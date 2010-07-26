@@ -1,0 +1,21 @@
+#if TARGET == ipodnano2g
+target/ipodnano2g/mmu.c
+target/ipodnano2g/lcd.c
+target/ipodnano2g/nand.c
+target/ipodnano2g/storage.c
+target/ipodnano2g/i2c.c
+#endif
+
+init.c
+main.c
+util.c
+drawing.S
+lcdconsole.c
+format.c
+snprintf.c
+panic.c
+console.c
+arm-support.S
+strlen.c
+fat32.c
+ucl.S
