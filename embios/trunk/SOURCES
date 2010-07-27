@@ -3,7 +3,7 @@ target/ipodnano2g/mmu.c
 target/ipodnano2g/lcd.c
 target/ipodnano2g/nand.c
 target/ipodnano2g/storage.c
-target/ipodnano2g/i2c.c
+target/ipodnano2g/i2c.S
 #endif
 
 init.c
