@@ -41,7 +41,9 @@ endif
 	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -D TARGET=$(1) $$< > $$@.dep
 	@mv -f $$@.dep $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
-	@sed -e "s/.*://" -e "s/\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+	@# Those many backslashes are necessary as make escapes them itself, then the shell
+	@# So make makes 4 out of 8, then the shell makes 2 out of 4 which is what we want
+	@sed -e "s/.*://" -e "s/\\\\\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
 	@rm -f $$@.dep.tmp
 
 build/$(1)/%.o: %.S
@@ -54,7 +56,9 @@ endif
 	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -D TARGET=$(1) $$< > $$@.dep
 	@mv -f $$@.dep $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
-	@sed -e "s/.*://" -e "s/\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+	@# Those many backslashes are necessary as make escapes them itself, then the shell
+	@# So make makes 4 out of 8, then the shell makes 2 out of 4 which is what we want
+	@sed -e "s/.*://" -e "s/\\\\\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
 	@rm -f $$@.dep.tmp
 endef
 
