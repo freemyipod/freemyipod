@@ -1,4 +1,4 @@
-#if TARGET == ipodnano2g
+#ifdef TARGET_ipodnano2g
 target/ipodnano2g/mmu.c
 target/ipodnano2g/lcd.c
 target/ipodnano2g/nand.c

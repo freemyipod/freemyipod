@@ -14,7 +14,7 @@ LDFLAGS ?= "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
 
 define TARGET_template
-SRC_$(1) := $$(call preprocess,SOURCES,-D TARGET=$(1))
+SRC_$(1) := $$(call preprocess,SOURCES,-DTARGET_$(1))
 OBJ_$(1) := $$(SRC_$(1):%.c=build/$(1)/%.o)
 OBJ_$(1) := $$(OBJ_$(1):%.S=build/$(1)/%.o)
 
@@ -37,12 +37,10 @@ ifeq ($(shell uname),WindowsNT)
 else
 	@-mkdir -p $$(dir $$@)
 endif
-	$(CC) -c $(CFLAGS) -Itarget/$(1) -D TARGET=$(1) -o $$@ $$<
-	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -D TARGET=$(1) $$< > $$@.dep
+	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
+	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep
 	@mv -f $$@.dep $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
-	@# Those many backslashes are necessary as make escapes them itself, then the shell
-	@# So make makes 4 out of 8, then the shell makes 2 out of 4 which is what we want
 	@sed -e "s/.*://" -e "s/\\\\\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
 	@rm -f $$@.dep.tmp
 
@@ -52,12 +50,10 @@ ifeq ($(shell uname),WindowsNT)
 else
 	@-mkdir -p $$(dir $$@)
 endif
-	$(CC) -c $(CFLAGS) -Itarget/$(1) -D TARGET=$(1) -o $$@ $$<
-	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -D TARGET=$(1) $$< > $$@.dep
+	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
+	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep
 	@mv -f $$@.dep $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
-	@# Those many backslashes are necessary as make escapes them itself, then the shell
-	@# So make makes 4 out of 8, then the shell makes 2 out of 4 which is what we want
 	@sed -e "s/.*://" -e "s/\\\\\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
 	@rm -f $$@.dep.tmp
 endef
