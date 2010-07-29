@@ -1,5 +1,5 @@
 NAME := embios
-TARGETS := ipodnano2g
+TARGETS := ipodnano2g ipodnano4g
 
 CROSS   := arm-none-eabi-
 CC      := $(CROSS)gcc
