@@ -40,7 +40,7 @@ endif
 	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
 	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
-	sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
 	@rm -f $$@.dep.tmp
 
 build/$(1)/%.o: %.S
@@ -52,7 +52,7 @@ endif
 	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
 	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
-	sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
 	@rm -f $$@.dep.tmp
 endef
 
