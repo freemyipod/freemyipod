@@ -107,29 +107,29 @@ displaylcd_dma:
 
 displaylcd_sendlcd2c:
 	ldr	r4, [r12,#0x1c]
-	ands	r4, r4, #0x10
+	tst	r4, #0x10
 	bne	displaylcd_sendlcd2c
 	mov	r4, r0,lsr#8
 	str	r4, [r12,#0x04]
 	and	r0, r0, #0xff
 displaylcd_sendlcdc:
-	ldr	r4, [r12,#0x1c]
-	ands	r4, r4, #0x10
+	ldrh	r4, [r12,#0x1c]
+	tst	r4, #0x10
 	bne	displaylcd_sendlcdc
-	str	r0, [r12,#0x04]
+	strh	r0, [r12,#0x04]
 	mov	pc, lr
 displaylcd_sendlcd2d:
-	ldr	r4, [r12,#0x1c]
-	ands	r4, r4, #0x10
+	ldrh	r4, [r12,#0x1c]
+	tst	r4, #0x10
 	bne	displaylcd_sendlcd2d
 	mov	r4, r0,lsr#8
-	str	r4, [r12,#0x40]
+	strh	r4, [r12,#0x40]
 	and	r0, r0, #0xff
 displaylcd_sendlcdd:
-	ldr	r4, [r12,#0x1c]
-	ands	r4, r4, #0x10
+	ldrh	r4, [r12,#0x1c]
+	tst	r4, #0x10
 	bne	displaylcd_sendlcdd
-	str	r0, [r12,#0x40]
+	strh	r0, [r12,#0x40]
 	mov	pc, lr
 
 displaylcd_detectlcd:
