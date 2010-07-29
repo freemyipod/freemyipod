@@ -652,24 +652,21 @@ __clzsi2:
     .byte 22,  0, 12,  0,  0,  3, 28,  0, 23,  0,  4, 29,  0,  0, 30, 31
     .size __clzsi2, .-__clzsi2
 
+    .section .text.__divisionhelpers
 #ifndef __ARM_EABI__
-    .section .text.__udivsi3
 __udivsi3:
     ARMV4_UDIV32_BODY r0, r1, r0, "", r2, r3, __div0_wrap, 1
     .size __udivsi3, . - __udivsi3
 
-    .section .text._divsi3
 __divsi3:
     ARMV4_SDIV32_BODY r0, r1, r0, "", r2, r3, __div0_wrap, 1
     .size __divsi3, . - __divsi3
 
 #else
-    .section .text.__aeabi_uidivmod
 __aeabi_uidivmod:
     ARMV4_UDIV32_BODY r0, r1, r0, r1, r2, r3, __div0_wrap, 1
     .size __aeabi_uidivmod, . - __aeabi_uidivmo
 
-    .section .text.__aeabi_idivmod
 __aeabi_idivmod:
     ARMV4_SDIV32_BODY r0, r1, r0, r1, r2, r3, __div0_wrap, 1
     .size __aeabi_idivmod, . - __aeabi_idivmod
@@ -677,31 +674,26 @@ __aeabi_idivmod:
 
 #else
 #ifndef __ARM_EABI__
-    .section .text.__udivsi3
 __udivsi3:
     ARMV5_UDIV32_BODY r0, r1, r0, "", r2, r3, ip, __div0_wrap, 1
     .size __udivsi3, . - __udivsi3
 
-    .section .text.__divsi3
 __divsi3:
     str lr, [sp, #-4]
     ARMV5_SDIV32_BODY r0, r1, r0, "", r2, lr, ip, r3, __div0_wrap_s, "ldr pc, [sp, #-4]"
     .size __divsi3, . - __divsi3
 
 #else
-    .section .text.__aeabi_uidivmod
 __aeabi_uidivmod:
     ARMV5_UDIV32_BODY r0, r1, r0, r1, r2, r3, ip, __div0_wrap, 1
     .size __aeabi_uidivmod, . - __aeabi_uidivmo
 
-    .section .text.__aeabi_idivmod
 __aeabi_idivmod:
     str lr, [sp, #-4]
     ARMV5_SDIV32_BODY r0, r1, r0, r1, r2, lr, ip, r3, __div0_wrap_s, "ldr pc, [sp, #-4]"
     .size __aeabi_idivmod, . - __aeabi_idivmod
 #endif
 
-    .section .text._L_udiv_est_table
 .L_udiv_est_table:
     .byte 0xff, 0xfc, 0xf8, 0xf4, 0xf0, 0xed, 0xea, 0xe6
     .byte 0xe3, 0xe0, 0xdd, 0xda, 0xd7, 0xd4, 0xd2, 0xcf
