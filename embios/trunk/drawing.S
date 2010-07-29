@@ -30,23 +30,23 @@ renderbmp:
 	sub	r2, r2, #0x4d00
 	subs	r2, r2, #0x42
 	movne	pc, lr
-	str	lr, [sp,#-4]
+	stmfd	sp!, {r4,lr}
 	ldrh	r2, [r1,#18]
 	ldrh	r12, [r1,#20]
 	orr	r2, r2, r12,lsl#16
-	ldrh	r3, [r1,#22]
+	ldrh	r4, [r1,#22]
 	ldrh	r12, [r1,#24]
-	orr	r3, r3, r12,lsl#16
+	orr	r4, r4, r12,lsl#16
 	ldrh	lr, [r1,#10]
 	ldrh	r12, [r1,#12]
 	orr	lr, lr, r12,lsl#16
 	add	r1, r1, lr
 	mov	r12, #352
-	mul	lr, r12, r3
+	mul	lr, r12, r4
 	add	r0, r0, lr
 renderbmp_row:
 	mov	r12, r2
-	sub	r0, r0, #352
+	sub	r0, r0, r3
 renderbmp_pixel:
 	ldrb	lr, [r1,#1]
 	strb	lr, [r0], #1
@@ -57,9 +57,9 @@ renderbmp_pixel:
 	tst	r2, #1
 	addne	r1, r1, #2
 	sub	r0, r0, r2,lsl#1
-	subs	r3, r3, #1
+	subs	r4, r4, #1
 	bne	renderbmp_row
-	ldr	pc, [sp,#-4]
+	ldmfd	sp!, {r4,pc}
 .size renderbmp, .-renderbmp
 
 
@@ -68,7 +68,8 @@ renderbmp_pixel:
 .global renderchar
 .type renderchar, %function
 renderchar:
-	stmfd	sp!, {r4-r6,lr}
+	stmfd	sp!, {r4-r7,lr}
+	ldr	r7, [sp,#0x14]
 	cmn	r2, #1
 	beq	renderchar_nobg
 	mov	r6, r0
@@ -92,7 +93,8 @@ renderchar_blendcol:
 	strh	lr, [r6], #2
 	subs	r5, r5, #1
 	bne	renderchar_blendcol
-	add	r6, r6, #340
+	add	r6, r6, r7
+	sub	r6, r6, #12
 	subs	r4, r4, #1
 	bne	renderchar_blendrow
 	b	renderchar_nobg
@@ -102,7 +104,8 @@ renderchar_opaquecol:
 	strh	r2, [r6], #2
 	subs	r5, r5, #1
 	bne	renderchar_opaquecol
-	add	r6, r6, #340
+	add	r6, r6, r7
+	sub	r6, r6, #12
 	subs	r4, r4, #1
 	bne	renderchar_opaquerow
 renderchar_nobg:
@@ -118,14 +121,14 @@ renderchar_col:
 renderchar_row:
 	tst	r4, #1
 	strneh	r1, [r6]
-	add	r6, r6, #352
+	add	r6, r6, r7
 	movs	r4, r4,lsr#1
 	bne	renderchar_row
 	add	r0, r0, #2
 	subs	r3, r3, #1
 	bne	renderchar_col
 	add	r0, r0, #2
-	ldmfd	sp!, {r4-r6,pc}
+	ldmfd	sp!, {r4-r7,pc}
 
 renderchar_font:
 	.byte 0, 0, 0, 0, 0

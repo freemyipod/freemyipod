@@ -32,8 +32,8 @@
 #define FONT_HEIGHT 8
 
 
-void rendertext(void* buffer, int fgcol, int bgcol, char* text);
-void renderbmp(void* buffer, void* bitmap);
+void rendertext(void* buffer, int fgcol, int bgcol, char* text, int stride);
+void renderbmp(void* buffer, void* bitmap, int stride);
 
 
 #endif

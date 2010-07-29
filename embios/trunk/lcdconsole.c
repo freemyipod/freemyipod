@@ -76,7 +76,7 @@ void lcdconsole_putc(char string, int fgcolor, int bgcolor)
   }
   renderchar(&framebuf[OFFSETBYTES + ROWBYTES * current_row
                      + COLBYTES * current_col],
-             fgcolor, bgcolor, string);
+             fgcolor, bgcolor, string, LINEBYTES);
 }
 
 void lcdconsole_puts(const char* string, int fgcolor, int bgcolor)
