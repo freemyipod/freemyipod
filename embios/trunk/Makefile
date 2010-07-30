@@ -8,7 +8,7 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
 
-CFLAGS  ?= -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -std=c99
+CFLAGS  ?= -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -std=gnu99
 LDFLAGS ?= "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
