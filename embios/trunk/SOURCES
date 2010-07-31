@@ -1,15 +1,19 @@
+#include "target.h"
+
 #ifdef TARGET_ipodnano2g
 target/ipodnano2g/mmu.c
 target/ipodnano2g/lcd.c
-target/ipodnano2g/nand.c
-target/ipodnano2g/storage.c
-target/ipodnano2g/i2c.S
+target/ipodnano2g/timer.c
 #endif
 
 #ifdef TARGET_ipodnano4g
 target/ipodnano4g/mmu.c
 target/ipodnano4g/lcd.c
-target/ipodnano4g/storage.c
+#endif
+
+#ifdef ARM_ARCH
+arm/arm-support.S
+arm/contextswitch.S
 #endif
 
 init.c
@@ -21,8 +25,7 @@ format.c
 snprintf.c
 panic.c
 console.c
-arm-support.S
 strlen.c
-fat32.c
 ucl.S
-
+thread.c
+interrupt.c

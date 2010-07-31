@@ -78,16 +78,28 @@ _start:
 	str	r0, [r1]
 	mov	r0, #0
 	mcr	p15, 0, r0,c7,c5,0
+	mov	r1, #0x39c00000
+	str	r0, [r1,#4]
+	str	r0, [r1,#8]
+	str	r0, [r1,#0x38]
+	str	r0, [r1,#0x20]
+	sub	r0, r0, #1
+	str	r0, [r1]
+	str	r0, [r1,#0x10]
+	str	r0, [r1,#0x1c]
 	msr	cpsr_c, #0xd2
 	ldr	sp, =_irqstackend
 	msr	cpsr_c, #0xd7
 	ldr	sp, =_abortstackend
 	msr	cpsr_c, #0xdb
 	ldr	sp, =_abortstackend
-	msr	cpsr_c, #0xd3
+	msr	cpsr_c, #0x13
 	ldr	sp, =_initstackend
 	bl	init
-	b	main
+	mov	r0, #0
+idleloop:
+	mcr	p15, 0, r0,c7,c0,4
+	b	idleloop
 .ltorg
 
 
@@ -153,12 +165,6 @@ fiq_handler:
 	b	panic
 .size fiq_handler, .-fiq_handler
 
-.type irq_handler, %function
-irq_handler:
-	adr	r0, irq_text
-	b	panic
-.size irq_handler, .-irq_handler
-
 .type syscall_handler, %function
 syscall_handler:
 	adr	r0, syscall_text
@@ -179,9 +185,6 @@ reserved_text:
 
 fiq_text:
 	.ascii	"Unhandled FIQ!\0"
-
-irq_text:
-	.ascii	"Unhandled IRQ!\0"
 
 syscall_text:
 	.ascii	"Unhandled syscall!\0"

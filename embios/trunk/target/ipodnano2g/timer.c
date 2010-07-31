@@ -21,20 +21,35 @@
 //
 
 
-#ifndef __CONSOLE_H__
-#define __CONSOLE_H__
-
-
 #include "global.h"
-#include <stdarg.h>
+#include "timer.h"
+#include "thread.h"
+#include "s5l8701.h"
 
 
-void console_init() INITCODE_ATTR;
-void cputc(unsigned int consoles, char string) ICODE_ATTR;
-void cputs(unsigned int consoles, const char* string) ICODE_ATTR;
-int cprintf(unsigned int consoles, const char* fmt, ...) ICODE_ATTR;
-int cvprintf(unsigned int consoles, const char* fmt, va_list ap) ICODE_ATTR;
-void cflush(unsigned int consoles) ICODE_ATTR;
+void setup_tick()
+{
+    int cycles = SYSTEM_TICK / 100;
+    
+    PWRCON &= ~(1 << 4);
+    
+    /* configure timer for 10 kHz */
+    TBCMD = (1 << 1);   /* TB_CLR */
+    TBPRE = 300 - 1;    /* prescaler */
+    TBCON = (0 << 13) | /* TB_INT1_EN */
+            (1 << 12) | /* TB_INT0_EN */
+            (0 << 11) | /* TB_START */
+            (2 << 8) |  /* TB_CS = PCLK / 16 */
+            (0 << 4);   /* TB_MODE_SEL = interval mode */
+    TBDATA0 = cycles;   /* set interval period */
+    TBCMD = (1 << 0);   /* TB_EN */
 
+    /* enable timer interrupt */
+    INTMSK |= INTMSK_TIMER;
+}
 
-#endif
+void INT_TIMERB(void)
+{
+    TBCON = TBCON;
+    scheduler_switch(-1);
+}

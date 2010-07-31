@@ -87,7 +87,10 @@ _start:
 	msr	cpsr_c, #0xd3
 	ldr	sp, =_initstackend
 	bl	init
-	b	main
+	mov	r0, #0
+idleloop:
+	mcr	p15, 0, r0,c7,c0,4
+	b	idleloop
 .ltorg
 
 
@@ -148,12 +151,6 @@ fiq_handler:
 	b	panic
 .size fiq_handler, .-fiq_handler
 
-.type irq_handler, %function
-irq_handler:
-	adr	r0, irq_text
-	b	panic
-.size irq_handler, .-irq_handler
-
 .type syscall_handler, %function
 syscall_handler:
 	adr	r0, syscall_text
@@ -174,9 +171,6 @@ reserved_text:
 
 fiq_text:
 	.ascii	"Unhandled FIQ!\0"
-
-irq_text:
-	.ascii	"Unhandled IRQ!\0"
 
 syscall_text:
 	.ascii	"Unhandled syscall!\0"

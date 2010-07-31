@@ -237,9 +237,34 @@
 
 
 /////TIMER/////
+#define TACON        (*((volatile uint32_t*)(0x3C700000)))
+#define TACMD        (*((volatile uint32_t*)(0x3C700004)))
+#define TADATA0      (*((volatile uint32_t*)(0x3C700008)))
+#define TADATA1      (*((volatile uint32_t*)(0x3C70000C)))
+#define TAPRE        (*((volatile uint32_t*)(0x3C700010)))
+#define TACNT        (*((volatile uint32_t*)(0x3C700014)))
+#define TBCON        (*((volatile uint32_t*)(0x3C700020)))
+#define TBCMD        (*((volatile uint32_t*)(0x3C700024)))
+#define TBDATA0      (*((volatile uint32_t*)(0x3C700028)))
+#define TBDATA1      (*((volatile uint32_t*)(0x3C70002C)))
+#define TBPRE        (*((volatile uint32_t*)(0x3C700030)))
+#define TBCNT        (*((volatile uint32_t*)(0x3C700034)))
+#define TCCON        (*((volatile uint32_t*)(0x3C700040)))
+#define TCCMD        (*((volatile uint32_t*)(0x3C700044)))
+#define TCDATA0      (*((volatile uint32_t*)(0x3C700048)))
+#define TCDATA1      (*((volatile uint32_t*)(0x3C70004C)))
+#define TCPRE        (*((volatile uint32_t*)(0x3C700050)))
+#define TCCNT        (*((volatile uint32_t*)(0x3C700054)))
+#define TDCON        (*((volatile uint32_t*)(0x3C700060)))
+#define TDCMD        (*((volatile uint32_t*)(0x3C700064)))
+#define TDDATA0      (*((volatile uint32_t*)(0x3C700068)))
+#define TDDATA1      (*((volatile uint32_t*)(0x3C70006C)))
+#define TDPRE        (*((volatile uint32_t*)(0x3C700070)))
+#define TDCNT        (*((volatile uint32_t*)(0x3C700074)))
 #define FIVE_USEC_TIMER (((uint64_t)(*((volatile uint32_t*)(0x3C700080))) << 32) \
                         | (*((volatile uint32_t*)(0x3C700084))))  /* 64bit 5usec timer */
 #define USEC_TIMER      ((long)(FIVE_USEC_TIMER * 5)) /* usecs */
+#define INTMSK_TIMER (1<<5)
 
 
 #endif

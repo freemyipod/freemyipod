@@ -28,8 +28,16 @@
 #include "global.h"
 
 
-void panic(const char* string) ICODE_ATTR;
-void panicf(const char* string, ...) ICODE_ATTR;
+enum panic_severity
+{
+    PANIC_KILLTHREAD,
+    PANIC_KILLPROCESS,
+    PANIC_FATAL
+};
+
+
+void panic(enum panic_severity severity, const char* string) ICODE_ATTR;
+void panicf(enum panic_severity severity, const char* string, ...) ICODE_ATTR;
 
 
 #endif

@@ -22,15 +22,16 @@
 
 
 #include "global.h"
+#include "thread.h"
+#include "console.h"
 #include "lcdconsole.h"
 
 void init() INITCODE_ATTR;
 void init()
 {
-  lcdconsole_init();
-  lcdconsole_puts("emBIOS v" VERSION "\n\nStorage init...", 0, -1);
-  lcdconsole_update();
-  if (fat32_init()) lcdconsole_puts(" failed!\n", 0, -1);
-  else lcdconsole_puts(" done\n", 0, -1);
-  lcdconsole_update();
+    scheduler_init();
+    console_init();
+    lcdconsole_init();
+    lcdconsole_puts("emBIOS v" VERSION "\n\n", 0, -1);
+    lcdconsole_update();
 }

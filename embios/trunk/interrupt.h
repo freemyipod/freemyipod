@@ -21,20 +21,14 @@
 //
 
 
-#ifndef __CONSOLE_H__
-#define __CONSOLE_H__
+#ifndef __INTERRUPT_H__
+#define __INTERRUPT_H__
 
 
 #include "global.h"
-#include <stdarg.h>
 
 
-void console_init() INITCODE_ATTR;
-void cputc(unsigned int consoles, char string) ICODE_ATTR;
-void cputs(unsigned int consoles, const char* string) ICODE_ATTR;
-int cprintf(unsigned int consoles, const char* fmt, ...) ICODE_ATTR;
-int cvprintf(unsigned int consoles, const char* fmt, va_list ap) ICODE_ATTR;
-void cflush(unsigned int consoles) ICODE_ATTR;
-
+void irqhandler(void) ICODE_ATTR;
+void INT_TIMER(void) ICODE_ATTR;
 
 #endif

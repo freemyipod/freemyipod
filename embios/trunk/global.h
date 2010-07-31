@@ -40,6 +40,14 @@
 #define INITDATA_ATTR __attribute__ ((section(".initdata")))
 #define INITBSS_ATTR __attribute__ ((section(".initbss")))
 
+#define bool int
+#define true 1
+#define false 0
+
 #include "target.h"
+
+#ifndef MAX_THREADS
+#define MAX_THREADS 32
+#endif
 
 #endif

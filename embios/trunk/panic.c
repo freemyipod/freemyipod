@@ -22,23 +22,24 @@
 
 
 #include "global.h"
+#include "panic.h"
 #include "console.h"
 
 
-void handle_panic()
+void handle_panic(enum panic_severity severity)
 {
   while(1);
 }
 
-void panic(const char* string)
+void panic(enum panic_severity severity, const char* string)
 {
   cputs(1, "\n*PANIC*\n");
   cputs(1, string);
   cputc(1, '\n');
-  handle_panic();
+  handle_panic(severity);
 }
 
-void panicf(const char* string, ...)
+void panicf(enum panic_severity severity, const char* string, ...)
 {
   va_list ap;
   cputs(1, "\n*PANIC*\n");
@@ -46,10 +47,10 @@ void panicf(const char* string, ...)
   cvprintf(1, string, ap);
   va_end(ap);
   cputc(1, '\n');
-  handle_panic();
+  handle_panic(severity);
 }
 
 void __div0()
 {
-  panic("Division by zero!");
+  panic(PANIC_KILLTHREAD, "Division by zero!");
 }

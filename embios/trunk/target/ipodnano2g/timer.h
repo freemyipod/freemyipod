@@ -25,6 +25,7 @@
 #define __TIMER_H__
 
 #include "global.h"
+#include "s5l8701.h"
 
 
 #define TIME_AFTER(a,b)         ((long)(b) - (long)(a) < 0)
@@ -32,11 +33,15 @@
 #define TIMEOUT_EXPIRED(a,b)    TIME_AFTER(USEC_TIMER,a + b)
 
 
-static inline void sleep(long duration)  /* in usec steps */
+static inline void udelay(long duration)  /* in usec steps */
 {
     long timestamp = USEC_TIMER;
     while (!TIMEOUT_EXPIRED(timestamp, duration));
 }
+
+
+void setup_tick() INITCODE_ATTR;
+void INT_TIMERB() ICODE_ATTR;
 
 
 #endif

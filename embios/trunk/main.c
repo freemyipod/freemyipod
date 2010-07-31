@@ -22,8 +22,9 @@
 
 
 #include "global.h"
+#include "panic.h"
 
 void main()
 {
-  panic("main() doesn't know what to do!");
+    panic(PANIC_FATAL, "main() doesn't know what to do!");
 }

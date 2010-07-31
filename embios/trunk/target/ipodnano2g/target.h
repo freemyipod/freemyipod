@@ -25,9 +25,6 @@
 #define __TARGET_H__
 
 
-#include "s5l8701.h"
-
-
 #define ARM_ARCH 4
 
 
