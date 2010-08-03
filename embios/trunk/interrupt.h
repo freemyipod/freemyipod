@@ -29,6 +29,6 @@
 
 
 void irqhandler(void) ICODE_ATTR;
-void INT_TIMER(void) ICODE_ATTR;
+void interrupt_init(void) INITCODE_ATTR;
 
 #endif

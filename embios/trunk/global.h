@@ -31,23 +31,28 @@
 
 #define VERSION "0.0.1pre"
 
-#define ICODE_ATTR __attribute__ ((section(".icode")))
-#define ICONST_ATTR __attribute__ ((section(".irodata")))
-#define IDATA_ATTR __attribute__ ((section(".idata")))
-#define IBSS_ATTR __attribute__ ((section(".ibss")))
-#define INITCODE_ATTR __attribute__ ((section(".initcode")))
-#define INITCONST_ATTR __attribute__ ((section(".initrodata")))
-#define INITDATA_ATTR __attribute__ ((section(".initdata")))
-#define INITBSS_ATTR __attribute__ ((section(".initbss")))
+#define ICODE_ATTR __attribute__((section(".icode")))
+#define ICONST_ATTR __attribute__((section(".irodata")))
+#define IDATA_ATTR __attribute__((section(".idata")))
+#define IBSS_ATTR __attribute__((section(".ibss")))
+#define INITCODE_ATTR __attribute__((section(".initcode")))
+#define INITCONST_ATTR __attribute__((section(".initrodata")))
+#define INITDATA_ATTR __attribute__((section(".initdata")))
+#define INITBSS_ATTR __attribute__((section(".initbss")))
+#define STACK_ATTR __attribute__((section(".stack")))
 
 #define bool int
 #define true 1
 #define false 0
 
+#include "config.h"
 #include "target.h"
 
 #ifndef MAX_THREADS
 #define MAX_THREADS 32
 #endif
+
+#define CACHELINE_SIZE (1<<CACHELINE_BITS)
+#define CACHEALIGN_ATTR __attribute__((aligned(CACHELINE_SIZE)))
 
 #endif

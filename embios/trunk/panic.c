@@ -23,34 +23,76 @@
 
 #include "global.h"
 #include "panic.h"
+#include "lcd.h"
+#include "lcdconsole.h"
 #include "console.h"
+#include "format.h"
+#include "thread.h"
+#include "contextswitch.h"
+
+
+void hang();
 
 
 void handle_panic(enum panic_severity severity)
 {
-  while(1);
+    thread_exit();
 }
 
 void panic(enum panic_severity severity, const char* string)
 {
-  cputs(1, "\n*PANIC*\n");
-  cputs(1, string);
-  cputc(1, '\n');
-  handle_panic(severity);
+    if (severity == PANIC_FATAL)
+    {
+        enter_critical_section();
+        while (!displaylcd_safe());
+        lcdconsole_puts_noblit("\n*PANIC*\n", 0, -1);
+        lcdconsole_puts_noblit(string, 0, -1);
+        lcdconsole_puts_noblit("\n", 0, -1);
+        lcdconsole_update();
+        hang();
+    }
+    else
+    {
+        cputs(1, "\n*PANIC*\n");
+        cputs(1, string);
+        cputc(1, '\n');
+        handle_panic(severity);
+    }
+}
+
+static int pprfunc(void* ptr, unsigned char letter)
+{
+    lcdconsole_putc_noblit(letter, 0, -1);
+    return true;
 }
 
 void panicf(enum panic_severity severity, const char* string, ...)
 {
-  va_list ap;
-  cputs(1, "\n*PANIC*\n");
-  va_start(ap, string);
-  cvprintf(1, string, ap);
-  va_end(ap);
-  cputc(1, '\n');
-  handle_panic(severity);
+    va_list ap;
+    if (severity == PANIC_FATAL)
+    {
+        enter_critical_section();
+        while (!displaylcd_safe());
+        lcdconsole_puts_noblit("\n*PANIC*\n", 0, -1);
+        va_start(ap, string);
+        format(pprfunc, NULL, string, ap);
+        va_end(ap);
+        lcdconsole_puts_noblit("\n", 0, -1);
+        lcdconsole_update();
+        hang();
+    }
+    else
+    {
+        cputs(1, "\n*PANIC*\n");
+        va_start(ap, string);
+        cvprintf(1, string, ap);
+        va_end(ap);
+        cputc(1, '\n');
+        handle_panic(severity);
+    }
 }
 
 void __div0()
 {
-  panic(PANIC_KILLTHREAD, "Division by zero!");
+    panic(PANIC_KILLTHREAD, "Division by zero!");
 }

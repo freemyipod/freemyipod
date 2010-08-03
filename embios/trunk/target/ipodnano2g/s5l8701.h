@@ -132,7 +132,14 @@
 #define DMACADDR7    (*((volatile uint32_t*)(0x384000EC)))
 #define DMACTCNT7    (*((volatile uint32_t*)(0x384000F0)))
 #define DMACOM7      (*((volatile uint32_t*)(0x384000F4)))
+#define DMABASE8     (*((volatile uint32_t*)(0x38400100)))
+#define DMACON8      (*((volatile uint32_t*)(0x38400104)))
+#define DMATCNT8     (*((volatile uint32_t*)(0x38400108)))
+#define DMACADDR8    (*((volatile uint32_t*)(0x3840010C)))
+#define DMACTCNT8    (*((volatile uint32_t*)(0x38400110)))
+#define DMACOM8      (*((volatile uint32_t*)(0x38400114)))
 #define DMAALLST     (*((volatile uint32_t*)(0x38400180)))
+#define DMAALLST2    (*((volatile uint32_t*)(0x38400184)))
 #define DMACON_DEVICE_SHIFT    30
 #define DMACON_DIRECTION_SHIFT 29
 #define DMACON_DATA_SIZE_SHIFT 22
@@ -193,7 +200,6 @@
 #define ECC_RESULT    (*((volatile uint32_t*)(0x39E00010)))
 #define ECC_UNK1      (*((volatile uint32_t*)(0x39E00014)))
 #define ECC_INT_CLR   (*((volatile uint32_t*)(0x39E00040)))
-#define INTMSK_ECC             0x80000
 #define ECCCTRL_STARTDECODING  (1 << 0)
 #define ECCCTRL_STARTENCODING  (1 << 1)
 #define ECCCTRL_STARTDECNOSYND (1 << 2)
@@ -261,10 +267,30 @@
 #define TDDATA1      (*((volatile uint32_t*)(0x3C70006C)))
 #define TDPRE        (*((volatile uint32_t*)(0x3C700070)))
 #define TDCNT        (*((volatile uint32_t*)(0x3C700074)))
-#define FIVE_USEC_TIMER (((uint64_t)(*((volatile uint32_t*)(0x3C700080))) << 32) \
-                        | (*((volatile uint32_t*)(0x3C700084))))  /* 64bit 5usec timer */
-#define USEC_TIMER      ((long)(FIVE_USEC_TIMER * 5)) /* usecs */
-#define INTMSK_TIMER (1<<5)
+uint64_t read_5usec_timer();
+uint32_t read_usec_timer();
+#define FIVE_USEC_TIMER (read_5usec_timer()) /* 64bit 5usec timer */
+#define USEC_TIMER      (read_usec_timer()) /* usecs */
+
+
+/////USB/////
+#define OTGBASE 0x38800000
+#define PHYBASE 0x3C400000
+
+
+/////I2C/////
+#define IICCON       (*((volatile uint32_t*)(0x3C900000)))
+#define IICSTAT      (*((volatile uint32_t*)(0x3C900004)))
+#define IICADD       (*((volatile uint32_t*)(0x3C900008)))
+#define IICDS        (*((volatile uint32_t*)(0x3C90000C)))
+
+
+/////INTERRUPTS/////
+#define INTMSK_TIMER   (1<<5)
+#define INTMSK_DMA     (1<<10)
+#define INTMSK_USB_OTG (1<<16)
+#define INTMSK_ECC     (1<<19)
+#define INTMSK_IIC     (1<<27)
 
 
 #endif

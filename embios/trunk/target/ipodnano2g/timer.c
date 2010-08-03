@@ -31,8 +31,6 @@ void setup_tick()
 {
     int cycles = SYSTEM_TICK / 100;
     
-    PWRCON &= ~(1 << 4);
-    
     /* configure timer for 10 kHz */
     TBCMD = (1 << 1);   /* TB_CLR */
     TBPRE = 300 - 1;    /* prescaler */
@@ -43,9 +41,6 @@ void setup_tick()
             (0 << 4);   /* TB_MODE_SEL = interval mode */
     TBDATA0 = cycles;   /* set interval period */
     TBCMD = (1 << 0);   /* TB_EN */
-
-    /* enable timer interrupt */
-    INTMSK |= INTMSK_TIMER;
 }
 
 void INT_TIMERB(void)

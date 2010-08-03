@@ -28,10 +28,11 @@
 #include "global.h"
 
 
-extern void i2csend(uint32_t device, uint32_t address, void* data, uint32_t length);
-extern void i2crecv(uint32_t device, uint32_t address, void* data, uint32_t length);
-extern void i2csendbyte(uint32_t device, uint32_t address, uint32_t data);
-extern uint32_t i2crecvbyte(uint32_t device, uint32_t address);
+void i2c_init();
+void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* data, uint32_t length);
+void i2c_recv(uint32_t bus, uint32_t device, uint32_t address, uint8_t* data, uint32_t length);
+void i2c_sendbyte(uint32_t bus, uint32_t device, uint32_t address, uint32_t data);
+uint8_t i2c_recvbyte(uint32_t bus, uint32_t device, uint32_t address);
 
 
 #endif

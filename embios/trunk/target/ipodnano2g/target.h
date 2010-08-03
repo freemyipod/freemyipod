@@ -25,7 +25,14 @@
 #define __TARGET_H__
 
 
+#define PLATFORM_ID 0x47324e49
+
+
 #define ARM_ARCH 4
+#define CACHELINE_BITS 4
+
+
+#define USB_NUM_ENDPOINTS 5
 
 
 #endif

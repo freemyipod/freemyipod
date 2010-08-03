@@ -28,9 +28,10 @@
 #include "util.h"
 
 
-struct scheduler_thread scheduler_threads[MAX_THREADS] IDATA_ATTR;
-struct scheduler_thread* current_thread IDATA_ATTR;
-uint32_t last_tick IDATA_ATTR;
+struct scheduler_thread scheduler_threads[MAX_THREADS] IBSS_ATTR;
+struct scheduler_thread* current_thread IBSS_ATTR;
+uint32_t last_tick IBSS_ATTR;
+extern struct wakeup dbgwakeup;
 
 
 void mutex_init(struct mutex* obj)
@@ -41,7 +42,7 @@ void mutex_init(struct mutex* obj)
 void mutex_add_to_queue(struct mutex* obj, struct scheduler_thread* thread)
 {
     struct scheduler_thread* t;
-    if (!obj->waiters || obj->waiters->priority < thread->priority)
+    if (!obj->waiters || obj->waiters->priority <= thread->priority)
     {
         thread->queue_next = obj->waiters;
         obj->waiters = thread;
@@ -168,6 +169,7 @@ int wakeup_wait(struct wakeup* obj, int timeout)
             obj->waiter = current_thread;
             leave_critical_section(mode);
             context_switch();
+            obj->waiter = NULL;
             if (!obj->signalled) return THREAD_TIMEOUT;
             obj->signalled = false;
             return THREAD_OK;
@@ -200,12 +202,15 @@ int wakeup_signal(struct wakeup* obj)
 
 void sleep(int usecs)
 {
-    uint32_t mode = enter_critical_section();
-    current_thread->state = THREAD_BLOCKED;
-    current_thread->block_type = THREAD_BLOCK_SLEEP;
-    current_thread->timeout = usecs;
-    current_thread->blocked_since = USEC_TIMER;
-    leave_critical_section(mode);
+    if (usecs)
+    {
+        uint32_t mode = enter_critical_section();
+        current_thread->state = THREAD_BLOCKED;
+        current_thread->block_type = THREAD_BLOCK_SLEEP;
+        current_thread->timeout = usecs;
+        current_thread->blocked_since = USEC_TIMER;
+        leave_critical_section(mode);
+    }
     context_switch();
 }
 
@@ -230,10 +235,18 @@ void scheduler_switch(int thread)
     current_thread->cputime_total += usec - current_thread->startusec;
     current_thread->cputime_current += usec - current_thread->startusec;
     if ((int)current_thread->stack != -1 && *current_thread->stack != 0xaffebeaf)
-        panicf(PANIC_KILLPROCESS, "Stack overflow (%s)", current_thread->name);
+    {
+        for (i = 0; i < MAX_THREADS; i++)
+            if (scheduler_threads[i].type == USER_THREAD)
+                scheduler_threads[i].state = THREAD_SUSPENDED;
+        current_thread->state = THREAD_DEFUNCT;
+        current_thread->block_type = THREAD_DEFUNCT_STKOV;
+        wakeup_signal(&dbgwakeup);
+    }
 
     if (usec - last_tick > SCHEDULER_TICK)
     {
+        last_tick = usec;
         for (i = 0; i < MAX_THREADS; i++)
         {
             scheduler_threads[i].cpuload = scheduler_threads[i].cputime_current / SCHEDULER_TICK;
@@ -268,7 +281,7 @@ void scheduler_switch(int thread)
                 score = scheduler_threads[i].cputime_current / scheduler_threads[i].priority;
                 if (score < best)
                 {
-                    score = best;
+                    best = score;
                     thread = i;
                 }
             }
@@ -280,7 +293,7 @@ void scheduler_switch(int thread)
 }
 
 int thread_create(const char* name, const void* code, void* stack,
-                  int stacksize, int priority, bool run)
+                  int stacksize, enum thread_type type, int priority, bool run)
 {
     int ret = NO_MORE_THREADS;
     int i;
@@ -295,6 +308,7 @@ int thread_create(const char* name, const void* code, void* stack,
             ret = i;
             memset(&scheduler_threads[i], 0, sizeof(struct scheduler_thread));
             scheduler_threads[i].state = run ? THREAD_READY : THREAD_SUSPENDED;
+            scheduler_threads[i].type = type;
             scheduler_threads[i].name = name;
             scheduler_threads[i].priority = priority;
             scheduler_threads[i].cpsr = 0x13;
@@ -326,14 +340,18 @@ int thread_suspend(int thread)
         else if (t->state == THREAD_BLOCKED)
         {
             if (t->block_type == THREAD_BLOCK_SLEEP)
-                t->timeout -= USEC_TIMER - t->blocked_since;
+            {
+                if (t->timeout != -1) t->timeout -= USEC_TIMER - t->blocked_since;
+            }
             else if (t->block_type == THREAD_BLOCK_MUTEX)
             {
                 mutex_remove_from_queue((struct mutex*)t->blocked_by, t);
-                t->timeout -= USEC_TIMER - t->blocked_since;
+                if (t->timeout != -1) t->timeout -= USEC_TIMER - t->blocked_since;
             }
             else if (t->block_type == THREAD_BLOCK_WAKEUP)
-                t->timeout -= USEC_TIMER - t->blocked_since;
+            {
+                if (t->timeout != -1) t->timeout -= USEC_TIMER - t->blocked_since;
+            }
         }
         t->state = THREAD_SUSPENDED;
     }

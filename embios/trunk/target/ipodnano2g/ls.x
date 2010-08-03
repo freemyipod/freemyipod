@@ -12,51 +12,41 @@ MEMORY
 
 SECTIONS
 {
-    .init : {
+    .init :
+    {
         *(.initcode*)
         *(.initrodata*)
         *(.initdata*)
         . = ALIGN(0x4);
     } > INIT
 
-    .intvect : {
+    .sram :
+    {
         _sramstart = .;
         KEEP(*(.intvect))
         *(.intvect)
-    } > SRAM AT> INIT
-    _sramsource = LOADADDR(.intvect);
-
-    .iram :
-    {
         *(.icode*)
         *(.irodata*)
         *(.idata*)
         . = ALIGN(0x4);
         _sramend = .;
     } > SRAM AT> INIT
+    _sramsource = LOADADDR(.sram);
 
-    .text :
+    .sdram :
     {
         _sdramstart = .;
         *(.text*)
         *(.glue_7)
         *(.glue_7t)
         . = ALIGN(0x4);
-    } > SDRAM AT> INIT
-    _sdramsource = LOADADDR(.text);
-
-    .rodata :
-    {
         *(.rodata*)
         . = ALIGN(0x4);
-    } > SDRAM AT> INIT
-
-    .data :
-    {
         *(.data*)
         . = ALIGN(0x4);
         _sdramend = .;
     } > SDRAM AT> INIT
+    _sdramsource = LOADADDR(.sdram);
 
     .initbss (NOLOAD) :
     {
@@ -80,7 +70,7 @@ SECTIONS
         _abortstackstart = .;
         . += 0x400;
         _abortstackend = .;
-        *(.stack)
+        *(.stack*)
         _ibssend = .;
     } > SRAM
 

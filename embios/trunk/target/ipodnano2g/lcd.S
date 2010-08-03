@@ -21,12 +21,25 @@
 @
 
 
+.section .initcode.lcd_init, "ax", %progbits
+.align 2
+.global lcd_init
+.type lcd_init, %function
+lcd_init:
+	mov	r1, #0x38000000
+	orr	r1, r1, #0x400000
+	mov	r0, #0x20000000
+	orr	r0, r0, #0x190000
+	str	r0, [r1,#0x104]
+	mov	pc, lr
+.size lcd_init, .-lcd_init
+
 .section .icode.displaylcd, "ax", %progbits
 .align 2
 .global displaylcd
 .type displaylcd, %function
 displaylcd:
-	stmfd	sp!, {r0,r1,r4,lr}
+	stmfd	sp!, {r0-r4,lr}
 	bl	displaylcd_sync
 	bl	displaylcd_detectlcd
 	sub	r12, r12, #0x04900000
@@ -42,11 +55,11 @@ displaylcd:
 	bl	displaylcd_sendlcd2d
 	mov	r0, #0x52
 	bl	displaylcd_sendlcd2c
-	mov	r0, r2
+	ldr	r0, [sp,#0x08]
 	bl	displaylcd_sendlcd2d
 	mov	r0, #0x53
 	bl	displaylcd_sendlcd2c
-	mov	r0, r3
+	ldr	r0, [sp,#0x0c]
 	bl	displaylcd_sendlcd2d
 	mov	r0, #0x20
 	bl	displaylcd_sendlcd2c
@@ -54,7 +67,7 @@ displaylcd:
 	bl	displaylcd_sendlcd2d
 	mov	r0, #0x21
 	bl	displaylcd_sendlcd2c
-	mov	r0, r2
+	ldr	r0, [sp,#0x08]
 	bl	displaylcd_sendlcd2d
 	mov	r0, #0x22
 	bl	displaylcd_sendlcd2c
@@ -68,33 +81,33 @@ displaylcd_othertypes:
 	bl	displaylcd_sendlcd2d
 	mov	r0, #0x2b
 	bl	displaylcd_sendlcdc
-	mov	r0, r2
+	ldr	r0, [sp,#0x08]
 	bl	displaylcd_sendlcd2d
-	mov	r0, r3
+	ldr	r0, [sp,#0x0c]
 	bl	displaylcd_sendlcd2d
 	mov	r0, #0x2c
 	bl	displaylcd_sendlcdc
 displaylcd_blit:
-	ldmia	sp, {r0,r1}
+	ldmia	sp, {r0-r3}
 	sub	r1, r0
 	add	r1, r1, #1
 	sub	r3, r2
 	add	r3, r3, #1
 	mul	r2, r1, r3
-	ldr	r1, [sp,#0x10]
+	ldr	r1, [sp,#0x18]
 	cmp	r1, #0x40000000
 	bne	displaylcd_dma
 displaylcd_pixel:
-	ldr	r0, [sp,#0x14]
+	ldr	r0, [sp,#0x1c]
 	bl	displaylcd_sendlcd2d
 	subs	r2, r2, #1
 	bne	displaylcd_pixel
-	ldmfd	sp!, {r0,r1,r4,pc}
+	ldmfd	sp!, {r0-r4,pc}
 displaylcd_dma:
 	mov	r4, #0x38000000
-	add	r4, r4, #0x400000
+	orr	r4, r4, #0x400000
 	mov	r0, #0x20000000
-	orr	r0, r0, #0x180000
+	orr	r0, r0, #0x190000
 	str	r0, [r4,#0x104]
 	str	r1, [r4,#0x100]
 	mov	r0, r2,lsr#1
@@ -103,7 +116,7 @@ displaylcd_dma:
 	bl	clean_dcache
 	mov	r0, #4
 	str	r0, [r4,#0x114]
-	ldmfd	sp!, {r0,r1,r4,pc}
+	ldmfd	sp!, {r0-r4,pc}
 
 displaylcd_sendlcd2c:
 	ldr	r4, [r12,#0x1c]
@@ -155,11 +168,53 @@ displaylcd_detectlcd:
 .global displaylcd_sync
 .type displaylcd_sync, %function
 displaylcd_sync:
-	mov	r1, #0x38000000
-	add	r1, r1, #0x400000
+	str	lr, [sp,#-4]!
 displaylcd_sync_wait:
+	mov	r1, #0x38000000
+	orr	r1, r1, #0x400000
 	ldr	r0, [r1,#0x184]
-	tst	r0, #0x40000
-	bne	displaylcd_sync_wait
-	mov	pc, lr
+	tst	r0, #0x70000
+	ldreq	pc, [sp], #4
+	adr	lr, displaylcd_sync_wait
+	b	context_switch
 .size displaylcd_sync, .-displaylcd_sync
+
+.section .icode.displaylcd_busy, "ax", %progbits
+.align 2
+.global displaylcd_busy
+.type displaylcd_busy, %function
+displaylcd_busy:
+	mov	r1, #0x38000000
+	orr	r1, r1, #0x400000
+	ldr	r0, [r1,#0x184]
+	and	r0, r0, #0x70000
+	mov	pc, lr
+.size displaylcd_busy, .-displaylcd_busy
+
+.section .icode.displaylcd_safe, "ax", %progbits
+.align 2
+.global displaylcd_safe
+.type displaylcd_safe, %function
+displaylcd_safe:
+	mov	r1, #0x38000000
+	orr	r1, r1, #0x400000
+	ldr	r0, [r1,#0x184]
+	tst	r0, #0x70000
+	moveq	r0, #1
+	movne	r0, #0
+	mov	pc, lr
+.size displaylcd_safe, .-displaylcd_safe
+
+.section .icode.INT_DMA8, "ax", %progbits
+.align 2
+.global INT_DMA8
+.type INT_DMA8, %function
+INT_DMA8:
+	str	lr, [sp,#-4]!
+	mov	r1, #0x38000000
+	orr	r1, r1, #0x400000
+	mov	r0, #7
+	str	r0, [r1,#0x114]
+	bl	lcdconsole_callback
+	ldr	pc, [sp], #4
+.size INT_DMA8, .-INT_DMA8

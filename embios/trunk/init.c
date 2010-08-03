@@ -24,14 +24,25 @@
 #include "global.h"
 #include "thread.h"
 #include "console.h"
+#include "lcd.h"
 #include "lcdconsole.h"
+#include "interrupt.h"
+#include "i2c.h"
+#include "usb/usb.h"
+
+static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION "\n\nInitializing USB...";
+static const char donestring[] INITCONST_ATTR =  " done\n";
 
 void init() INITCODE_ATTR;
 void init()
 {
     scheduler_init();
     console_init();
+    lcd_init();
     lcdconsole_init();
-    lcdconsole_puts("emBIOS v" VERSION "\n\n", 0, -1);
-    lcdconsole_update();
+    interrupt_init();
+    i2c_init();
+    cputs(1, welcomestring);
+    usb_init();
+    cputs(1, donestring);
 }

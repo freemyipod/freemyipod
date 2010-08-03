@@ -21,26 +21,24 @@
 //
 
 
-#ifndef __LCD_H__
-#define __LCD_H__
+#ifndef __USBDRV_H__
+#define __USBDRV_H__
 
 
 #include "global.h"
 
 
-#define LCD_WIDTH 176
-#define LCD_HEIGHT 132
-#define LCD_FORMAT rgb565
-#define LCD_BYTESPERPIXEL 2
-#define LCD_FRAMEBUFSIZE (LCD_WIDTH * LCD_HEIGHT * LCD_BYTESPERPIXEL)
-
-
-void lcd_init();
-void displaylcd(unsigned int startx, unsigned int endx,
-                unsigned int starty, unsigned int endy, void* data, int color);
-void displaylcd_sync();
-bool displaylcd_busy();
-bool displaylcd_safe();
+int usb_drv_port_speed(void);
+int usb_drv_request_endpoint(int type, int dir);
+void usb_drv_release_endpoint(int ep);
+void usb_drv_set_address(int address);
+int usb_drv_send(int endpoint, const void *ptr, int length);
+int usb_drv_send_nonblocking(int endpoint, const void *ptr, int length);
+int usb_drv_recv(int endpoint, void* ptr, int length);
+void usb_drv_cancel_all_transfers(void);
+bool usb_drv_stalled(int endpoint, bool in);
+void usb_drv_stall(int endpoint, bool stall, bool in);
+void usb_drv_init(void);
 
 
 #endif

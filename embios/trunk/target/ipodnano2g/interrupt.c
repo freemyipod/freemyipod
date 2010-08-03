@@ -33,12 +33,20 @@ default_interrupt(EXT1);
 default_interrupt(EXT2);
 default_interrupt(EINT_VBUS);
 default_interrupt(EINTG);
-default_interrupt(INT_TIMERA);
 default_interrupt(INT_WDT);
+default_interrupt(INT_TIMERA);
 default_interrupt(INT_TIMERB);
 default_interrupt(INT_TIMERC);
 default_interrupt(INT_TIMERD);
-default_interrupt(INT_DMA);
+default_interrupt(INT_DMA0);
+default_interrupt(INT_DMA1);
+default_interrupt(INT_DMA2);
+default_interrupt(INT_DMA3);
+default_interrupt(INT_DMA4);
+default_interrupt(INT_DMA5);
+default_interrupt(INT_DMA6);
+default_interrupt(INT_DMA7);
+default_interrupt(INT_DMA8);
 default_interrupt(INT_ALARM_RTC);
 default_interrupt(INT_PRI_RTC);
 default_interrupt(RESERVED1);
@@ -70,15 +78,42 @@ void unhandled_irq(void)
     panicf(PANIC_FATAL, "Unhandled IRQ %d!", INTOFFSET);
 }
 
+static void (* const timervector[])(void) IDATA_ATTR =
+{
+    INT_TIMERA,INT_TIMERB,INT_TIMERC,INT_TIMERD
+};
+
+void INT_TIMER(void) ICODE_ATTR;
 void INT_TIMER()
 {
-    if (TACON & 0x00038000) INT_TIMERA();
-    if (TBCON & 0x00038000) INT_TIMERB();
-    if (TCCON & 0x00038000) INT_TIMERC();
-    if (TDCON & 0x00038000) INT_TIMERD();
+    if (TACON & 0x00038000) timervector[0]();
+    if (TBCON & 0x00038000) timervector[1]();
+    if (TCCON & 0x00038000) timervector[2]();
+    if (TDCON & 0x00038000) timervector[3]();
 }
 
-static void (* const irqvector[])(void) =
+static void (* const dmavector[])(void) IDATA_ATTR =
+{
+    INT_DMA0,INT_DMA1,INT_DMA2,INT_DMA3,INT_DMA4,INT_DMA5,INT_DMA6,INT_DMA7,INT_DMA8
+};
+
+void INT_DMA(void) ICODE_ATTR;
+void INT_DMA()
+{
+    uint32_t dmaallst = DMAALLST;
+    uint32_t dmaallst2 = DMAALLST2;
+    if (dmaallst & (DMACON0 >> 16) & 3) dmavector[0]();
+    if (dmaallst & (DMACON1 >> 12) & 0x30) dmavector[1]();
+    if (dmaallst & (DMACON2 >> 8) & 0x300) dmavector[2]();
+    if (dmaallst & (DMACON3 >> 4) & 0x3000) dmavector[3]();
+    if (dmaallst2 & (DMACON4 >> 16) & 3) dmavector[4]();
+    if (dmaallst2 & (DMACON5 >> 12) & 0x30) dmavector[5]();
+    if (dmaallst2 & (DMACON6 >> 8) & 0x300) dmavector[6]();
+    if (dmaallst2 & (DMACON7 >> 4) & 0x3000) dmavector[7]();
+    if (dmaallst2 & DMACON8 & 0x30000) dmavector[8]();
+}
+
+static void (* const irqvector[])(void) IDATA_ATTR =
 {
     EXT0,EXT1,EXT2,EINT_VBUS,EINTG,INT_TIMER,INT_WDT,INT_UNK1,
     INT_UNK2,INT_UNK3,INT_DMA,INT_ALARM_RTC,INT_PRI_RTC,RESERVED1,INT_UART,INT_USB_HOST,
@@ -92,4 +127,9 @@ void irqhandler(void)
     irqvector[irq_no]();
     SRCPND = (1 << irq_no);
     INTPND = INTPND;
+}
+
+void interrupt_init(void)
+{
+    INTMSK = INTMSK_TIMER | INTMSK_DMA;
 }

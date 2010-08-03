@@ -96,6 +96,7 @@ _start:
 	msr	cpsr_c, #0x13
 	ldr	sp, =_initstackend
 	bl	init
+	bl	context_switch
 	mov	r0, #0
 idleloop:
 	mcr	p15, 0, r0,c7,c0,4
@@ -120,6 +121,8 @@ reset:
 	str	r1, [r2,#4]
 	str	r0, [r2]
 hang:
+	msr	cpsr_c, #0xd3
+	mcr	p15, 0, r0,c7,c0,4
 	b	hang
 .size reset, .-reset
 .size hang, .-hang
@@ -188,3 +191,28 @@ fiq_text:
 
 syscall_text:
 	.ascii	"Unhandled syscall!\0"
+
+
+.section .icode.usec_timer, "ax", %progbits
+.align 2
+.global read_5usec_timer
+.type read_5usec_timer, %function
+read_5usec_timer:
+	ldr	r0, val_3c700000
+	ldr	r1, [r0,#0x80]
+	ldr	r0, [r0,#0x84]
+	bx	lr
+.size read_5usec_timer, .-read_5usec_timer
+
+.global read_usec_timer
+.type read_usec_timer, %function
+read_usec_timer:
+	ldr	r0, val_3c700000
+	ldr	r1, [r0,#0x80]
+	ldr	r0, [r0,#0x84]
+	add	r0, r0, r0,lsl#2
+	bx	lr
+.size read_usec_timer, .-read_usec_timer
+
+val_3c700000:
+	.word	0x3c700000

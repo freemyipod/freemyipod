@@ -380,8 +380,8 @@ uint32_t nand_init()
     uint32_t i, j;
     PWRCONEXT &= ~0x40;
     PWRCON &= ~0x100010;
-    i2csendbyte(0xE6, 0x35, 0x15);
-    i2csendbyte(0xE6, 0x36, 0x01);
+    i2c_sendbyte(0, 0xE6, 0x35, 0x15);
+    i2c_sendbyte(0, 0xE6, 0x36, 0x01);
     PCON2 = 0x33333333;
     PDAT2 = 0;
     PCON3 = 0x11113333;

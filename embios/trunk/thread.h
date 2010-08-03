@@ -55,7 +55,9 @@ enum thread_state
     THREAD_READY,
     THREAD_RUNNING,
     THREAD_BLOCKED,
-    THREAD_SUSPENDED
+    THREAD_SUSPENDED,
+    THREAD_DEFUNCT,
+    THREAD_DEFUNCT_ACK
 };
 
 enum thread_block
@@ -63,7 +65,14 @@ enum thread_block
     THREAD_NOT_BLOCKED = 0,
     THREAD_BLOCK_SLEEP,
     THREAD_BLOCK_MUTEX,
-    THREAD_BLOCK_WAKEUP
+    THREAD_BLOCK_WAKEUP,
+    THREAD_DEFUNCT_STKOV
+};
+
+enum thread_type
+{
+    USER_THREAD = 0,
+    SYSTEM_THREAD
 };
 
 struct scheduler_thread
@@ -81,6 +90,7 @@ struct scheduler_thread
     uint32_t* stack;
     enum thread_state state;
     enum thread_block block_type;
+    enum thread_type type;
     uint8_t priority;
     uint8_t cpuload;
 };
@@ -102,7 +112,7 @@ struct wakeup
 void scheduler_init() INITCODE_ATTR;
 void scheduler_switch(int thread) ICODE_ATTR;
 int thread_create(const char* name, const void* code, void* stack,
-                  int stacksize, int priority, bool run);
+                  int stacksize, enum thread_type type, int priority, bool run);
 int thread_suspend(int thread);
 int thread_resume(int thread);
 int thread_terminate(int thread);

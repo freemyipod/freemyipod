@@ -26,13 +26,17 @@
 .global context_switch
 .type context_switch, %function
 context_switch:
+	mrs	r1, cpsr
+	orr	r0, r1, #0xc0
+	msr	cpsr_c, r0
 	ldr	r0, =current_thread
 	ldr	r0, [r0]
 	stmia	r0!, {r0-r14}
 	str	lr, [r0], #4
-	mrs	r1, cpsr
 	str	r1, [r0]
+	msr	cpsr_c, #0xd2
 	adr	lr, resume_thread
+	mov	r0, #-1
 	b	scheduler_switch
 .size context_switch, .-context_switch
 
@@ -59,17 +63,16 @@ irq_handler:
 .global resume_thread
 .type resume_thread, %function
 resume_thread:
-	ldr	r0, =current_thread
-	ldr	r0, [r0]
-	ldr	r1, [r0,#0x40]
-	orr	r2, r1, #0xc0
-	msr	cpsr_c, r2
-	ldr	sp, [r0,#0x34]
-	ldr	lr, [r0,#0x38]
-	msr	cpsr_c, #0xd2
+	ldr	lr, =current_thread
+	ldr	lr, [lr]
+	mov	r0, lr
+	ldr	r1, [lr,#0x40]
+	ldr	lr, [lr,#0x3c]
 	msr	spsr_all, r1
-	ldr	lr, [r0,#0x3c]
-	ldmia	r0, {r0-r12}
+	orr	r1, r1, #0xc0
+	msr	cpsr_c, r1
+	ldmia	r0, {r0-r14}
+	msr	cpsr_c, #0xd2
 	movs	pc, lr
 .size irq_handler, .-irq_handler
 .size resume_thread, .-resume_thread
@@ -78,7 +81,8 @@ resume_thread:
 .type enter_critical_section, %function
 enter_critical_section:
 	mrs	r0, cpsr
-	msr	cpsr_c, #0xd3
+	orr	r1, r0, #0xc0
+	msr	cpsr_c, r1
 	mov	pc, lr
 .size enter_critical_section, .-enter_critical_section
 
