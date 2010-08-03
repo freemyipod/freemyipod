@@ -25,6 +25,10 @@
 #include <string.h>
 #include <limits.h>
 
+#ifndef _CONST
+#define _CONST const
+#endif
+
 size_t strlen(_CONST char *str)
 {
   _CONST char *start = str;
