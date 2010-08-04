@@ -1,5 +1,4 @@
 NAME := embios
-TARGETS := ipodnano2g ipodnano4g
 
 CROSS   := arm-none-eabi-
 CC      := $(CROSS)gcc
@@ -11,10 +10,13 @@ UCLPACK := ucl2e10singleblk
 CFLAGS  ?= -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections
 LDFLAGS ?= "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
-preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
+preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
+preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
+
+TARGETS := $(call preprocess,TARGETS,-I.)
 
 define TARGET_template
-SRC_$(1) := $$(call preprocess,SOURCES,-DTARGET_$(1) -Itarget/$(1) -I.)
+SRC_$(1) := $$(call preprocesspaths,SOURCES,-DTARGET_$(1) -Itarget/$(1) -I.)
 OBJ_$(1) := $$(SRC_$(1):%.c=build/$(1)/%.o)
 OBJ_$(1) := $$(OBJ_$(1):%.S=build/$(1)/%.o)
 
