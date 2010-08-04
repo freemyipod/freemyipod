@@ -21,8 +21,8 @@
 //
 
 
-#ifndef __PANIC_H__
-#define __PANIC_H__
+#ifndef __SNPRINTF_H__
+#define __SNPRINTF_H__
 
 
 #define __need___va_list
