@@ -32,6 +32,8 @@
 #include "i2c.h"
 #include "strlen.h"
 #include "contextswitch.h"
+#include "pmu.h"
+#include "shutdown.h"
 
 
 static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
@@ -45,17 +47,23 @@ enum dbgaction_t
     DBGACTION_IDLE = 0,
     DBGACTION_I2CSEND,
     DBGACTION_I2CRECV,
-    DBGACTION_POWEROFF
+    DBGACTION_RESET,
+    DBGACTION_POWEROFF,
+    DBGACTION_CWRITE,
+    DBGACTION_CREAD,
+    DBGACTION_CFLUSH
 };
 
 static uint32_t dbgstack[0x100] STACK_ATTR;
 struct wakeup dbgwakeup IBSS_ATTR;
 extern struct scheduler_thread* scheduler_threads;
 static enum dbgaction_t dbgaction IBSS_ATTR;
-static int dbgi2cbus IBSS_ATTR;
-static int dbgi2cslave IBSS_ATTR;
-static int dbgi2caddr IBSS_ATTR;
-static int dbgi2clen IBSS_ATTR;
+static int dbgi2cbus;
+static int dbgi2cslave;
+static int dbgactionaddr;
+static int dbgactionlength;
+static int dbgactionconsoles;
+static int dbgactiontype;
 static char dbgconsendbuf[4096];
 static char dbgconrecvbuf[1024];
 static int dbgconsendreadidx IBSS_ATTR;
@@ -281,12 +289,12 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
     }
 }
 
-bool set_dbgaction(enum dbgaction_t action)
+bool set_dbgaction(enum dbgaction_t action, int addsize)
 {
     if (dbgaction != DBGACTION_IDLE)
     {
         dbgsendbuf[0] = 3;
-        usb_drv_send_nonblocking(dbgendpoints[1], dbgsendbuf, 16);
+        usb_drv_send_nonblocking(dbgendpoints[1], dbgsendbuf, 16 + addsize);
         return true;
     }
     dbgaction = action;
@@ -325,10 +333,19 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             }
             break;
         case 2:  // RESET
-            reset();
+            if (dbgrecvbuf[1])
+            {
+                if (set_dbgaction(DBGACTION_RESET, 0)) break;
+                dbgsendbuf[0] = 1;
+                size = 16;
+            }
+            else reset();
             break;
         case 3:  // POWER OFF
-            set_dbgaction(DBGACTION_POWEROFF);
+            if (set_dbgaction(DBGACTION_POWEROFF, 0)) break;
+            dbgactiontype = dbgrecvbuf[1];
+            dbgsendbuf[0] = 1;
+            size = 16;
             break;
         case 4:  // READ MEMORY
             dbgsendbuf[0] = 1;
@@ -351,19 +368,19 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             usb_drv_recv(dbgendpoints[2], (void*)dbgrecvbuf[1], dbgrecvbuf[2]);
             break;
         case 8:  // READ I2C
-            if (set_dbgaction(DBGACTION_I2CRECV)) break;
+            if (set_dbgaction(DBGACTION_I2CRECV, dbgrecvbuf[1] >> 24)) break;
             dbgi2cbus = dbgrecvbuf[1] & 0xff;
             dbgi2cslave = (dbgrecvbuf[1] >> 8) & 0xff;
-            dbgi2caddr = (dbgrecvbuf[1] >> 16) & 0xff;
-            dbgi2clen = dbgrecvbuf[1] >> 24;
+            dbgactionaddr = (dbgrecvbuf[1] >> 16) & 0xff;
+            dbgactionlength = dbgrecvbuf[1] >> 24;
             break;
         case 9:  // WRITE I2C
-            if (set_dbgaction(DBGACTION_I2CSEND)) break;
+            if (set_dbgaction(DBGACTION_I2CSEND, 0)) break;
             dbgi2cbus = dbgrecvbuf[1] & 0xff;
             dbgi2cslave = (dbgrecvbuf[1] >> 8) & 0xff;
-            dbgi2caddr = (dbgrecvbuf[1] >> 16) & 0xff;
-            dbgi2clen = dbgrecvbuf[1] >> 24;
-            memcpy(dbgasyncsendbuf, &dbgsendbuf[4], dbgi2clen);
+            dbgactionaddr = (dbgrecvbuf[1] >> 16) & 0xff;
+            dbgactionlength = dbgrecvbuf[1] >> 24;
+            memcpy(dbgasyncsendbuf, &dbgsendbuf[4], dbgactionlength);
             break;
         case 10:  // READ CONSOLE
             dbgconsoleattached = true;
@@ -419,6 +436,21 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgsendbuf[3] = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
             size = 16;
             break;
+        case 12:  // CWRITE
+            if (set_dbgaction(DBGACTION_CWRITE, 0)) break;
+            dbgactionconsoles = dbgrecvbuf[1];
+            dbgactionlength = dbgrecvbuf[2];
+            memcpy(dbgasyncsendbuf, &dbgrecvbuf[4], dbgactionlength);
+            break;
+        case 13:  // CREAD
+            if (set_dbgaction(DBGACTION_CREAD, dbgrecvbuf[2])) break;
+            dbgactionconsoles = dbgrecvbuf[1];
+            dbgactionlength = dbgrecvbuf[2];
+            break;
+        case 14:  // CFLUSH
+            if (set_dbgaction(DBGACTION_CFLUSH, 0)) break;
+            dbgactionconsoles = dbgrecvbuf[1];
+            break;
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -461,17 +493,39 @@ void dbgthread(void)
             switch (dbgaction)
             {
             case DBGACTION_I2CSEND:
-                i2c_send(dbgi2cbus, dbgi2cslave, dbgi2caddr, (uint8_t*)dbgasyncsendbuf, dbgi2clen);
+                i2c_send(dbgi2cbus, dbgi2cslave, dbgactionaddr,
+                         (uint8_t*)dbgasyncsendbuf, dbgactionlength);
                 dbgasyncsendbuf[0] = 1;
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_I2CRECV:
-                i2c_recv(dbgi2cbus, dbgi2cslave, dbgi2caddr,
-                         (uint8_t*)(&dbgasyncsendbuf[4]), dbgi2clen);
+                i2c_recv(dbgi2cbus, dbgi2cslave, dbgactionaddr,
+                         (uint8_t*)(&dbgasyncsendbuf[4]), dbgactionlength);
                 dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16 + dbgi2clen);
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16 + dbgactionlength);
                 break;
             case DBGACTION_POWEROFF:
+                if (dbgactiontype) shutdown();
+                poweroff();
+                break;
+            case DBGACTION_RESET:
+                shutdown();
+                reset();
+                break;
+            case DBGACTION_CWRITE:
+                cwrite(dbgactionconsoles, (const char*)dbgasyncsendbuf, dbgactionlength);
+                dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_CREAD:
+                cread(dbgactionconsoles, (char*)&dbgasyncsendbuf[4], dbgactionlength, 0);
+                dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_CFLUSH:
+                cflush(dbgactionconsoles);
+                dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             }
             dbgaction = DBGACTION_IDLE;

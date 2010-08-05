@@ -22,27 +22,20 @@
 
 
 #include "global.h"
-#include "thread.h"
-#include "console.h"
-#include "lcd.h"
-#include "lcdconsole.h"
-#include "interrupt.h"
 #include "i2c.h"
 #include "pmu.h"
-#include "usb/usb.h"
+#include "thread.h"
 
-static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION "\n\n";
 
-void init() INITCODE_ATTR;
-void init()
+static struct mutex pmumutex;
+
+
+void pmu_init()
 {
-    scheduler_init();
-    console_init();
-    lcd_init();
-    lcdconsole_init();
-    interrupt_init();
-    cputs(1, welcomestring);
-    i2c_init();
-    pmu_init();
-    usb_init();
+    mutex_init(&pmumutex);
+}
+
+void poweroff()
+{
+    i2c_sendbyte(0, 0xe6, 0xc, 1);
 }

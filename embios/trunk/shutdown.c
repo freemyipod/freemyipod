@@ -22,27 +22,8 @@
 
 
 #include "global.h"
-#include "thread.h"
-#include "console.h"
-#include "lcd.h"
-#include "lcdconsole.h"
-#include "interrupt.h"
-#include "i2c.h"
-#include "pmu.h"
-#include "usb/usb.h"
 
-static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION "\n\n";
 
-void init() INITCODE_ATTR;
-void init()
+void shutdown()
 {
-    scheduler_init();
-    console_init();
-    lcd_init();
-    lcdconsole_init();
-    interrupt_init();
-    cputs(1, welcomestring);
-    i2c_init();
-    pmu_init();
-    usb_init();
 }
