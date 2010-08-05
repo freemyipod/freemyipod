@@ -29,7 +29,7 @@
 #include <stddef.h>
 #endif
 
-#define VERSION "0.0.1pre"
+#include "build/version.h"
 
 #define ICODE_ATTR __attribute__((section(".icode")))
 #define ICONST_ATTR __attribute__((section(".irodata")))
@@ -47,6 +47,14 @@
 
 #include "config.h"
 #include "target.h"
+
+#ifndef SCHEDULER_TICK
+#define SCHEDULER_TICK 1048576
+#endif
+
+#ifndef SYSTEM_TICK
+#define SYSTEM_TICK 10000
+#endif
 
 #ifndef MAX_THREADS
 #define MAX_THREADS 32

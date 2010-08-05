@@ -304,12 +304,25 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
     {
         switch (dbgrecvbuf[0])
         {
-        case 1:  // GET VERSION
+        case 1:  // GET INFO
             dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = 0x01010000;
-            dbgsendbuf[2] = PLATFORM_ID;
-            dbgsendbuf[3] = 0x02000200;
             size = 16;
+            switch (dbgrecvbuf[1])
+            {
+            case 0:  // GET VERSION INFO
+                dbgsendbuf[1] = VERSION_MAJOR | (VERSION_MINOR << 8)
+                              | (VERSION_PATCH << 16) | (1 << 24);
+                dbgsendbuf[2] = PLATFORM_ID;
+                dbgsendbuf[3] = VERSION_SVN_INT;
+                break;
+            case 1:  // GET PACKET SIZE INFO
+                dbgsendbuf[1] = 0x02000200;
+                dbgsendbuf[2] = usb_drv_get_max_out_size();
+                dbgsendbuf[3] = usb_drv_get_max_in_size();
+                break;
+            default:
+                dbgsendbuf[0] = 2;
+            }
             break;
         case 2:  // RESET
             reset();

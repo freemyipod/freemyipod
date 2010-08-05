@@ -13,6 +13,9 @@ LDFLAGS ?= "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
 preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
 
+REVISION := $(shell svnversion .)
+REVISIONINT := $(shell echo $(REVISION) | sed -e "s/[^0-9].*$$//")
+
 TARGETS := $(call preprocess,TARGETS,-I.)
 
 define TARGET_template
@@ -33,7 +36,7 @@ build/$(1)/$(NAME).bin: build/$(1)/$(NAME).elf
 build/$(1)/$(NAME).elf: target/$(1)/ls.x build/$(1)/target/$(1)/crt0.o $$(OBJ_$(1))
 	$(LD) $(LDFLAGS) -o $$@ -T target/$(1)/ls.x $$(OBJ_$(1))
 
-build/$(1)/%.o: %.c
+build/$(1)/%.o: %.c build/version.h
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $$(subst /,\,$$(dir $$@)) md $$(subst /,\,$$(dir $$@))
 else
@@ -45,7 +48,7 @@ endif
 	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
 	@rm -f $$@.dep.tmp
 
-build/$(1)/%.o: %.S
+build/$(1)/%.o: %.S build/version.h
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $$(subst /,\,$$(dir $$@)) md $$(subst /,\,$$(dir $$@))
 else
@@ -61,6 +64,12 @@ endef
 all: $(TARGETS)
 
 $(foreach target,$(TARGETS),$(eval $(call TARGET_template,$(target))))
+
+build/version.h: version.h .svn/entries build
+	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
+
+build:
+	@mkdir build
 
 clean:
 	rm -rf build

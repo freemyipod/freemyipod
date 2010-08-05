@@ -21,26 +21,16 @@
 //
 
 
-#ifndef __USBDRV_H__
-#define __USBDRV_H__
+#ifndef __VERSION_H__
+#define __VERSIONs_H__
 
 
-#include "global.h"
-
-
-int usb_drv_port_speed(void);
-int usb_drv_request_endpoint(int type, int dir);
-void usb_drv_release_endpoint(int ep);
-void usb_drv_set_address(int address);
-int usb_drv_send(int endpoint, const void *ptr, int length);
-int usb_drv_send_nonblocking(int endpoint, const void *ptr, int length);
-int usb_drv_recv(int endpoint, void* ptr, int length);
-void usb_drv_cancel_all_transfers(void);
-bool usb_drv_stalled(int endpoint, bool in);
-void usb_drv_stall(int endpoint, bool stall, bool in);
-void usb_drv_init(void);
-int usb_drv_get_max_out_size();
-int usb_drv_get_max_in_size();
+#define VERSION "0.0.1pre"
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 0
+#define VERSION_PATCH 1
+#define VERSION_SVN "$REVISION$"
+#define VERSION_SVN_INT $REVISIONINT$
 
 
 #endif

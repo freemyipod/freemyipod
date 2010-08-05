@@ -29,14 +29,6 @@
 #include "contextswitch.h"
 
 
-#ifndef SCHEDULER_TICK
-#define SCHEDULER_TICK 1048576
-#endif
-
-#ifndef SYSTEM_TICK
-#define SYSTEM_TICK 10000
-#endif
-
 #define TIMEOUT_NONE 0
 #define TIMEOUT_BLOCK -1
 

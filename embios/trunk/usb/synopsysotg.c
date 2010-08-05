@@ -366,3 +366,13 @@ void usb_drv_init(void)
     /* reset the beast */
     usb_reset();
 }
+
+int usb_drv_get_max_out_size()
+{
+    return usb_drv_port_speed() ? 262144 : 32768;
+}
+
+int usb_drv_get_max_in_size()
+{
+    return usb_drv_port_speed() ? 262144 : 32768;
+}
