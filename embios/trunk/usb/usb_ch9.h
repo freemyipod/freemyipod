@@ -151,6 +151,7 @@ struct usb_ctrlrequest {
         uint16_t wValue;
         uint16_t wIndex;
         uint16_t wLength;
+        uint8_t safety[56];
 } __attribute__ ((packed));
 
 /*-------------------------------------------------------------------------*/
