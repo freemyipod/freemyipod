@@ -451,6 +451,13 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             if (set_dbgaction(DBGACTION_CFLUSH, 0)) break;
             dbgactionconsoles = dbgrecvbuf[1];
             break;
+        case 15:  // GET PROCESS INFO
+            dbgsendbuf[0] = 1;
+            dbgsendbuf[1] = SCHEDULER_THREAD_INFO_VERSION;
+            dbgsendbuf[2] = MAX_THREADS * sizeof(struct scheduler_thread);
+            memcpy(&dbgsendbuf[4], scheduler_threads, dbgrecvbuf[1]);
+            size = dbgrecvbuf[1] + 16;
+            break;
         default:
             dbgsendbuf[0] = 2;
             size = 16;

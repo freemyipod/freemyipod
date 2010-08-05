@@ -67,6 +67,9 @@ enum thread_type
     SYSTEM_THREAD
 };
 
+
+#define SCHEDULER_THREAD_INFO_VERSION 1
+
 struct scheduler_thread
 {
     uint32_t regs[16];
