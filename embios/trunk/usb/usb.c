@@ -30,6 +30,8 @@
 #include "console.h"
 #include "util.h"
 #include "i2c.h"
+#include "strlen.h"
+#include "contextswitch.h"
 
 
 static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
@@ -54,6 +56,17 @@ static int dbgi2cbus IBSS_ATTR;
 static int dbgi2cslave IBSS_ATTR;
 static int dbgi2caddr IBSS_ATTR;
 static int dbgi2clen IBSS_ATTR;
+static char dbgconsendbuf[4096];
+static char dbgconrecvbuf[1024];
+static int dbgconsendreadidx IBSS_ATTR;
+static int dbgconsendwriteidx IBSS_ATTR;
+static int dbgconrecvreadidx IBSS_ATTR;
+static int dbgconrecvwriteidx IBSS_ATTR;
+static struct wakeup dbgconsendwakeup IBSS_ATTR;
+static struct wakeup dbgconrecvwakeup IBSS_ATTR;
+static bool dbgconsoleattached IBSS_ATTR;
+
+static const char dbgconoverflowstr[] = "\n\n[overflowed]\n\n";
 
 
 static struct usb_device_descriptor CACHEALIGN_ATTR device_descriptor =
@@ -295,7 +308,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgsendbuf[0] = 1;
             dbgsendbuf[1] = 0x01010000;
             dbgsendbuf[2] = PLATFORM_ID;
-            dbgsendbuf[3] = usb_drv_port_speed() ? 0x02000200 : 0x00400040;
+            dbgsendbuf[3] = 0x02000200;
             size = 16;
             break;
         case 2:  // RESET
@@ -339,6 +352,34 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgi2clen = dbgrecvbuf[1] >> 24;
             memcpy(dbgasyncsendbuf, &dbgsendbuf[4], dbgi2clen);
             break;
+        case 10:  // READ CONSOLE
+            dbgconsoleattached = true;
+            wakeup_signal(&dbgconsendwakeup);
+            int bytes = dbgconsendwriteidx - dbgconsendreadidx;
+            if (bytes >= sizeof(dbgconsendbuf)) bytes -= sizeof(dbgconsendbuf);
+            if (bytes)
+            {
+                if (bytes < 0) bytes += sizeof(dbgconsendbuf);
+                if (bytes > dbgrecvbuf[1]) bytes = dbgrecvbuf[1];
+                int readbytes = bytes;
+                char* outptr = (char*)&dbgsendbuf[4];
+                if (dbgconsendreadidx + bytes >= sizeof(dbgconsendbuf))
+                {
+                    readbytes = sizeof(dbgconsendbuf) - dbgconsendreadidx;
+                    memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
+                    dbgconsendreadidx = 0;
+                    outptr = &outptr[readbytes];
+                    readbytes = bytes - readbytes;
+                }
+                if (readbytes) memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
+                dbgconsendreadidx += readbytes;
+            }
+            dbgsendbuf[0] = 1;
+            dbgsendbuf[1] = bytes;
+            dbgsendbuf[2] = sizeof(dbgconsendbuf);
+            dbgsendbuf[3] = dbgconsendwriteidx - dbgconsendreadidx;
+            size = 16 + dbgrecvbuf[1];
+            break;
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -364,6 +405,7 @@ void usb_handle_bus_reset(void)
 void dbgthread(void)
 {
     int i;
+    int t;
     while (1)
     {
         wakeup_wait(&dbgwakeup, TIMEOUT_BLOCK);
@@ -402,6 +444,84 @@ void usb_init(void)
 {
     dbgaction = DBGACTION_IDLE;
     wakeup_init(&dbgwakeup);
+    dbgconsendreadidx = 0;
+    dbgconsendwriteidx = 0;
+    dbgconrecvreadidx = 0;
+    dbgconrecvwriteidx = 0;
+    wakeup_init(&dbgconsendwakeup);
+    wakeup_init(&dbgconrecvwakeup);
+    dbgconsoleattached = false;;
     thread_create("Debugger", dbgthread, dbgstack, sizeof(dbgstack), 255, SYSTEM_THREAD, true);
     usb_drv_init();
+}
+
+int dbgconsole_getfree() ICODE_ATTR;
+int dbgconsole_getfree()
+{
+    int free = dbgconsendreadidx - dbgconsendwriteidx - 1;
+    if (free < 0) free += sizeof(dbgconsendbuf);
+    return free;
+}
+
+int dbgconsole_makespace(int length) ICODE_ATTR;
+int dbgconsole_makespace(int length)
+{
+    int free = dbgconsole_getfree();
+    while (!free && dbgconsoleattached)
+    {
+        if (wakeup_wait(&dbgconsendwakeup, 2000000) == THREAD_TIMEOUT)
+            dbgconsoleattached = false;
+        free = dbgconsole_getfree();
+    }
+    if (free) return free > length ? length : free;
+    if (length > sizeof(dbgconsendbuf) - 17) length = sizeof(dbgconsendbuf) - 17;
+    uint32_t mode = enter_critical_section();
+    dbgconsendreadidx += length;
+    if (dbgconsendreadidx >= sizeof(dbgconsendbuf))
+        dbgconsendreadidx -= sizeof(dbgconsendbuf);
+    int offset = 0;
+    int idx = dbgconsendreadidx;
+    if (idx + 16 >= sizeof(dbgconsendbuf))
+    {
+        offset = sizeof(dbgconsendbuf) - dbgconsendreadidx;
+        memcpy(&dbgconsendbuf[dbgconsendreadidx], dbgconoverflowstr, offset);
+        idx = 0;
+    }
+    if (offset != 16) memcpy(&dbgconsendbuf[idx], &dbgconoverflowstr[offset], 16 - offset);
+    leave_critical_section(mode);
+    return length;
+}
+
+void dbgconsole_putc(char string)
+{
+    dbgconsole_makespace(1);
+    dbgconsendbuf[dbgconsendwriteidx++] = string;
+    if (dbgconsendwriteidx >= sizeof(dbgconsendbuf))
+        dbgconsendwriteidx -= sizeof(dbgconsendbuf);
+}
+
+void dbgconsole_write(const char* string, size_t length)
+{
+    while (length)
+    {
+        int space = dbgconsole_makespace(length);
+        if (dbgconsendwriteidx + space >= sizeof(dbgconsendbuf))
+        {
+            int bytes = sizeof(dbgconsendbuf) - dbgconsendwriteidx;
+            memcpy(&dbgconsendbuf[dbgconsendwriteidx], string, bytes);
+            dbgconsendwriteidx = 0;
+            string = &string[bytes];
+            space -= bytes;
+            length -= bytes;
+        }
+        if (space) memcpy(&dbgconsendbuf[dbgconsendwriteidx], string, space);
+        dbgconsendwriteidx += space;
+        string = &string[space];
+        length -= space;
+    }
+}
+
+void dbgconsole_puts(const char* string)
+{
+    dbgconsole_write(string, strlen(string));
 }

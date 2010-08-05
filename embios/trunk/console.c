@@ -24,6 +24,7 @@
 #include "global.h"
 #include "console.h"
 #include "lcdconsole.h"
+#include "usb/dbgconsole.h"
 #include "format.h"
 #include "thread.h"
 #include <stdio.h>
@@ -51,6 +52,7 @@ void cputc_internal(unsigned int consoles, char string) ICODE_ATTR;
 void cputc_internal(unsigned int consoles, char string)
 {
     if (consoles & 1) lcdconsole_putc(string, 0, -1);
+    if (consoles & 2) dbgconsole_putc(string);
 }
 
 static int cprfunc(void* ptr, unsigned char letter)
@@ -103,6 +105,15 @@ void cputs(unsigned int consoles, const char* string)
 {
     mutex_lock(&console_mutex, TIMEOUT_BLOCK);
     if (consoles & 1) lcdconsole_puts(string, 0, -1);
+    if (consoles & 2) dbgconsole_puts(string);
+    mutex_unlock(&console_mutex);
+}
+
+void cwrite(unsigned int consoles, const char* string, size_t length)
+{
+    mutex_lock(&console_mutex, TIMEOUT_BLOCK);
+    if (consoles & 1) lcdconsole_write(string, length, 0, -1);
+    if (consoles & 2) dbgconsole_write(string, length);
     mutex_unlock(&console_mutex);
 }
 

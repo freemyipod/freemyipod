@@ -89,6 +89,11 @@ void lcdconsole_puts_noblit(const char* string, int fgcolor, int bgcolor)
     while (*string) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
 }
 
+void lcdconsole_write_noblit(const char* string, size_t length, int fgcolor, int bgcolor)
+{
+    while (length--) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
+}
+
 void lcdconsole_update()
 {
     uint32_t mode = enter_critical_section();
@@ -111,6 +116,12 @@ void lcdconsole_putc(char string, int fgcolor, int bgcolor)
 void lcdconsole_puts(const char* string, int fgcolor, int bgcolor)
 {
     while (*string) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
+    lcdconsole_update();
+}
+
+void lcdconsole_write(const char* string, size_t length, int fgcolor, int bgcolor)
+{
+    while (length--) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
     lcdconsole_update();
 }
 
