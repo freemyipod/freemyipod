@@ -1,14 +1,14 @@
 NAME := embios
 
-CROSS   := arm-none-eabi-
+CROSS   ?= arm-none-eabi-
 CC      := $(CROSS)gcc
 AS      := $(CROSS)as
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
 
-CFLAGS  ?= -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections
-LDFLAGS ?= "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections
+LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
 preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
@@ -48,7 +48,7 @@ endif
 ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
 else
-	@sed -e "s/.*://" -e "s/\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+	@sed -e 's/.*://' -e 's/\\$$$$//' < $$@.dep.tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$$$/:/' >> $$@.dep
 endif
 	@rm -f $$@.dep.tmp
 
@@ -64,7 +64,7 @@ endif
 ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
 else
-	@sed -e "s/.*://" -e "s/\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+	@sed -e 's/.*://' -e 's/\\$$$$//' < $$@.dep.tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$$$/:/' >> $$@.dep
 endif
 	@rm -f $$@.dep.tmp
 endef
@@ -77,11 +77,11 @@ build/version.h: version.h .svn/entries build
 ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
 else
-	@sed -e "s/\\$$REVISION\\$$/$(REVISION)/" -e "s/\\$$REVISIONINT\\$$/$(REVISIONINT)/" < $< > $@
+	@sed -e 's/\$$REVISION\$$/$(REVISION)/' -e 's/\$$REVISIONINT\$$/$(REVISIONINT)/' < $< > $@
 endif
 
 build:
-	@mkdir build
+	@mkdir $@
 
 clean:
 	rm -rf build
