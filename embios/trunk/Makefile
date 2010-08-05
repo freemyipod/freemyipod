@@ -45,7 +45,11 @@ endif
 	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
 	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
+ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+else
+	@sed -e "s/.*://" -e "s/\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+endif
 	@rm -f $$@.dep.tmp
 
 build/$(1)/%.o: %.S build/version.h
@@ -57,7 +61,11 @@ endif
 	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
 	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
+ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+else
+	@sed -e "s/.*://" -e "s/\\\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+endif
 	@rm -f $$@.dep.tmp
 endef
 
@@ -66,7 +74,11 @@ all: $(TARGETS)
 $(foreach target,$(TARGETS),$(eval $(call TARGET_template,$(target))))
 
 build/version.h: version.h .svn/entries build
+ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
+else
+	@sed -e "s/\\$$REVISION\\$$/$(REVISION)/" -e "s/\\$$REVISIONINT\\$$/$(REVISIONINT)/" < $< > $@
+endif
 
 build:
 	@mkdir build

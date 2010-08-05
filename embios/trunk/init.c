@@ -31,7 +31,7 @@
 #include "pmu.h"
 #include "usb/usb.h"
 
-static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION "\n\n";
+static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSION_SVN "\n\n";
 
 void init() INITCODE_ATTR;
 void init()
