@@ -34,7 +34,7 @@ i2csendbyte:
 i2csend:
 	stmfd	sp!, {r4,lr}
 	mov	r12, #0x3C000000
-	add	r12, r12, #0x00900000
+	add	r12, r12, #0x00600000
 	mov	r4, #0
 	str	r4, [r12,#0x08]
 	str	r0, [r12,#0x0c]
@@ -79,46 +79,46 @@ i2crecvbyte:
 @fallthrough
 
 i2crecv:
-	stmfd	sp!, {r0,r4,lr}
-	mov	r12, #0x3C000000
-	add	r12, r12, #0x00900000
+	stmfd	sp!, {r0,r4,lr}    @ R0 = slave id, R1 = I2C address, R2 = data, R3 = length
+	mov	r12, #0x3C000000       @ R12 = I2C base address
+	add	r12, r12, #0x00600000  @ DIFF!! something needs to be done about the different busses
 	mov	r4, #0
-	str	r4, [r12,#0x08]
-	str	r0, [r12,#0x0c]
+	str	r4, [r12,#0x08]        @ store 0 to the i2c address + 0x8
+	str	r0, [r12,#0x0c]        @ write the slave id to the i2c handler
 	mov	r4, #0xf0
-	str	r4, [r12,#0x04]
+	str	r4, [r12,#0x04]        @ write 0xF0 to the i2c handler (idk why)
 	mov	r4, #0xf3
-	str	r4, [r12]
+	str	r4, [r12]              @ write 0xF3 to the i2c handler (apparently a finished signal)
 	bl	i2cwait
-	str	r1, [r12,#0x0c]
-	str	r4, [r12]
+	str	r1, [r12,#0x0c]        @ write the i2c address to the i2c handler
+	str	r4, [r12]              @ write 0xF3 to the i2c handler (apparently a finished signal)
 	bl	i2cwait
-	ldr	r0, [sp]
-	orr	r0, r0, #1
-	str	r0, [r12,#0x0c]
+	ldr	r0, [sp]               @ DIFF!! why is it stack pointer here?
+	orr	r0, r0, #1             @ find the least significant bit of the slave id
+	str	r0, [r12,#0x0c]        @ write it to the i2c handler
 	mov	r0, #0xb0
-	str	r0, [r12,#0x04]
-	str	r4, [r12]
+	str	r0, [r12,#0x04]        @ write 0xB0 to the i2c handler (idk why)
+	str	r4, [r12]              @ write 0xF3 to the i2c handler (apparently a finished signal)
 	bl	i2cwait
 i2crecv_read:
-	subs	r3, r3, #1
-	moveq	r4, #0x73
+	subs	r3, r3, #1         @ decrement the bytes left
+	moveq	r4, #0x73          @ set R6 to 0x73 if the bytes left is now 0
 	str	r4, [r12]
 	bl	i2cwait
-	ldr	r0, [r12,#0x0c]
+	ldr	r0, [r12,#0x0c]        @ read a byte into R0
 	movs	r2, r2
-	strne	r0, [r2], #1
+	strne	r0, [r2], #1       @ write it to our buffer
 	movs	r3, r3
-	bne	i2crecv_read
+	bne	i2crecv_read           @ repeat if there are still bytes left
 	mov	r1, #0x90
-	str	r1, [r12,#0x04]
+	str	r1, [r12,#0x04]        @ write 0x90 to the i2c handler
 	mov	r1, #0xf3
-	str	r1, [r12]
+	str	r1, [r12]              @ write 0xF3 to the i2c handler (apparently a finished signal)
 i2crecv_wait:
 	ldr	r1, [r12,#0x04]
 	tst	r1, #0x20
-	bne	i2crecv_wait
-	ldmfd	sp!, {r0,r4,pc}
+	bne	i2crecv_wait           @ wait until [R12,#0x04] does not equal 0x20
+	ldmfd	sp!, {r1,r4,pc}
 .size i2crecvbyte, .-i2crecvbyte
 .size i2crecv, .-i2crecv
 

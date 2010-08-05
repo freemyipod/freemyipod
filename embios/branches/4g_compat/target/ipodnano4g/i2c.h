@@ -21,25 +21,17 @@
 //
 
 
-#ifndef __PANIC_H__
-#define __PANIC_H__
+#ifndef __I2C_H__
+#define __I2C_H__
 
 
-#define __need___va_list
-#include <stdarg.h>
-#include "gcc_extensions.h"
 #include "global.h"
 
-#ifdef __GNUC__
-#define __VALIST __gnuc_va_list
-#else
-#define __VALIST char*
-#endif
 
-int vsnprintf (char *buf, size_t size, const char *fmt, __VALIST ap);
-
-int snprintf (char *buf, size_t size, const char *fmt, ...)
-              ATTRIBUTE_PRINTF(3, 4);
+extern void i2csend(uint32_t device, uint32_t address, void* data, uint32_t length);
+extern void i2crecv(uint32_t device, uint32_t address, void* data, uint32_t length);
+extern void i2csendbyte(uint32_t device, uint32_t address, uint32_t data);
+extern uint32_t i2crecvbyte(uint32_t device, uint32_t address);
 
 
 #endif

@@ -49,7 +49,11 @@ void lcdconsole_init()
 
 void lcdconsole_putc(char string, int fgcolor, int bgcolor)
 {
-  if (string == '\r') return;
+  if (string == '\r')
+  {
+    current_col = 0;
+    return;
+  }
   current_col++;
   if (string == '\n')
   {

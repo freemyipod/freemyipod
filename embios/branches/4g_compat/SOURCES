@@ -10,6 +10,8 @@ target/ipodnano2g/i2c.S
 target/ipodnano4g/mmu.c
 target/ipodnano4g/lcd.c
 target/ipodnano4g/storage.c
+target/ipodnano4g/i2c.S
+target/ipodnano4g/accel.c
 #endif
 
 init.c
