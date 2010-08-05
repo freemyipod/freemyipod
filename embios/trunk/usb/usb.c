@@ -33,6 +33,7 @@
 #include "strlen.h"
 #include "contextswitch.h"
 #include "pmu.h"
+#include "mmu.h"
 #include "shutdown.h"
 
 
@@ -75,6 +76,9 @@ static struct wakeup dbgconrecvwakeup IBSS_ATTR;
 static bool dbgconsoleattached IBSS_ATTR;
 
 static const char dbgconoverflowstr[] = "\n\n[overflowed]\n\n";
+
+extern int _initstart;   // These aren't ints at all, but gcc complains about void types being
+extern int _sdramstart;  // used here, and we only need the address, so forget about it...
 
 
 static struct usb_device_descriptor CACHEALIGN_ATTR device_descriptor =
@@ -328,6 +332,10 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
                 dbgsendbuf[2] = usb_drv_get_max_out_size();
                 dbgsendbuf[3] = usb_drv_get_max_in_size();
                 break;
+            case 2:  // GET USER MEMORY INFO
+                dbgsendbuf[1] = (uint32_t)&_initstart;
+                dbgsendbuf[2] = (uint32_t)&_sdramstart;
+                break;
             default:
                 dbgsendbuf[0] = 2;
             }
@@ -463,6 +471,30 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgsendbuf[0] = 1;
             size = 16;
             break;
+        case 17:  // SUSPEND THREAD
+            if (dbgrecvbuf[1]) thread_suspend(dbgrecvbuf[2]);
+            else thread_resume(dbgrecvbuf[2]);
+            dbgsendbuf[0] = 1;
+            size = 16;
+            break;
+        case 18:  // KILL THREAD
+            thread_terminate(dbgrecvbuf[1]);
+            dbgsendbuf[0] = 1;
+            size = 16;
+            break;
+        case 19:  // KILL THREAD
+            dbgsendbuf[0] = 1;
+            dbgsendbuf[1] = thread_create((const char*)dbgsendbuf[1], (const void*)dbgsendbuf[2],
+                                          (char*)dbgsendbuf[3], dbgsendbuf[4], dbgsendbuf[5],
+                                          dbgsendbuf[6], dbgsendbuf[7]);
+            size = 16;
+            break;
+        case 20:  // FLUSH CACHE
+            clean_dcache();
+            invalidate_icache();
+            dbgsendbuf[0] = 1;
+            size = 16;
+            break;
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -496,8 +528,12 @@ void dbgthread(void)
             if (scheduler_threads[i].state == THREAD_DEFUNCT)
             {
                 if (scheduler_threads[i].block_type == THREAD_DEFUNCT_STKOV)
-                    cprintf(1, "\n*PANIC*\nStack overflow! (%s)\n",
-                            scheduler_threads[i].name);
+                {
+                    if (scheduler_threads[i].name)
+                        cprintf(1, "\n*PANIC*\nStack overflow! (%s)\n",
+                                scheduler_threads[i].name);
+                    else cprintf(1, "\n*PANIC*\nStack overflow! (ID %d)\n", i);
+                }
                 scheduler_threads[i].state = THREAD_DEFUNCT_ACK;
             }
         if (dbgaction != DBGACTION_IDLE)

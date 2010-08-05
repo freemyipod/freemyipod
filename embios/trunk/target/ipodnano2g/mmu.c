@@ -62,3 +62,12 @@ void invalidate_dcache()
         "MOV PC, LR                \n\t"
     );
 }
+
+void invalidate_icache()
+{
+    asm volatile(
+        "MOV R0, #0                \n\t"
+        "MCR p15, 0, R0,c7,c5,0    \n\t"
+        "MOV PC, LR                \n\t"
+    );
+}

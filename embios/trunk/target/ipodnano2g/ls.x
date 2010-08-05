@@ -14,10 +14,12 @@ SECTIONS
 {
     .init :
     {
+        _initstart = .;
         *(.initcode*)
         *(.initrodata*)
         *(.initdata*)
         . = ALIGN(0x4);
+        _initend = .;
     } > INIT
 
     .sram :
