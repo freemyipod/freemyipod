@@ -22,15 +22,13 @@
 
 
 #include "global.h"
-#include <string.h>
-#include <limits.h>
 
-size_t strlen(_CONST char *str)
+
+size_t strlen(const char *str)
 {
-  _CONST char *start = str;
+  const char *start = str;
 
-  while (*str)
-    str++;
+  while (*str) str++;
 
   return str - start;
 }
