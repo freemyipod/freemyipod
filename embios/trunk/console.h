@@ -36,6 +36,9 @@ void cwrite(unsigned int consoles, const char* string, size_t length) ICODE_ATTR
 int cprintf(unsigned int consoles, const char* fmt, ...) ICODE_ATTR;
 int cvprintf(unsigned int consoles, const char* fmt, va_list ap) ICODE_ATTR;
 void cflush(unsigned int consoles) ICODE_ATTR;
+int cgetc(unsigned int consoles, int timeout) ICODE_ATTR;
+int cread(unsigned int consoles, char* buffer, size_t length, int timeout) ICODE_ATTR;
+void creada(unsigned int consoles, char* buffer, size_t length, int timeout) ICODE_ATTR;
 
 
 #endif

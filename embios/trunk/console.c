@@ -41,11 +41,13 @@ struct for_cprintf
 
 
 struct mutex console_mutex;
+struct mutex console_readmutex;
 
 
 void console_init()
 {
     mutex_init(&console_mutex);
+    mutex_init(&console_readmutex);
 }
 
 void cputc_internal(unsigned int consoles, char string) ICODE_ATTR;
@@ -121,5 +123,36 @@ void cflush(unsigned int consoles)
 {
     mutex_lock(&console_mutex, TIMEOUT_BLOCK);
     if (consoles & 1) lcdconsole_update();
+    mutex_unlock(&console_mutex);
+}
+
+int cgetc(unsigned int consoles, int timeout)
+{
+    int result;
+    mutex_lock(&console_readmutex, TIMEOUT_BLOCK);
+    if ((consoles & 2) && (result = dbgconsole_getc(timeout)) != -1) return result;
+    mutex_unlock(&console_mutex);
+}
+
+int cread(unsigned int consoles, char* buffer, size_t length, int timeout)
+{
+    int result;
+    mutex_lock(&console_readmutex, TIMEOUT_BLOCK);
+    if ((consoles & 2) && (result = dbgconsole_read(buffer, length, timeout))) return result;
+    mutex_unlock(&console_mutex);
+}
+
+void creada(unsigned int consoles, char* buffer, size_t length, int timeout)
+{
+    int result;
+    mutex_lock(&console_readmutex, TIMEOUT_BLOCK);
+    while (length)
+    {
+        if (length && (consoles & 2) && (result = dbgconsole_read(buffer, length, timeout)))
+        {
+            buffer = &buffer[result];
+            length -= result;
+        }
+    }
     mutex_unlock(&console_mutex);
 }

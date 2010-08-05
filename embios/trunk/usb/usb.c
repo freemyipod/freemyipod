@@ -354,7 +354,6 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             break;
         case 10:  // READ CONSOLE
             dbgconsoleattached = true;
-            wakeup_signal(&dbgconsendwakeup);
             int bytes = dbgconsendwriteidx - dbgconsendreadidx;
             if (bytes >= sizeof(dbgconsendbuf)) bytes -= sizeof(dbgconsendbuf);
             if (bytes)
@@ -373,12 +372,39 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
                 }
                 if (readbytes) memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
                 dbgconsendreadidx += readbytes;
+                wakeup_signal(&dbgconsendwakeup);
             }
             dbgsendbuf[0] = 1;
             dbgsendbuf[1] = bytes;
             dbgsendbuf[2] = sizeof(dbgconsendbuf);
             dbgsendbuf[3] = dbgconsendwriteidx - dbgconsendreadidx;
             size = 16 + dbgrecvbuf[1];
+            break;
+        case 11:  // WRITE CONSOLE
+            bytes = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
+            if (bytes < 0) bytes += sizeof(dbgconrecvbuf);
+            if (bytes)
+            {
+                if (bytes > dbgrecvbuf[1]) bytes = dbgrecvbuf[1];
+                int writebytes = bytes;
+                char* readptr = (char*)&dbgrecvbuf[4];
+                if (dbgconrecvwriteidx + bytes >= sizeof(dbgconrecvbuf))
+                {
+                    writebytes = sizeof(dbgconrecvbuf) - dbgconrecvwriteidx;
+                    memcpy(&dbgconrecvbuf[dbgconrecvwriteidx], readptr, writebytes);
+                    dbgconrecvwriteidx = 0;
+                    readptr = &readptr[writebytes];
+                    writebytes = bytes - writebytes;
+                }
+                if (writebytes) memcpy(&dbgconrecvbuf[dbgconrecvwriteidx], readptr, writebytes);
+                dbgconrecvwriteidx += writebytes;
+                wakeup_signal(&dbgconrecvwakeup);
+            }
+            dbgsendbuf[0] = 1;
+            dbgsendbuf[1] = bytes;
+            dbgsendbuf[2] = sizeof(dbgconrecvbuf);
+            dbgsendbuf[3] = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
+            size = 16;
             break;
         default:
             dbgsendbuf[0] = 2;
@@ -524,4 +550,59 @@ void dbgconsole_write(const char* string, size_t length)
 void dbgconsole_puts(const char* string)
 {
     dbgconsole_write(string, strlen(string));
+}
+
+int dbgconsole_getavailable() ICODE_ATTR;
+int dbgconsole_getavailable()
+{
+    int available = dbgconrecvwriteidx - dbgconrecvreadidx;
+    if (available < 0) available += sizeof(dbgconrecvbuf);
+    return available;
+}
+
+int dbgconsole_getc(int timeout)
+{
+    if (!dbgconsole_getavailable())
+    {
+        wakeup_wait(&dbgconrecvwakeup, TIMEOUT_NONE);
+        if (!dbgconsole_getavailable())
+        {
+            wakeup_wait(&dbgconrecvwakeup, timeout);
+            if (!dbgconsole_getavailable()) return -1;
+        }
+    }
+    int byte = dbgconrecvbuf[dbgconrecvreadidx++];
+    if (dbgconrecvreadidx >= sizeof(dbgconrecvbuf))
+        dbgconrecvreadidx -= sizeof(dbgconrecvbuf);
+    return byte;
+}
+
+int dbgconsole_read(char* buffer, size_t length, int timeout)
+{
+    if (!length) return 0;
+    int available = dbgconsole_getavailable();
+    if (!available)
+    {
+        wakeup_wait(&dbgconrecvwakeup, TIMEOUT_NONE);
+        int available = dbgconsole_getavailable();
+        if (!available)
+        {
+            wakeup_wait(&dbgconrecvwakeup, timeout);
+            int available = dbgconsole_getavailable();
+            if (!available) return 0;
+        }
+    }
+    if (available > length) available = length;
+    int left = available;
+    if (dbgconrecvreadidx + available >= sizeof(dbgconrecvbuf))
+    {
+        int bytes = sizeof(dbgconrecvbuf) - dbgconrecvreadidx;
+        memcpy(buffer, &dbgconrecvbuf[dbgconrecvreadidx], bytes);
+        dbgconrecvreadidx = 0;
+        buffer = &buffer[bytes];
+        left -= bytes;
+    }
+    if (left) memcpy(buffer, &dbgconrecvbuf[dbgconrecvreadidx], left);
+    dbgconrecvreadidx += left;
+    return available;
 }
