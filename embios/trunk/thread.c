@@ -31,6 +31,7 @@
 struct scheduler_thread scheduler_threads[MAX_THREADS] IBSS_ATTR;
 struct scheduler_thread* current_thread IBSS_ATTR;
 uint32_t last_tick IBSS_ATTR;
+bool scheduler_frozen IBSS_ATTR;
 extern struct wakeup dbgwakeup;
 
 
@@ -217,6 +218,7 @@ void sleep(int usecs)
 void scheduler_init(void)
 {
     memset(scheduler_threads, 0, sizeof(scheduler_threads));
+    scheduler_frozen = false;
     last_tick = USEC_TIMER;
     current_thread = scheduler_threads;
     current_thread->state = THREAD_RUNNING;
@@ -224,6 +226,11 @@ void scheduler_init(void)
     current_thread->name = "idle thread";
     current_thread->stack = (uint32_t*)-1;
     setup_tick();
+}
+
+void scheduler_freeze(bool value)
+{
+    scheduler_frozen = value;
 }
 
 void scheduler_switch(int thread)
@@ -254,37 +261,41 @@ void scheduler_switch(int thread)
         }
     }
 
-    for (i = 0; i < MAX_THREADS; i++)
-        if (scheduler_threads[i].state == THREAD_BLOCKED
-         && scheduler_threads[i].timeout != -1
-         && TIME_AFTER(usec, scheduler_threads[i].blocked_since
-                           + scheduler_threads[i].timeout))
-        {
-            if (scheduler_threads[i].block_type == THREAD_BLOCK_MUTEX)
-                mutex_remove_from_queue((struct mutex*)scheduler_threads[i].blocked_by,
-                                        &scheduler_threads[i]);
-            scheduler_threads[i].state = THREAD_READY;
-            scheduler_threads[i].block_type = THREAD_NOT_BLOCKED;
-            scheduler_threads[i].blocked_by = NULL;
-            scheduler_threads[i].timeout = 0;
-        }
-
-    if (thread >= 0 && thread < MAX_THREADS && scheduler_threads[thread].state == THREAD_READY)
-        current_thread = &scheduler_threads[thread];
+    if (scheduler_frozen) thread = 0;
     else
     {
-        thread = 0;
-        best = 0xffffffff;
         for (i = 0; i < MAX_THREADS; i++)
-            if (scheduler_threads[i].state == THREAD_READY && scheduler_threads[i].priority)
+            if (scheduler_threads[i].state == THREAD_BLOCKED
+             && scheduler_threads[i].timeout != -1
+             && TIME_AFTER(usec, scheduler_threads[i].blocked_since
+                               + scheduler_threads[i].timeout))
             {
-                score = scheduler_threads[i].cputime_current / scheduler_threads[i].priority;
-                if (score < best)
-                {
-                    best = score;
-                    thread = i;
-                }
+                if (scheduler_threads[i].block_type == THREAD_BLOCK_MUTEX)
+                    mutex_remove_from_queue((struct mutex*)scheduler_threads[i].blocked_by,
+                                            &scheduler_threads[i]);
+                scheduler_threads[i].state = THREAD_READY;
+                scheduler_threads[i].block_type = THREAD_NOT_BLOCKED;
+                scheduler_threads[i].blocked_by = NULL;
+                scheduler_threads[i].timeout = 0;
             }
+
+        if (thread >= 0 && thread < MAX_THREADS && scheduler_threads[thread].state == THREAD_READY)
+            current_thread = &scheduler_threads[thread];
+        else
+        {
+            thread = 0;
+            best = 0xffffffff;
+            for (i = 0; i < MAX_THREADS; i++)
+                if (scheduler_threads[i].state == THREAD_READY && scheduler_threads[i].priority)
+                {
+                    score = scheduler_threads[i].cputime_current / scheduler_threads[i].priority;
+                    if (score < best)
+                    {
+                        best = score;
+                        thread = i;
+                    }
+                }
+        }
     }
 
     current_thread = &scheduler_threads[thread];

@@ -458,6 +458,11 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             memcpy(&dbgsendbuf[4], scheduler_threads, dbgrecvbuf[1]);
             size = dbgrecvbuf[1] + 16;
             break;
+        case 16:  // FREEZE SCHEDULER
+            scheduler_freeze(dbgrecvbuf[1]);
+            dbgsendbuf[0] = 1;
+            size = 16;
+            break;
         default:
             dbgsendbuf[0] = 2;
             size = 16;
