@@ -518,8 +518,9 @@ void dbgthread(void)
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_CREAD:
-                cread(dbgactionconsoles, (char*)&dbgasyncsendbuf[4], dbgactionlength, 0);
                 dbgasyncsendbuf[0] = 1;
+                dbgasyncsendbuf[1] = cread(dbgactionconsoles, (char*)&dbgasyncsendbuf[4],
+                                           dbgactionlength, 0);
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_CFLUSH:
