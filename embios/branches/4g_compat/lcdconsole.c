@@ -23,6 +23,7 @@
 
 #include "global.h"
 #include "lcdconsole.h"
+#include "drawing.h"
 #include "util.h"
 
 
@@ -49,11 +50,7 @@ void lcdconsole_init()
 
 void lcdconsole_putc(char string, int fgcolor, int bgcolor)
 {
-  if (string == '\r')
-  {
-    current_col = 0;
-    return;
-  }
+  if (string == '\r') return;
   current_col++;
   if (string == '\n')
   {
@@ -74,12 +71,13 @@ void lcdconsole_putc(char string, int fgcolor, int bgcolor)
   if (current_row >= LCDCONSOLE_ROWS)
   {
     int offset = current_row - LCDCONSOLE_ROWS + 1;
-    memcpy(framebuf, &framebuf[ROWBYTES * offset], ROWBYTES * offset);
-    memset(&framebuf[sizeof(framebuf) - ROWBYTES * offset],
+    memcpy(&framebuf[LINEBYTES * OFFSETY], &framebuf[LINEBYTES * OFFSETY + ROWBYTES * offset],
+           ROWBYTES * (LCDCONSOLE_ROWS - offset));
+    memset(&framebuf[LINEBYTES * OFFSETY + ROWBYTES * (LCDCONSOLE_ROWS - offset)],
            -1, ROWBYTES * offset);
+    current_row = LCDCONSOLE_ROWS - 1;
   }
-  renderchar(&framebuf[OFFSETBYTES + ROWBYTES * current_row
-                     + COLBYTES * current_col],
+  renderchar(&framebuf[OFFSETBYTES + ROWBYTES * current_row + COLBYTES * current_col],
              fgcolor, bgcolor, string, LINEBYTES);
 }
 
