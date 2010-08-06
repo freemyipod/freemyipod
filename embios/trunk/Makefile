@@ -10,6 +10,10 @@ UCLPACK := ucl2e10singleblk
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
+ifeq ($(shell uname),Linux)
+        CFLAGS += -I/usr/include
+endif
+
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
 preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
 
