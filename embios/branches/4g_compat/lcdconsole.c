@@ -48,7 +48,7 @@ void lcdconsole_init()
   current_col = -1;
 }
 
-void lcdconsole_putc(char string, int fgcolor, int bgcolor)
+void lcdconsole_putc_noblit(char string, int fgcolor, int bgcolor)
 {
   if (string == '\r') return;
   current_col++;
@@ -81,12 +81,24 @@ void lcdconsole_putc(char string, int fgcolor, int bgcolor)
              fgcolor, bgcolor, string, LINEBYTES);
 }
 
-void lcdconsole_puts(const char* string, int fgcolor, int bgcolor)
+void lcdconsole_puts_noblit(const char* string, int fgcolor, int bgcolor)
 {
-  while (*string) lcdconsole_putc(*string++, fgcolor, bgcolor);
+  while (*string) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
 }
 
 void lcdconsole_update()
 {
   displaylcd(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf, 0);
+}
+
+void lcdconsole_putc(char string, int fgcolor, int bgcolor)
+{
+    lcdconsole_putc_noblit(string, fgcolor, bgcolor);
+    lcdconsole_update();
+}
+    
+void lcdconsole_puts(const char* string, int fgcolor, int bgcolor)
+{
+    while (*string) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
+    lcdconsole_update();
 }

@@ -23,14 +23,23 @@
 
 #include "global.h"
 #include "lcdconsole.h"
+#include "console.h"
+#include "accel.h"
+
+static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION "\n";
 
 void init() INITCODE_ATTR;
 void init()
 {
   lcdconsole_init();
-  lcdconsole_puts("emBIOS v" VERSION "\n\nStorage init...", 0, -1);
-  lcdconsole_update();
-  if (fat32_init()) lcdconsole_puts(" failed!\n", 0, -1);
-  else lcdconsole_puts(" done\n", 0, -1);
-  lcdconsole_update();
+  cputs(1, welcomestring);
+  while(1)
+  {
+    uint8_t x = accel_get_axis(0);
+    uint8_t y = accel_get_axis(1);
+    uint8_t z = accel_get_axis(2);
+    cprintf(1, "x:%d y:%d z:%d\n", x, y, z);
+  }
+  // Never works so just comment it out:
+  //if (fat32_init()) cputs(1, "fat32_init() failed!\n");
 }
