@@ -47,6 +47,7 @@
 
 #include "config.h"
 #include "target.h"
+#include "debug.h"
 
 #ifndef SCHEDULER_TICK
 #define SCHEDULER_TICK 1048576
