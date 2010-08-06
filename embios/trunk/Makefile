@@ -1,10 +1,10 @@
 NAME := embios
 
-CROSS   ?= arm-none-eabi
-CC      := $(CROSS)-gcc
-AS      := $(CROSS)-as
-LD      := $(CROSS)-ld
-OBJCOPY := $(CROSS)-objcopy
+CROSS   ?= arm-none-eabi-
+CC      := $(CROSS)gcc
+AS      := $(CROSS)as
+LD      := $(CROSS)ld
+OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections
