@@ -322,7 +322,7 @@ int thread_create(const char* name, const void* code, void* stack,
             scheduler_threads[i].type = type;
             scheduler_threads[i].name = name;
             scheduler_threads[i].priority = priority;
-            scheduler_threads[i].cpsr = 0x13;
+            scheduler_threads[i].cpsr = 0x1f;
             scheduler_threads[i].regs[15] = (uint32_t)code;
             scheduler_threads[i].regs[14] = (uint32_t)thread_exit;
             scheduler_threads[i].regs[13] = (uint32_t)stack + stacksize;

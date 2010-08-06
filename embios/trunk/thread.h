@@ -44,10 +44,10 @@
 enum thread_state
 {
     THREAD_FREE = 0,
+    THREAD_SUSPENDED = 1,
     THREAD_READY,
     THREAD_RUNNING,
     THREAD_BLOCKED,
-    THREAD_SUSPENDED,
     THREAD_DEFUNCT,
     THREAD_DEFUNCT_ACK
 };
@@ -74,16 +74,16 @@ struct scheduler_thread
 {
     uint32_t regs[16];
     uint32_t cpsr;
+    uint32_t state;
     const char* name;
-    uint64_t cputime_total;
     uint32_t cputime_current;
+    uint64_t cputime_total;
     uint32_t startusec;
     struct scheduler_thread* queue_next;
     uint32_t timeout;
     uint32_t blocked_since;
     void* blocked_by;
     uint32_t* stack;
-    enum thread_state state;
     enum thread_block block_type;
     enum thread_type type;
     uint8_t priority;

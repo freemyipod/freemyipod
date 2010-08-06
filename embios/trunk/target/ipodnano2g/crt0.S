@@ -93,7 +93,7 @@ _start:
 	ldr	sp, =_abortstackend
 	msr	cpsr_c, #0xdb
 	ldr	sp, =_abortstackend
-	msr	cpsr_c, #0x13
+	msr	cpsr_c, #0x1f
 	ldr	sp, =_initstackend
 	bl	init
 	bl	context_switch
@@ -129,7 +129,8 @@ hang:
 
 .type reset_handler, %function
 reset_handler:
-	adr	r0, reset_text
+	mov	r0, #0
+	adr	r1, reset_text
 	b	panic
 reset_text:
 	.ascii	"Hit reset vector!\0"
@@ -137,42 +138,41 @@ reset_text:
 
 .type undef_instr_handler, %function
 undef_instr_handler:
-	adr	r0, undef_instr_text
-	sub	r0, lr, #4
+	mov	r0, #0
+	adr	r1, undef_instr_text
+	sub	r2, lr, #4
 	b	panicf
 .size undef_instr_handler, .-undef_instr_handler
 
 .type prefetch_abort_handler, %function
 prefetch_abort_handler:
-	adr	r0, prefetch_abort_text
-	sub	r0, lr, #4
+	mov	r0, #0
+	adr	r1, prefetch_abort_text
+	sub	r2, lr, #4
 	b	panicf
 .size prefetch_abort_handler, .-prefetch_abort_handler
 
 .type data_abort_handler, %function
 data_abort_handler:
-	adr	r0, data_abort_text
-	sub	r0, lr, #4
+	mov	r0, #0
+	adr	r1, data_abort_text
+	sub	r2, lr, #4
 	b	panicf
 .size data_abort_handler, .-data_abort_handler
 
 .type reserved_handler, %function
 reserved_handler:
-	adr	r0, reserved_text
+	mov	r0, #0
+	adr	r1, reserved_text
 	b	panic
 .size reserved_handler, .-reserved_handler
 
 .type fiq_handler, %function
 fiq_handler:
-	adr	r0, fiq_text
+	mov	r0, #2
+	adr	r1, fiq_text
 	b	panic
 .size fiq_handler, .-fiq_handler
-
-.type syscall_handler, %function
-syscall_handler:
-	adr	r0, syscall_text
-	b	panic
-.size syscall_handler, .-syscall_handler
 
 undef_instr_text:
 	.ascii	"Undefined instruction at %08X!\0"

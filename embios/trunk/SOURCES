@@ -34,3 +34,4 @@ ucl.S
 thread.c
 usb/usb.c
 shutdown.c
+syscall.c

@@ -21,23 +21,14 @@
 //
 
 
-#ifndef __PANIC_H__
-#define __PANIC_H__
+#ifndef __SYSCALL_H__
+#define __SYSCALL_H__
 
 
 #include "global.h"
 
 
-enum panic_severity
-{
-    PANIC_KILLTHREAD = 0,
-    PANIC_KILLPROCESS = 1,
-    PANIC_FATAL = 2
-};
-
-
-void panic(enum panic_severity severity, const char* string) ICODE_ATTR;
-void panicf(enum panic_severity severity, const char* string, ...) ICODE_ATTR;
+void* get_syscall_table() ICODE_ATTR;
 
 
 #endif
