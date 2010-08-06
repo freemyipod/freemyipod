@@ -45,5 +45,4 @@ void init()
     i2c_init();
     pmu_init();
     usb_init();
-    DEBUGF("init completed!");
 }
