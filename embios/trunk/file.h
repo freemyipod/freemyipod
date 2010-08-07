@@ -25,7 +25,7 @@
 #define MAX_PATH 260
 
 #include <sys/types.h>
-#include "_ansi.h"
+#include "gcc_extensions.h"
 
 #define MAX_OPEN_FILES 11
 

@@ -18,15 +18,14 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
+#include "global.h"
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include "fat.h"
 #include "dir.h"
 #include "debug.h"
-#include "filefuncs.h"
 
 #if ((defined(MEMORYSIZE) && (MEMORYSIZE > 8)) || MEM > 8)
 #define MAX_OPEN_DIRS 12

@@ -25,8 +25,6 @@
 #include "fat.h"
 #include "dir.h"
 #include "debug.h"
-#include "filefuncs.h"
-#include "gcc_extensions.h"
 
 /*
   These functions provide a roughly POSIX-compatible file IO API.

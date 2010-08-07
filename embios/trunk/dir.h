@@ -40,7 +40,6 @@ struct dirent {
     unsigned short wrtdate; /*  Last write date */ 
     unsigned short wrttime; /*  Last write time */
 };
-#endif
 
 #include "fat.h"
 
@@ -48,7 +47,7 @@ typedef struct {
     bool busy;
     long startcluster;
     struct fat_dir fatdir;
-    struct dirent_uncached theent;
+    struct dirent theent;
 #ifdef HAVE_MULTIVOLUME
     int volumecounter; /* running counter for faked volume entries */
 #endif
@@ -70,7 +69,5 @@ extern int rmdir(const char* name);
 extern struct dirent* readdir(DIR* dir);
 
 extern int release_dirs(int volume);
-
-#endif /* DIRFUNCTIONS_DEFINED */
 
 #endif
