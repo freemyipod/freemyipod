@@ -34,7 +34,8 @@
 #include "format.h"
 
 
-struct for_snprintf {
+struct for_snprintf
+{
     unsigned char *ptr; /* where to store it */
     size_t bytes; /* amount already stored */
     size_t max;   /* max amount to store */
@@ -43,7 +44,8 @@ struct for_snprintf {
 static int sprfunc(void *ptr, unsigned char letter)
 {
     struct for_snprintf *pr = (struct for_snprintf *)ptr;
-    if(pr->bytes < pr->max) {
+    if(pr->bytes < pr->max)
+    {
         *pr->ptr = letter;
         pr->ptr++;
         pr->bytes++;

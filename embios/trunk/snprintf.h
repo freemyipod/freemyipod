@@ -25,15 +25,14 @@
 #define __SNPRINTF_H__
 
 
-#define __need___va_list
-#include <stdarg.h>
 #include "global.h"
+#include "gcc_extensions.h"
+#include <stdarg.h>
 
 
-int vsnprintf (char *buf, size_t size, const char *fmt, __VALIST ap);
+int vsnprintf(char *buf, size_t size, const char *fmt, va_list ap);
 
-int snprintf (char *buf, size_t size, const char *fmt, ...)
-              ATTRIBUTE_PRINTF(3, 4);
+int snprintf(char *buf, size_t size, const char *fmt, ...) ATTRIBUTE_PRINTF(3, 4);
 
 
 #endif

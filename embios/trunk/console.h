@@ -26,6 +26,7 @@
 
 
 #include "global.h"
+#include "gcc_extensions.h"
 #include <stdarg.h>
 
 
@@ -33,7 +34,8 @@ void console_init() INITCODE_ATTR;
 void cputc(unsigned int consoles, char string) ICODE_ATTR;
 void cputs(unsigned int consoles, const char* string) ICODE_ATTR;
 void cwrite(unsigned int consoles, const char* string, size_t length) ICODE_ATTR;
-int cprintf(unsigned int consoles, const char* fmt, ...) ICODE_ATTR;
+int cprintf(unsigned int consoles, const char* fmt, ...) ICODE_ATTR
+            ATTRIBUTE_PRINTF(2, 3);
 int cvprintf(unsigned int consoles, const char* fmt, va_list ap) ICODE_ATTR;
 void cflush(unsigned int consoles) ICODE_ATTR;
 int cgetc(unsigned int consoles, int timeout) ICODE_ATTR;

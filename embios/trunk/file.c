@@ -18,16 +18,15 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
+#include "global.h"
 #include <string.h>
 #include <errno.h>
-#include <stdbool.h>
 #include "file.h"
 #include "fat.h"
 #include "dir.h"
 #include "debug.h"
-#include "dircache.h"
 #include "filefuncs.h"
-#include "system.h"
+#include "gcc_extensions.h"
 
 /*
   These functions provide a roughly POSIX-compatible file IO API.

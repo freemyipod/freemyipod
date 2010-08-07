@@ -26,6 +26,8 @@
 
 
 #include "global.h"
+#include "gcc_extensions.h"
+#include <stdarg.h>
 
 
 enum panic_severity
@@ -37,7 +39,8 @@ enum panic_severity
 
 
 void panic(enum panic_severity severity, const char* string) ICODE_ATTR;
-void panicf(enum panic_severity severity, const char* string, ...) ICODE_ATTR;
+void panicf(enum panic_severity severity, const char* string, ...) ICODE_ATTR
+            ATTRIBUTE_PRINTF(2, 3);
 
 
 #endif
