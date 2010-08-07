@@ -18,19 +18,16 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
+#include "global.h"
+#include "thread.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <stdbool.h>
 #include "fat.h"
 #include "storage.h"
 #include "debug.h"
 #include "panic.h"
-#include "system.h"
-#include "timefuncs.h"
-#include "kernel.h"
-#include "rbunicode.h"
 
 #define BYTES2INT16(array,pos) \
           (array[pos] | (array[pos+1] << 8 ))

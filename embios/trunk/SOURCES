@@ -7,6 +7,8 @@ target/ipodnano2g/timer.c
 target/ipodnano2g/i2c.c
 target/ipodnano2g/interrupt.c
 target/ipodnano2g/pmu.c
+target/ipodnano2g/nand.c
+target/ipodnano2g/storage.c
 usb/synopsysotg.c
 #endif
 
@@ -36,4 +38,6 @@ usb/usb.c
 shutdown.c
 syscall.c
 disk.c
-fat32.c
+fat.c
+file.c
+dir.c
