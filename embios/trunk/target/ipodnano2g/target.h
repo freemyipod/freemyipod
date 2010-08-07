@@ -35,4 +35,7 @@
 #define USB_NUM_ENDPOINTS 5
 
 
+#define NUM_VOLUMES 1
+
+
 #endif

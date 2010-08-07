@@ -208,12 +208,12 @@ struct fat_cache_entry
 
 static char fat_cache_sectors[FAT_CACHE_SIZE][SECTOR_SIZE];
 static struct fat_cache_entry fat_cache[FAT_CACHE_SIZE];
-static struct mutex cache_mutex SHAREDBSS_ATTR;
+static struct mutex cache_mutex;
 
 #if defined(HAVE_HOTSWAP) && !(CONFIG_STORAGE & STORAGE_MMC) /* A better condition ?? */
 void fat_lock(void)
 {
-    mutex_lock(&cache_mutex);
+    mutex_lock(&cache_mutex, TIMEOUT_BLOCK);
 }
 
 void fat_unlock(void)
@@ -475,7 +475,7 @@ int fat_unmount(int volume, bool flush)
     else
     {   /* volume is not accessible any more, e.g. MMC removed */
         int i;
-        mutex_lock(&cache_mutex);
+        mutex_lock(&cache_mutex, TIMEOUT_BLOCK);
         for(i = 0;i < FAT_CACHE_SIZE;i++)
         {
             struct fat_cache_entry *fce = &fat_cache[i];
@@ -660,7 +660,7 @@ static void *cache_fat_sector(IF_MV2(struct bpb* fat_bpb,)
     unsigned char *sectorbuf = &fat_cache_sectors[cache_index][0];
     int rc;
 
-    mutex_lock(&cache_mutex); /* make changes atomic */
+    mutex_lock(&cache_mutex, TIMEOUT_BLOCK); /* make changes atomic */
 
     /* Delete the cache entry if it isn't the sector we want */
     if(fce->inuse && (fce->secnum != secnum
@@ -970,7 +970,7 @@ static int flush_fat(IF_MV_NONVOID(struct bpb* fat_bpb))
     unsigned char *sec;
     DEBUGF("flush_fat()");
 
-    mutex_lock(&cache_mutex);
+    mutex_lock(&cache_mutex, TIMEOUT_BLOCK);
     for(i = 0;i < FAT_CACHE_SIZE;i++)
     {
         struct fat_cache_entry *fce = &fat_cache[i];
@@ -1013,80 +1013,10 @@ static void fat_time(unsigned short* date,
     if (tenth)
         *tenth = (tm->tm_sec & 1) * 100;
 #else
-    /* non-RTC version returns an increment from the supplied time, or a
-     * fixed standard time/date if no time given as input */
 
-/* Macros to convert a 2-digit string to a decimal constant.
-   (YEAR), MONTH and DAY are set by the date command, which outputs
-   DAY as 00..31 and MONTH as 01..12. The leading zero would lead to
-   misinterpretation as an octal constant. */
-#define S100(x) 1 ## x
-#define C2DIG2DEC(x) (S100(x)-100)
-/* The actual build date, as FAT date constant */
-#define BUILD_DATE_FAT (((YEAR - 1980) << 9) \
-                        | (C2DIG2DEC(MONTH) << 5) \
-                        | C2DIG2DEC(DAY))
-
-    bool date_forced = false;
-    bool next_day = false;
-    unsigned time2 = 0; /* double time, for CRTTIME with 1s precision */
-
-    if (date && *date < BUILD_DATE_FAT)
-    {
-        *date = BUILD_DATE_FAT;
-        date_forced = true;
-    }
-    
-    if (time)
-    {
-        time2 = *time << 1;
-        if (time2 == 0 || date_forced)
-        {
-            time2 = (11 < 6) | 11; /* set to 00:11:11 */
-        }
-        else
-        {
-            unsigned mins  = (time2 >> 6) & 0x3f;
-            unsigned hours = (time2 >> 12) & 0x1f;
-            
-            mins = 11 * ((mins/11) + 1); /* advance to next multiple of 11 */
-            if (mins > 59)
-            {
-                mins = 11; /* 00 would be a bad marker */
-                if (++hours > 23)
-                {
-                    hours = 0;
-                    next_day = true;
-                }
-            }
-            time2 = (hours << 12) | (mins << 6) | mins; /* secs = mins */
-        }
-        *time = time2 >> 1;
-    }
-    
-    if (tenth)
-        *tenth = (time2 & 1) * 100;
-
-    if (date && next_day)
-    {
-        static const unsigned char daysinmonth[] =
-                              {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-        unsigned day   = *date & 0x1f;
-        unsigned month = (*date >> 5) & 0x0f;
-        unsigned year  = (*date >> 9) & 0x7f;
-
-        /* simplification: ignore leap years */
-        if (++day > daysinmonth[month-1])
-        {
-            day = 1;
-            if (++month > 12)
-            {
-                month = 1;
-                year++;
-            }
-        }
-        *date = (year << 9) | (month << 5) | day;
-    }
+    if (date) *date = (1 << 5) | 1;
+    if (time) *time = 0;
+    if (tenth) *tenth = 0;
 
 #endif /* CONFIG_RTC */
 }
@@ -1104,7 +1034,7 @@ static int write_long_name(struct fat_file* file,
     unsigned int sector = firstentry / DIR_ENTRIES_PER_SECTOR;
     unsigned char chksum = 0;
     unsigned int i, j=0;
-    unsigned int nameidx=0, namelen = utf8length(name);
+    unsigned int nameidx=0, namelen = strlen(name);
     int rc;
     unsigned short name_utf16[namelen + 1];
 
@@ -1132,7 +1062,7 @@ static int write_long_name(struct fat_file* file,
     /* we need to convert the name first    */
     /* since it is written in reverse order */
     for (i = 0; i <= namelen; i++)
-        name = utf8decode(name, &name_utf16[i]);
+        name_utf16[i] = *(name++);
 
     for (i=0; i < numentries; i++) {
         /* new sector? */
@@ -2456,7 +2386,7 @@ int fat_getnext(struct fat_dir *dir, struct fat_direntry *entry)
                                 break;
                             /* utf8encode will return a pointer after the converted
                              * string, subtract the pointer to the start to get the length of it */
-                            segm_utf8len = utf8encode(ucs, longname_utf8segm) - longname_utf8segm;
+                            segm_utf8len = 1;
 
                             /* warn the trailing zero ! (FAT_FILENAME_BYTES includes it) */
                             if (longname_utf8len + segm_utf8len >= FAT_FILENAME_BYTES) {
@@ -2465,6 +2395,8 @@ int fat_getnext(struct fat_dir *dir, struct fat_direntry *entry)
                                 break; /* fallback later */
                             }
                             else {
+                                if (ucs < 128) longname_utf8segm[0] = (unsigned char)ucs;
+                                else longname_utf8segm[0] = '?';
                                 longname_utf8segm[segm_utf8len] = 0;
                                 strcat(entry->name + longname_utf8len, longname_utf8segm);
                                 longname_utf8len += segm_utf8len;
@@ -2482,9 +2414,8 @@ int fat_getnext(struct fat_dir *dir, struct fat_direntry *entry)
                                are control characters. */
                             DEBUGF("SN-DOS: %s", shortname);
                             unsigned char *utf8;
-                            utf8 = iso_decode(shortname, entry->name, -1,
-                                              strlen(shortname));
-                            *utf8 = 0;
+                            memcpy(entry->name, shortname, strlen(shortname));
+                            *(entry->name + strlen(shortname)) = 0;
                             DEBUGF("SN: %s", entry->name);
                         } else {
                             DEBUGF("LN: %s", entry->name);
