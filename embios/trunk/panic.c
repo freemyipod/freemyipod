@@ -31,12 +31,26 @@
 #include "contextswitch.h"
 
 
+extern struct scheduler_thread* scheduler_threads;
+extern struct scheduler_thread* current_thread;
 void hang();
 
 
 void handle_panic(enum panic_severity severity)
 {
-    thread_exit();
+    int i;
+    if (severity == PANIC_KILLTHREAD) thread_exit();
+    else
+    {
+        uint32_t mode = enter_critical_section();
+        for (i = 0; i < MAX_THREADS; i++)
+            if (scheduler_threads[i].type == USER_THREAD)
+                scheduler_threads[i].state = THREAD_SUSPENDED;
+        current_thread->state = THREAD_DEFUNCT_ACK;
+        current_thread->block_type = THREAD_DEFUNCT_PANIC;
+        leave_critical_section(mode);
+        context_switch();
+    }
 }
 
 void panic(enum panic_severity severity, const char* string)

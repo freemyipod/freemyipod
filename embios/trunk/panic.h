@@ -31,7 +31,7 @@
 enum panic_severity
 {
     PANIC_KILLTHREAD = 0,
-    PANIC_KILLPROCESS = 1,
+    PANIC_KILLUSERTHREADS = 1,
     PANIC_FATAL = 2
 };
 

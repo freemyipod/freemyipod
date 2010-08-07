@@ -73,11 +73,11 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
     (void)use_cache;
 #endif
 
-    DEBUGF("open(\"%s\",%d)\n",pathname,flags);
+    DEBUGF("open(\"%s\",%d)",pathname,flags);
 
     if ( pathname[0] != '/' ) {
-        DEBUGF("'%s' is not an absolute path.\n",pathname);
-        DEBUGF("Only absolute pathnames supported at the moment\n");
+        DEBUGF("'%s' is not an absolute path.",pathname);
+        DEBUGF("Only absolute pathnames supported at the moment");
         errno = EINVAL;
         return -1;
     }
@@ -88,7 +88,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
             break;
 
     if ( fd == MAX_OPEN_FILES ) {
-        DEBUGF("Too many files open\n");
+        DEBUGF("Too many files open");
         errno = EMFILE;
         return -2;
     }
@@ -148,14 +148,14 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
         name = pathnamecopy+1;
     }
     if (!dir) {
-        DEBUGF("Failed opening dir\n");
+        DEBUGF("Failed opening dir");
         errno = EIO;
         file->busy = false;
         return -4;
     }
 
     if(name[0] == 0) {
-        DEBUGF("Empty file name\n");
+        DEBUGF("Empty file name");
         errno = EINVAL;
         file->busy = false;
         closedir(dir);
@@ -176,13 +176,13 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
     }
 
     if ( !entry ) {
-        DEBUGF("Didn't find file %s\n",name);
+        DEBUGF("Didn't find file %s",name);
         if ( file->write && (flags & O_CREAT) ) {
             rc = fat_create_file(name,
                                  &(file->fatfile),
                                  &(dir->fatdir));
             if (rc < 0) {
-                DEBUGF("Couldn't create %s in %s\n",name,pathnamecopy);
+                DEBUGF("Couldn't create %s in %s",name,pathnamecopy);
                 errno = EIO;
                 file->busy = false;
                 closedir(dir);
@@ -195,7 +195,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
             file->attr = 0;
         }
         else {
-            DEBUGF("Couldn't find %s in %s\n",name,pathnamecopy);
+            DEBUGF("Couldn't find %s in %s",name,pathnamecopy);
             errno = ENOENT;
             file->busy = false;
             closedir(dir);
@@ -239,7 +239,7 @@ int close(int fd)
     struct filedesc* file = &openfiles[fd];
     int rc = 0;
 
-    DEBUGF("close(%d)\n", fd);
+    DEBUGF("close(%d)", fd);
 
     if (fd < 0 || fd > MAX_OPEN_FILES-1) {
         errno = EINVAL;
@@ -268,7 +268,7 @@ int fsync(int fd)
     struct filedesc* file = &openfiles[fd];
     int rc = 0;
 
-    DEBUGF("fsync(%d)\n", fd);
+    DEBUGF("fsync(%d)", fd);
 
     if (fd < 0 || fd > MAX_OPEN_FILES-1) {
         errno = EINVAL;
@@ -324,7 +324,7 @@ int remove(const char* name)
 #endif
     rc = fat_remove(&(file->fatfile));
     if ( rc < 0 ) {
-        DEBUGF("Failed removing file: %d\n", rc);
+        DEBUGF("Failed removing file: %d", rc);
         errno = EIO;
         return rc * 10 - 3;
     }
@@ -403,7 +403,7 @@ int rename(const char* path, const char* newpath)
     if ( rc == -1) {
         close(fd);
         closedir(dir);
-        DEBUGF("Failed renaming file across volumnes: %d\n", rc);
+        DEBUGF("Failed renaming file across volumnes: %d", rc);
         errno = EXDEV;
         return -6;
     }
@@ -411,7 +411,7 @@ int rename(const char* path, const char* newpath)
     if ( rc < 0 ) {
         close(fd);
         closedir(dir);
-        DEBUGF("Failed renaming file: %d\n", rc);
+        DEBUGF("Failed renaming file: %d", rc);
         errno = EIO;
         return rc * 10 - 7;
     }
@@ -471,7 +471,7 @@ static int flush_cache(int fd)
     struct filedesc* file = &openfiles[fd];
     long sector = file->fileoffset / SECTOR_SIZE;
 
-    DEBUGF("Flushing dirty sector cache\n");
+    DEBUGF("Flushing dirty sector cache");
 
     /* make sure we are on correct sector */
     rc = fat_seek(&(file->fatfile), sector);
@@ -516,7 +516,7 @@ static int readwrite(int fd, void* buf, long count, bool write)
         return -1;
     }
 
-    DEBUGF( "readwrite(%d,%lx,%ld,%s)\n",
+    DEBUGF( "readwrite(%d,%lx,%ld,%s)",
              fd,(long)buf,count,write?"write":"read");
 
     /* attempt to read past EOF? */
@@ -564,10 +564,10 @@ static int readwrite(int fd, void* buf, long count, bool write)
         rc = fat_readwrite(&(file->fatfile), sectors,
             (unsigned char*)buf+nread, write );
         if ( rc < 0 ) {
-            DEBUGF("Failed read/writing %ld sectors\n",sectors);
+            DEBUGF("Failed read/writing %ld sectors",sectors);
             errno = EIO;
             if(write && file->fatfile.eof) {
-                DEBUGF("No space left on device\n");
+                DEBUGF("No space left on device");
                 errno = ENOSPC;
             } else {
                 file->fileoffset += nread;
@@ -606,10 +606,10 @@ static int readwrite(int fd, void* buf, long count, bool write)
         if (write) {
             if ( file->fileoffset + nread < file->size ) {
                 /* sector is only partially filled. copy-back from disk */
-                DEBUGF("Copy-back tail cache\n");
+                DEBUGF("Copy-back tail cache");
                 rc = fat_readwrite(&(file->fatfile), 1, file->cache, false );
                 if ( rc < 0 ) {
-                    DEBUGF("Failed writing\n");
+                    DEBUGF("Failed writing");
                     errno = EIO;
                     file->fileoffset += nread;
                     file->cacheoffset = -1;
@@ -628,7 +628,7 @@ static int readwrite(int fd, void* buf, long count, bool write)
                               (file->fileoffset + nread) /
                               SECTOR_SIZE);
                 if ( rc < 0 ) {
-                    DEBUGF("fat_seek() failed\n");
+                    DEBUGF("fat_seek() failed");
                     errno = EIO;
                     file->fileoffset += nread;
                     file->cacheoffset = -1;
@@ -649,7 +649,7 @@ static int readwrite(int fd, void* buf, long count, bool write)
         else {
             rc = fat_readwrite(&(file->fatfile), 1, file->cache,false);
             if (rc < 1 ) {
-                DEBUGF("Failed caching sector\n");
+                DEBUGF("Failed caching sector");
                 errno = EIO;
                 file->fileoffset += nread;
                 file->cacheoffset = -1;
@@ -663,7 +663,7 @@ static int readwrite(int fd, void* buf, long count, bool write)
     }
 
     file->fileoffset += nread;
-    DEBUGF("fileoffset: %ld\n", file->fileoffset);
+    DEBUGF("fileoffset: %ld", file->fileoffset);
 
     /* adjust file size to length written */
     if ( write && file->fileoffset > file->size )
@@ -701,7 +701,7 @@ off_t lseek(int fd, off_t offset, int whence)
     int rc;
     struct filedesc* file = &openfiles[fd];
 
-    DEBUGF("lseek(%d,%ld,%d)\n",fd,offset,whence);
+    DEBUGF("lseek(%d,%ld,%d)",fd,offset,whence);
 
     if (fd < 0 || fd > MAX_OPEN_FILES-1) {
         errno = EINVAL;

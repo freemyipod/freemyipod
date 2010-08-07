@@ -72,7 +72,7 @@ DIR* opendir(const char* name)
 #endif
 
     if ( name[0] != '/' ) {
-        DEBUGF("Only absolute paths supported right now\n");
+        DEBUGF("Only absolute paths supported right now");
         return NULL;
     }
 
@@ -82,7 +82,7 @@ DIR* opendir(const char* name)
             break;
 
     if ( dd == MAX_OPEN_DIRS ) {
-        DEBUGF("Too many dirs open\n");
+        DEBUGF("Too many dirs open");
         errno = EMFILE;
         return NULL;
     }
@@ -98,7 +98,7 @@ DIR* opendir(const char* name)
 #endif
 
     if ( fat_opendir(IF_MV2(volume,) &pdir->fatdir, 0, NULL) < 0 ) {
-        DEBUGF("Failed opening root dir\n");
+        DEBUGF("Failed opening root dir");
         pdir->busy = false;
         return NULL;
     }
@@ -128,7 +128,7 @@ DIR* opendir(const char* name)
                                  &pdir->fatdir,
                                  entry.firstcluster,
                                  &pdir->fatdir) < 0 ) {
-                    DEBUGF("Failed opening dir '%s' (%ld)\n",
+                    DEBUGF("Failed opening dir '%s' (%ld)",
                            part, entry.firstcluster);
                     pdir->busy = false;
                     return NULL;
@@ -208,7 +208,7 @@ int mkdir(const char *name)
     int rc;
 
     if ( name[0] != '/' ) {
-        DEBUGF("mkdir: Only absolute paths supported right now\n");
+        DEBUGF("mkdir: Only absolute paths supported right now");
         return -1;
     }
 
@@ -224,17 +224,17 @@ int mkdir(const char *name)
     else
         parent = namecopy;
         
-    DEBUGF("mkdir: parent: %s, name: %s\n", parent, basename);
+    DEBUGF("mkdir: parent: %s, name: %s", parent, basename);
 
     dir = opendir(parent);
     
     if(!dir) {
-        DEBUGF("mkdir: can't open parent dir\n");
+        DEBUGF("mkdir: can't open parent dir");
         return -2;
     }    
 
     if(basename[0] == 0) {
-        DEBUGF("mkdir: Empty dir name\n");
+        DEBUGF("mkdir: Empty dir name");
         errno = EINVAL;
         return -3;
     }
@@ -242,7 +242,7 @@ int mkdir(const char *name)
     /* Now check if the name already exists */
     while ((entry = readdir(dir))) {
         if ( !strcasecmp(basename, entry->d_name) ) {
-            DEBUGF("mkdir error: file exists\n");
+            DEBUGF("mkdir error: file exists");
             errno = EEXIST;
             closedir(dir);
             return - 4;
@@ -276,7 +276,7 @@ int rmdir(const char* name)
         if (strcmp(entry->d_name, ".") &&
             strcmp(entry->d_name, ".."))
         {
-            DEBUGF("rmdir error: not empty\n");
+            DEBUGF("rmdir error: not empty");
             errno = ENOTEMPTY;
             closedir(dir);
             return -2;
@@ -285,7 +285,7 @@ int rmdir(const char* name)
 
     rc = fat_remove(&(dir->fatdir.file));
     if ( rc < 0 ) {
-        DEBUGF("Failed removing dir: %d\n", rc);
+        DEBUGF("Failed removing dir: %d", rc);
         errno = EIO;
         rc = rc * 10 - 3;
     }

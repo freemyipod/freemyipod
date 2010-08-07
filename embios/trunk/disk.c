@@ -84,7 +84,7 @@ struct partinfo* disk_init(IF_MD_NONVOID(int drive))
     /* check that the boot sector is initialized */
     if ( (sector[510] != 0x55) ||
          (sector[511] != 0xaa)) {
-        DEBUGF("Bad boot sector signature\n");
+        DEBUGF("Bad boot sector signature");
         return NULL;
     }
 
@@ -95,7 +95,7 @@ struct partinfo* disk_init(IF_MD_NONVOID(int drive))
         pinfo[i].start = BYTES2INT32(ptr, 8);
         pinfo[i].size  = BYTES2INT32(ptr, 12);
 
-        DEBUGF("Part%d: Type %02x, start: %08lx size: %08lx\n",
+        DEBUGF("Part%d: Type %02x, start: %08lx size: %08lx",
                i,pinfo[i].type,pinfo[i].start,pinfo[i].size);
 
         /* extended? */
@@ -196,7 +196,7 @@ int disk_mount(int drive)
 
     if (mounted == 0 && volume != -1) /* none of the 4 entries worked? */
     {   /* try "superfloppy" mode */
-        DEBUGF("No partition found, trying to mount sector 0.\n");
+        DEBUGF("No partition found, trying to mount sector 0.");
         if (!fat_mount(IF_MV2(volume,) IF_MD2(drive,) 0))
         {
             mounted = 1;
