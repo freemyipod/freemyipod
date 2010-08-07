@@ -19,7 +19,6 @@
  *
  ****************************************************************************/
 #include <stdio.h>
-#include "kernel.h"
 #include "storage.h"
 #include "debug.h"
 #include "fat.h"
@@ -67,8 +66,8 @@ struct partinfo* disk_init(IF_MD_NONVOID(int drive))
     int i;
     unsigned char sector[SECTOR_SIZE];
 #ifdef HAVE_MULTIDRIVE
-    /* For each drive, start at a different position, in order not to destroy 
-       the first entry of drive 0. 
+    /* For each drive, start at a different position, in order not to destroy
+       the first entry of drive 0.
        That one is needed to calculate config sector position. */
     struct partinfo* pinfo = &part[drive*4];
     if ((size_t)drive >= sizeof(part)/sizeof(*part)/4)

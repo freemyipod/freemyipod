@@ -31,8 +31,6 @@
 #include "timefuncs.h"
 #include "kernel.h"
 #include "rbunicode.h"
-/*#define LOGF_ENABLE*/
-#include "logf.h"
 
 #define BYTES2INT16(array,pos) \
           (array[pos] | (array[pos+1] << 8 ))
@@ -450,11 +448,11 @@ int fat_mount(IF_MV2(int volume,) IF_MD2(int drive,) long startsector)
         fat_recalc_free(IF_MV(volume));
     }
 
-    LDEBUGF("Freecount: %ld\n",fat_bpb->fsinfo.freecount);
-    LDEBUGF("Nextfree: 0x%lx\n",fat_bpb->fsinfo.nextfree);
-    LDEBUGF("Cluster count: 0x%lx\n",fat_bpb->dataclusters);
-    LDEBUGF("Sectors per cluster: %d\n",fat_bpb->bpb_secperclus);
-    LDEBUGF("FAT sectors: 0x%lx\n",fat_bpb->fatsize);
+    DEBUGF("Freecount: %ld\n",fat_bpb->fsinfo.freecount);
+    DEBUGF("Nextfree: 0x%lx\n",fat_bpb->fsinfo.nextfree);
+    DEBUGF("Cluster count: 0x%lx\n",fat_bpb->dataclusters);
+    DEBUGF("Sectors per cluster: %d\n",fat_bpb->bpb_secperclus);
+    DEBUGF("FAT sectors: 0x%lx\n",fat_bpb->fatsize);
 
 #ifdef HAVE_MULTIVOLUME
     fat_bpb->mounted = true;
@@ -737,7 +735,7 @@ static unsigned long find_free_cluster(IF_MV2(struct bpb* fat_bpb,)
                         cluster numbers out of bounds */
                     if ( c < 2 || c > fat_bpb->dataclusters+1 )
                         continue;
-                    LDEBUGF("find_free_cluster(%x) == %x\n",startcluster,c);
+                    DEBUGF("find_free_cluster(%x) == %x\n",startcluster,c);
                     fat_bpb->fsinfo.nextfree = c;
                     return c;
                 }
@@ -765,7 +763,7 @@ static unsigned long find_free_cluster(IF_MV2(struct bpb* fat_bpb,)
                         cluster numbers out of bounds */
                     if ( c < 2 || c > fat_bpb->dataclusters+1 )
                         continue;
-                    LDEBUGF("find_free_cluster(%lx) == %lx\n",startcluster,c);
+                    DEBUGF("find_free_cluster(%lx) == %lx\n",startcluster,c);
                     fat_bpb->fsinfo.nextfree = c;
                     return c;
                 }
@@ -774,7 +772,7 @@ static unsigned long find_free_cluster(IF_MV2(struct bpb* fat_bpb,)
         }
     }
 
-    LDEBUGF("find_free_cluster(%lx) == 0\n",startcluster);
+    DEBUGF("find_free_cluster(%lx) == 0\n",startcluster);
     return 0; /* 0 is an illegal cluster number */
 }
 
@@ -793,7 +791,7 @@ static int update_fat_entry(IF_MV2(struct bpb* fat_bpb,) unsigned long entry,
 
         val &= 0xFFFF;
 
-        LDEBUGF("update_fat_entry(%x,%x)\n",entry,val);
+        DEBUGF("update_fat_entry(%x,%x)\n",entry,val);
 
         if (entry==val)
             panicf("Creating FAT loop: %lx,%lx\n",entry,val);
@@ -817,7 +815,7 @@ static int update_fat_entry(IF_MV2(struct bpb* fat_bpb,) unsigned long entry,
                 fat_bpb->fsinfo.freecount++;
         }
 
-        LDEBUGF("update_fat_entry: %d free clusters\n",
+        DEBUGF("update_fat_entry: %d free clusters\n",
                 fat_bpb->fsinfo.freecount);
 
         sec[offset] = htole16(val);
@@ -829,7 +827,7 @@ static int update_fat_entry(IF_MV2(struct bpb* fat_bpb,) unsigned long entry,
         int offset = entry % CLUSTERS_PER_FAT_SECTOR;
         unsigned long* sec;
 
-        LDEBUGF("update_fat_entry(%lx,%lx)\n",entry,val);
+        DEBUGF("update_fat_entry(%lx,%lx)\n",entry,val);
 
         if (entry==val)
             panicf("Creating FAT loop: %lx,%lx\n",entry,val);
@@ -854,7 +852,7 @@ static int update_fat_entry(IF_MV2(struct bpb* fat_bpb,) unsigned long entry,
                 fat_bpb->fsinfo.freecount++;
         }
 
-        LDEBUGF("update_fat_entry: %ld free clusters\n",
+        DEBUGF("update_fat_entry: %ld free clusters\n",
                 fat_bpb->fsinfo.freecount);
 
         /* don't change top 4 bits */
@@ -973,7 +971,7 @@ static int flush_fat(IF_MV_NONVOID(struct bpb* fat_bpb))
     int i;
     int rc;
     unsigned char *sec;
-    LDEBUGF("flush_fat()\n");
+    DEBUGF("flush_fat()\n");
 
     mutex_lock(&cache_mutex);
     for(i = 0;i < FAT_CACHE_SIZE;i++)
@@ -1113,7 +1111,7 @@ static int write_long_name(struct fat_file* file,
     int rc;
     unsigned short name_utf16[namelen + 1];
 
-    LDEBUGF("write_long_name(file:%lx, first:%d, num:%d, name:%s)\n",
+    DEBUGF("write_long_name(file:%lx, first:%d, num:%d, name:%s)\n",
             file->firstcluster, firstentry, numentries, name);
 
     rc = fat_seek(file, sector);
@@ -1154,7 +1152,7 @@ static int write_long_name(struct fat_file* file,
             /* read next sector */
             rc = fat_readwrite(file, 1, buf, false);
             if (rc<0) {
-                LDEBUGF("Failed writing new sector: %d\n",rc);
+                DEBUGF("Failed writing new sector: %d\n",rc);
                 return rc * 10 - 5;
             }
             if (rc==0)
@@ -1207,12 +1205,12 @@ static int write_long_name(struct fat_file* file,
             entry[FATDIR_FSTCLUSLO] = 0;
             entry[FATLONG_TYPE] = 0;
             entry[FATLONG_CHKSUM] = chksum;
-            LDEBUGF("Longname entry %d: %s\n", idx, name+nameidx);
+            DEBUGF("Longname entry %d: %s\n", idx, name+nameidx);
         }
         else {
             /* shortname entry */
             unsigned short date=0, time=0, tenth=0;
-            LDEBUGF("Shortname entry: %s\n", shortname);
+            DEBUGF("Shortname entry: %s\n", shortname);
             memcpy(entry + FATDIR_NAME, shortname, 11);
             entry[FATDIR_ATTR] = is_directory?FAT_ATTR_DIRECTORY:0;
             entry[FATDIR_NTRES] = 0;
@@ -1282,7 +1280,7 @@ static int add_dir_entry(struct fat_dir* dir,
     int entries_needed, entries_found = 0;
     int firstentry;
 
-    LDEBUGF( "add_dir_entry(%s,%lx)\n",
+    DEBUGF( "add_dir_entry(%s,%lx)\n",
              name, file->firstcluster);
 
     /* Don't check dotdirs name for validity */
@@ -1335,7 +1333,7 @@ static int add_dir_entry(struct fat_dir* dir,
         }
 
         if (rc == 0) { /* current end of dir reached */
-            LDEBUGF("End of dir on cluster boundary\n");
+            DEBUGF("End of dir on cluster boundary\n");
             break;
         }
 
@@ -1345,7 +1343,7 @@ static int add_dir_entry(struct fat_dir* dir,
             switch (buf[i * DIR_ENTRY_SIZE]) {
               case 0:
                 entries_found += DIR_ENTRIES_PER_SECTOR - i;
-                LDEBUGF("Found end of dir %d\n",
+                DEBUGF("Found end of dir %d\n",
                         sector * DIR_ENTRIES_PER_SECTOR + i);
                 i = DIR_ENTRIES_PER_SECTOR - 1;
                 done = true;
@@ -1353,7 +1351,7 @@ static int add_dir_entry(struct fat_dir* dir,
 
               case 0xe5:
                 entries_found++;
-                LDEBUGF("Found free entry %d (%d/%d)\n",
+                DEBUGF("Found free entry %d (%d/%d)\n",
                         sector * DIR_ENTRIES_PER_SECTOR + i,
                         entries_found, entries_needed);
                 break;
@@ -1365,7 +1363,7 @@ static int add_dir_entry(struct fat_dir* dir,
                 if (!strncmp(shortname, buf + i * DIR_ENTRY_SIZE, 11)) {
                     /* shortname exists already, make a new one */
                     randomize_dos_name(shortname);
-                    LDEBUGF("Duplicate shortname, changing to %s\n",
+                    DEBUGF("Duplicate shortname, changing to %s\n",
                             shortname);
 
                     /* name has changed, we need to restart search */
@@ -1382,7 +1380,7 @@ static int add_dir_entry(struct fat_dir* dir,
     /* step 2: extend the dir if necessary */
     if (firstentry < 0)
     {
-        LDEBUGF("Adding new sector(s) to dir\n");
+        DEBUGF("Adding new sector(s) to dir\n");
         rc = fat_seek(&dir->file, sector);
         if (rc < 0)
             return rc * 10 - 4;
@@ -1407,7 +1405,7 @@ static int add_dir_entry(struct fat_dir* dir,
 
     /* step 3: add entry */
     sector = firstentry / DIR_ENTRIES_PER_SECTOR;
-    LDEBUGF("Adding longname to entry %d in sector %d\n",
+    DEBUGF("Adding longname to entry %d in sector %d\n",
             firstentry, sector);
 
     rc = write_long_name(&dir->file, firstentry,
@@ -1419,7 +1417,7 @@ static int add_dir_entry(struct fat_dir* dir,
     file->direntry = firstentry + entries_needed - 1;
     file->direntries = entries_needed;
     file->dircluster = dir->file.firstcluster;
-    LDEBUGF("Added new dir entry %d, using %d slots.\n",
+    DEBUGF("Added new dir entry %d, using %d slots.\n",
             file->direntry, file->direntries);
 
     return 0;
@@ -1540,7 +1538,7 @@ static int update_short_entry( struct fat_file* file, long size, int attr )
     struct fat_file dir;
     int rc;
 
-    LDEBUGF("update_file_size(cluster:%lx entry:%d size:%ld)\n",
+    DEBUGF("update_file_size(cluster:%lx entry:%d size:%ld)\n",
             file->firstcluster, file->direntry, size);
 
     /* create a temporary file handle for the dir holding this file */
@@ -1661,12 +1659,12 @@ int fat_open(IF_MV2(int volume,)
     /* fixme: remove error check when done */
     if (volume >= NUM_VOLUMES || !fat_bpbs[volume].mounted)
     {
-        LDEBUGF("fat_open() illegal volume %d\n", volume);
+        DEBUGF("fat_open() illegal volume %d\n", volume);
         return -1;
     }
 #endif
 
-    LDEBUGF("fat_open(%lx), entry %d\n",startcluster,file->direntry);
+    DEBUGF("fat_open(%lx), entry %d\n",startcluster,file->direntry);
     return 0;
 }
 
@@ -1676,7 +1674,7 @@ int fat_create_file(const char* name,
 {
     int rc;
 
-    LDEBUGF("fat_create_file(\"%s\",%lx,%lx)\n",name,(long)file,(long)dir);
+    DEBUGF("fat_create_file(\"%s\",%lx,%lx)\n",name,(long)file,(long)dir);
     rc = add_dir_entry(dir, file, name, false, false);
     if (!rc) {
         file->firstcluster = 0;
@@ -1705,7 +1703,7 @@ int fat_create_dir(const char* name,
     int rc;
     struct fat_file dummyfile;
 
-    LDEBUGF("fat_create_dir(\"%s\",%lx,%lx)\n",name,(long)newdir,(long)dir);
+    DEBUGF("fat_create_dir(\"%s\",%lx,%lx)\n",name,(long)newdir,(long)dir);
 
     memset(newdir, 0, sizeof(struct fat_dir));
     memset(&dummyfile, 0, sizeof(struct fat_file));
@@ -1770,7 +1768,7 @@ int fat_truncate(const struct fat_file *file)
     struct bpb* fat_bpb = &fat_bpbs[file->volume];
 #endif
 
-    LDEBUGF("fat_truncate(%lx, %lx)\n", file->firstcluster, last);
+    DEBUGF("fat_truncate(%lx, %lx)\n", file->firstcluster, last);
 
     for ( last = get_next_cluster(IF_MV2(fat_bpb,) last); last; last = next ) {
         next = get_next_cluster(IF_MV2(fat_bpb,) last);
@@ -1788,7 +1786,7 @@ int fat_closewrite(struct fat_file *file, long size, int attr)
 #ifdef HAVE_MULTIVOLUME
     struct bpb* fat_bpb = &fat_bpbs[file->volume];
 #endif
-    LDEBUGF("fat_closewrite(size=%ld)\n",size);
+    DEBUGF("fat_closewrite(size=%ld)\n",size);
 
     if (!size) {
         /* empty file */
@@ -1819,11 +1817,11 @@ int fat_closewrite(struct fat_file *file, long size, int attr)
         long next;
         for ( next = file->firstcluster; next;
               next = get_next_cluster(IF_MV2(fat_bpb,) next) ) {
-            LDEBUGF("cluster %ld: %lx\n", count, next);
+            DEBUGF("cluster %ld: %lx\n", count, next);
             count++;
         }
         len = count * fat_bpb->bpb_secperclus * SECTOR_SIZE;
-        LDEBUGF("File is %ld clusters (chainlen=%ld, size=%ld)\n",
+        DEBUGF("File is %ld clusters (chainlen=%ld, size=%ld)\n",
                 count, len, size );
         if ( len > size + fat_bpb->bpb_secperclus * SECTOR_SIZE)
             panicf("Cluster chain is too long\n");
@@ -1859,7 +1857,7 @@ static int free_direntries(struct fat_file* file)
         return rc * 10 - 3;
 
     for (i=0; i < numentries; i++) {
-        LDEBUGF("Clearing dir entry %d (%d/%d)\n",
+        DEBUGF("Clearing dir entry %d (%d/%d)\n",
                 entry, i+1, numentries);
         buf[(entry % DIR_ENTRIES_PER_SECTOR) * DIR_ENTRY_SIZE] = 0xe5;
         entry++;
@@ -1906,7 +1904,7 @@ int fat_remove(struct fat_file* file)
     struct bpb* fat_bpb = &fat_bpbs[file->volume];
 #endif
 
-    LDEBUGF("fat_remove(%lx)\n",last);
+    DEBUGF("fat_remove(%lx)\n",last);
 
     while ( last ) {
         next = get_next_cluster(IF_MV2(fat_bpb,) last);
@@ -2045,7 +2043,7 @@ static long next_write_cluster(struct fat_file* file,
     long cluster = 0;
     long sector;
 
-    LDEBUGF("next_write_cluster(%lx,%lx)\n",file->firstcluster, oldcluster);
+    DEBUGF("next_write_cluster(%lx,%lx)\n",file->firstcluster, oldcluster);
 
     if (oldcluster)
         cluster = get_next_cluster(IF_MV2(fat_bpb,) oldcluster);
@@ -2094,7 +2092,7 @@ static int transfer(IF_MV2(struct bpb* fat_bpb,)
 #endif
     int rc;
 
-    LDEBUGF("transfer(s=%lx, c=%lx, %s)\n",
+    DEBUGF("transfer(s=%lx, c=%lx, %s)\n",
         start+ fat_bpb->startsector, count, write?"write":"read");
     if (write) {
         unsigned long firstallowed;
@@ -2143,9 +2141,9 @@ long fat_readwrite( struct fat_file *file, long sectorcount,
     long i;
     int rc;
 
-    LDEBUGF( "fat_readwrite(file:%lx,count:0x%lx,buf:%lx,%s)\n",
+    DEBUGF( "fat_readwrite(file:%lx,count:0x%lx,buf:%lx,%s)\n",
              file->firstcluster,sectorcount,(long)buf,write?"write":"read");
-    LDEBUGF( "fat_readwrite: sec=%lx numsec=%ld eof=%d\n",
+    DEBUGF( "fat_readwrite: sec=%lx numsec=%ld eof=%d\n",
              sector,numsec, eof?1:0);
 
     if ( eof && !write)
@@ -2286,7 +2284,7 @@ int fat_seek(struct fat_file *file, unsigned long seeksector )
         sectornum = -1;
     }
 
-    LDEBUGF("fat_seek(%lx, %lx) == %lx, %lx, %lx\n",
+    DEBUGF("fat_seek(%lx, %lx) == %lx, %lx, %lx\n",
             file->firstcluster, seeksector, cluster, sector, sectornum);
 
     file->lastcluster = cluster;
@@ -2305,7 +2303,7 @@ int fat_opendir(IF_MV2(int volume,)
     /* fixme: remove error check when done */
     if (volume >= NUM_VOLUMES || !fat_bpbs[volume].mounted)
     {
-        LDEBUGF("fat_open() illegal volume %d\n", volume);
+        DEBUGF("fat_open() illegal volume %d\n", volume);
         return -1;
     }
 #else
@@ -2405,14 +2403,14 @@ int fat_getnext(struct fat_dir *dir, struct fat_direntry *entry)
                 else {
                     /* check orphan entry */
                     if (nb_longs == 0) {
-                        logf("fat warning: orphan LFN entry");
+                        DEBUGF("fat warning: orphan LFN entry");
                         /* ignore */
                         continue;
                     }
                     
                     /* check order */
                     if (order != (last_long_ord - 1)) {
-                        logf("fat warning: wrong LFN ordinal");
+                        DEBUGF("fat warning: wrong LFN ordinal");
                         /* ignore the whole LFN, will trigger lots of warnings */
                         nb_longs = 0;
                     }
@@ -2485,15 +2483,15 @@ int fat_getnext(struct fat_dir *dir, struct fat_direntry *entry)
                                Beware: this file will be shown with strange
                                glyphs in file browser since unicode 0x80 to 0x9F
                                are control characters. */
-                            logf("SN-DOS: %s", shortname);
+                            DEBUGF("SN-DOS: %s", shortname);
                             unsigned char *utf8;
                             utf8 = iso_decode(shortname, entry->name, -1,
                                               strlen(shortname));
                             *utf8 = 0;
-                            logf("SN: %s", entry->name);
+                            DEBUGF("SN: %s", entry->name);
                         } else {
-                            logf("LN: %s", entry->name);
-                            logf("LNLen: %d", longname_utf8len);
+                            DEBUGF("LN: %s", entry->name);
+                            DEBUGF("LNLen: %d", longname_utf8len);
                         }
                     }
                     done = true;

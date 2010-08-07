@@ -34,7 +34,7 @@
 
   Since the fat32 driver only manages sectors, we maintain a one-sector
   cache for each open file. This way we can provide byte access without
-  having to re-read the sector each time. 
+  having to re-read the sector each time.
   The penalty is the RAM used for the cache and slightly more complex code.
 */
 
@@ -73,7 +73,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
     (void)use_cache;
 #endif
 
-    LDEBUGF("open(\"%s\",%d)\n",pathname,flags);
+    DEBUGF("open(\"%s\",%d)\n",pathname,flags);
 
     if ( pathname[0] != '/' ) {
         DEBUGF("'%s' is not an absolute path.\n",pathname);
@@ -176,7 +176,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
     }
 
     if ( !entry ) {
-        LDEBUGF("Didn't find file %s\n",name);
+        DEBUGF("Didn't find file %s\n",name);
         if ( file->write && (flags & O_CREAT) ) {
             rc = fat_create_file(name,
                                  &(file->fatfile),
@@ -239,7 +239,7 @@ int close(int fd)
     struct filedesc* file = &openfiles[fd];
     int rc = 0;
 
-    LDEBUGF("close(%d)\n", fd);
+    DEBUGF("close(%d)\n", fd);
 
     if (fd < 0 || fd > MAX_OPEN_FILES-1) {
         errno = EINVAL;
@@ -268,7 +268,7 @@ int fsync(int fd)
     struct filedesc* file = &openfiles[fd];
     int rc = 0;
 
-    LDEBUGF("fsync(%d)\n", fd);
+    DEBUGF("fsync(%d)\n", fd);
 
     if (fd < 0 || fd > MAX_OPEN_FILES-1) {
         errno = EINVAL;
@@ -516,7 +516,7 @@ static int readwrite(int fd, void* buf, long count, bool write)
         return -1;
     }
 
-    LDEBUGF( "readwrite(%d,%lx,%ld,%s)\n",
+    DEBUGF( "readwrite(%d,%lx,%ld,%s)\n",
              fd,(long)buf,count,write?"write":"read");
 
     /* attempt to read past EOF? */
@@ -606,7 +606,7 @@ static int readwrite(int fd, void* buf, long count, bool write)
         if (write) {
             if ( file->fileoffset + nread < file->size ) {
                 /* sector is only partially filled. copy-back from disk */
-                LDEBUGF("Copy-back tail cache\n");
+                DEBUGF("Copy-back tail cache\n");
                 rc = fat_readwrite(&(file->fatfile), 1, file->cache, false );
                 if ( rc < 0 ) {
                     DEBUGF("Failed writing\n");
@@ -663,7 +663,7 @@ static int readwrite(int fd, void* buf, long count, bool write)
     }
 
     file->fileoffset += nread;
-    LDEBUGF("fileoffset: %ld\n", file->fileoffset);
+    DEBUGF("fileoffset: %ld\n", file->fileoffset);
 
     /* adjust file size to length written */
     if ( write && file->fileoffset > file->size )
@@ -701,7 +701,7 @@ off_t lseek(int fd, off_t offset, int whence)
     int rc;
     struct filedesc* file = &openfiles[fd];
 
-    LDEBUGF("lseek(%d,%ld,%d)\n",fd,offset,whence);
+    DEBUGF("lseek(%d,%ld,%d)\n",fd,offset,whence);
 
     if (fd < 0 || fd > MAX_OPEN_FILES-1) {
         errno = EINVAL;
