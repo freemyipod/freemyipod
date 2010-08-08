@@ -21,7 +21,7 @@
 #ifndef __DIR_H__
 #define __DIR_H__
 
-#include <stdbool.h>
+#include "global.h"
 #include "file.h"
 
 #define ATTR_READ_ONLY   0x01

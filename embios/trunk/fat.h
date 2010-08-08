@@ -22,15 +22,8 @@
 #ifndef FAT_H
 #define FAT_H
 
-#include <stdbool.h>
+#include "global.h"
 #include "mv.h" /* for volume definitions */
-#include "config.h"
-
-/* This value can be overwritten by a target in config-[target].h, but
-   that behaviour is still experimental */
-#ifndef SECTOR_SIZE
-#define SECTOR_SIZE 512
-#endif
 
 /* Number of bytes reserved for a file name (including the trailing \0).
    Since names are stored in the entry as UTF-8, we won't be able to
@@ -132,5 +125,7 @@ extern int fat_opendir(IF_MV2(int volume,)
 extern int fat_getnext(struct fat_dir *ent, struct fat_direntry *entry);
 extern unsigned int fat_get_cluster_size(IF_MV_NONVOID(int volume)); /* public for debug info screen */
 extern bool fat_ismounted(int volume);
+extern void* fat_get_sector_buffer(void);
+extern void fat_release_sector_buffer(void);
 
 #endif

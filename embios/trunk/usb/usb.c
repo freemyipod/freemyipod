@@ -463,8 +463,9 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgsendbuf[0] = 1;
             dbgsendbuf[1] = SCHEDULER_THREAD_INFO_VERSION;
             dbgsendbuf[2] = MAX_THREADS * sizeof(struct scheduler_thread);
-			memcpy(&dbgsendbuf[4], (void*)((uint32_t)scheduler_threads + dbgrecvbuf[1]), dbgrecvbuf[2]);
-			size = dbgrecvbuf[2] + 16;
+            memcpy(&dbgsendbuf[4], (void*)((uint32_t)scheduler_threads + dbgrecvbuf[1]),
+                   dbgrecvbuf[2]);
+            size = dbgrecvbuf[2] + 16;
             break;
         case 16:  // FREEZE SCHEDULER
             dbgsendbuf[1] = scheduler_freeze(dbgrecvbuf[1]);
@@ -490,7 +491,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgsendbuf[0] = 1;
             size = 16;
             break;
-        case 19:  // CREATE THREAD
+        case 19:  // KILL THREAD
             dbgsendbuf[0] = 1;
             dbgsendbuf[1] = thread_create((const char*)dbgsendbuf[1], (const void*)dbgsendbuf[2],
                                           (char*)dbgsendbuf[3], dbgsendbuf[4], dbgsendbuf[5],

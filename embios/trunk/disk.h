@@ -21,6 +21,7 @@
 #ifndef _DISK_H_
 #define _DISK_H_
 
+#include "global.h"
 #include "mv.h" /* for volume definitions */
 
 struct partinfo {
@@ -42,10 +43,5 @@ void disk_init_subsystem(void); /* Initialises mutexes */
 int disk_mount_all(void); /* returns the # of successful mounts */
 int disk_mount(int drive);
 int disk_unmount(int drive);
-
-/* The number of 512-byte sectors in a "logical" sector. Needed for ipod 5.5G */
-#ifdef MAX_LOG_SECTOR_SIZE
-extern int disk_sector_multiplier;
-#endif
 
 #endif

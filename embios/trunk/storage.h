@@ -71,7 +71,6 @@ struct storage_info
             #define storage_flush() (void)0
         #endif
         #define storage_last_disk_activity() ata_last_disk_activity()
-        #define storage_spinup_time() ata_spinup_time()
         #define storage_get_identify() ata_get_identify()
 
         #ifdef STORAGE_GET_INFO
@@ -96,7 +95,6 @@ struct storage_info
             #define storage_flush() (void)0
         #endif
         #define storage_last_disk_activity() sd_last_disk_activity()
-        #define storage_spinup_time() 0
         #define storage_get_identify() sd_get_identify()
 
         #ifdef STORAGE_GET_INFO
@@ -121,7 +119,6 @@ struct storage_info
             #define storage_flush() (void)0
         #endif
         #define storage_last_disk_activity() mmc_last_disk_activity()
-        #define storage_spinup_time() 0
         #define storage_get_identify() mmc_get_identify()
        
         #ifdef STORAGE_GET_INFO
@@ -146,7 +143,6 @@ struct storage_info
             #define storage_flush() nand_flush()
         #endif
         #define storage_last_disk_activity() nand_last_disk_activity()
-        #define storage_spinup_time() 0
         #define storage_get_identify() nand_get_identify()
        
         #ifdef STORAGE_GET_INFO
@@ -171,7 +167,6 @@ struct storage_info
             #define storage_flush() (void)0
         #endif
         #define storage_last_disk_activity() ramdisk_last_disk_activity()
-        #define storage_spinup_time() 0
         #define storage_get_identify() ramdisk_get_identify()
        
         #ifdef STORAGE_GET_INFO
@@ -184,7 +179,7 @@ struct storage_info
     #else
         //#error No storage driver!
     #endif
-#else /* NOT CONFIG_STORAGE_MULTI and PLATFORM_NATIVE*/
+#else /* NOT CONFIG_STORAGE_MULTI */
 
 /* Simulator and multi-driver use normal functions */
 
@@ -198,7 +193,6 @@ int storage_flush(void);
 void storage_spin(void);
 void storage_spindown(int seconds);
 long storage_last_disk_activity(void);
-int storage_spinup_time(void);
 int storage_num_drives(void);
 #ifdef STORAGE_GET_INFO
 void storage_get_info(int drive, struct storage_info *info);
@@ -208,7 +202,7 @@ bool storage_removable(int drive);
 bool storage_present(int drive);
 #endif
 
-#endif /* NOT CONFIG_STORAGE_MULTI and NOT SIMULATOR*/
+#endif /* NOT CONFIG_STORAGE_MULTI */
 
 int storage_read_sectors(IF_MD2(int drive,) unsigned long start, int count, void* buf);
 int storage_write_sectors(IF_MD2(int drive,) unsigned long start, int count, const void* buf);
