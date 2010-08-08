@@ -56,7 +56,7 @@ SECTIONS
         *(.initbss*)
         . = ALIGN(0x4);
         _initstackstart = .;
-        . += 0x4000;
+        . += 0x400;
         _initstackend = .;
         _initbssend = .;
     } > INIT

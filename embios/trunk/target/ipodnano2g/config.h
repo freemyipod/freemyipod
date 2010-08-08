@@ -27,7 +27,9 @@
 
 //#define NAND_DEBUG
 //#define NAND_TRACE
+//#define VFL_DEBUG
 //#define VFL_TRACE
+//#define FTL_DEBUG
 //#define FTL_TRACE
 
 
