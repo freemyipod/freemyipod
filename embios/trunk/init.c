@@ -29,6 +29,8 @@
 #include "interrupt.h"
 #include "i2c.h"
 #include "pmu.h"
+#include "storage.h"
+#include "disk.h"
 #include "usb/usb.h"
 
 static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSION_SVN "\n\n";
@@ -45,4 +47,8 @@ void init()
     i2c_init();
     power_init();
     usb_init();
+    storage_init();
+    disk_init_subsystem();
+    disk_init();
+    disk_mount_all();
 }

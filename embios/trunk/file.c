@@ -24,7 +24,7 @@
 #include "file.h"
 #include "fat.h"
 #include "dir.h"
-#include "debug.h"
+#include "util.h"
 
 /*
   These functions provide a roughly POSIX-compatible file IO API.
@@ -35,8 +35,10 @@
   The penalty is the RAM used for the cache and slightly more complex code.
 */
 
+extern struct scheduler_thread* current_thread;
+
 struct filedesc {
-    unsigned char cache[SECTOR_SIZE];
+    unsigned char cache[SECTOR_SIZE] CACHEALIGN_ATTR;
     int cacheoffset; /* invariant: 0 <= cacheoffset <= SECTOR_SIZE */
     long fileoffset;
     long size;
@@ -46,9 +48,10 @@ struct filedesc {
     bool write;
     bool dirty;
     bool trunc;
-};
+    struct scheduler_thread* process;
+} CACHEALIGN_ATTR;
 
-static struct filedesc openfiles[MAX_OPEN_FILES];
+static struct filedesc openfiles[MAX_OPEN_FILES] CACHEALIGN_ATTR;
 
 static int flush_cache(int fd);
 
@@ -66,9 +69,6 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
     char* name;
     struct filedesc* file = NULL;
     int rc;
-#ifndef HAVE_DIRCACHE
-    (void)use_cache;
-#endif
 
     DEBUGF("open(\"%s\",%d)",pathname,flags);
 
@@ -100,35 +100,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
             file->trunc = true;
     }
     file->busy = true;
-
-#ifdef HAVE_DIRCACHE
-    if (dircache_is_enabled() && !file->write && use_cache)
-    {
-        const struct dircache_entry *ce;
-# ifdef HAVE_MULTIVOLUME
-        int volume = strip_volume(pathname, pathnamecopy);
-# endif
-
-        ce = dircache_get_entry_ptr(pathname);
-        if (!ce)
-        {
-            errno = ENOENT;
-            file->busy = false;
-            return -7;
-        }
-
-        fat_open(IF_MV2(volume,)
-                 ce->startcluster,
-                 &(file->fatfile),
-                 NULL);
-        file->size = ce->size;
-        file->attr = ce->attribute;
-        file->cacheoffset = -1;
-        file->fileoffset = 0;
-
-        return fd;
-    }
-#endif
+    file->process = current_thread;
 
     strlcpy(pathnamecopy, pathname, sizeof(pathnamecopy));
 
@@ -185,9 +157,6 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
                 closedir(dir);
                 return rc * 10 - 6;
             }
-#ifdef HAVE_DIRCACHE
-            dircache_add_file(pathname, file->fatfile.firstcluster);
-#endif
             file->size = 0;
             file->attr = 0;
         }
@@ -217,11 +186,6 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
             return rc * 10 - 9;
     }
 
-#ifdef HAVE_DIRCACHE
-    if (file->write)
-        dircache_bind(fd, pathname);
-#endif
-
     return fd;
 }
 
@@ -250,14 +214,26 @@ int close(int fd)
         rc = fsync(fd);
         if (rc < 0)
             return rc * 10 - 3;
-#ifdef HAVE_DIRCACHE
-        dircache_update_filesize(fd, file->size, file->fatfile.firstcluster);
-        dircache_update_filetime(fd);
-#endif
     }
 
     file->busy = false;
     return 0;
+}
+
+int close_all_of_process(struct scheduler_thread* process)
+{
+    struct filedesc* pfile = openfiles;
+    int fd;
+    int closed = 0;
+    for ( fd=0; fd<MAX_OPEN_FILES; fd++, pfile++)
+    {
+        if (pfile->process == process)
+        {
+            pfile->busy = false; /* mark as available, no further action */
+            closed++;
+        }
+    }
+    return closed; /* return how many we did */
 }
 
 int fsync(int fd)
@@ -316,9 +292,6 @@ int remove(const char* name)
         return fd * 10 - 1;
 
     file = &openfiles[fd];
-#ifdef HAVE_DIRCACHE
-    dircache_remove(name);
-#endif
     rc = fat_remove(&(file->fatfile));
     if ( rc < 0 ) {
         DEBUGF("Failed removing file: %d", rc);
@@ -413,10 +386,6 @@ int rename(const char* path, const char* newpath)
         return rc * 10 - 7;
     }
 
-#ifdef HAVE_DIRCACHE
-    dircache_rename(path, newpath);
-#endif
-
     rc = close(fd);
     if (rc<0) {
         closedir(dir);
@@ -455,9 +424,6 @@ int ftruncate(int fd, off_t size)
     }
 
     file->size = size;
-#ifdef HAVE_DIRCACHE
-    dircache_update_filesize(fd, size, file->fatfile.firstcluster);
-#endif
 
     return 0;
 }
@@ -574,9 +540,6 @@ static int readwrite(int fd, void* buf, long count, bool write)
             if ( write && file->fileoffset > file->size )
             {
                 file->size = file->fileoffset;
-#ifdef HAVE_DIRCACHE
-                dircache_update_filesize(fd, file->size, file->fatfile.firstcluster);
-#endif
             }
             return nread ? nread : rc * 10 - 4;
         }
@@ -614,9 +577,6 @@ static int readwrite(int fd, void* buf, long count, bool write)
                     if ( file->fileoffset > file->size )
                     {
                         file->size = file->fileoffset;
-#ifdef HAVE_DIRCACHE
-                        dircache_update_filesize(fd, file->size, file->fatfile.firstcluster);
-#endif
                     }
                     return nread ? nread : rc * 10 - 5;
                 }
@@ -633,9 +593,6 @@ static int readwrite(int fd, void* buf, long count, bool write)
                     if ( file->fileoffset > file->size )
                     {
                         file->size = file->fileoffset;
-#ifdef HAVE_DIRCACHE
-                        dircache_update_filesize(fd, file->size, file->fatfile.firstcluster);
-#endif
                     }
                     return nread ? nread : rc * 10 - 6;
                 }
@@ -666,9 +623,6 @@ static int readwrite(int fd, void* buf, long count, bool write)
     if ( write && file->fileoffset > file->size )
     {
         file->size = file->fileoffset;
-#ifdef HAVE_DIRCACHE
-        dircache_update_filesize(fd, file->size, file->fatfile.firstcluster);
-#endif
     }
 
     return nread;

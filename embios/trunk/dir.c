@@ -27,12 +27,11 @@
 #include "dir.h"
 #include "debug.h"
 
-#if ((defined(MEMORYSIZE) && (MEMORYSIZE > 8)) || MEM > 8)
-#define MAX_OPEN_DIRS 12
-#else
-#define MAX_OPEN_DIRS 8
+#ifndef MAX_OPEN_DIRS
+#define MAX_OPEN_DIRS 16
 #endif
 
+extern struct scheduler_thread* current_thread;
 static DIR opendirs[MAX_OPEN_DIRS];
 
 #ifdef HAVE_HOTSWAP
@@ -87,6 +86,7 @@ DIR* opendir(const char* name)
     }
 
     pdir->busy = true;
+    pdir->process = current_thread;
 
 #ifdef HAVE_MULTIVOLUME
     /* try to extract a heading volume name, if present */
@@ -147,6 +147,22 @@ int closedir(DIR* dir)
 {
     dir->busy=false;
     return 0;
+}
+
+int closedir_all_of_process(struct scheduler_thread* process)
+{
+    DIR* pdir = opendirs;
+    int dd;
+    int closed = 0;
+    for ( dd=0; dd<MAX_OPEN_DIRS; dd++, pdir++)
+    {
+        if (pdir->process == process)
+        {
+            pdir->busy = false; /* mark as available, no further action */
+            closed++;
+        }
+    }
+    return closed; /* return how many we did */
 }
 
 struct dirent* readdir(DIR* dir)

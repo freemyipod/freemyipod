@@ -50,3 +50,15 @@ int memcmp(const void* ptr1, const void* ptr2, size_t num)
         return diff;
     return 0;
 }
+
+void* memchr(const void* ptr, int value, size_t num)
+{
+    unsigned char val = (unsigned char)value;
+    while (num-- > 0)
+    {
+        if (*((unsigned char*)ptr) == val)
+            return (void*)ptr;
+        ptr++;
+    }
+    return NULL;
+}

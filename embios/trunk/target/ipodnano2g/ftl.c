@@ -831,7 +831,7 @@ uint32_t ftl_vfl_read(uint32_t vpage, void* buffer, void* sparebuffer,
     uint32_t abspage = vpage + ppb * syshyperblocks;
     if (abspage >= ftl_nand_type->blocks * ppb || abspage < ppb)
     {
-        DEBUG("FTL: Trying to read out-of-bounds vPage %u", (unsigned)vpage);
+        DEBUGF("FTL: Trying to read out-of-bounds vPage %u", (unsigned)vpage);
         return 4;
     }
 

@@ -741,7 +741,7 @@ uint32_t nand_device_init(void)
         if (type == 0xFFFFFFFF) continue;
         for (j = 0; ; j++)
         {
-            if (j == sizeof(nand_deviceinfotable) / sizeof(nand_deviceinfotable[0])) break;
+            if (j == ARRAYLEN(nand_deviceinfotable)) break;
             else if (nand_deviceinfotable[j].id == type)
             {
                 nand_type[i] = j;

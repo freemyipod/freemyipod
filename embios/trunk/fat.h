@@ -23,6 +23,7 @@
 #define FAT_H
 
 #include "global.h"
+#include "util.h"
 #include "mv.h" /* for volume definitions */
 
 /* Number of bytes reserved for a file name (including the trailing \0).
@@ -78,13 +79,13 @@ struct fat_dir
     unsigned int entrycount;
     long sector;
     struct fat_file file;
-    unsigned char sectorcache[SECTOR_SIZE];
+    unsigned char sectorcache[SECTOR_SIZE] CACHEALIGN_ATTR;
     /* There are 2-bytes per characters. We don't want to bother too much, as LFN entries are
      * at much 255 characters longs, that's at most 20 LFN entries. Each entry hold at most
      * 13 characters, that a total of 260 characters. So we keep a buffer of that size.
      * Keep coherent with fat.c code. */
     unsigned char longname[260 * 2];
-};
+} CACHEALIGN_ATTR;
 
 #ifdef HAVE_HOTSWAP
 extern void fat_lock(void);

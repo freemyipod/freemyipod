@@ -29,7 +29,8 @@
 
 
 #define ARM_ARCH 4
-#define CACHELINE_BITS 4
+#define LITTLE_ENDIAN
+#define CACHEALIGN_BITS 4
 #define CPU_FREQ 191692800
 
 

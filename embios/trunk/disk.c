@@ -29,6 +29,7 @@
 #include "file.h" /* for release_files() */
 #endif
 #include "disk.h"
+#include "util.h"
 #include <string.h>
 
 /* Partition table entry layout:
@@ -66,7 +67,6 @@ static struct mutex disk_mutex;
 struct partinfo* disk_init(IF_MD_NONVOID(int drive))
 {
     int i;
-    unsigned char sector[SECTOR_SIZE];
 #ifdef HAVE_MULTIDRIVE
     /* For each drive, start at a different position, in order not to destroy
        the first entry of drive 0.
@@ -80,10 +80,12 @@ struct partinfo* disk_init(IF_MD_NONVOID(int drive))
     (void)drive;
 #endif
 
+    unsigned char* sector = fat_get_sector_buffer();
     storage_read_sectors(IF_MD2(drive,) 0,1, sector);
     /* check that the boot sector is initialized */
     if ( (sector[510] != 0x55) ||
          (sector[511] != 0xaa)) {
+        fat_release_sector_buffer();
         DEBUGF("Bad boot sector signature");
         return NULL;
     }
@@ -103,6 +105,7 @@ struct partinfo* disk_init(IF_MD_NONVOID(int drive))
             /* not handled yet */
         }
     }
+    fat_release_sector_buffer();
     return pinfo;
 }
 

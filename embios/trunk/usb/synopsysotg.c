@@ -30,6 +30,7 @@
 #include "usb.h"
 #include "usb_ch9.h"
 #include "synopsysotg.h"
+#include "util.h"
 
 
 struct ep_type

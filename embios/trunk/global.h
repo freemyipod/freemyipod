@@ -48,7 +48,5 @@
 #include "configmagic.h"
 #include "debug.h"
 
-#define CACHELINE_SIZE (1<<CACHELINE_BITS)
-#define CACHEALIGN_ATTR __attribute__((aligned(CACHELINE_SIZE)))
 
 #endif

@@ -22,6 +22,7 @@
 #define __DIR_H__
 
 #include "global.h"
+#include "thread.h"
 #include "file.h"
 
 #define ATTR_READ_ONLY   0x01
@@ -48,6 +49,7 @@ typedef struct {
     long startcluster;
     struct fat_dir fatdir;
     struct dirent theent;
+    struct scheduler_thread* process;
 #ifdef HAVE_MULTIVOLUME
     int volumecounter; /* running counter for faked volume entries */
 #endif
@@ -63,6 +65,7 @@ char *get_volume_name(int volume);
 
 extern DIR* opendir(const char* name);
 extern int closedir(DIR* dir);
+extern int closedir_all_of_process(struct scheduler_thread* process);
 extern int mkdir(const char* name);
 extern int rmdir(const char* name);
 

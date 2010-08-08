@@ -24,10 +24,14 @@
 
 #define MAX_PATH 260
 
+#include "global.h"
 #include <sys/types.h>
+#include "thread.h"
 #include "gcc_extensions.h"
 
-#define MAX_OPEN_FILES 11
+#ifndef MAX_OPEN_FILES
+#define MAX_OPEN_FILES 32
+#endif
 
 #ifndef SEEK_SET
 #define SEEK_SET 0
@@ -57,6 +61,7 @@ typedef void (*qsort_func)(void *base, size_t nmemb,  size_t size,
 
 extern int file_open(const char* pathname, int flags);
 extern int close(int fd);
+extern int close_all_of_process(struct scheduler_thread* process);
 extern int fsync(int fd);
 extern ssize_t read(int fd, void *buf, size_t count);
 extern off_t lseek(int fildes, off_t offset, int whence);
