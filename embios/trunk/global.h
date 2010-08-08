@@ -28,7 +28,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <stdio.h>
+typedef int32_t ssize_t;
+typedef int32_t mode_t;
+typedef int32_t off_t;
 #endif
 
 #include "build/version.h"

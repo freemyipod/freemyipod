@@ -19,7 +19,6 @@
  *
  ****************************************************************************/
 #include "global.h"
-#include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include "fat.h"
