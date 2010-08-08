@@ -45,21 +45,8 @@
 #define true 1
 #define false 0
 
-#include "config.h"
-#include "target.h"
+#include "configmagic.h"
 #include "debug.h"
-
-#ifndef SCHEDULER_TICK
-#define SCHEDULER_TICK 1048576
-#endif
-
-#ifndef SYSTEM_TICK
-#define SYSTEM_TICK 10000
-#endif
-
-#ifndef MAX_THREADS
-#define MAX_THREADS 32
-#endif
 
 #define CACHELINE_SIZE (1<<CACHELINE_BITS)
 #define CACHEALIGN_ATTR __attribute__((aligned(CACHELINE_SIZE)))

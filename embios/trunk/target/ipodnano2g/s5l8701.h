@@ -78,6 +78,8 @@
 #define PDAT7        (*((volatile uint32_t*)(0x3CF00074)))
 #define PCON10       (*((volatile uint32_t*)(0x3CF000A0)))
 #define PDAT10       (*((volatile uint32_t*)(0x3CF000A4)))
+#define PCON11       (*((volatile uint32_t*)(0x3CF000B0)))
+#define PDAT11       (*((volatile uint32_t*)(0x3CF000B4)))
 #define PCON15       (*((volatile uint32_t*)(0x3CF000F0)))
 #define PUNK15       (*((volatile uint32_t*)(0x3CF000FC)))
 

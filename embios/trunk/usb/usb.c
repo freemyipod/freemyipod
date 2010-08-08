@@ -32,7 +32,7 @@
 #include "i2c.h"
 #include "strlen.h"
 #include "contextswitch.h"
-#include "pmu.h"
+#include "power.h"
 #include "mmu.h"
 #include "shutdown.h"
 
@@ -467,13 +467,21 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             size = dbgrecvbuf[1] + 16;
             break;
         case 16:  // FREEZE SCHEDULER
-            scheduler_freeze(dbgrecvbuf[1]);
+            dbgsendbuf[1] = scheduler_freeze(dbgrecvbuf[1]);
             dbgsendbuf[0] = 1;
             size = 16;
             break;
         case 17:  // SUSPEND THREAD
-            if (dbgrecvbuf[1]) thread_suspend(dbgrecvbuf[2]);
-            else thread_resume(dbgrecvbuf[2]);
+            if (dbgrecvbuf[1])
+            {
+                if (thread_suspend(dbgrecvbuf[2]) == -4) dbgsendbuf[1] = 1;
+                else dbgsendbuf[1] = 0;
+            }
+            else
+            {
+                if (thread_resume(dbgrecvbuf[2]) == -5) dbgsendbuf[1] = 0;
+                else dbgsendbuf[1] = 1;
+            }
             dbgsendbuf[0] = 1;
             size = 16;
             break;
@@ -554,7 +562,7 @@ void dbgthread(void)
                 break;
             case DBGACTION_POWEROFF:
                 if (dbgactiontype) shutdown();
-                poweroff();
+                power_off();
                 break;
             case DBGACTION_RESET:
                 shutdown();

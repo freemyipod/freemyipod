@@ -22,27 +22,37 @@
 
 
 #include "global.h"
-#include "thread.h"
-#include "console.h"
-#include "lcd.h"
-#include "lcdconsole.h"
-#include "interrupt.h"
-#include "i2c.h"
+#include "s5l8701.h"
+#include "power.h"
 #include "pmu.h"
-#include "usb/usb.h"
 
-static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSION_SVN "\n\n";
 
-void init() INITCODE_ATTR;
-void init()
+void reset();
+
+
+void power_off(void)
 {
-    scheduler_init();
-    console_init();
-    lcd_init();
-    lcdconsole_init();
-    interrupt_init();
-    cputs(1, welcomestring);
-    i2c_init();
-    power_init();
-    usb_init();
+    pmu_ldo_on_in_standby(0, 0);
+    pmu_ldo_on_in_standby(1, 0);
+    pmu_ldo_on_in_standby(2, 0);
+    pmu_ldo_on_in_standby(3, 0);
+    pmu_ldo_on_in_standby(4, 0);
+    pmu_ldo_on_in_standby(5, 0);
+    pmu_ldo_on_in_standby(6, 0);
+    pmu_ldo_on_in_standby(7, 0);
+    pmu_set_wake_condition(0x42); /* USB inserted or EXTON1 */
+    pmu_enter_standby();
+
+    reset();
+}
+
+void power_init(void)
+{
+    pmu_init();
+    pmu_write(0x1e, 15);  /* Vcore = 1.000V */
+}
+
+bool charging_state(void)
+{
+    return (PDAT11 & 0x10) ? false : true;
 }

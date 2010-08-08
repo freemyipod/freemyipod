@@ -228,9 +228,11 @@ void scheduler_init(void)
     setup_tick();
 }
 
-void scheduler_freeze(bool value)
+bool scheduler_freeze(bool value)
 {
+    bool old = scheduler_frozen;
     scheduler_frozen = value;
+    return old;
 }
 
 void scheduler_switch(int thread)

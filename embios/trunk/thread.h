@@ -107,7 +107,7 @@ struct wakeup
 
 void scheduler_init() INITCODE_ATTR;
 void scheduler_switch(int thread) ICODE_ATTR;
-void scheduler_freeze(bool value);
+bool scheduler_freeze(bool value);
 int thread_create(const char* name, const void* code, void* stack,
                   int stacksize, enum thread_type type, int priority, bool run);
 int thread_suspend(int thread);

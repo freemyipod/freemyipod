@@ -21,28 +21,20 @@
 //
 
 
+#ifndef __FTL_H__
+#define __FTL_H__
+
 #include "global.h"
-#include "thread.h"
-#include "console.h"
-#include "lcd.h"
-#include "lcdconsole.h"
-#include "interrupt.h"
-#include "i2c.h"
-#include "pmu.h"
-#include "usb/usb.h"
 
-static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSION_SVN "\n\n";
 
-void init() INITCODE_ATTR;
-void init()
-{
-    scheduler_init();
-    console_init();
-    lcd_init();
-    lcdconsole_init();
-    interrupt_init();
-    cputs(1, welcomestring);
-    i2c_init();
-    power_init();
-    usb_init();
-}
+extern const struct nand_device_info_type* ftl_nand_type;
+extern uint32_t ftl_banks;
+
+
+uint32_t ftl_init(void);
+uint32_t ftl_read(uint32_t sector, uint32_t count, void* buffer);
+uint32_t ftl_write(uint32_t sector, uint32_t count, const void* buffer);
+uint32_t ftl_sync(void);
+
+
+#endif

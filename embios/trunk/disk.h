@@ -29,11 +29,6 @@ struct partinfo {
     unsigned char type;
 };
 
-/* FIXME: This sets the drive count to 1. This should belong to the device itself */
-#define NUM_DRIVES 1
-#define NUM_VOLUMES 1
-#define NUM_VOLUMES_PER_DRIVE 1
-
 #define PARTITION_TYPE_FAT32                0x0b
 #define PARTITION_TYPE_FAT32_LBA            0x0c
 #define PARTITION_TYPE_FAT16                0x06
