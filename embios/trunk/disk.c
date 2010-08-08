@@ -20,7 +20,6 @@
  ****************************************************************************/
 #include "global.h"
 #include "thread.h"
-#include <stdio.h>
 #include "storage.h"
 #include "debug.h"
 #include "fat.h"

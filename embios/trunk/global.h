@@ -27,6 +27,8 @@
 #ifndef ASM_FILE
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+#include <stdio.h>
 #endif
 
 #include "build/version.h"
@@ -40,10 +42,6 @@
 #define INITDATA_ATTR __attribute__((section(".initdata")))
 #define INITBSS_ATTR __attribute__((section(".initbss")))
 #define STACK_ATTR __attribute__((section(".stack")))
-
-#define bool int
-#define true 1
-#define false 0
 
 #include "configmagic.h"
 #include "debug.h"

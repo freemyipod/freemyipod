@@ -27,9 +27,7 @@
 #include "usb/dbgconsole.h"
 #include "format.h"
 #include "thread.h"
-#include <stdio.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <limits.h>
 
 

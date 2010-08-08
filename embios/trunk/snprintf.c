@@ -27,9 +27,7 @@
  */
 
 #include "global.h"
-#include <stdio.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <limits.h>
 #include "format.h"
 

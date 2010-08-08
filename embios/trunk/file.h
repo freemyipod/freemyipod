@@ -25,7 +25,6 @@
 #define MAX_PATH 260
 
 #include "global.h"
-#include <sys/types.h>
 #include "thread.h"
 #include "gcc_extensions.h"
 
