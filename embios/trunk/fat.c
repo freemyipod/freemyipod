@@ -26,6 +26,7 @@
 #include "storage.h"
 #include "debug.h"
 #include "panic.h"
+#include "ctype.h"
 
 #define BYTES2INT16(array,pos) \
           (array[pos] | (array[pos+1] << 8 ))
@@ -1307,7 +1308,7 @@ static int add_dir_entry(struct fat_dir* dir,
 
         /* one dir entry needed for every 13 bytes of filename,
            plus one entry for the short name */
-        entries_needed = (utf8length(name) + (NAME_BYTES_PER_ENTRY-1))
+        entries_needed = (strlen(name) + (NAME_BYTES_PER_ENTRY-1))
                          / NAME_BYTES_PER_ENTRY + 1;
     }
 

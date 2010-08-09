@@ -42,6 +42,10 @@ fat.c
 file.c
 dir.c
 storage.c
+strcasestr.c
+strcasecmp.c
+strlcpy.c
+strlcat.c
 
 libc/strstr.c
 libc/strtok.c
