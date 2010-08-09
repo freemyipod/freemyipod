@@ -524,7 +524,7 @@ static int readwrite(int fd, void* buf, long count, bool write)
     /* read/write whole sectors right into/from the supplied buffer */
     sectors = count / SECTOR_SIZE;
     if ( sectors ) {
-        if (buf+nread & (CACHEALIGN_SIZE - 1))
+        if (((uint32_t)buf + nread) & (CACHEALIGN_SIZE - 1))
         {
             if (write) memcpy(file->cache, buf+nread, SECTOR_SIZE);
             rc = fat_readwrite(&(file->fatfile), sectors, file->cache, write );
