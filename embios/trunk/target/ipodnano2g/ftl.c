@@ -1287,6 +1287,11 @@ uint32_t ftl_read(uint32_t sector, uint32_t count, void* buffer)
     DEBUGF("FTL: Reading %d sectors starting at %d", count, sector);
 #endif
 
+	if ((uint32_t)buffer & 0xf)
+		panicf(PANIC_KILLTHREAD,
+		       "ftl_read: Misaligned data buffer at %08X (sector %lu, count %lu)",
+			   (unsigned int)buffer, sector, count);
+
     if (sector + count > ftl_nand_type->userblocks * ppb)
     {
         DEBUGF("FTL: Sector %d is out of range!", sector + count - 1);
@@ -1941,6 +1946,11 @@ uint32_t ftl_write(uint32_t sector, uint32_t count, const void* buffer)
 #ifdef FTL_TRACE
     DEBUGF("FTL: Writing %d sectors starting at %d", count, sector);
 #endif
+
+	if ((uint32_t)buffer & 0xf)
+		panicf(PANIC_KILLTHREAD,
+		       "ftl_write: Misaligned data buffer at %08X (sector %lu, count %lu)",
+			   (unsigned int)buffer, sector, count);
 
     if (sector + count > ftl_nand_type->userblocks * ppb)
     {

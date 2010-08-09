@@ -94,7 +94,6 @@ static struct wakeup nand_wakeup;
 static struct mutex ecc_mtx;
 static struct wakeup ecc_wakeup;
 
-static uint8_t nand_data[0x800] CACHEALIGN_ATTR;
 static uint8_t nand_ctrl[0x200] CACHEALIGN_ATTR;
 static uint8_t nand_spare[0x40] CACHEALIGN_ATTR;
 static uint8_t nand_ecc[0x30] CACHEALIGN_ATTR;
@@ -375,34 +374,38 @@ uint32_t nand_read_page(uint32_t bank, uint32_t page, void* databuffer,
                         void* sparebuffer, uint32_t doecc,
                         uint32_t checkempty)
 {
-    uint8_t* data = nand_data;
+    uint8_t* data = (uint8_t*)databuffer;
     uint8_t* spare = nand_spare;
-    if (databuffer && !((uint32_t)databuffer & 0xf))
-        data = (uint8_t*)databuffer;
-    if (sparebuffer && !((uint32_t)sparebuffer & 0xf))
-        spare = (uint8_t*)sparebuffer;
+    if (sparebuffer) spare = (uint8_t*)sparebuffer;
+	if ((uint32_t)databuffer & 0xf)
+		panicf(PANIC_KILLUSERTHREADS,
+	           "nand_read_page: Misaligned data buffer at %08X (bank %lu, page %lu)",
+			   (unsigned int)databuffer, bank, page);
+	if ((uint32_t)sparebuffer & 0xf)
+		panicf(PANIC_KILLUSERTHREADS,
+	           "nand_read_page: Misaligned spare buffer at %08X (bank %lu, page %lu)",
+			   (unsigned int)sparebuffer, bank, page);
     mutex_lock(&nand_mtx, TIMEOUT_BLOCK);
     nand_last_activity_value = USEC_TIMER;
     if (!nand_powered) nand_power_up();
     uint32_t rc, eccresult;
     nand_set_fmctrl0(bank, FMCTRL0_ENABLEDMA);
     if (nand_send_cmd(NAND_CMD_READ)) return nand_unlock(1);
-    if (nand_send_address(page, databuffer ? 0 : 0x800))
+    if (nand_send_address(page, data ? 0 : 0x800))
         return nand_unlock(1);
     if (nand_send_cmd(NAND_CMD_READ2)) return nand_unlock(1);
     if (nand_wait_status_ready(bank)) return nand_unlock(1);
-    if (databuffer)
+    if (data)
         if (nand_transfer_data(bank, 0, data, 0x800))
             return nand_unlock(1);
     rc = 0;
     if (!doecc)
     {
-        if (databuffer && data != databuffer) memcpy(databuffer, data, 0x800);
         if (sparebuffer)
         {
             if (nand_transfer_data(bank, 0, spare, 0x40))
                 return nand_unlock(1);
-            if (sparebuffer && spare != sparebuffer) 
+            if (sparebuffer) 
                 memcpy(sparebuffer, spare, 0x800);
             if (checkempty)
                 rc = nand_check_empty((uint8_t*)sparebuffer) << 1;
@@ -414,7 +417,6 @@ uint32_t nand_read_page(uint32_t bank, uint32_t page, void* databuffer,
     {
         memcpy(nand_ecc, &spare[0xC], 0x28);
         rc |= (ecc_decode(3, data, nand_ecc) & 0xF) << 4;
-        if (data != databuffer) memcpy(databuffer, data, 0x800);
     }
     memset(nand_ctrl, 0xFF, 0x200);
     memcpy(nand_ctrl, spare, 0xC);
@@ -423,7 +425,6 @@ uint32_t nand_read_page(uint32_t bank, uint32_t page, void* databuffer,
     rc |= (eccresult & 0xF) << 8;
     if (sparebuffer)
     {
-        if (spare != sparebuffer) memcpy(sparebuffer, spare, 0x40);
         if (eccresult & 1) memset(sparebuffer, 0xFF, 0xC);
         else memcpy(sparebuffer, nand_ctrl, 0xC);
     }
@@ -436,26 +437,26 @@ static uint32_t nand_write_page_int(uint32_t bank, uint32_t page,
                                     void* databuffer, void* sparebuffer,
                                     uint32_t doecc, uint32_t wait)
 {
-    uint8_t* data = nand_data;
+    uint8_t* data = (uint8_t*)databuffer;
     uint8_t* spare = nand_spare;
-    if (databuffer && !((uint32_t)databuffer & 0xf))
-        data = (uint8_t*)databuffer;
-    if (sparebuffer && !((uint32_t)sparebuffer & 0xf))
-        spare = (uint8_t*)sparebuffer;
+    if (sparebuffer) spare = (uint8_t*)sparebuffer;
+	if ((uint32_t)databuffer & 0xf)
+		panicf(PANIC_KILLUSERTHREADS,
+	           "nand_write_page: Misaligned data buffer at %08X (bank %lu, page %lu)",
+			   (unsigned int)databuffer, bank, page);
+	if ((uint32_t)sparebuffer & 0xf)
+		panicf(PANIC_KILLUSERTHREADS,
+	           "nand_write_page: Misaligned spare buffer at %08X (bank %lu, page %lu)",
+			   (unsigned int)sparebuffer, bank, page);
     mutex_lock(&nand_mtx, TIMEOUT_BLOCK);
     nand_last_activity_value = USEC_TIMER;
     if (!nand_powered) nand_power_up();
-    if (sparebuffer)
-    {
-        if (spare != sparebuffer) memcpy(spare, sparebuffer, 0x40);
-    }
-    else memset(spare, 0xFF, 0x40);
+    if (!sparebuffer) memset(spare, 0xFF, 0x40);
     nand_set_fmctrl0(bank, FMCTRL0_ENABLEDMA);
     if (nand_send_cmd(NAND_CMD_PROGRAM)) return nand_unlock(1);
-    if (nand_send_address(page, databuffer ? 0 : 0x800))
+    if (nand_send_address(page, data ? 0 : 0x800))
         return nand_unlock(1);
-    if (databuffer && data != databuffer) memcpy(data, databuffer, 0x800);
-    if (databuffer) nand_transfer_data_start(bank, 1, data, 0x800);
+    if (data) nand_transfer_data_start(bank, 1, data, 0x800);
     if (doecc)
     {
         if (ecc_encode(3, data, nand_ecc)) return nand_unlock(1);
@@ -465,7 +466,7 @@ static uint32_t nand_write_page_int(uint32_t bank, uint32_t page,
         if (ecc_encode(0, nand_ctrl, nand_ecc)) return nand_unlock(1);
         memcpy(&spare[0x34], nand_ecc, 0xC);
     }
-    if (databuffer)
+    if (data)
         if (nand_transfer_data_collect(1))
             return nand_unlock(1);
     if (sparebuffer || doecc)
