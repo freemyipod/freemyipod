@@ -73,7 +73,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
     DEBUGF("open(\"%s\",%d)",pathname,flags);
 
     if ( pathname[0] != '/' ) {
-        DEBUGF("'%s' is not an absolute path.",pathname);
+        DEBUGF("'%s' is not an absolute path.", pathname);
         DEBUGF("Only absolute pathnames supported at the moment");
         errno = EINVAL;
         return -1;
@@ -524,8 +524,13 @@ static int readwrite(int fd, void* buf, long count, bool write)
     /* read/write whole sectors right into/from the supplied buffer */
     sectors = count / SECTOR_SIZE;
     if ( sectors ) {
-        rc = fat_readwrite(&(file->fatfile), sectors,
-            (unsigned char*)buf+nread, write );
+        if (buf+nread & (CACHEALIGN_SIZE - 1))
+        {
+            if (write) memcpy(file->cache, buf+nread, SECTOR_SIZE);
+            rc = fat_readwrite(&(file->fatfile), sectors, file->cache, write );
+            if (!write) memcpy(buf+nread, file->cache, SECTOR_SIZE);
+        }
+        else rc = fat_readwrite(&(file->fatfile), sectors, (unsigned char*)buf+nread, write );
         if ( rc < 0 ) {
             DEBUGF("Failed read/writing %ld sectors",sectors);
             errno = EIO;

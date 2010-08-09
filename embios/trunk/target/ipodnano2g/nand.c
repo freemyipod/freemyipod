@@ -377,11 +377,11 @@ uint32_t nand_read_page(uint32_t bank, uint32_t page, void* databuffer,
     uint8_t* data = (uint8_t*)databuffer;
     uint8_t* spare = nand_spare;
     if (sparebuffer) spare = (uint8_t*)sparebuffer;
-	if ((uint32_t)databuffer & 0xf)
+	if ((uint32_t)databuffer & (CACHEALIGN_SIZE - 1))
 		panicf(PANIC_KILLUSERTHREADS,
 	           "nand_read_page: Misaligned data buffer at %08X (bank %lu, page %lu)",
 			   (unsigned int)databuffer, bank, page);
-	if ((uint32_t)sparebuffer & 0xf)
+	if ((uint32_t)sparebuffer & (CACHEALIGN_SIZE - 1))
 		panicf(PANIC_KILLUSERTHREADS,
 	           "nand_read_page: Misaligned spare buffer at %08X (bank %lu, page %lu)",
 			   (unsigned int)sparebuffer, bank, page);
