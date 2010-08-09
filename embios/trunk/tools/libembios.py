@@ -434,24 +434,26 @@ class embios:
     
     self.handle.bulkWrite(self.__coutep, struct.pack("<IBBBBII", 8, bus, slave, addr, size, 0, 0))
     data = self.__getbulk(self.handle, self.__cinep, 0x10 + size)
-    self.__checkstatus(data)
+    self.__checkstatus(response)
     
-    self.__myprint(" done\n", silent)
+    self.__myprint(" done\n data was:\n%s\n" % (self.__gethexviewprintout(data[16:])), silent)
     
     return data[16:]
 
 
   def i2csend(self, bus, slave, addr, data, silent = 0):
+    size = len(data)
     if (size > self.cout_maxsize - 0x10) or (size > 0xFF):
       raise Exception ("The data exceeds the maximum amount that can be send with this instruction.")
   
     self.__myprint("Writing 0x%2x bytes to 0x%2x at I2C device at bus 0x%2x, slave adress 0x%2x ..." % (size, addr, bus, slave), silent)
   
-    self.handle.bulkWrite(self.__coutep, struct.pack("<IBBBBII", 9, bus, slave, addr, len(data), 0, 0) + data)
-    self.__checkstatus(self.__readstatus())
+    self.handle.bulkWrite(self.__coutep, struct.pack("<IBBBBII", 9, bus, slave, addr, size, 0, 0) + data)
+    response = self.__getbulk(self.handle, self.__cinep, 0x10)
+    self.__checkstatus(response)
     
     self.__myprint(" done\n", silent)
-
+    
     
 #=====================================================================================      
 
@@ -500,10 +502,12 @@ class embios:
                        struct.unpack("<IIII", response[:0x10])[2],
                        struct.unpack("<IIII", response[:0x10])[3])
                     , silent)
-      self.__myprint(self.gethexviewprintout(response[0x10:], "", 1), silent)
+      self.__myprint(self.__gethexviewprintout(response[0x10:], "", 1), silent)
       self.__myprint("\n\n", silent)
-      
-    elif (outtype != ""):   # none of the above and also not "" which would be return only
+    
+    elif (outtype == ""):
+      pass    # return only
+    else:
       raise Exception ("Invalid argument for <outtype>: '%s'." % (outtype))
     
     self.__myprint(" done\n", silent)
@@ -638,11 +642,12 @@ class embios:
     
     out = []
     out[0] = struct.unpack("<I", response[4:8])[0]    # Process information struct version
-    out[1] = struct.unpack("<I", response[4:8])[0]    # Process information table size
+    out[1] = struct.unpack("<I", response[8:12])[0]    # Process information table size
+    out[2] = response     # raw received data
     
     if (struct.unpack("<I", response[4:8])[0] == 1):   # Process information struct version == 1
       p = 0x10
-      process_n = 2   # actually process 0, but there are alread two other elements in out
+      process_n = 3   # actually process 0, but there are alread three other elements in out
       while True:
       # regs ==================================================
         keylen = 16
@@ -829,14 +834,47 @@ class embios:
         
       process_n += 1
         
+    procinfoprint = ""
     
-    
+    try:
+      i = 0
+      while (out[0] == 1) and (!silent):      # Process information struct version == 1 && !silent
+        processinfoprint += "--------------------------------------------------------------------------------"
+        processinfoprint += "R0: 0x%08x,  R1: 0x%08x,  R2: 0x%08x,  R3: 0x%08x,\n\
+                             R4: 0x%08x,  R5: 0x%08x,  R6: 0x%08x,  R7: 0x%08x,\n\
+                             R8: 0x%08x,  R9: 0x%08x,  R10: 0x%08x, R11: 0x%08x,\n\
+                             R12: 0x%08x, R13: 0x%08x, LR: 0x%08x,  PC: 0x%08x\n" \
+                             % (out[i+3]['regs'][0], out[i+3]['regs'][1], out[i+3]['regs'][2], out[i+3]['regs'][3], \
+                                out[i+3]['regs'][4], out[i+3]['regs'][5], out[i+3]['regs'][6], out[i+3]['regs'][7], \
+                                out[i+3]['regs'][8], out[i+3]['regs'][9], out[i+3]['regs'][10], out[i+3]['regs'][11], \
+                                out[i+3]['regs'][12], out[i+3]['regs'][13], out[i+3]['regs'][14], out[i+3]['regs'][15] )
+        processinfoprint += "cpsr: 0b%032b      " % (out[i+3]['cpsr'])
+        states = ["THREAD_FREE", "THREAD_SUSPENDED", "THREAD_READY", "THREAD_RUNNING", "THREAD_BLOCKED", "THREAD_DEFUNCT", "THREAD_DEFUNCT_ACK"]
+        processinfoprint += "state: %s      " % (states[out[i+3]['state']])
+        processinfoprint += "nameptr: 0x%08x\n" % (out[i+3]['namepointer'])
+        processinfoprint += "current cpu time: 0x%08x      " % (out[i+3]['cputime_current'])
+        processinfoprint += "total cpu time: 0x%016x\n" % (out[i+3]['cputime_total'])
+        processinfoprint += "startusec: 0x%08x      " % (out[i+3]['startusec'])
+        processinfoprint += "queue next ptr: 0x%08x\n" % (out[i+3]['queue_next_pointer'])
+        processinfoprint += "timeout: 0x%08x\n" % (out[i+3]['timeout'])
+        processinfoprint += "blocked since: 0x%08x      " % (out[i+3]['blocked_since'])
+        processinfoprint += "blocked by ptr: 0x%08x\n" % (out[i+3]['blocked_by_pointer'])
+        processinfoprint += "stackptr: 0x%08x      " % (out[i+3]['stackpointer'])
+        blocktype = ["THREAD_NOT_BLOCKED", "THREAD_BLOCK_SLEEP", "THREAD_BLOCK_MUTEX", "THREAD_BLOCK_WAKEUP", "THREAD_DEFUNCT_STKOV", "THREAD_DEFUNCT_PANIC"]
+        processinfoprint += "block type: %s\n" % (blocktype[out[i+3]['block_type']])
+        threadtype = ["USER_THREAD", "SYSTEM_THREAD"]
+        processinfoprint += "thread type: %s\n" % (threadtype[out[i+3]['thread_type']])
+        processinfoprint += "priority: 0x%02x      " % (out[i+3]['priority'])
+        processinfoprint += "cpu load: 0x%02x\n" % (out[i+3]['cpuload'])
+        
+    except IndexError:
+      processinfoprint += "--------------------------------------------------------------------------------"
     
     self.__myprint(" done\n\
                     Process information struct version: 0x%8x\n\
                     Total size of process information table: 0x%8x\n\
                     %s"
-                  % (struct.unpack("<I", response[4:8]), struct.unpack("<I", response[8:12]), hexprint)
+                  % (out[0], out[1], procinfoprint)
                   , silent)
     
     return out

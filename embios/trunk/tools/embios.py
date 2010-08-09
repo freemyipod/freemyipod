@@ -46,6 +46,28 @@ def usage():
   print "    If <force> is 1, the poweroff will be forced, otherwise it will be gracefully,"
   print "    which may take some time."
   print ""
+  print "  i2crecv <bus> <slave> <addr> <size>"
+  print "    Reads data from an I2C device"
+  print "      <bus> the bus index"
+  print "      <slave> the slave address"
+  print "      <addr> the start address on the I2C device"
+  print "      <size> the number of bytes to read"
+  print ""
+  print "  i2csend <bus> <slave> <addr> <db1> <db2> ... <dbN>"
+  print "    Writes data to an I2C device"
+  print "      <bus> the bus index"
+  print "      <slave> the slave address"
+  print "      <addr> the start address on the I2C device"
+  print "      <db1> ... <dbN> the data in single bytes, seperated by whitespaces, eg. 0x37 0x56 0x45 0x12"
+  print ""
+  print "  getprocessinformation <offset> <size> / getprocinfo <offset> <size>"
+  print "    Fetches data on the currently running processes"
+  print "      <offset> the offset in the data field"
+  print "      <size> the number of bytes to be fetched"
+  print "     ATTENTION: this function will be print the information to the console window."
+  print "                If several threads are running this might overflow the window,"
+  print "                causing not everything to be shown."
+  print ""
   print "  lockscheduler"
   print "    Locks (freezes) the scheduler"
   print ""
@@ -93,9 +115,22 @@ def parsecommand(dev, argv):
     if len(argv) != 3: usage()
     dev.poweroff(int(argv[2]))
 
-  elif argv[1] == "flushcaches":
-    if len(argv) != 2: usage()
-    dev.flushcaches()
+  elif argv[1] == "i2cread":
+    if len(argv) != 6: usage()
+    dev.i2crecv(int(argv[2]), int(argv[3]), int(argv[4]), int(argv[5]))
+    
+  elif argv[1] == "i2csend":
+    if len(argv) < 6: usage()
+    data = ""
+    ptr = 5
+    while ptr < lean(argv):
+      data += struct.pack("<B", int(argv[ptr]))
+      ptr += 1
+    dev.i2csend(int(argv[2]), int(argv[3]), int(argv[4]), data)
+    
+  elif argv[1] == "getprocessinformation" or argv[1] == "getprocinfo":
+    if len(argv) != 4: usage()
+    dev.getprocinfo(int(argv[2]), int(argv[3]))
     
   elif argv[1] == "lockscheduler":
     if len(argv) != 2: usage()
@@ -120,6 +155,10 @@ def parsecommand(dev, argv):
   elif argv[1] == "createthread":
     if len(argv) != 9: usage()
     dev.createthread(int(argv[2]), int(argv[3]), int(argv[4]), int(argv[5]), int(argv[6]), int(argv[7]), int(argv[8]))
+    
+  elif argv[1] == "flushcaches":
+    if len(argv) != 2: usage()
+    dev.flushcaches()
     
   else: usage()
 
