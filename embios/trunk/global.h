@@ -24,16 +24,6 @@
 #ifndef __GLOBAL_H__
 #define __GLOBAL_H__
 
-#ifndef ASM_FILE
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-typedef int32_t ssize_t;
-typedef int32_t mode_t;
-typedef int32_t off_t;
-#endif
-
-#include "build/version.h"
 
 #define ICODE_ATTR __attribute__((section(".icode")))
 #define ICONST_ATTR __attribute__((section(".irodata")))
@@ -45,6 +35,20 @@ typedef int32_t off_t;
 #define INITBSS_ATTR __attribute__((section(".initbss")))
 #define STACK_ATTR __attribute__((section(".stack")))
 
+#ifndef ASM_FILE
+#include "errno.h"
+#include "inttypes.h"
+#include "math.h"
+#include "stdint.h"
+#include "stdlib.h"
+#include "string.h"
+#include "sys/types.h"
+typedef int bool;
+#define true 1
+#define false 0
+#endif
+
+#include "build/version.h"
 #include "configmagic.h"
 #include "debug.h"
 

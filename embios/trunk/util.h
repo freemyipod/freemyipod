@@ -28,12 +28,6 @@
 #include "global.h"
 
 
-void* memcpy(void* destination, const void* source, size_t num) ICODE_ATTR;
-void* memset(void* ptr, int value, size_t num) ICODE_ATTR;
-int memcmp(const void* ptr1, const void* ptr2, size_t num) ICODE_ATTR;
-void* memchr(const void* ptr, int value, size_t num) ICODE_ATTR;
-
-
 #ifndef NULL
 #define NULL ((void*)0)
 #endif

@@ -22,8 +22,13 @@
 
 
 #include "global.h"
+#include "storage.h"
 
 
 void shutdown()
 {
+    DEBUGF("Shutting down...");
+#ifdef HAVE_STORAGE_FLUSH
+    storage_flush();
+#endif
 }

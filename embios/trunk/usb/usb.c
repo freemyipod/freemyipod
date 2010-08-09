@@ -30,7 +30,6 @@
 #include "console.h"
 #include "util.h"
 #include "i2c.h"
-#include "strlen.h"
 #include "contextswitch.h"
 #include "power.h"
 #include "mmu.h"

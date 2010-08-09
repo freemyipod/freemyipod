@@ -447,3 +447,8 @@ void thread_exit()
 {
     thread_terminate(-1);
 }
+
+int* __errno()
+{
+    return &current_thread->err_no;
+}

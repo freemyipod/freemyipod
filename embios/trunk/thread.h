@@ -85,6 +85,7 @@ struct scheduler_thread
     uint32_t blocked_since;
     void* blocked_by;
     uint32_t* stack;
+    int err_no;
     enum thread_block block_type;
     enum thread_type type;
     uint8_t priority;
