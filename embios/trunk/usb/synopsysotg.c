@@ -51,7 +51,7 @@ int usb_drv_port_speed(void)
     return (DSTS & 2) == 0 ? 1 : 0;
 }
 
-void reset_endpoints(int reinit)
+static void reset_endpoints(int reinit)
 {
     unsigned int i;
     for (i = 0; i < sizeof(endpoints)/sizeof(struct ep_type); i++)
@@ -257,7 +257,7 @@ void usb_drv_set_address(int address)
     DCFG = (DCFG & ~0x7F0) | (address << 4);
 }
 
-void ep_send(int ep, const void *ptr, int length)
+static void ep_send(int ep, const void *ptr, int length)
 {
     endpoints[ep].busy = true;
     endpoints[ep].size = length;
@@ -273,13 +273,12 @@ void ep_send(int ep, const void *ptr, int length)
     {
         DIEPTSIZ(ep) = length | (packets << 19);
         DIEPDMA(ep) = (uint32_t)ptr;
-//        if (length > 64) panicf(PANIC_FATAL, "%08X %08X %08X\n%08X %08X %08X", ptr, length | (packets << 19), DIEPCTL(ep), DIEPDMA(ep), DIEPTSIZ(ep), DIEPINT(ep));
     }
     clean_dcache();
     DIEPCTL(ep) |= 0x84000000;  /* EPx OUT ENABLE CLEARNAK */
 }
 
-void ep_recv(int ep, void *ptr, int length)
+static void ep_recv(int ep, void *ptr, int length)
 {
     endpoints[ep].busy = true;
     endpoints[ep].size = length;

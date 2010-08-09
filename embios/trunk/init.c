@@ -34,6 +34,26 @@
 #include "usb/usb.h"
 
 static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSION_SVN "\n\n";
+static const char initthreadname[] INITCONST_ATTR = "Initialisation thread";
+static uint32_t initstack[0x400] INITBSS_ATTR;
+
+void initthread() INITCODE_ATTR;
+void initthread()
+{
+    cputs(1, welcomestring);
+    i2c_init();
+    power_init();
+    usb_init();
+    DEBUGF("Initializing storage drivers...");
+    storage_init();
+    DEBUGF("Initializing storage subsystem...");
+    disk_init_subsystem();
+    DEBUGF("Reading partition tables...");
+    disk_init();
+    DEBUGF("Mounting partitions...");
+    disk_mount_all();
+    DEBUGF("Finished initialisation sequence");
+}
 
 void init() INITCODE_ATTR;
 void init()
@@ -43,12 +63,6 @@ void init()
     lcd_init();
     lcdconsole_init();
     interrupt_init();
-    cputs(1, welcomestring);
-    i2c_init();
-    power_init();
-    usb_init();
-    storage_init();
-    disk_init_subsystem();
-    disk_init();
-    disk_mount_all();
+    thread_create(initthreadname, initthread, initstack,
+                  sizeof(initstack), USER_THREAD, 127, true);
 }
