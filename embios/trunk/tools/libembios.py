@@ -59,9 +59,9 @@ class embios:
             self.handle = handle
             self.dev = dev
             
-            self.svnrev self.major, self.minor, self.patch, self.type, self.devtype = i[1:6]
+            self.svnrev, self.major, self.minor, self.patch, self.type, self.devtype = i[1:6]
             self.__myprint("Connected to emBIOS %s v%d.%d.%d (SVN revision: %d) on %s, USB version %s" \
-                  % (self.type2name(self.type), self.major, self.minor, self.patch, self.svnrev\
+                  % (self.type2name(self.type), self.major, self.minor, self.patch, self.svnrev, \
                      self.devtype2name(self.devtype), dev.deviceVersion))
                      
             # get packet size info
@@ -86,18 +86,18 @@ class embios:
 
       
   @staticmethod
-  def __gethexviewprintout(data, title, showaddr)
+  def __gethexviewprintout(data, title, showaddr):
     printout_temp = struct.unpack("%dB" % (len(data)), data)
       
-    printout_temp = title + ":\n"
+    printout = title + ":\n"
     pointer = 0
     pointer2 = 0
     
-    while (pointer < printout_temp.size):
+    while (pointer < len(printout_temp)):
       pointer2 = 0
-      if (showaddr): printout += "%8x" % (pointer)
-      while (pointer2 < 0x10):
-        printout_temp += ("%2x " % (printout_temp[pointer]))
+      if (showaddr): printout += "0x%08x     " % (pointer)
+      while (pointer2 < 0x10) and (pointer < len(printout_temp)):
+        printout += ("%2x " % (printout_temp[pointer]))
         pointer += 1
         pointer2 += 1
       printout += "\n"
@@ -157,7 +157,7 @@ class embios:
       
       i = struct.unpack("<IIBBBBI", response)
       
-      self.svnrev self.major, self.minor, self.patch, self.type, self.devtype = i[1:6]
+      self.svnrev, self.major, self.minor, self.patch, self.type, self.devtype = i[1:6]
       
       self.__myprint("emBIOS %s v%d.%d.%d (SVN revision: %d) on %s, USB version %s\n" \
               % (self.type2name(self.type), self.major, self.minor, self.patch, self.svnrev, \
@@ -301,7 +301,7 @@ class embios:
     while (size > 0):
       blocklen = size
       
-      if (blocklen > self.cout_maxsize - 0x10)
+      if (blocklen > self.cout_maxsize - 0x10):
         blocklen = self.cout_maxsize
     
       self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 5, offset, blocklen, 0) + data[boffset:boffset+blocklen])
@@ -364,7 +364,7 @@ class embios:
     while (size > 0):
       blocklen = size
       
-      if (blocklen > self.cin_maxsize - 0x10)
+      if (blocklen > self.cin_maxsize - 0x10):
         blocklen = self.cin_maxsize
     
       self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 4, offset, blocklen, 0))
@@ -488,7 +488,7 @@ class embios:
     elif (outtype == "printstring"):
       self.__myprint("\nBytes read: 0x%x\nOn-device buffersize: 0x%x\nBytes still in device's buffer: 0x%x\n\n"\
                     % (struct.unpack("<IIII", response[:0x10])[1], 
-                       struct.unpack("<IIII", response[:0x10])[2]
+                       struct.unpack("<IIII", response[:0x10])[2],
                        struct.unpack("<IIII", response[:0x10])[3])
                     , silent)
       self.__myprint(response[0x10 : 0x10 + struct.unpack("<IIII", response[:0x10])[1]], silent)
@@ -497,16 +497,14 @@ class embios:
     elif (outtype == "printhex"):
       self.__myprint("\nBytes read: 0x%x\nOn-device buffersize: 0x%x\nBytes still in device's buffer: 0x%x\n\n"\
                     % (struct.unpack("<IIII", response[:0x10])[1], 
-                       struct.unpack("<IIII", response[:0x10])[2]
+                       struct.unpack("<IIII", response[:0x10])[2],
                        struct.unpack("<IIII", response[:0x10])[3])
                     , silent)
       self.__myprint(self.gethexviewprintout(response[0x10:], "", 1), silent)
       self.__myprint("\n\n", silent)
       
-    elif (outtype == ""):
-      # only return
-    else:
-      raise Exception ("Invalid argument for <outtype>.")
+    elif (outtype != ""):   # none of the above and also not "" which would be return only
+      raise Exception ("Invalid argument for <outtype>: '%s'." % (outtype))
     
     self.__myprint(" done\n", silent)
     
@@ -514,7 +512,7 @@ class embios:
     return struct.unpack("<IIII", response[:0x10]).extend(response[0x10 : 0x10 + struct.unpack("<IIII", response[:0x10])[1]])
     
     
-  def writeusbcon(self, data, *range, silent = 0):
+  def writeusbcon(self, data, silent = 0, *range):
     """ writes to USB console
       <data>: the data to be written
       <range>: the range in <data> that should be written, in the from [offset, length]
@@ -571,7 +569,7 @@ class embios:
     if (freeze):
       self.__myprint("Freezing scheduler...", silent)
       freeze = 1
-    else
+    else:
       self.__myprint("Unfreezing scheduler...", silent)
       freeze = 0
       
@@ -586,7 +584,7 @@ class embios:
     if (suspend):
       self.__myprint("Suspending thread 0x%8x...", silent) % threadid
       suspend = 1
-    else
+    else:
       self.__myprint("Unsuspending thread 0x%8x...", silent) % threadid
       suspend = 0
       
@@ -614,7 +612,10 @@ class embios:
     response = self.__getbulk(self.handle, self.__cinep, 0x10)
     self.__checkstatus(response)
     
-    self.__myprint(" done\n", silent)     
+    if (struct.unpack("<i", response[4:8]) < 0):
+      self.__myprint(" failed, error code: 0x%x" % (struct.unpack("<i", response[4:8])), silent)
+    else:
+      self.__myprint(" done\n, thread ID: 0x%x" % (struct.unpack("<I", response[4:8])), silent)     
     
     
   def getprocinfo(self, offset, size, silent = 0):
@@ -622,10 +623,7 @@ class embios:
       printout on console window:
         <silent> = 0: Process information struct version, Process information table size
         <silent> = 1: nothing
-        <silent> = 2: Process information struct version, Process information table size, hexview of the data
-    
-    
-    
+
       {'regs': [16I], 'cpsr': I, 'state': I, 'namepointer': I, 'cputime_current': I, 'cputime_total': Q, 'startusec': I,
       'queue_next_pointer': I, 'timeout': I, 'blocked_since': I, 'blocked_by_pointer': I, 'stackpointer': I, 'block_type': B, 'thread_type': B, 'priority': B, 'cpuload': B} 
     """
@@ -640,29 +638,27 @@ class embios:
     
     out = []
     out[0] = struct.unpack("<I", response[4:8])[0]    # Process information struct version
-    out[0] = struct.unpack("<I", response[4:8])[0]    # Process information table size
+    out[1] = struct.unpack("<I", response[4:8])[0]    # Process information table size
     
     if (struct.unpack("<I", response[4:8])[0] == 1):   # Process information struct version == 1
       p = 0x10
-      process_n = 0
+      process_n = 2   # actually process 0, but there are alread two other elements in out
       while True:
       # regs ==================================================
         keylen = 16
         key_offset = 0
         
-        while (offset > 0) and (keylen > 0):
+        while (offset > 0) and (key_offset < 0x10):
           offset -= 0x4
-          out[process_n]['regs'][16 - keylen] = None
-          keylen -= 1
+          out[process_n]['regs'][key_offset] = None
           key_offset += 1
-          
-        if (offset < 1): offset = 0
         
         while (p+(keylen*0x4) - 0x10 > size) and (keylen > 0): keylen -= 1
         if (p+(keylen*0x4) - 0x10 > size): break
         
         while (key_offset < keylen):
           out[process_n]['regs'][key_offset] = struct.unpack("<I", response[p + (key_offset * 0x4) :])[0]
+          key_offset += 1
        
         p += 16 * 0x4
         
@@ -834,11 +830,7 @@ class embios:
       process_n += 1
         
     
-    if (silent == 2):
-      hexprint = self.__gethexviewprintout(response[0x10:], "Requested data", 1)
-      silent = 0
-    else:
-      hexprint = ""
+    
     
     self.__myprint(" done\n\
                     Process information struct version: 0x%8x\n\
