@@ -30,7 +30,9 @@
 
 
 void cputc(unsigned int consoles, char string) ICODE_ATTR;
+void cputc_noblit(unsigned int consoles, char string) ICODE_ATTR;
 void cputs(unsigned int consoles, const char* string) ICODE_ATTR;
+void cputs_noblit(unsigned int consoles, const char* string) ICODE_ATTR;
 int cprintf(unsigned int consoles, const char* fmt, ...) ICODE_ATTR;
 int cvprintf(unsigned int consoles, const char* fmt, va_list ap) ICODE_ATTR;
 void cflush(unsigned int consoles) ICODE_ATTR;
