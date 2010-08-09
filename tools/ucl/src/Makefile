@@ -30,7 +30,7 @@ OBJS = $(OUT)/alloc.o $(OUT)/io.o $(OUT)/n2b_99.o $(OUT)/n2b_d.o $(OUT)/n2b_ds.o
 # we don't use $(AR) and $(RANLIB) below since we want the _native_ tools
 # not the cross-compiler tools
 libucl$(RBARCH).a: $(OUT) $(OBJS)
-	$(SILENT)ar ruv $(TARGET_DIR)$@ $(OBJS) >/dev/null 2>&1
+	$(SILENT)ar ruv $(TARGET_DIR)$@ $(OBJS)
 	$(SILENT)ranlib $(TARGET_DIR)$@
 
 $(OUT)/%.o: %.c
