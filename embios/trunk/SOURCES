@@ -17,6 +17,13 @@ usb/synopsysotg.c
 #ifdef TARGET_ipodnano4g
 target/ipodnano4g/mmu.c
 target/ipodnano4g/lcd.c
+target/ipodnano4g/timer.c
+target/ipodnano4g/i2c.S
+target/ipodnano4g/interrupt.c
+target/ipodnano4g/power.c
+target/ipodnano4g/accel.c
+target/ipodnano4g/backlight.c
+usb/synopsysotg.c
 #endif
 
 #ifdef ARM_ARCH
@@ -27,21 +34,27 @@ arm/contextswitch.S
 init.c
 main.c
 util.c
+#ifdef HAVE_LCD
 drawing.S
 lcdconsole.c
+#endif
 format.c
 panic.c
 console.c
 ucl.S
 thread.c
+#ifdef HAVE_USB
 usb/usb.c
+#endif
 shutdown.c
 syscall.c
+#ifdef HAVE_STORAGE
 disk.c
 fat.c
 file.c
 dir.c
 storage.c
+#endif
 strcasestr.c
 strcasecmp.c
 strlcpy.c

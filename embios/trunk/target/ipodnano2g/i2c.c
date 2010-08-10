@@ -54,7 +54,7 @@ void i2c_init()
     /* serial output on */
     IICSTAT = (1 << 4);
 
-    INTMSK |= INTMSK_IIC;
+    interrupt_enable(IRQ_IIC, true);
 }
 
 void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* data, uint32_t length)

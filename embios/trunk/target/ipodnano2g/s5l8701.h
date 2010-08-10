@@ -270,9 +270,7 @@
 #define TDPRE        (*((volatile uint32_t*)(0x3C700070)))
 #define TDCNT        (*((volatile uint32_t*)(0x3C700074)))
 uint64_t read_5usec_timer();
-uint32_t read_usec_timer();
 #define FIVE_USEC_TIMER (read_5usec_timer()) /* 64bit 5usec timer */
-#define USEC_TIMER      (read_usec_timer()) /* usecs */
 
 
 /////USB/////
@@ -288,11 +286,11 @@ uint32_t read_usec_timer();
 
 
 /////INTERRUPTS/////
-#define INTMSK_TIMER   (1<<5)
-#define INTMSK_DMA     (1<<10)
-#define INTMSK_USB_OTG (1<<16)
-#define INTMSK_ECC     (1<<19)
-#define INTMSK_IIC     (1<<27)
+#define IRQ_TIMER    5
+#define IRQ_DMA      10
+#define IRQ_USB_FUNC 16
+#define IRQ_ECC      19
+#define IRQ_IIC      27
 
 
 #endif

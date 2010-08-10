@@ -29,6 +29,7 @@
 #include "nand.h"
 #include "pmu.h"
 #include "mmu.h"
+#include "s5l8701.h"
  
 #define NAND_CMD_READ       0x00
 #define NAND_CMD_PROGCNFRM  0x10
@@ -253,7 +254,7 @@ static void ecc_start(uint32_t size, void* databuffer, void* sparebuffer,
 {
     mutex_lock(&ecc_mtx, TIMEOUT_BLOCK);
     ECC_INT_CLR = 1;
-    SRCPND = INTMSK_ECC;
+    SRCPND = (1 << IRQ_ECC);
     ECC_UNK1 = size;
     ECC_DATA_PTR = (uint32_t)databuffer;
     ECC_SPARE_PTR = (uint32_t)sparebuffer;
@@ -264,11 +265,11 @@ static void ecc_start(uint32_t size, void* databuffer, void* sparebuffer,
 static uint32_t ecc_collect(void)
 {
     uint32_t timeout = USEC_TIMER + 20000;
-    while (!(SRCPND & INTMSK_ECC))
+    while (!(SRCPND & (1 << IRQ_ECC)))
         if (nand_timeout(timeout)) return ecc_unlock(1);
     invalidate_dcache();
     ECC_INT_CLR = 1;
-    SRCPND = INTMSK_ECC;
+    SRCPND = (1 << IRQ_ECC);
     return ecc_unlock(ECC_RESULT);
 }
 

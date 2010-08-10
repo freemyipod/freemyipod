@@ -21,31 +21,14 @@
 //
 
 
+#ifndef __POWER_H__
+#define __POWER_H__
+
 
 #include "global.h"
-#include "storage.h"
 
-uint32_t storage_init()
-{
-    return -1;
-}
+void power_off(void);
+void power_init(void);
+bool charging_state(void);
 
-uint32_t storage_read(uint32_t sector, uint32_t count, void* buffer)
-{
-    return -1;
-}
-
-uint32_t storage_write(uint32_t sector, uint32_t count, const void* buffer)
-{
-    return -1;
-}
-
-uint32_t storage_sync()
-{
-    return -1;
-}
-
-uint32_t storage_get_sector_count()
-{
-    return -1;
-}
+#endif

@@ -30,6 +30,13 @@
 
 #ifdef TARGET_ipodnano2g
 #include "s5l8701.h"
+#define SYNOPSYSOTG_CLOCK 0
+#define SYNOPSYSOTG_AHBCFG 0x27
+#endif
+#ifdef TARGET_ipodnano4g
+#include "s5l8720.h"
+#define SYNOPSYSOTG_CLOCK 0x11
+#define SYNOPSYSOTG_AHBCFG 0x2B
 #endif
 
 
@@ -55,7 +62,7 @@
 #define GNPTXFSIZ   (*((volatile uint32_t*)(OTGBASE + 0x028)))
 #define GNPTXSTS    (*((volatile uint32_t*)(OTGBASE + 0x02C)))
 #define HPTXFSIZ    (*((volatile uint32_t*)(OTGBASE + 0x100)))
-#define DPTXFSIZ(x) (*((volatile uint32_t*)(OTGBASE + 0x100 + 4 * x)))
+#define DPTXFSIZ(x) (*((volatile uint32_t*)(OTGBASE + 0x100 + 4 * (x))))
 #define DPTXFSIZ1   (*((volatile uint32_t*)(OTGBASE + 0x104)))
 #define DPTXFSIZ2   (*((volatile uint32_t*)(OTGBASE + 0x108)))
 #define DPTXFSIZ3   (*((volatile uint32_t*)(OTGBASE + 0x10C)))
@@ -85,12 +92,12 @@
 #define HPRT        (*((volatile uint32_t*)(OTGBASE + 0x440)))
 
 /* Host Channel-Specific Registers */
-#define HCCHAR(x)   (*((volatile uint32_t*)(OTGBASE + 0x500 + 0x20 * x)))
-#define HCSPLT(x)   (*((volatile uint32_t*)(OTGBASE + 0x504 + 0x20 * x)))
-#define HCINT(x)    (*((volatile uint32_t*)(OTGBASE + 0x508 + 0x20 * x)))
-#define HCINTMSK(x) (*((volatile uint32_t*)(OTGBASE + 0x50C + 0x20 * x)))
-#define HCTSIZ(x)   (*((volatile uint32_t*)(OTGBASE + 0x510 + 0x20 * x)))
-#define HCDMA(x)    (*((volatile uint32_t*)(OTGBASE + 0x514 + 0x20 * x)))
+#define HCCHAR(x)   (*((volatile uint32_t*)(OTGBASE + 0x500 + 0x20 * (x))))
+#define HCSPLT(x)   (*((volatile uint32_t*)(OTGBASE + 0x504 + 0x20 * (x))))
+#define HCINT(x)    (*((volatile uint32_t*)(OTGBASE + 0x508 + 0x20 * (x))))
+#define HCINTMSK(x) (*((volatile uint32_t*)(OTGBASE + 0x50C + 0x20 * (x))))
+#define HCTSIZ(x)   (*((volatile uint32_t*)(OTGBASE + 0x510 + 0x20 * (x))))
+#define HCDMA(x)    (*((volatile uint32_t*)(OTGBASE + 0x514 + 0x20 * (x))))
 #define HCCHAR0     (*((volatile uint32_t*)(OTGBASE + 0x500)))
 #define HCSPLT0     (*((volatile uint32_t*)(OTGBASE + 0x504)))
 #define HCINT0      (*((volatile uint32_t*)(OTGBASE + 0x508)))
@@ -205,10 +212,10 @@
 #define DTKNQR4     (*((volatile uint32_t*)(OTGBASE + 0x834)))
 
 /* Device Logical IN Endpoint-Specific Registers */
-#define DIEPCTL(x)  (*((volatile uint32_t*)(OTGBASE + 0x900 + 0x20 * x)))
-#define DIEPINT(x)  (*((volatile uint32_t*)(OTGBASE + 0x908 + 0x20 * x)))
-#define DIEPTSIZ(x) (*((volatile uint32_t*)(OTGBASE + 0x910 + 0x20 * x)))
-#define DIEPDMA(x)  (*((volatile uint32_t*)(OTGBASE + 0x914 + 0x20 * x)))
+#define DIEPCTL(x)  (*((volatile uint32_t*)(OTGBASE + 0x900 + 0x20 * (x))))
+#define DIEPINT(x)  (*((volatile uint32_t*)(OTGBASE + 0x908 + 0x20 * (x))))
+#define DIEPTSIZ(x) (*((volatile uint32_t*)(OTGBASE + 0x910 + 0x20 * (x))))
+#define DIEPDMA(x)  (*((volatile uint32_t*)(OTGBASE + 0x914 + 0x20 * (x))))
 #define DIEPCTL0    (*((volatile uint32_t*)(OTGBASE + 0x900)))
 #define DIEPINT0    (*((volatile uint32_t*)(OTGBASE + 0x908)))
 #define DIEPTSIZ0   (*((volatile uint32_t*)(OTGBASE + 0x910)))
@@ -275,10 +282,10 @@
 #define DIEPDMA15   (*((volatile uint32_t*)(OTGBASE + 0xAF4)))
 
 /* Device Logical OUT Endpoint-Specific Registers */
-#define DOEPCTL(x)  (*((volatile uint32_t*)(OTGBASE + 0xB00 + 0x20 * x)))
-#define DOEPINT(x)  (*((volatile uint32_t*)(OTGBASE + 0xB08 + 0x20 * x)))
-#define DOEPTSIZ(x) (*((volatile uint32_t*)(OTGBASE + 0xB10 + 0x20 * x)))
-#define DOEPDMA(x)  (*((volatile uint32_t*)(OTGBASE + 0xB14 + 0x20 * x)))
+#define DOEPCTL(x)  (*((volatile uint32_t*)(OTGBASE + 0xB00 + 0x20 * (x))))
+#define DOEPINT(x)  (*((volatile uint32_t*)(OTGBASE + 0xB08 + 0x20 * (x))))
+#define DOEPTSIZ(x) (*((volatile uint32_t*)(OTGBASE + 0xB10 + 0x20 * (x))))
+#define DOEPDMA(x)  (*((volatile uint32_t*)(OTGBASE + 0xB14 + 0x20 * (x))))
 #define DOEPCTL0    (*((volatile uint32_t*)(OTGBASE + 0xB00)))
 #define DOEPINT0    (*((volatile uint32_t*)(OTGBASE + 0xB08)))
 #define DOEPTSIZ0   (*((volatile uint32_t*)(OTGBASE + 0xB10)))

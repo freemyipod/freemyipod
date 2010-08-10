@@ -24,14 +24,22 @@
 #include "global.h"
 #include "thread.h"
 #include "console.h"
+#include "power.h"
+#include "interrupt.h"
+#ifdef HAVE_LCD
 #include "lcd.h"
 #include "lcdconsole.h"
-#include "interrupt.h"
+#endif
+#ifdef HAVE_I2C
 #include "i2c.h"
-#include "pmu.h"
+#endif
+#ifdef HAVE_USB
+#include "usb/usb.h"
+#endif
+#ifdef HAVE_STORAGE
 #include "storage.h"
 #include "disk.h"
-#include "usb/usb.h"
+#endif
 
 static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSION_SVN "\n\n";
 static const char initthreadname[] INITCONST_ATTR = "Initialisation thread";
@@ -40,10 +48,15 @@ static uint32_t initstack[0x400] INITBSS_ATTR;
 void initthread() INITCODE_ATTR;
 void initthread()
 {
-    cputs(1, welcomestring);
+    cputs(CONSOLE_BOOT, welcomestring);
+	#ifdef HAVE_I2C
     i2c_init();
+	#endif
     power_init();
+	#ifdef HAVE_USB
     usb_init();
+	#endif
+	#ifdef HAVE_STORAGE
     DEBUGF("Initializing storage drivers...");
     storage_init();
     DEBUGF("Initializing storage subsystem...");
@@ -52,6 +65,7 @@ void initthread()
     disk_init();
     DEBUGF("Mounting partitions...");
     disk_mount_all();
+	#endif
     DEBUGF("Finished initialisation sequence");
 }
 
@@ -60,8 +74,10 @@ void init()
 {
     scheduler_init();
     console_init();
+	#ifdef HAVE_LCD
     lcd_init();
     lcdconsole_init();
+	#endif
     interrupt_init();
     thread_create(initthreadname, initthread, initstack,
                   sizeof(initstack), USER_THREAD, 127, true);

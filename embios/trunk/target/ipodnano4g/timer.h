@@ -32,11 +32,19 @@
 #define TIMEOUT_EXPIRED(a,b)    TIME_AFTER(USEC_TIMER,a + b)
 
 
-static inline void sleep(long duration)  /* in usec steps */
+uint32_t read_usec_timer();
+#define USEC_TIMER (read_usec_timer())
+
+
+static inline void udelay(long duration)  /* in usec steps */
 {
     long timestamp = USEC_TIMER;
     while (!TIMEOUT_EXPIRED(timestamp, duration));
 }
+
+
+void setup_tick() INITCODE_ATTR;
+void INT_TIMERB() ICODE_ATTR;
 
 
 #endif

@@ -31,6 +31,7 @@
 #include "usb_ch9.h"
 #include "synopsysotg.h"
 #include "util.h"
+#include "interrupt.h"
 
 
 struct ep_type
@@ -133,9 +134,9 @@ static void usb_reset(void)
     DCTL = 0x802;  /* Soft Disconnect */
 
     OPHYPWR = 0;  /* PHY: Power up */
-    OPHYUNK1 = 0xFFFFFFFF;
+    OPHYUNK1 = 1;
     OPHYUNK2 = 0xE3F;
-    OPHYCLK = 0;  /* PHY: 48MHz clock */
+    OPHYCLK = SYNOPSYSOTG_CLOCK;
     ORSTCON = 1;  /* PHY: Assert Software Reset */
     udelay(10);
     ORSTCON = 0;  /* PHY: Deassert Software Reset */
@@ -146,7 +147,7 @@ static void usb_reset(void)
 
     GRXFSIZ = 0x00000200;  /* RX FIFO: 512 bytes */
     GNPTXFSIZ = 0x02000200;  /* Non-periodic TX FIFO: 512 bytes */
-    GAHBCFG = 0x27;  /* OTG AHB config: Unmask ints, burst length 4, DMA on */
+    GAHBCFG = SYNOPSYSOTG_AHBCFG;
     GUSBCFG = 0x1408;  /* OTG: 16bit PHY and some reserved bits */
 
     DCFG = 4;  /* Address 0 */
@@ -361,7 +362,7 @@ void usb_drv_init(void)
     PCGCCTL = 0;
 
     /* unmask irq */
-    INTMSK |= INTMSK_USB_OTG;
+    interrupt_enable(IRQ_USB_FUNC, true);
 
     /* reset the beast */
     usb_reset();

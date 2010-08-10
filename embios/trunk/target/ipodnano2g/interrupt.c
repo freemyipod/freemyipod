@@ -78,7 +78,7 @@ void unhandled_irq(void)
     panicf(PANIC_FATAL, "Unhandled IRQ %d!", INTOFFSET);
 }
 
-static void (* const timervector[])(void) IDATA_ATTR =
+static void (* timervector[])(void) IDATA_ATTR =
 {
     INT_TIMERA,INT_TIMERB,INT_TIMERC,INT_TIMERD
 };
@@ -113,7 +113,7 @@ void INT_DMA()
     if (dmaallst2 & DMACON8 & 0x30000) dmavector[8]();
 }
 
-static void (* const irqvector[])(void) IDATA_ATTR =
+static void (* irqvector[])(void) IDATA_ATTR =
 {
     EXT0,EXT1,EXT2,EINT_VBUS,EINTG,INT_TIMER,INT_WDT,INT_UNK1,
     INT_UNK2,INT_UNK3,INT_DMA,INT_ALARM_RTC,INT_PRI_RTC,RESERVED1,INT_UART,INT_USB_HOST,
@@ -129,7 +129,25 @@ void irqhandler(void)
     INTPND = INTPND;
 }
 
+void interrupt_enable(int irq, bool state)
+{
+	if (state) INTMSK |= 1 << irq;
+	else INTMSK &= ~(1 << irq);
+}
+
+void interrupt_set_handler(int irq, void* handler)
+{
+	if (handler) irqvector[irq] = handler;
+	else irqvector[irq] = unhandled_irq;
+}
+
+void int_timer_set_handler(int timer, void* handler)
+{
+	if (handler) timervector[timer] = handler;
+	else timervector[timer] = unhandled_irq;
+}
+
 void interrupt_init(void)
 {
-    INTMSK = INTMSK_TIMER | INTMSK_DMA;
+    INTMSK = (1 << IRQ_TIMER) | (1 << IRQ_DMA);
 }

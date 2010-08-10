@@ -21,16 +21,23 @@
 //
 
 
-#ifndef __FTL_H__
-#define __FTL_H__
-
 #include "global.h"
-
-uint32_t storage_init();
-uint32_t storage_read(uint32_t sector, uint32_t count, void* buffer);
-uint32_t storage_write(uint32_t sector, uint32_t count, const void* buffer);
-uint32_t storage_sync();
-uint32_t storage_get_sector_count();
+#include "power.h"
 
 
-#endif
+void reset();
+
+
+void power_off(void)
+{
+    reset();
+}
+
+void power_init(void)
+{
+}
+
+bool charging_state(void)
+{
+    return false;
+}

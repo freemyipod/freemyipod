@@ -30,5 +30,8 @@
 
 void irqhandler(void) ICODE_ATTR;
 void interrupt_init(void) INITCODE_ATTR;
+void interrupt_enable(int irq, bool state);
+void interrupt_set_handler(int irq, void* handler);
+void int_timer_set_handler(int timer, void* handler);
 
 #endif

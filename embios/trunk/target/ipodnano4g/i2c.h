@@ -21,26 +21,18 @@
 //
 
 
-#ifndef __LCD_H__
-#define __LCD_H__
+#ifndef __I2C_H__
+#define __I2C_H__
 
 
 #include "global.h"
 
 
-#define LCD_WIDTH 240
-#define LCD_HEIGHT 320
-#define LCD_FORMAT rgb565
-#define LCD_BYTESPERPIXEL 2
-#define LCD_FRAMEBUFSIZE (LCD_WIDTH * LCD_HEIGHT * LCD_BYTESPERPIXEL)
-
-
-void lcd_init();
-void displaylcd(unsigned int startx, unsigned int endx,
-                unsigned int starty, unsigned int endy, void* data, int color);
-void displaylcd_sync();
-bool displaylcd_busy();
-bool displaylcd_safe();
+void i2c_init();
+void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* data, uint32_t length);
+void i2c_recv(uint32_t bus, uint32_t device, uint32_t address, uint8_t* data, uint32_t length);
+void i2c_sendbyte(uint32_t bus, uint32_t device, uint32_t address, uint32_t data);
+uint8_t i2c_recvbyte(uint32_t bus, uint32_t device, uint32_t address);
 
 
 #endif

@@ -26,7 +26,7 @@
 
 
 #include "global.h"
-#include "gcc_extensions.h"
+#include "_ansi.h"
 #include <stdarg.h>
 
 

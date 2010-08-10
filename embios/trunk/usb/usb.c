@@ -29,11 +29,13 @@
 #include "thread.h"
 #include "console.h"
 #include "util.h"
-#include "i2c.h"
 #include "contextswitch.h"
 #include "power.h"
 #include "mmu.h"
 #include "shutdown.h"
+#ifdef HAVE_I2C
+#include "i2c.h"
+#endif
 
 
 static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
@@ -321,10 +323,10 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             switch (dbgrecvbuf[1])
             {
             case 0:  // GET VERSION INFO
-                dbgsendbuf[1] = VERSION_MAJOR | (VERSION_MINOR << 8)
+                dbgsendbuf[1] = VERSION_SVN_INT;
+                dbgsendbuf[2] = VERSION_MAJOR | (VERSION_MINOR << 8)
                               | (VERSION_PATCH << 16) | (1 << 24);
-                dbgsendbuf[2] = PLATFORM_ID;
-                dbgsendbuf[3] = VERSION_SVN_INT;
+                dbgsendbuf[3] = PLATFORM_ID;
                 break;
             case 1:  // GET PACKET SIZE INFO
                 dbgsendbuf[1] = 0x02000200;
@@ -374,6 +376,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             size = 16;
             usb_drv_recv(dbgendpoints[2], (void*)dbgrecvbuf[1], dbgrecvbuf[2]);
             break;
+#ifdef HAVE_I2C
         case 8:  // READ I2C
             if (set_dbgaction(DBGACTION_I2CRECV, dbgrecvbuf[1] >> 24)) break;
             dbgi2cbus = dbgrecvbuf[1] & 0xff;
@@ -389,6 +392,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgactionlength = dbgrecvbuf[1] >> 24;
             memcpy(dbgasyncsendbuf, &dbgsendbuf[4], dbgactionlength);
             break;
+#endif
         case 10:  // READ CONSOLE
             dbgconsoleattached = true;
             int bytes = dbgconsendwriteidx - dbgconsendreadidx;
@@ -548,6 +552,7 @@ void dbgthread(void)
         {
             switch (dbgaction)
             {
+#ifdef HAVE_I2C
             case DBGACTION_I2CSEND:
                 i2c_send(dbgi2cbus, dbgi2cslave, dbgactionaddr,
                          (uint8_t*)dbgasyncsendbuf, dbgactionlength);
@@ -560,6 +565,7 @@ void dbgthread(void)
                 dbgasyncsendbuf[0] = 1;
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16 + dbgactionlength);
                 break;
+#endif
             case DBGACTION_POWEROFF:
                 if (dbgactiontype) shutdown();
                 power_off();
@@ -600,7 +606,7 @@ void usb_init(void)
     dbgconrecvwriteidx = 0;
     wakeup_init(&dbgconsendwakeup);
     wakeup_init(&dbgconrecvwakeup);
-    dbgconsoleattached = false;;
+    dbgconsoleattached = false;
     thread_create("Debugger", dbgthread, dbgstack, sizeof(dbgstack), 255, SYSTEM_THREAD, true);
     usb_drv_init();
 }

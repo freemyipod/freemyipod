@@ -27,8 +27,20 @@
 
 void clean_dcache()
 {
+    asm volatile(
+        "MOV PC, LR                \n\t"
+    );
 }
 
 void invalidate_dcache()
 {
+    asm volatile(
+        "MOV PC, LR                \n\t"
+    );
+}
+void invalidate_icache()
+{
+    asm volatile(
+        "MOV PC, LR                \n\t"
+    );
 }

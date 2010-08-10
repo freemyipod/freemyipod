@@ -26,8 +26,10 @@
 #include "timer.h"
 #include "panic.h"
 #include "util.h"
+#ifdef HAVE_STORAGE
 #include "dir.h"
 #include "file.h"
+#endif
 
 
 struct scheduler_thread scheduler_threads[MAX_THREADS] IBSS_ATTR;
@@ -432,8 +434,10 @@ int thread_terminate(int thread)
                 ((struct wakeup*)t->blocked_by)->waiter = NULL;
         }
         t->state = THREAD_FREE;
+#ifdef HAVE_STORAGE
         close_all_of_process(t);
         closedir_all_of_process(t);
+#endif
     }
 
     leave_critical_section(mode);

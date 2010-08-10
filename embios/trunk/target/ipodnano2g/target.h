@@ -34,9 +34,17 @@
 #define CPU_FREQ 191692800
 
 
+#define CONSOLE_BOOT 1
+
+
+#define HAVE_USB
 #define USB_NUM_ENDPOINTS 5
 
+#define HAVE_LCD
 
+#define HAVE_I2C
+
+#define HAVE_STORAGE
 #define HAVE_FLASH_STORAGE
 #define HAVE_STORAGE_FLUSH
 #define CONFIG_STORAGE STORAGE_NAND

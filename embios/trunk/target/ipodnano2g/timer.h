@@ -25,12 +25,15 @@
 #define __TIMER_H__
 
 #include "global.h"
-#include "s5l8701.h"
 
 
 #define TIME_AFTER(a,b)         ((long)(b) - (long)(a) < 0)
 #define TIME_BEFORE(a,b)        TIME_AFTER(b,a)
 #define TIMEOUT_EXPIRED(a,b)    TIME_AFTER(USEC_TIMER,a + b)
+
+
+uint32_t read_usec_timer();
+#define USEC_TIMER (read_usec_timer())
 
 
 static inline void udelay(long duration)  /* in usec steps */

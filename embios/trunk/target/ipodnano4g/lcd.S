@@ -21,6 +21,14 @@
 @
 
 
+.section .initcode.lcd_init, "ax", %progbits
+.align 2
+.global lcd_init
+.type lcd_init, %function
+lcd_init:
+	mov	pc, lr
+.size lcd_init, .-lcd_init
+
 .section .icode.displaylcd, "ax", %progbits
 .align 2
 .global displaylcd
@@ -90,3 +98,22 @@ displaylcd_sendlcdd:
 displaylcd_sync:
 	mov	pc, lr
 .size displaylcd_sync, .-displaylcd_sync
+
+.section .icode.displaylcd_busy, "ax", %progbits
+.align 2
+.global displaylcd_busy
+.type displaylcd_busy, %function
+displaylcd_busy:
+	mov	r0, #0
+	mov	pc, lr
+.size displaylcd_busy, .-displaylcd_busy
+
+.section .icode.displaylcd_safe, "ax", %progbits
+.align 2
+.global displaylcd_safe
+.type displaylcd_safe, %function
+displaylcd_safe:
+	mov	r0, #1
+	mov	pc, lr
+.size displaylcd_safe, .-displaylcd_safe
+
