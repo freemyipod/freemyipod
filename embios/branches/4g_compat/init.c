@@ -28,6 +28,8 @@
 
 static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION "\n";
 
+#include "s5l8720.h"
+
 void init() INITCODE_ATTR;
 void init()
 {
@@ -36,10 +38,7 @@ void init()
     cputs(1, welcomestring);
     while(1)
     {
-        uint8_t x = accel_get_axis(0);
-        uint8_t y = accel_get_axis(1);
-        uint8_t z = accel_get_axis(2);
-        cprintf(1, "x:%d y:%d z:%d\n", x, y, z);
+        cprintf(1, "TBCNT: %d \n", TBCNT);
     }
   
 }

@@ -38,6 +38,10 @@ default_interrupt(INT_TIMERA);
 default_interrupt(INT_TIMERB);
 default_interrupt(INT_TIMERC);
 default_interrupt(INT_TIMERD);
+default_interrupt(INT_TIMERE);
+default_interrupt(INT_TIMERF);
+default_interrupt(INT_TIMERG);
+default_interrupt(INT_TIMERH);
 default_interrupt(INT_DMA0);
 default_interrupt(INT_DMA1);
 default_interrupt(INT_DMA2);
@@ -80,7 +84,7 @@ void unhandled_irq(void)
 
 static void (* const timervector[])(void) IDATA_ATTR =
 {
-    INT_TIMERA,INT_TIMERB,INT_TIMERC,INT_TIMERD
+    INT_TIMERA,INT_TIMERB,INT_TIMERC,INT_TIMERD,INT_TIMERE,INT_TIMERF,INT_TIMERG,INT_TIMERH
 };
 
 void INT_TIMER(void) ICODE_ATTR;
@@ -90,6 +94,10 @@ void INT_TIMER()
     if (TBCON & 0x00038000) timervector[1]();
     if (TCCON & 0x00038000) timervector[2]();
     if (TDCON & 0x00038000) timervector[3]();
+    if (TECON & 0x00038000) timervector[4]();
+    if (TFCON & 0x00038000) timervector[5]();
+    if (TGCON & 0x00038000) timervector[6]();
+    if (THCON & 0x00038000) timervector[7]();
 }
 
 static void (* const dmavector[])(void) IDATA_ATTR =

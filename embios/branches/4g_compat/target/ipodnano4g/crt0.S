@@ -84,7 +84,7 @@ _start:
 	ldr	sp, =_abortstackend
 	msr	cpsr_c, #0xdb
 	ldr	sp, =_abortstackend
-	msr	cpsr_c, #0xd3
+	msr	cpsr_c, #0xdf
 	ldr	sp, =_initstackend
 	bl	init
 	bl	context_switch
