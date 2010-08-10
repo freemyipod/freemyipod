@@ -158,7 +158,7 @@ def usage():
   print "  killthread <threadid>"
   print "    Kills the thread with thread ID <threadid>"
   print ""
-  print "  createthread <namepointer> <entrypoint> <stackpointer> <stacksize>, <type> <priority> <state>"
+  print "  createthread <namepointer> <entrypoint> <stackpointer> <stacksize> <type> <priority> <state>"
   print "    Creates a new thread and returns its thread ID"
   print "      <namepointer> a pointer to the thread's name"
   print "      <entrypoint> a pointer to the entrypoint of the thread"
@@ -185,66 +185,66 @@ def parsecommand(dev, argv):
   
   elif argv[1] == "reset":
     if len(argv) != 3: usage()
-    dev.reset(int(argv[2]))
+    dev.reset(int(argv[2]), 16)
   
   elif argv[1] == "poweroff":
     if len(argv) != 3: usage()
-    dev.poweroff(int(argv[2]))
+    dev.poweroff(int(argv[2]), 16)
 
     
   elif argv[1] == "uploadfile":
     if len(argv) < 4 or len(argv) > 6: usage()
     if len(argv) > 4:
-      usedma = argv[4]
+      usedma = int(argv[4], 16)
       if len(argv) > 5:
-        freezesched = argv[5]
+        freezesched = int(argv[5], 16)
       else:
         freezesched = 0
     else:
       freezesched = 0
       usedma = 1
-    dev.uploadfile(int(argv[2]), argv[3], usedma, freezesched)
+    dev.uploadfile(int(argv[2], 16), argv[3], usedma, freezesched)
   
   elif argv[1] == "downloadfile":
     if len(argv) < 5 or len(argv) > 7: usage()
     if len(argv) > 5:
-      usedma = argv[5]
+      usedma = int(argv[5], 16)
       if len(argv) > 6:
-        freezesched = argv[6]
+        freezesched = int(argv[6], 16)
       else:
         freezesched = 0
     else:
       freezesched = 0
       usedma = 1
-    dev.downloadfile(int(argv[2]), int(argv[3]), argv[4], usedma, freezesched)
+    dev.downloadfile(int(argv[2], 16), int(argv[3], 16), argv[4], usedma, freezesched)
   
   elif argv[1] == "uploadint":
     if len(argv) != 4: usage()
-    dev.uploadint(int(argv[2]), int(argv[3]))
+    dev.uploadint(int(argv[2], 16), int(argv[3], 16))
   
   elif argv[1] == "downloadint":
     if len(argv) != 3: usage()
-    dev.downloadint(int(argv[2]))
+    dev.downloadint(int(argv[2], 16))
   
   
   elif argv[1] == "i2cread":
     if len(argv) != 6: usage()
-    dev.i2crecv(int(argv[2]), int(argv[3]), int(argv[4]), int(argv[5]))
+    dev.i2crecv(int(argv[2], 16), int(argv[3], 16), int(argv[4], 16), int(argv[5], 16))
     
   elif argv[1] == "i2csend":
     if len(argv) < 6: usage()
     data = ""
     ptr = 5
     while ptr < len(argv):
-      data += struct.pack("<B", int(argv[ptr]))
+      data += struct.pack("<B", int(argv[ptr], 16))
       ptr += 1
-    dev.i2csend(int(argv[2]), int(argv[3]), int(argv[4]), data)
+    dev.i2csend(int(argv[2], 16), int(argv[3], 16), int(argv[4], 16), data)
   
   
   elif argv[1] == "readusbconsole":
     if len(argv) not in [4, 5]: usage()
     if len(argv) == 4: argv[4] = ""
-    dev.readusbcon(int(argv[2]), argv[3], argv[4])
+    dev.readusbcon(int(argv[2], 16), argv[3], argv[4])
   
   elif argv[1] == "writeusbconsole":
     if len(argv) < 4: usage()
@@ -254,11 +254,11 @@ def parsecommand(dev, argv):
       data = f.read()
       
       if len(argv) > 4:
-        offset = int(argv[4])
+        offset = int(argv[4], 16)
       else:
         offset = 0
       if len(argv) > 5:
-        size = int(argv[5])
+        size = int(argv[5], 16)
       else:
         size = len(data)
       if len(argv) > 6: usage()
@@ -269,14 +269,14 @@ def parsecommand(dev, argv):
       data = ""
       ptr = 3
       while ptr < len(argv):
-        data += struct.pack("<I", int(argv[ptr]))
+        data += struct.pack("<I", int(argv[ptr], 16))
         ptr += 1
       dev.writeusbcon(data)
   
   elif argv[1] == "readdevconsole":
     if len(argv) not in [5, 6]: usage()
     if len(argv) == 5: argv[5] = ""
-    dev.readusbcon(int(argv[2]), int(argv[3]), argv[4], argv[5])
+    dev.readusbcon(int(argv[2], 16), int(argv[3], 16), argv[4], argv[5])
   
   elif argv[1] == "writedevconsole":
     if len(argv) < 5: usage()
@@ -286,33 +286,33 @@ def parsecommand(dev, argv):
       data = f.read()
       
       if len(argv) > 5:
-        offset = int(argv[5])
+        offset = int(argv[5], 16)
       else:
         offset = 0
       if len(argv) > 6:
-        size = int(argv[6])
+        size = int(argv[6], 16)
       else:
         size = len(data)
       if len(argv) > 7: usage()
       
-      dev.writeusbcon(int(argv[3]), data, 0, offset, size)
+      dev.writeusbcon(int(argv[3], 16), data, 0, offset, size)
       
     if argv[2] == "direct":
       data = ""
       ptr = 4
       while ptr < len(argv):
-        data += struct.pack("<I", int(argv[ptr]))
+        data += struct.pack("<I", int(argv[ptr], 16))
         ptr += 1
-      dev.writeusbcon(int(argv[3]), data)
+      dev.writeusbcon(int(argv[3], 16), data)
   
   elif argv[1] == "flushconsolebuffers":
     if len(argv) != 3: usage()
-    dev.flushconsolebuffers(int(argv[2]))
+    dev.flushconsolebuffers(int(argv[2], 16))
    
    
   elif argv[1] == "getprocessinformation" or argv[1] == "getprocinfo":
     if len(argv) != 4: usage()
-    dev.getprocinfo(int(argv[2]), int(argv[3]))
+    dev.getprocinfo(int(argv[2], 16), int(argv[3], 16))
     
   elif argv[1] == "lockscheduler":
     if len(argv) != 2: usage()
@@ -324,19 +324,19 @@ def parsecommand(dev, argv):
     
   elif argv[1] == "suspendthread":
     if len(argv) != 3: usage()
-    dev.suspendthread(1, int(argv[2]))
+    dev.suspendthread(1, int(argv[2], 16))
     
   elif argv[1] == "resumethread":
     if len(argv) != 3: usage()
-    dev.suspendthread(0, int(argv[2]))
+    dev.suspendthread(0, int(argv[2], 16))
     
   elif argv[1] == "killthread":
     if len(argv) != 3: usage()
-    dev.killthread(int(argv[2]))
+    dev.killthread(int(argv[2], 16))
     
   elif argv[1] == "createthread":
     if len(argv) != 9: usage()
-    dev.createthread(int(argv[2]), int(argv[3]), int(argv[4]), int(argv[5]), int(argv[6]), int(argv[7]), int(argv[8]))
+    dev.createthread(int(argv[2], 16), int(argv[3], 16), int(argv[4], 16), int(argv[5], 16), int(argv[6], 16), int(argv[7], 16), int(argv[8], 16))
     
     
   elif argv[1] == "flushcaches":
