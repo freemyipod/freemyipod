@@ -25,6 +25,7 @@
 #include "lcdconsole.h"
 #include "drawing.h"
 #include "util.h"
+#include "contextswitch.h"
 
 
 #define OFFSETX LCDCONSOLE_OFFSETX
@@ -37,62 +38,73 @@
 
 
 static unsigned char framebuf[LCD_FRAMEBUFSIZE];
-static unsigned int current_row;
-static unsigned int current_col;
+static unsigned int current_row IBSS_ATTR;
+static unsigned int current_col IBSS_ATTR;
+static bool lcdconsole_needs_update IBSS_ATTR;
 
 
 void lcdconsole_init()
 {
-  memset(framebuf, -1, sizeof(framebuf));
-  current_row = 0;
-  current_col = -1;
+    memset(framebuf, -1, sizeof(framebuf));
+    current_row = 0;
+    current_col = -1;
+    lcdconsole_needs_update = false;
 }
 
 void lcdconsole_putc_noblit(char string, int fgcolor, int bgcolor)
 {
-  if (string == '\r')
-  {
-    current_col = 0;
-    return;
-  }
-  current_col++;
-  if (string == '\n')
-  {
-    current_col = -1;
-    current_row++;
-    return;
-  }
-  if (string == '\t')
-  {
-    current_col |= 3;
-    return;
-  }
-  if (current_col >= LCDCONSOLE_COLS)
-  {
-    current_col = 0;
-    current_row++;
-  }
-  if (current_row >= LCDCONSOLE_ROWS)
-  {
-    int offset = current_row - LCDCONSOLE_ROWS + 1;
-    memcpy(&framebuf[LINEBYTES * OFFSETY], &framebuf[LINEBYTES * OFFSETY + ROWBYTES * offset],
-           ROWBYTES * (LCDCONSOLE_ROWS - offset));
-    memset(&framebuf[LINEBYTES * OFFSETY + ROWBYTES * (LCDCONSOLE_ROWS - offset)],
-           -1, ROWBYTES * offset);
-    current_row = LCDCONSOLE_ROWS - 1;
-  }
-  renderchar(&framebuf[OFFSETBYTES + ROWBYTES * current_row + COLBYTES * current_col],
-             fgcolor, bgcolor, string, LINEBYTES);
+    if (string == '\r') return;
+    current_col++;
+    if (string == '\n')
+    {
+        current_col = -1;
+        current_row++;
+        return;
+    }
+    if (string == '\t')
+    {
+        current_col |= 3;
+        return;
+    }
+    if (current_col >= LCDCONSOLE_COLS)
+    {
+        current_col = 0;
+        current_row++;
+    }
+    if (current_row >= LCDCONSOLE_ROWS)
+    {
+        int offset = current_row - LCDCONSOLE_ROWS + 1;
+        memcpy(&framebuf[LINEBYTES * OFFSETY], &framebuf[LINEBYTES * OFFSETY + ROWBYTES * offset],
+            ROWBYTES * (LCDCONSOLE_ROWS - offset));
+        memset(&framebuf[LINEBYTES * OFFSETY + ROWBYTES * (LCDCONSOLE_ROWS - offset)],
+            -1, ROWBYTES * offset);
+        current_row = LCDCONSOLE_ROWS - 1;
+    }
+    renderchar(&framebuf[OFFSETBYTES + ROWBYTES * current_row + COLBYTES * current_col],
+        fgcolor, bgcolor, string, LINEBYTES);
 }
 
 void lcdconsole_puts_noblit(const char* string, int fgcolor, int bgcolor)
 {
-  while (*string) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
+    while (*string) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
+}
+
+void lcdconsole_write_noblit(const char* string, size_t length, int fgcolor, int bgcolor)
+{
+    while (length--) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
 }
 
 void lcdconsole_update()
 {
-  displaylcd(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf, 0);
+    uint32_t mode = enter_critical_section();
+    if (displaylcd_busy())
+    {
+        lcdconsole_needs_update = true;
+        leave_critical_section(mode);
+        return;
+    }
+    leave_critical_section(mode);
+    displaylcd(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf, 0);
 }
 
 void lcdconsole_putc(char string, int fgcolor, int bgcolor)
@@ -105,4 +117,19 @@ void lcdconsole_puts(const char* string, int fgcolor, int bgcolor)
 {
     while (*string) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
     lcdconsole_update();
+}
+
+void lcdconsole_write(const char* string, size_t length, int fgcolor, int bgcolor)
+{
+    while (length--) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
+    lcdconsole_update();
+}
+
+void lcdconsole_callback()
+{
+    if (lcdconsole_needs_update)
+    {
+        displaylcd(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf, 0);
+        lcdconsole_needs_update = false;
+    }
 }

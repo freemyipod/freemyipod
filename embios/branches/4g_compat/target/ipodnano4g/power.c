@@ -22,9 +22,7 @@
 
 
 #include "global.h"
-#include "s5l8701.h"
 #include "power.h"
-#include "pmu.h"
 
 
 void reset();

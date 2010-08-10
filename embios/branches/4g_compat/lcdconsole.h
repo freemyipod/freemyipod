@@ -39,9 +39,12 @@
 void lcdconsole_init();
 void lcdconsole_putc(char string, int fgcolor, int bgcolor) ICODE_ATTR;
 void lcdconsole_puts(const char* string, int fgcolor, int bgcolor) ICODE_ATTR;
+void lcdconsole_write(const char* string, size_t length, int fgcolor, int bgcolor) ICODE_ATTR;
 void lcdconsole_putc_noblit(char string, int fgcolor, int bgcolor) ICODE_ATTR;
 void lcdconsole_puts_noblit(const char* string, int fgcolor, int bgcolor) ICODE_ATTR;
+void lcdconsole_write_noblit(const char* string, size_t length, int fgcolor, int bgcolor) ICODE_ATTR;
 void lcdconsole_update() ICODE_ATTR;
+void lcdconsole_callback() ICODE_ATTR;
 
 
 #endif

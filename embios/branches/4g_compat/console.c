@@ -24,10 +24,10 @@
 #include "global.h"
 #include "console.h"
 #include "lcdconsole.h"
+#include "usb/dbgconsole.h"
 #include "format.h"
-#include <stdio.h>
+#include "thread.h"
 #include <stdarg.h>
-#include <stdbool.h>
 #include <limits.h>
 
 
@@ -38,10 +38,27 @@ struct for_cprintf
 };
 
 
+struct mutex console_mutex;
+struct mutex console_readmutex;
+
+
+void console_init()
+{
+    mutex_init(&console_mutex);
+    mutex_init(&console_readmutex);
+}
+
+void cputc_internal(unsigned int consoles, char string) ICODE_ATTR;
+void cputc_internal(unsigned int consoles, char string)
+{
+    if (consoles & 1) lcdconsole_putc(string, 0, -1);
+    if (consoles & 2) dbgconsole_putc(string);
+}
+
 static int cprfunc(void* ptr, unsigned char letter)
 {
     struct for_cprintf* pr = (struct for_cprintf*)ptr;
-    cputc_noblit(pr->consoles, letter);
+    cputc_internal(pr->consoles, letter);
     pr->bytes++;
     return true;
 }
@@ -54,11 +71,11 @@ int cprintf(unsigned int consoles, const char* fmt, ...)
     pr.consoles = consoles;
     pr.bytes = 0;
 
+    mutex_lock(&console_mutex, TIMEOUT_BLOCK);
     va_start(ap, fmt);
     format(cprfunc, &pr, fmt, ap);
     va_end(ap);
-    
-    lcdconsole_update();
+    mutex_unlock(&console_mutex);
 
     return pr.bytes;
 }
@@ -70,34 +87,70 @@ int cvprintf(unsigned int consoles, const char* fmt, va_list ap)
     pr.consoles = consoles;
     pr.bytes = 0;
 
+    mutex_lock(&console_mutex, TIMEOUT_BLOCK);
     format(cprfunc, &pr, fmt, ap);
-    
-    lcdconsole_update();
+    mutex_unlock(&console_mutex);
 
     return pr.bytes;
 }
 
 void cputc(unsigned int consoles, char string)
 {
-  if (consoles & 1) lcdconsole_putc(string, 0, -1);
-}
-
-void cputc_noblit(unsigned int consoles, char string)
-{
-  if (consoles & 1) lcdconsole_putc_noblit(string, 0, -1);
+    mutex_lock(&console_mutex, TIMEOUT_BLOCK);
+    cputc_internal(consoles, string);
+    mutex_unlock(&console_mutex);
 }
 
 void cputs(unsigned int consoles, const char* string)
 {
-  if (consoles & 1) lcdconsole_puts(string, 0, -1);
+    mutex_lock(&console_mutex, TIMEOUT_BLOCK);
+    if (consoles & 1) lcdconsole_puts(string, 0, -1);
+    if (consoles & 2) dbgconsole_puts(string);
+    mutex_unlock(&console_mutex);
 }
 
-void cputs_noblit(unsigned int consoles, const char* string)
+void cwrite(unsigned int consoles, const char* string, size_t length)
 {
-  if (consoles & 1) lcdconsole_puts_noblit(string, 0, -1);
+    mutex_lock(&console_mutex, TIMEOUT_BLOCK);
+    if (consoles & 1) lcdconsole_write(string, length, 0, -1);
+    if (consoles & 2) dbgconsole_write(string, length);
+    mutex_unlock(&console_mutex);
 }
 
 void cflush(unsigned int consoles)
 {
-  if (consoles & 1) lcdconsole_update();
+    mutex_lock(&console_mutex, TIMEOUT_BLOCK);
+    if (consoles & 1) lcdconsole_update();
+    mutex_unlock(&console_mutex);
+}
+
+int cgetc(unsigned int consoles, int timeout)
+{
+    int result;
+    mutex_lock(&console_readmutex, TIMEOUT_BLOCK);
+    if ((consoles & 2) && (result = dbgconsole_getc(timeout)) != -1) return result;
+    mutex_unlock(&console_mutex);
+}
+
+int cread(unsigned int consoles, char* buffer, size_t length, int timeout)
+{
+    int result;
+    mutex_lock(&console_readmutex, TIMEOUT_BLOCK);
+    if ((consoles & 2) && (result = dbgconsole_read(buffer, length, timeout))) return result;
+    mutex_unlock(&console_mutex);
+}
+
+void creada(unsigned int consoles, char* buffer, size_t length, int timeout)
+{
+    int result;
+    mutex_lock(&console_readmutex, TIMEOUT_BLOCK);
+    while (length)
+    {
+        if (length && (consoles & 2) && (result = dbgconsole_read(buffer, length, timeout)))
+        {
+            buffer = &buffer[result];
+            length -= result;
+        }
+    }
+    mutex_unlock(&console_mutex);
 }

@@ -35,6 +35,7 @@
 #define LCD_FRAMEBUFSIZE (LCD_WIDTH * LCD_HEIGHT * LCD_BYTESPERPIXEL)
 
 
+void lcd_init();
 void displaylcd(unsigned int startx, unsigned int endx,
                 unsigned int starty, unsigned int endy, void* data, int color);
 void displaylcd_sync();
