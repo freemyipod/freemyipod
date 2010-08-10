@@ -60,7 +60,7 @@ class embios:
             self.dev = dev
             
             self.svnrev, self.major, self.minor, self.patch, self.type, self.devtype = i[1:6]
-            self.__myprint("Connected to emBIOS %s v%d.%d.%d (SVN revision: %d) on %s, USB version %s" \
+            self.__myprint("Connected to emBIOS %s v%d.%d.%d (SVN revision: %d) on %s, USB version %s\n" \
                   % (self.type2name(self.type), self.major, self.minor, self.patch, self.svnrev, \
                      self.devtype2name(self.devtype), dev.deviceVersion))
                      
@@ -134,7 +134,7 @@ class embios:
   @staticmethod
   def type2name(type):
     if type == 1: return "Debugger"
-    else: return "UNKNOWN (%8x)" % type
+    else: return "UNKNOWN (0x%08x)" % type
 
 
   @staticmethod
@@ -143,7 +143,7 @@ class embios:
     if devtype == 0x47334e49: return "iPod Nano 3G"
     if devtype == 0x47344e49: return "iPod Nano 4G"
     if devtype == 0x4c435049: return "iPod Classic"
-    else: return "UNKNOWN (%8x)" % devtype
+    else: return "UNKNOWN (0x%08x)" % devtype
 
 
 #=====================================================================================
@@ -838,7 +838,7 @@ class embios:
     
     try:
       i = 0
-      while (out[0] == 1) and (!silent):      # Process information struct version == 1 && !silent
+      while out[0] == 1 and not silent:      # Process information struct version == 1 && !silent
         processinfoprint += "--------------------------------------------------------------------------------"
         processinfoprint += "R0: 0x%08x,  R1: 0x%08x,  R2: 0x%08x,  R3: 0x%08x,\n\
                              R4: 0x%08x,  R5: 0x%08x,  R6: 0x%08x,  R7: 0x%08x,\n\

@@ -123,7 +123,7 @@ def parsecommand(dev, argv):
     if len(argv) < 6: usage()
     data = ""
     ptr = 5
-    while ptr < lean(argv):
+    while ptr < len(argv):
       data += struct.pack("<B", int(argv[ptr]))
       ptr += 1
     dev.i2csend(int(argv[2]), int(argv[3]), int(argv[4]), data)
