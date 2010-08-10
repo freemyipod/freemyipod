@@ -1,24 +1,25 @@
 NAME := embios
-TARGETS := ipodnano2g ipodnano4g
 
-CROSS   := arm-elf-eabi-
+CROSS   ?= arm-none-eabi-
 CC      := $(CROSS)gcc
 AS      := $(CROSS)as
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
 
-CFLAGS  ?= -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections
-LDFLAGS ?= "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -Ilibc/include -ffunction-sections -fdata-sections
+LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
-ifeq ($(shell uname),Linux)
-        CFLAGS += -I/usr/include
-endif
+preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
+preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
 
-preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
+REVISION := $(shell svnversion .)
+REVISIONINT := $(shell echo $(REVISION) | sed -e "s/[^0-9].*$$//")
+
+TARGETS := $(call preprocess,TARGETS,-I.)
 
 define TARGET_template
-SRC_$(1) := $$(call preprocess,SOURCES,-DTARGET_$(1))
+SRC_$(1) := $$(call preprocesspaths,SOURCES,-DTARGET_$(1) -Itarget/$(1) -I.)
 OBJ_$(1) := $$(SRC_$(1):%.c=build/$(1)/%.o)
 OBJ_$(1) := $$(OBJ_$(1):%.S=build/$(1)/%.o)
 
@@ -35,7 +36,7 @@ build/$(1)/$(NAME).bin: build/$(1)/$(NAME).elf
 build/$(1)/$(NAME).elf: target/$(1)/ls.x build/$(1)/target/$(1)/crt0.o $$(OBJ_$(1))
 	$(LD) $(LDFLAGS) -o $$@ -T target/$(1)/ls.x $$(OBJ_$(1))
 
-build/$(1)/%.o: %.c
+build/$(1)/%.o: %.c build/version.h
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $$(subst /,\,$$(dir $$@)) md $$(subst /,\,$$(dir $$@))
 else
@@ -44,10 +45,14 @@ endif
 	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
 	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
+ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+else
+	@sed -e 's/.*://' -e 's/\\$$$$//' < $$@.dep.tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$$$/:/' >> $$@.dep
+endif
 	@rm -f $$@.dep.tmp
 
-build/$(1)/%.o: %.S
+build/$(1)/%.o: %.S build/version.h
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $$(subst /,\,$$(dir $$@)) md $$(subst /,\,$$(dir $$@))
 else
@@ -56,13 +61,27 @@ endif
 	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
 	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
+ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
+else
+	@sed -e 's/.*://' -e 's/\\$$$$//' < $$@.dep.tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$$$/:/' >> $$@.dep
+endif
 	@rm -f $$@.dep.tmp
 endef
 
 all: $(TARGETS)
 
 $(foreach target,$(TARGETS),$(eval $(call TARGET_template,$(target))))
+
+build/version.h: version.h .svn/entries build
+ifeq ($(shell uname),WindowsNT)
+	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
+else
+	@sed -e 's/\$$REVISION\$$/$(REVISION)/' -e 's/\$$REVISIONINT\$$/$(REVISIONINT)/' < $< > $@
+endif
+
+build:
+	@mkdir $@
 
 clean:
 	rm -rf build

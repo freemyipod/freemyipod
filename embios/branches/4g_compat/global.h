@@ -24,22 +24,33 @@
 #ifndef __GLOBAL_H__
 #define __GLOBAL_H__
 
+
+#define ICODE_ATTR __attribute__((section(".icode")))
+#define ICONST_ATTR __attribute__((section(".irodata")))
+#define IDATA_ATTR __attribute__((section(".idata")))
+#define IBSS_ATTR __attribute__((section(".ibss")))
+#define INITCODE_ATTR __attribute__((section(".initcode")))
+#define INITCONST_ATTR __attribute__((section(".initrodata")))
+#define INITDATA_ATTR __attribute__((section(".initdata")))
+#define INITBSS_ATTR __attribute__((section(".initbss")))
+#define STACK_ATTR __attribute__((section(".stack")))
+
 #ifndef ASM_FILE
-#include <stdint.h>
-#include <stddef.h>
+#include "errno.h"
+#include "inttypes.h"
+#include "math.h"
+#include "stdint.h"
+#include "stdlib.h"
+#include "string.h"
+#include "sys/types.h"
+typedef int bool;
+#define true 1
+#define false 0
 #endif
 
-#define VERSION "0.0.1pre"
+#include "build/version.h"
+#include "configmagic.h"
+#include "debug.h"
 
-#define ICODE_ATTR __attribute__ ((section(".icode")))
-#define ICONST_ATTR __attribute__ ((section(".irodata")))
-#define IDATA_ATTR __attribute__ ((section(".idata")))
-#define IBSS_ATTR __attribute__ ((section(".ibss")))
-#define INITCODE_ATTR __attribute__ ((section(".initcode")))
-#define INITCONST_ATTR __attribute__ ((section(".initrodata")))
-#define INITDATA_ATTR __attribute__ ((section(".initdata")))
-#define INITBSS_ATTR __attribute__ ((section(".initbss")))
-
-#include "target.h"
 
 #endif

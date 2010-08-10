@@ -25,7 +25,22 @@
 #define __TARGET_H__
 
 
+#define PLATFORM_ID 0x47344e49
+
+
 #define ARM_ARCH 6
+#define LITTLE_ENDIAN
+#define CACHEALIGN_BITS 4
+#define CPU_FREQ 191692800
+
+
+#define USB_NUM_ENDPOINTS 5
+
+
+//#define HAVE_FLASH_STORAGE
+//#define HAVE_STORAGE_FLUSH
+//#define CONFIG_STORAGE STORAGE_NAND
+#define SECTOR_SIZE 4096
 
 
 #endif

@@ -24,14 +24,22 @@
 #include "global.h"
 #include "lcdconsole.h"
 #include "console.h"
+#include "accel.h"
 
 static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION "\n";
 
 void init() INITCODE_ATTR;
 void init()
 {
-  lcdconsole_init();
-  cputs(1, welcomestring);
-  // Never works so just comment it out:
-  //if (fat32_init()) cputs(1, "fat32_init() failed!\n");
+    scheduler_init();
+    lcdconsole_init();
+    cputs(1, welcomestring);
+    while(1)
+    {
+        uint8_t x = accel_get_axis(0);
+        uint8_t y = accel_get_axis(1);
+        uint8_t z = accel_get_axis(2);
+        cprintf(1, "x:%d y:%d z:%d\n", x, y, z);
+    }
+  
 }

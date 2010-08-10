@@ -26,10 +26,21 @@
 
 
 #include "global.h"
+#include "gcc_extensions.h"
+#include <stdarg.h>
 
 
-void panic(const char* string) ICODE_ATTR;
-void panicf(const char* string, ...) ICODE_ATTR;
+enum panic_severity
+{
+    PANIC_KILLTHREAD = 0,
+    PANIC_KILLUSERTHREADS = 1,
+    PANIC_FATAL = 2
+};
+
+
+void panic(enum panic_severity severity, const char* string) ICODE_ATTR;
+void panicf(enum panic_severity severity, const char* string, ...) ICODE_ATTR
+            ATTRIBUTE_PRINTF(2, 3);
 
 
 #endif

@@ -30,6 +30,7 @@
 
 void clean_dcache() __attribute__((naked, noinline)) ICODE_ATTR;
 void invalidate_dcache() __attribute__((naked, noinline)) ICODE_ATTR;
+void invalidate_icache() __attribute__((naked, noinline)) ICODE_ATTR;
 
 
 #endif

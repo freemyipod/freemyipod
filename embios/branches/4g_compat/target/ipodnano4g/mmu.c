@@ -32,3 +32,6 @@ void clean_dcache()
 void invalidate_dcache()
 {
 }
+void invalidate_icache()
+{
+}

@@ -38,6 +38,8 @@
 void displaylcd(unsigned int startx, unsigned int endx,
                 unsigned int starty, unsigned int endy, void* data, int color);
 void displaylcd_sync();
+bool displaylcd_busy();
+bool displaylcd_safe();
 
 
 #endif

@@ -22,29 +22,9 @@
 
 
 #include "global.h"
-#include "console.h"
-#include "accel.h"
-#include "backlight.h"
+#include "panic.h"
 
 void main()
 {
-  //panic("main() doesn't know what to do!");
-  demo();
-}
-
-void demo()
-{
-  backlight_off(32);
-  cputs(1, "\nAccelerometer data. Om nom nom!\n\n");
-  int i;
-  for(i = 0; i < 16; i++)
-  {
-    uint8_t x = accel_get_axis(0);
-    uint8_t y = accel_get_axis(1);
-    uint8_t z = accel_get_axis(2);
-    cprintf(1, "x:%3d y:%3d z:%3d\n", x, y, z);
-  }
-  cputs(1, "\nemBIOS is a hardware abstraction with\ndebugging.\n\nIt helps with writing drivers too.");
-  backlight_on(32);
-  while(1) {}
+    panic(PANIC_FATAL, "main() doesn't know what to do!");
 }

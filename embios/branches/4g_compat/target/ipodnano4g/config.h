@@ -21,8 +21,20 @@
 //
 
 
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
+
+
 //#define NAND_DEBUG
 //#define NAND_TRACE
+//#define VFL_DEBUG
 //#define VFL_TRACE
+//#define FTL_DEBUG
 //#define FTL_TRACE
 
+
+//#define DEBUG_CONSOLES 2
+//#define DEBUG_PRINT_SOURCE_LINE
+
+
+#endif
