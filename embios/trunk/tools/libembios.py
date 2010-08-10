@@ -21,7 +21,7 @@
 #
 #
 
-# note: handles commands 1,2,3,4,5,6,7,8,9,10,11,   ,14,15,16,17,18,19,20
+# note: handles commands 1 to 20
 
 import sys
 import math
@@ -59,7 +59,7 @@ class embios:
             self.handle = handle
             self.dev = dev
             
-            self.svnrev, self.major, self.minor, self.patch, self.type, self.devtype = i[1:6]
+            self.svnrev, self.major, self.minor, self.patch, self.type, self.devtype = i[1:]
             self.__myprint("Connected to emBIOS %s v%d.%d.%d (SVN revision: %d) on %s, USB version %s\n" \
                   % (self.type2name(self.type), self.major, self.minor, self.patch, self.svnrev, \
                      self.devtype2name(self.devtype), dev.deviceVersion))
@@ -80,7 +80,7 @@ class embios:
     
   @staticmethod
   def __myprint(data, silent = 0):
-    if (silent == 0):
+    if not silent:
       sys.stdout.write(data)
       sys.stdout.flush()
 
@@ -157,7 +157,7 @@ class embios:
       
       i = struct.unpack("<IIBBBBI", response)
       
-      self.svnrev, self.major, self.minor, self.patch, self.type, self.devtype = i[1:6]
+      self.svnrev, self.major, self.minor, self.patch, self.type, self.devtype = i[1:]
       
       self.__myprint("emBIOS %s v%d.%d.%d (SVN revision: %d) on %s, USB version %s\n" \
               % (self.type2name(self.type), self.major, self.minor, self.patch, self.svnrev, \
@@ -459,7 +459,7 @@ class embios:
 
   def readusbcon(self, size, outtype = "", file = "", silent = 0):
     """ reads from USB console
-      <size>: number of bytes to be read, cannot be more than the Command In endpoint packet size - 0x10
+      <size>: number of bytes to be read, if its length exceeds the Command In endpoint packet size - 0x10, it will be read in several steps
       <outtype>: how the data will be put out
         "file" => writes data to file <file>
         "printstring" => prints data as a string to the console window
@@ -471,49 +471,65 @@ class embios:
         [len, buffersize, datainbuffer, data]
           where len is the length of the data actually read,
                 buffersize is the on-device read buffer size,
-                datainbuffer is the number of bytes still left in the on_device buffer,
+                datainbuffer is the number of bytes still left in the on device buffer,
                 data is the actual data
+      
+      in case that within 5 secs, it's not possible to read <size> bytes, a timeout will occur
     """
-    if size > self.cin_maxsize - 0x10:
-      size = self.cin_maxsize - 0x10
+    out_data = ""
+    readbytes = 0
+    buffersize = 0
+    bytesleft = 0
+    timeoutcounter = 0
     
     self.__myprint("Reading 0x%x bytes from USB console..." % (size), silent)
     
-    self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 10, size, 0, 0))
-    response = self.__getbulk(self.handle, self.__cinep, size + 0x10)
-    self.__checkstatus(response)
+    while size > 0 and timoutcounter < 50:
+      blocklen = size
+      
+      if size > self.cin_maxsize - 0x10:
+        blocklen = self.cin_maxsize - 0x10
+      
+      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 10, blocklen, 0, 0))
+      response = self.__getbulk(self.handle, self.__cinep, blocklen + 0x10)
+      self.__checkstatus(response)
+      
+      readbytes, buffersize, bytesleft = struct.unpack("<III", response[:12])
+      out_data += response[0x10:0x10+readbytes]
+      size -= blocklen
+      
+      if not bytesleft > 0:   # no data left to read => wait a bit and prevent an infinite loop trying to read data when there is none
+        timeoutcounter += 1
+        time.sleep(0.1)
+      else:
+        timeoutcounter -= 3
+        if timeoutcounter < 0:
+          timeoutcounter = 0
+          
+    self.__myprint(" done\n", silent)
+    self.__myprint("\nBytes read: 0x%x\nOn-device buffersize: 0x%x\nBytes still in device's buffer: 0x%x\n\n"\
+                    % (len(out_data), buffersize, bytesleft)                      
+                    , silent)
     
     if (outtype == "file"):
       f = open(file, "wb")
-      f.write(response[0x10 : 0x10 + struct.unpack("<IIII", response[:0x10])[1]])
+      f.write(out_data)
       
     elif (outtype == "printstring"):
-      self.__myprint("\nBytes read: 0x%x\nOn-device buffersize: 0x%x\nBytes still in device's buffer: 0x%x\n\n"\
-                    % (struct.unpack("<IIII", response[:0x10])[1], 
-                       struct.unpack("<IIII", response[:0x10])[2],
-                       struct.unpack("<IIII", response[:0x10])[3])
-                    , silent)
-      self.__myprint(response[0x10 : 0x10 + struct.unpack("<IIII", response[:0x10])[1]], silent)
+      self.__myprint(out_data, silent)
       self.__myprint("\n\n", silent)
       
     elif (outtype == "printhex"):
-      self.__myprint("\nBytes read: 0x%x\nOn-device buffersize: 0x%x\nBytes still in device's buffer: 0x%x\n\n"\
-                    % (struct.unpack("<IIII", response[:0x10])[1], 
-                       struct.unpack("<IIII", response[:0x10])[2],
-                       struct.unpack("<IIII", response[:0x10])[3])
-                    , silent)
-      self.__myprint(self.__gethexviewprintout(response[0x10:], "", 1), silent)
+      self.__myprint(self.__gethexviewprintout(out_data, "", 1), silent)
       self.__myprint("\n\n", silent)
     
     elif (outtype == ""):
       pass    # return only
+      
     else:
       raise Exception ("Invalid argument for <outtype>: '%s'." % (outtype))
     
-    self.__myprint(" done\n", silent)
-    
-    #      header                                         data
-    return struct.unpack("<IIII", response[:0x10]).extend(response[0x10 : 0x10 + struct.unpack("<IIII", response[:0x10])[1]])
+    return [len(out_data), buffersize, bytesleft, out_data]
     
     
   def writeusbcon(self, data, silent = 0, *range):
@@ -522,7 +538,7 @@ class embios:
       <range>: the range in <data> that should be written, in the from [offset, length]
       <silent>: if 0, nothing will be written to the console window
       
-      the data to be written can't exceed the Command Out endpoint packet size - 0x10
+      if the data to be written exceeds the Command Out endpoint packet size - 0x10, it will be written in several steps
     """
     size = len(data)
     boffset = 0
@@ -532,30 +548,143 @@ class embios:
     if len(range) > 1:
       size = range[1]
     
-    if size > self.cout_maxsize - 0x10:
-      size = self.cout_maxsize - 0x10
-    
     self.__myprint("Writing 0x%x bytes to USB console..." % (size), silent)
     
     timeoutcounter = 0
     
-    while (size != 0) and (timeoutcounter < 10):
-      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 11, size, 0, 0) + data[boffset:boffset+size])
+    while (size > 0) and (timeoutcounter < 50):
+      blocklen = size
+      if blocklen > self.cout_maxsize - 0x10:
+        blocklen = self.cout_maxsize - 0x10
+    
+      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 11, size, 0, 0) + data[boffset:boffset+blocklen])
       response = self.__getbulk(self.handle, self.__cinep, 0x10)
       self.__checkstatus(response)
       
-      size -= struct.unpack("<I", response[4:8])
-      boffset += struct.unpack("<I", response[4:8])
+      sendbytes = struct.unpack("<I", response[4:8])
+      if sendbytes < blocklen:   # not everything has been written, need to resent some stuff but wait a bit before doing so
+        time.sleep(0.1)
+        timeoutcounter += 1
+      elif timeoutcounter > 0:    # lower timeoutcounter again
+        timeoutcounter -= 3
+        if timeoutcounter < 0:
+          timeoutcounter = 0
       
-      time.sleep(0.1)
-      timeoutcounter += 1
+      size -= sendbytes
+      boffset += sendbytes
+
       
-    if (timeoutcounter >=10):
-      raise Exception("0x%x couldn't be send.")
+    if (timeoutcounter >=50):
+      raise Exception("Timeout, 0x%x bytes couldn't be send." % size)
     
     self.__myprint(" done\n", silent)
     
+    return size   # number of bytes that have not been sent
+    
 
+  def readdevcon(self, bitmask, size, outtype = "", file = "", silent = 0):
+    """ reads from one or more of the device's consoles
+      <bitmask>: bitmask of consoles to be read from
+      <size>: number of bytes to be read, if its length exceeds the Command In endpoint packet size - 0x10, it will be read in several steps
+      <outtype>: how the data will be put out
+        "file" => writes data to file <file>
+        "printstring" => prints data as a string to the console window
+        "printhex" => prints a hexview view of the data to the console window
+        "" => only returns the data
+      <silent>: if 0, nothing will be written to the console window (even if <outtype> defines something else)
+      
+      in every case, the data will be returned
+      
+      in case that within 5 secs, it's not possible to read <size> bytes, a timeout will occur
+    """
+    out_data = ""
+    readbytes = 0
+    timeoutcounter = 0
+    
+    self.__myprint("Reading 0x%x bytes from device's console(s)..." % (size), silent)
+    
+    while size > 0 and timoutcounter < 50:
+      blocklen = size
+      
+      if size > self.cin_maxsize - 0x10:
+        blocklen = self.cin_maxsize - 0x10
+      
+      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 13, bitmask, blocklen, 0))
+      response = self.__getbulk(self.handle, self.__cinep, blocklen + 0x10)
+      self.__checkstatus(response)
+      
+      readbytes = struct.unpack("<III", response[4:8])
+      out_data += response[0x10:0x10+readbytes]
+      size -= blocklen
+      
+      if not readbytes > 0:   # no data read => wait a bit and prevent an infinite loop trying to read data when there is none
+        timeoutcounter += 1
+        time.sleep(0.1)
+      else:
+        timeoutcounter -= 3
+        if timeoutcounter < 0:
+          timeoutcounter = 0
+          
+    self.__myprint(" done\n", silent)
+    self.__myprint("\nBytes read: 0x%x\n\n" % (len(out_data)), silent)
+    
+    if (outtype == "file"):
+      f = open(file, "wb")
+      f.write(out_data)
+      
+    elif (outtype == "printstring"):
+      self.__myprint(out_data, silent)
+      self.__myprint("\n\n", silent)
+      
+    elif (outtype == "printhex"):
+      self.__myprint(self.__gethexviewprintout(out_data, "", 1), silent)
+      self.__myprint("\n\n", silent)
+    
+    elif (outtype == ""):
+      pass    # return only
+      
+    else:
+      raise Exception ("Invalid argument for <outtype>: '%s'." % (outtype))
+    
+    return out_data
+    
+    
+  def writedevcon(self, bitmask, data, silent = 0, *range):
+    """ writes to USB console
+      <bitmask>: bitmask of consoles to be written to
+      <data>: the data to be written
+      <range>: the range in <data> that should be written, in the from [offset, length]
+      <silent>: if 0, nothing will be written to the console window
+      
+      if the data to be written exceeds the Command Out endpoint packet size - 0x10, it will be written in several steps
+    """
+    size = len(data)
+    boffset = 0
+    
+    if len(range) > 0:
+      boffset = range[0]
+    if len(range) > 1:
+      size = range[1]
+    
+    self.__myprint("Writing 0x%x bytes to device's console(s)..." % (size), silent)
+    
+    timeoutcounter = 0
+    
+    while size > 0:
+      blocklen = size
+      if blocklen > self.cout_maxsize - 0x10:
+        blocklen = self.cout_maxsize - 0x10
+    
+      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 12, bitmask, size, 0) + data[boffset:boffset+blocklen])
+      response = self.__getbulk(self.handle, self.__cinep, 0x10)
+      self.__checkstatus(response)
+      
+      size -= blocklen
+      boffset += blocklen
+    
+    self.__myprint(" done\n", silent)
+   
+       
   def flushconsolebuffers(self, bitmask, silent = 0):
     self.__myprint("Flushing device console('s) buffer('s)...")
     
@@ -867,6 +996,8 @@ class embios:
         processinfoprint += "priority: 0x%02x      " % (out[i+3]['priority'])
         processinfoprint += "cpu load: 0x%02x\n" % (out[i+3]['cpuload'])
         
+        i += 1
+        
     except IndexError:
       processinfoprint += "--------------------------------------------------------------------------------"
     
@@ -895,7 +1026,7 @@ class embios:
     
   
 #======================================================================================
-#======================================================================================
+# backlight control, remnant from libibugger adjusted to work with libembios ==========
 
 
   def backlighton(self, fade, brightness, silent = 0):
