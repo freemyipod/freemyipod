@@ -22,7 +22,7 @@
 
 
 #include "global.h"
-#include "s5l8720.h"
+#include "s5l8701.h"
 
 
 void clockgate_enable(int gate, bool enable)

@@ -329,8 +329,8 @@ void nand_power_up(void)
     uint32_t i;
     mutex_lock(&nand_mtx, TIMEOUT_BLOCK);
     nand_last_activity_value = USEC_TIMER;
-    PWRCONEXT &= ~0x40;
-    PWRCON &= ~0x100000;
+    PWRCON(1) &= ~0x40;
+    PWRCON(0) &= ~0x100000;
     PCON2 = 0x33333333;
     PDAT2 = 0;
     PCON3 = 0x11113333;
@@ -365,8 +365,8 @@ void nand_power_down(void)
     PDAT4 = 0;
     PCON5 = (PCON5 & ~0xF) | 1;
     PUNK5 = 1;
-    PWRCONEXT |= 0x40;
-    PWRCON |= 0x100000;
+    PWRCON(1) |= 0x40;
+    PWRCON(0) |= 0x100000;
     nand_powered = 0;
     mutex_unlock(&nand_mtx);
 }

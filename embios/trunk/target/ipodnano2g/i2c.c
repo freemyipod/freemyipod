@@ -41,7 +41,7 @@ void i2c_init()
              (2 << 0);
 
     /* enable I2C clock */
-    PWRCON &= ~(1 << 5);
+    PWRCON(0) &= ~(1 << 5);
 
     /* initial config */
     IICADD = 0;
