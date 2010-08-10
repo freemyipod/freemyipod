@@ -26,5 +26,5 @@
 
 int8_t accel_get_axis(uint8_t axis)
 {
-    return i2crecvbyte(0, 0x3a, 0x29 + 2 * axis);
+    return i2c_recvbyte(0, 0x3a, 0x29 + 2 * axis);
 }

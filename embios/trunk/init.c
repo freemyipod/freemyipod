@@ -41,9 +41,11 @@
 #include "disk.h"
 #endif
 
+
 static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSION_SVN "\n\n";
 static const char initthreadname[] INITCONST_ATTR = "Initialisation thread";
 static uint32_t initstack[0x400] INITBSS_ATTR;
+
 
 void initthread() INITCODE_ATTR;
 void initthread()

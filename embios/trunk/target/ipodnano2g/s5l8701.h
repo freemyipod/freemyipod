@@ -37,13 +37,12 @@
 #define PLL2LCNT     (*((volatile uint32_t*)(0x3C50001C)))
 #define PLLLOCK      (*((volatile uint32_t*)(0x3C500020)))
 #define PLLCON       (*((volatile uint32_t*)(0x3C500024)))
-#define PWRCON       (*((volatile uint32_t*)(0x3C500028)))
 #define PWRMODE      (*((volatile uint32_t*)(0x3C50002C)))
 #define SWRCON       (*((volatile uint32_t*)(0x3C500030)))
 #define RSTSR        (*((volatile uint32_t*)(0x3C500034)))
 #define DSPCLKMD     (*((volatile uint32_t*)(0x3C500038)))
 #define CLKCON2      (*((volatile uint32_t*)(0x3C50003C)))
-#define PWRCONEXT    (*((volatile uint32_t*)(0x3C500040)))
+#define PWRCON(i)    (*((volatile uint32_t*)(0x3C500000 + ((i) == 1 ? 0x28 : 0x40))))
 
 
 /////ICU/////
@@ -283,6 +282,11 @@ uint64_t read_5usec_timer();
 #define IICSTAT      (*((volatile uint32_t*)(0x3C900004)))
 #define IICADD       (*((volatile uint32_t*)(0x3C900008)))
 #define IICDS        (*((volatile uint32_t*)(0x3C90000C)))
+
+
+/////CLOCK GATES/////
+#define CLOCKGATE_USB_1 14
+#define CLOCKGATE_USB_2 43
 
 
 /////INTERRUPTS/////

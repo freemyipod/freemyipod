@@ -32,6 +32,7 @@
 #include "synopsysotg.h"
 #include "util.h"
 #include "interrupt.h"
+#include "clockgates.h"
 
 
 struct ep_type
@@ -357,8 +358,8 @@ void usb_drv_init(void)
         wakeup_init(&endpoints[i].complete);
 
     /* Enable USB clock */
-    PWRCON &= ~0x4000;
-    PWRCONEXT &= ~0x800;
+    clockgate_enable(CLOCKGATE_USB_1, true);
+    clockgate_enable(CLOCKGATE_USB_2, true);
     PCGCCTL = 0;
 
     /* unmask irq */
