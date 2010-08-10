@@ -9,8 +9,8 @@
    "comment out" the non-ANSI parts of the ANSI header files (non-ANSI header
    files aren't affected).  */
 
-#ifndef _ANSIDECL_H_
-#define _ANSIDECL_H_
+#ifndef ___ANSI_H__
+#define ___ANSI_H__
 
 /* First try to figure out whether we really are in an ANSI C environment.  */
 /* FIXME: This probably needs some work.  Perhaps sys/config.h can be

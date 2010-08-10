@@ -26,7 +26,6 @@
 
 #include "global.h"
 #include "thread.h"
-#include "gcc_extensions.h"
 
 #ifndef MAX_OPEN_FILES
 #define MAX_OPEN_FILES 32
