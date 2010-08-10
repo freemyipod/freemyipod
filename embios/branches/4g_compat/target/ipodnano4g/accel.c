@@ -24,7 +24,7 @@
 #include "global.h"
 #include "i2c.h"
 
-uint32_t accel_get_axis(uint8_t axis)
+int8_t accel_get_axis(uint8_t axis)
 {
     uint8_t address = 0x29 + 2 * axis;
     return i2crecvbyte(0x3a, address);

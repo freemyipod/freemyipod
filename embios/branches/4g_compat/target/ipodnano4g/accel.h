@@ -26,6 +26,6 @@
 
 #include "global.h"
 
-uint8_t accel_get_axis(uint8_t axis);
+int8_t accel_get_axis(uint8_t axis);
 
 #endif
