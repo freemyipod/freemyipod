@@ -24,9 +24,24 @@
 #include "global.h"
 #include "lcdconsole.h"
 #include "console.h"
-#include "accel.h"
+#include "thread.h"
+
 
 static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION "\n";
+
+uint32_t stack_a[0x400];
+uint32_t stack_b[0x400];
+
+
+void thread_a()
+{
+	while(1) cprintf(1, "Hello from Thread A!\n");
+}
+
+void thread_b()
+{
+	while(1) cprintf(1, "Hello from Thread B!\n");
+}
 
 #include "s5l8720.h"
 
@@ -35,10 +50,8 @@ void init()
 {
     scheduler_init();
     lcdconsole_init();
-    cputs(1, welcomestring);
-    while(1)
-    {
-        cprintf(1, "TBCNT: %d \n", TBCNT);
-    }
+	interrupt_init();
+	thread_create("Thread A", thread_a, stack_a, sizeof(stack_a), USER_THREAD, 127, true);
+	thread_create("Thread B", thread_b, stack_b, sizeof(stack_b), USER_THREAD, 127, true);
   
 }

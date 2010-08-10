@@ -36,6 +36,8 @@
 .section .initcode,"ax",%progbits
 .global _start
 _start:
+	ldr	r0, =0x00450878
+	mcr	p15, 0, r0,c1,c0,0
 	ldr	r0, =_sramsource
 	ldr	r1, =_sramstart
 	ldr	r2, =_sramend
@@ -78,13 +80,29 @@ _start:
 	str	r0, [r1]
 	mov	r0, #0
 	mcr	p15, 0, r0,c7,c5,0
+	add	r1, r1, #0x00c00000
+	add	r2, r1, #0x00001000
+	add	r3, r1, #0x00002000
+	sub	r4, r0, #1
+	str	r4, [r1,#0x14]
+	str	r4, [r2,#0x14]
+	str	r4, [r1,#0xf00]
+	str	r4, [r2,#0xf00]
+	str	r4, [r3,#0x08]
+	str	r4, [r3,#0x0c]
+	str	r0, [r1,#0x14]
+	str	r0, [r2,#0x14]
+	mov	r0, #0
+	ldr	r1, =0x3c500000
+	str	r0, [r1,#0x48]
+	str	r0, [r1,#0x4c]
 	msr	cpsr_c, #0xd2
 	ldr	sp, =_irqstackend
 	msr	cpsr_c, #0xd7
 	ldr	sp, =_abortstackend
 	msr	cpsr_c, #0xdb
 	ldr	sp, =_abortstackend
-	msr	cpsr_c, #0xdf
+	msr	cpsr_c, #0x1f
 	ldr	sp, =_initstackend
 	bl	init
 	bl	context_switch
@@ -181,14 +199,14 @@ syscall_text:
 
 .section .icode.usec_timer, "ax", %progbits
 .align 2
-.global read_5usec_timer
-.type read_5usec_timer, %function
-read_5usec_timer:
+.global read_42nsec_timer
+.type read_42nsec_timer, %function
+read_42nsec_timer:
 	ldr	r0, val_3c700000
 	ldr	r1, [r0,#0x80]
 	ldr	r0, [r0,#0x84]
 	bx	lr
-.size read_5usec_timer, .-read_5usec_timer
+.size read_42nsec_timer, .-read_42nsec_timer
 
 .global read_usec_timer
 .type read_usec_timer, %function
@@ -196,7 +214,10 @@ read_usec_timer:
 	ldr	r0, val_3c700000
 	ldr	r1, [r0,#0x80]
 	ldr	r0, [r0,#0x84]
-	add	r0, r0, r0,lsl#2
+	mov	r0, r0,lsr#5
+	orr	r0, r0, r1,lsl#27
+	add	r0, r0, r0,asr#2
+	add	r0, r0, r0,asr#6
 	bx	lr
 .size read_usec_timer, .-read_usec_timer
 
