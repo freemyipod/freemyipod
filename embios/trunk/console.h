@@ -26,7 +26,6 @@
 
 
 #include "global.h"
-#include "gcc_extensions.h"
 #include <stdarg.h>
 
 
