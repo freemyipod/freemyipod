@@ -42,7 +42,7 @@
 #define RSTSR        (*((volatile uint32_t*)(0x3C500034)))
 #define DSPCLKMD     (*((volatile uint32_t*)(0x3C500038)))
 #define CLKCON2      (*((volatile uint32_t*)(0x3C50003C)))
-#define PWRCON(i)    (*((volatile uint32_t*)(0x3C500000 + ((i) == 1 ? 0x28 : 0x40))))
+#define PWRCON(i)    (*((volatile uint32_t*)(0x3C500000 + ((i) == 1 ? 0x40 : 0x28))))
 
 
 /////ICU/////

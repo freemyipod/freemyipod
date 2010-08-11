@@ -33,6 +33,7 @@
 #define INITCONST_ATTR __attribute__((section(".initrodata")))
 #define INITDATA_ATTR __attribute__((section(".initdata")))
 #define INITBSS_ATTR __attribute__((section(".initbss")))
+#define INITSTACK_ATTR __attribute__((section(".initstack")))
 #define STACK_ATTR __attribute__((section(".stack")))
 
 #ifndef ASM_FILE

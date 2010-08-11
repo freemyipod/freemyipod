@@ -61,6 +61,7 @@ strcasestr.c
 strcasecmp.c
 strlcpy.c
 strlcat.c
+execimage.c
 
 libc/strstr.c
 libc/strtok.c

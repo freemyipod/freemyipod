@@ -5,7 +5,8 @@ STARTUP(build/ipodnano4g/target/ipodnano4g/crt0.o)
 
 MEMORY
 {
-    INIT : ORIGIN = 0x08000000, LENGTH = 0x01f00000
+    INIT : ORIGIN = 0x08000000, LENGTH = 0x01eff000
+    INITSTACK : ORIGIN = 0x09eff000, LENGTH = 0x00001000
     SRAM : ORIGIN = 0x22000000, LENGTH = 0x00030000
     SDRAM : ORIGIN = 0x09f00000, LENGTH = 0x00100000
 }
@@ -84,6 +85,14 @@ SECTIONS
         . = ALIGN(0x4);
         _bssend = .;
     } > SDRAM
+
+    .initstack (NOLOAD) :
+    {
+        _loadspaceend = .;
+        *(.initstack*)
+        *(COMMON)
+        . = ALIGN(0x4);
+    } > INITSTACK
 
     /DISCARD/ :
     {

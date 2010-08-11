@@ -26,6 +26,9 @@
 #include "console.h"
 #include "power.h"
 #include "interrupt.h"
+#include "ucl.h"
+#include "util.h"
+#include "execimage.h"
 #ifdef HAVE_LCD
 #include "lcd.h"
 #include "lcdconsole.h"
@@ -39,13 +42,114 @@
 #ifdef HAVE_STORAGE
 #include "storage.h"
 #include "disk.h"
+#include "file.h"
 #endif
+
+
+struct bootinfo_t
+{
+    char signature[8];
+    int version;
+    bool trydataflash;
+    char dataflashpath[256];
+    bool dataflashflags;
+    bool trybootflash;
+    char bootimagename[8];
+    bool bootflashflags;
+    bool trymemmapped;
+    void* memmappedaddr;
+    uint32_t memmappedsize;
+    bool memmappedflags;
+};
 
 
 static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSION_SVN "\n\n";
 static const char initthreadname[] INITCONST_ATTR = "Initialisation thread";
-static uint32_t initstack[0x400] INITBSS_ATTR;
+static uint32_t initstack[0x400] INITSTACK_ATTR;
+extern int _loadspaceend;
+extern int _initstart;
+const struct bootinfo_t bootinfo_src INITCONST_ATTR =
+{
+    .signature = "emBIboot",
+    .version = 0,
+    .trydataflash = false,
+    .trybootflash = false,
+    .trymemmapped = false
+};
 
+
+void boot()
+{
+    struct bootinfo_t bootinfo = bootinfo_src;
+#ifdef HAVE_STORAGE
+    if (bootinfo.trydataflash)
+    {
+        int fd = file_open(bootinfo.dataflashpath, O_RDONLY);
+        if (fd < 0) goto dataflashfailed;
+        uint32_t size = filesize(fd);
+        if (bootinfo.dataflashflags & 1)
+        {
+            void* addr = (void*)((((uint32_t)&_loadspaceend) - size) & ~(CACHEALIGN_SIZE - 1));
+            if (read(fd, addr, size) != size) goto dataflashfailed;
+            if (ucl_decompress(addr, size, &_initstart, &size)) goto dataflashfailed;
+        }
+        else if (read(fd, &_initstart, size) != size) goto dataflashfailed;
+        if (execimage(&_initstart) < 0) return;
+    }
+dataflashfailed:
+#endif
+#ifdef HAVE_BOOTFLASH
+    if (bootinfo.trybootflash)
+    {
+        uint32_t size = bootflash_filesize(bootinfo.bootimagename);
+        if (size < 0) goto bootflashfailed;
+#ifdef BOOTFLASH_IS_MEMMAPPED
+        void* addr = bootflash_getaddr(bootinfo.bootimagename);
+        if (bootinfo.bootflashflags & 1)
+        {
+            if (ucl_decompress(addr, size, &_initstart, &size)) goto bootflashfailed;
+            if (execimage(&_initstart) < 0) return;
+        }
+        else if (bootinfo.bootflashflags & 2)
+        {
+            memcpy(&_initstart, addr, size);
+            if (execimage(&_initstart) < 0) return;
+        }
+        else execimage(addr);
+#else
+        if (bootinfo.bootflashflags & 1)
+        {
+            void* addr = (void*)((((uint32_t)&_loadspaceend) - size) & ~(CACHEALIGN_SIZE - 1));
+            bootflash_read(bootinfo.bootimagename, addr, 0, size);
+            if (ucl_decompress(addr, size, &_initstart, &size)) goto bootflashfailed;
+        }
+        else bootflash_read(bootinfo.bootimagename, &_initstart, 0, size);
+        if (execimage(&_initstart) < 0) return;
+#endif
+    }
+bootflashfailed:
+#endif
+    if (bootinfo.trymemmapped)
+    {
+        uint32_t size = bootinfo.memmappedsize;
+        if (bootinfo.bootflashflags & 1)
+        {
+            if (ucl_decompress(bootinfo.memmappedaddr, size, &_initstart, &size))
+                goto memmappedfailed;
+            if (execimage(&_initstart) < 0) return;
+        }
+        else if (bootinfo.bootflashflags & 2)
+        {
+            memcpy(&_initstart, bootinfo.memmappedaddr, size);
+            if (execimage(&_initstart) < 0) return;
+        }
+        else if (execimage(bootinfo.memmappedaddr) < 0) return;
+    }
+memmappedfailed:
+    if (bootinfo.trydataflash || bootinfo.trybootflash || bootinfo.trymemmapped)
+        cputs(CONSOLE_BOOT, "Could not find a usable boot image!\n");
+    cputs(CONSOLE_BOOT, "Waiting for USB commands\n\n");
+}
 
 void initthread() INITCODE_ATTR;
 void initthread()
@@ -69,6 +173,7 @@ void initthread()
     disk_mount_all();
 	#endif
     DEBUGF("Finished initialisation sequence");
+    boot();
 }
 
 void init() INITCODE_ATTR;

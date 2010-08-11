@@ -49,8 +49,8 @@
 
 .section .icode.ucl_decompress, "ax", %progbits
 .align 2
-ucl_decompress: .globl ucl_nrv2e_decompress_8  @ ARM mode
-        .type ucl_nrv2e_decompress_8, %function
+ucl_decompress: .globl ucl_decompress  @ ARM mode
+        .type ucl_decompress, %function
 /* error = (*)(char const *src, int len_src, char *dst, int *plen_dst)
    Actual decompressed length is stored through plen_dst.
 */
