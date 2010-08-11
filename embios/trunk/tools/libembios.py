@@ -161,7 +161,7 @@ class embios:
       
       self.__myprint("emBIOS %s v%d.%d.%d (SVN revision: %d) on %s, USB version %s\n" \
               % (self.type2name(self.type), self.major, self.minor, self.patch, self.svnrev, \
-                 self.devtype2name(self.devtype), dev.deviceVersion)\
+                 self.devtype2name(self.devtype), self.dev.deviceVersion)\
             , silent)
       
     elif (infotype == "packetsize"):
@@ -188,7 +188,7 @@ class embios:
       i = struct.unpack("<IIII", response)
       
       self.usermem_lower = i[1]
-      self.usermem_higher = i[2]
+      self.usermem_upper = i[2]
       
       self.__myprint("User memory range:\n     Lower bound (inclusive): %x\n     Upper bound (exclusive) %x\n" \
               % (self.usermem_lower, self.usermem_upper)
@@ -352,7 +352,7 @@ class embios:
         response = self.__getbulk(self.handle, self.__cinep, 0x10)
         self.__checkstatus(response)
       
-        data += self.__getBulk(self.handle, self.__doutep, blocklen)
+        data += self.__getbulk(self.handle, self.__doutep, blocklen)
       
         offset += blocklen
         size -= blocklen
