@@ -360,12 +360,13 @@ def parsecommand(dev, argv):
     
   elif argv[1] == "readrawbootflash":
     if len(argv) != 5: usage()
-    dev.readrawbootflash(int(argv[2]), int(argv[3]), int(argv[4]))
+    dev.readrawbootflash(int(argv[2], 16), int(argv[3], 16), int(argv[4], 16))
     
   elif argv[1] == "writerawbootflash":
     if len(argv) != 5: usage()
-    dev.writerawbootflash(int(argv[2]), int(argv[3]), int(argv[4]))
-    
+    dev.writerawbootflash(int(argv[2], 16), int(argv[3], 16), int(argv[4], 16))
+ 
+ 
   elif argv[1] == "flushcaches":
     if len(argv) != 2: usage()
     dev.flushcaches()

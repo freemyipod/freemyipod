@@ -258,12 +258,14 @@ class embios:
      
     # correct alignment
     while (offset & 0xF) != 0:
-      blocklen = (0x10 - offset % 0x10)
-      
+      blocklen = size
+        
       if (blocklen > size):
         blocklen = size
       if (blocklen > self.cout_maxsize - 0x10):
-        blocklen = self.cout_maxsize
+        blocklen = self.cout_maxsize - 0x10
+      
+      blocklen = (blocklen & 0xFFFFFFF0) +  (offset & 0xF)
       
       self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 5, offset, blocklen, 0) + data[boffset:boffset+blocklen])
       response = self.__getbulk(self.handle, self.__cinep, 0x10)
@@ -274,11 +276,11 @@ class embios:
       size -= blocklen
 
     # write data with DMA, if it makes sense (-> much data) and isn't forbidden
-    if (usedma): 
+    if (usedma) and (size > 2 * (self.cout_maxsize - 16)): 
       if (freezesched):
-        self.freezescheduler(1)
+        self.freezescheduler(1, 0)
     
-      while (size > 0x1F):
+      while (size > (self.cout_maxsize - 16)):
         blocklen = size
      
         if (blocklen > self.dout_maxsize):
@@ -295,14 +297,14 @@ class embios:
         size -= blocklen
         
       if (freezesched):
-        self.freezescheduler(0)
+        self.freezescheduler(0, 0)
         
     # write rest of data
     while (size > 0):
       blocklen = size
       
       if (blocklen > self.cout_maxsize - 0x10):
-        blocklen = self.cout_maxsize
+        blocklen = self.cout_maxsize - 0x10
     
       self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 5, offset, blocklen, 0) + data[boffset:boffset+blocklen])
       response = self.__getbulk(self.handle, self.__cinep, 0x10)
@@ -321,12 +323,14 @@ class embios:
     
     # correct alignment
     while (offset & 0xF) != 0:
-      blocklen = (0x10 - offset % 0x10)
+      blocklen = size
       
       if (blocklen > size):
         blocklen = size
       if (blocklen > self.cin_maxsize - 0x10):
-        blocklen = self.cin_maxsize
+        blocklen = self.cin_maxsize - 0x10
+        
+      blocklen = (blocklen & 0xFFFFFFF0) +  (offset & 0xF)
       
       self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 4, offset, blocklen, 0))
       response = self.__getbulk(self.handle, self.__cinep, 0x10 + blocklen)
@@ -338,11 +342,11 @@ class embios:
       size -= blocklen
 
     # read data with DMA, if it makes sense (-> much data) and isn't forbidden
-    if (usedma):
+    if (usedma) and (size > 2 * (self.cin_maxsize - 16)):
       if (freezesched):
-        self.freezescheduler(1)
+        self.freezescheduler(1, 0)
 
-      while (size > 0x1F):
+      while (size > (self.cin_maxsize - 16)):
         blocklen = size
       
         if (blocklen > self.din_maxsize):
@@ -358,14 +362,14 @@ class embios:
         size -= blocklen
         
       if (freezesched):
-        self.freezescheduler(0)
+        self.freezescheduler(0, 0)
         
     # read rest of data
     while (size > 0):
       blocklen = size
       
       if (blocklen > self.cin_maxsize - 0x10):
-        blocklen = self.cin_maxsize
+        blocklen = self.cin_maxsize - 0x10
     
       self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 4, offset, blocklen, 0))
       response = self.__getbulk(self.handle, self.__cinep, 0x10 + blocklen)
