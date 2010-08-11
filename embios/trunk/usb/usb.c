@@ -37,6 +37,9 @@
 #ifdef HAVE_I2C
 #include "i2c.h"
 #endif
+#ifdef HAVE_BOOTFLASH
+#include "bootflash.h"
+#endif
 
 
 static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
@@ -55,7 +58,9 @@ enum dbgaction_t
     DBGACTION_CWRITE,
     DBGACTION_CREAD,
     DBGACTION_CFLUSH,
-    DBGACTION_EXECIMAGE
+    DBGACTION_EXECIMAGE,
+    DBGACTION_READBOOTFLASH,
+    DBGACTION_WRITEBOOTFLASH
 };
 
 static uint32_t dbgstack[0x100] STACK_ATTR;
@@ -65,6 +70,7 @@ static enum dbgaction_t dbgaction IBSS_ATTR;
 static int dbgi2cbus;
 static int dbgi2cslave;
 static int dbgactionaddr;
+static int dbgactionoffset;
 static int dbgactionlength;
 static int dbgactionconsoles;
 static int dbgactiontype;
@@ -513,6 +519,20 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             if (set_dbgaction(DBGACTION_EXECIMAGE, 0)) break;
             dbgactionaddr = dbgrecvbuf[1];
             break;
+#ifdef HAVE_BOOTFLASH
+        case 22:  // READ BOOT FLASH
+            if (set_dbgaction(DBGACTION_READBOOTFLASH, 0)) break;
+            dbgactionaddr = dbgrecvbuf[1];
+            dbgactionoffset = dbgrecvbuf[2];
+            dbgactionlength = dbgrecvbuf[3];
+            break;
+        case 23:  // WRITE BOOT FLASH
+            if (set_dbgaction(DBGACTION_WRITEBOOTFLASH, 0)) break;
+            dbgactionaddr = dbgrecvbuf[1];
+            dbgactionoffset = dbgrecvbuf[2];
+            dbgactionlength = dbgrecvbuf[3];
+            break;
+#endif
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -601,6 +621,18 @@ void dbgthread(void)
                 dbgasyncsendbuf[1] = execimage((void*)dbgactionaddr);
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
+#ifdef HAVE_BOOTFLASH
+            case DBGACTION_READBOOTFLASH:
+                bootflash_readraw((void*)dbgactionaddr, dbgactionoffset, dbgactionlength);
+                dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_WRITEBOOTFLASH:
+                bootflash_writeraw((void*)dbgactionaddr, dbgactionoffset, dbgactionlength);
+                dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+#endif
             }
             dbgaction = DBGACTION_IDLE;
         }

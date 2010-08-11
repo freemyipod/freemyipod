@@ -216,3 +216,42 @@ read_usec_timer:
 
 val_3c700000:
 	.word	0x3c700000
+
+
+.section .text.control_nor_cache, "ax", %progbits
+.align 2
+.global control_nor_cache
+.type control_nor_cache, %function
+control_nor_cache:
+	mrc	p15, 0, r3,c1,c0
+	bic	r1, r3, #1
+	mcr	p15, 0, r1,c1,c0
+	mov	r1, #0
+	mcr	p15, 0, r1,c7,c5
+cnc_flushcache_loop:
+	mcr	p15, 0, r1,c7,c14,2
+	add	r2, r1, #0x10
+	mcr	p15, 0, r2,c7,c14,2
+	add	r2, r2, #0x10
+	mcr	p15, 0, r2,c7,c14,2
+	add	r2, r2, #0x10
+	mcr	p15, 0, r2,c7,c14,2
+	adds	r1, r1, #0x04000000
+	bne	cnc_flushcache_loop
+	mcr	p15, 0, r1,c7,c10,4
+	ands	r0, r0, r0
+	mrc	p15, 0, r1,c2,c0, 1
+	biceq	r1, r1, #0x10
+	orrne	r1, r1, #0x10
+	mcr	p15, 0, r1,c2,c0, 1
+	mrc	p15, 0, r1,c2,c0, 0
+	biceq	r1, r1, #0x10
+	orrne	r1, r1, #0x10
+	mcr	p15, 0, r1,c2,c0, 0
+	mrc	p15, 0, r1,c3,c0, 0
+	biceq	r1, r1, #0x10
+	orrne	r1, r1, #0x10
+	mcr	p15, 0, r1,c3,c0, 0
+	mcr	p15, 0, r3,c1,c0
+	mov	pc, lr
+.size control_nor_cache, .-control_nor_cache

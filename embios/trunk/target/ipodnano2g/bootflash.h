@@ -21,37 +21,20 @@
 //
 
 
-#ifndef __TARGET_H__
-#define __TARGET_H__
+#ifndef __BOOTFLASH_H__
+#define __BOOTFLASH_H__
 
 
-#define PLATFORM_ID 0x47324e49
+#include "global.h"
 
 
-#define ARM_ARCH 4
-#define LITTLE_ENDIAN
-#define CACHEALIGN_BITS 4
-#define CPU_FREQ 191692800
-
-
-#define CONSOLE_BOOT 1
-
-
-#define HAVE_USB
-#define USB_NUM_ENDPOINTS 5
-
-#define HAVE_LCD
-
-#define HAVE_I2C
-
-#define HAVE_BOOTFLASH
-#define BOOTFLASH_IS_MEMMAPPED
-
-#define HAVE_STORAGE
-#define HAVE_FLASH_STORAGE
-#define HAVE_STORAGE_FLUSH
-#define CONFIG_STORAGE STORAGE_NAND
-#define SECTOR_SIZE 2048
+int bootflash_filesize(const char* filename);
+int bootflash_attributes(const char* filename);
+void* bootflash_getaddr(const char* filename);
+int bootflash_read(const char* filename, void* addr, int offset, int size);
+void bootflash_readraw(void* addr, int offset, int size);
+void bootflash_writeraw(void* addr, int offset, int size);
+void* bootflash_getrawaddr(int offset);
 
 
 #endif

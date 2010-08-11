@@ -44,6 +44,9 @@
 #include "disk.h"
 #include "file.h"
 #endif
+#ifdef HAVE_BOOTFLASH
+#include "bootflash.h"
+#endif
 
 
 struct bootinfo_t
@@ -58,7 +61,7 @@ struct bootinfo_t
     bool bootflashflags;
     bool trymemmapped;
     void* memmappedaddr;
-    uint32_t memmappedsize;
+    int memmappedsize;
     bool memmappedflags;
 };
 
@@ -86,12 +89,13 @@ void boot()
     {
         int fd = file_open(bootinfo.dataflashpath, O_RDONLY);
         if (fd < 0) goto dataflashfailed;
-        uint32_t size = filesize(fd);
+        int size = filesize(fd);
+        if (size < 0) goto dataflashfailed;
         if (bootinfo.dataflashflags & 1)
         {
             void* addr = (void*)((((uint32_t)&_loadspaceend) - size) & ~(CACHEALIGN_SIZE - 1));
             if (read(fd, addr, size) != size) goto dataflashfailed;
-            if (ucl_decompress(addr, size, &_initstart, &size)) goto dataflashfailed;
+            if (ucl_decompress(addr, size, &_initstart, (uint32_t*)&size)) goto dataflashfailed;
         }
         else if (read(fd, &_initstart, size) != size) goto dataflashfailed;
         if (execimage(&_initstart) < 0) return;
@@ -101,13 +105,14 @@ dataflashfailed:
 #ifdef HAVE_BOOTFLASH
     if (bootinfo.trybootflash)
     {
-        uint32_t size = bootflash_filesize(bootinfo.bootimagename);
+        int size = bootflash_filesize(bootinfo.bootimagename);
         if (size < 0) goto bootflashfailed;
 #ifdef BOOTFLASH_IS_MEMMAPPED
         void* addr = bootflash_getaddr(bootinfo.bootimagename);
+        if (!addr) goto bootflashfailed;
         if (bootinfo.bootflashflags & 1)
         {
-            if (ucl_decompress(addr, size, &_initstart, &size)) goto bootflashfailed;
+            if (ucl_decompress(addr, size, &_initstart, (uint32_t*)&size)) goto bootflashfailed;
             if (execimage(&_initstart) < 0) return;
         }
         else if (bootinfo.bootflashflags & 2)
@@ -120,10 +125,12 @@ dataflashfailed:
         if (bootinfo.bootflashflags & 1)
         {
             void* addr = (void*)((((uint32_t)&_loadspaceend) - size) & ~(CACHEALIGN_SIZE - 1));
-            bootflash_read(bootinfo.bootimagename, addr, 0, size);
-            if (ucl_decompress(addr, size, &_initstart, &size)) goto bootflashfailed;
+            if (bootflash_read(bootinfo.bootimagename, addr, 0, size) != size)
+                goto bootflashfailed;
+            if (ucl_decompress(addr, size, &_initstart, (uint32_t*)&size)) goto bootflashfailed;
         }
-        else bootflash_read(bootinfo.bootimagename, &_initstart, 0, size);
+        else if (bootflash_read(bootinfo.bootimagename, &_initstart, 0, size) != size)
+            goto bootflashfailed;
         if (execimage(&_initstart) < 0) return;
 #endif
     }
@@ -131,10 +138,10 @@ bootflashfailed:
 #endif
     if (bootinfo.trymemmapped)
     {
-        uint32_t size = bootinfo.memmappedsize;
+        int size = bootinfo.memmappedsize;
         if (bootinfo.bootflashflags & 1)
         {
-            if (ucl_decompress(bootinfo.memmappedaddr, size, &_initstart, &size))
+            if (ucl_decompress(bootinfo.memmappedaddr, size, &_initstart, (uint32_t*)&size))
                 goto memmappedfailed;
             if (execimage(&_initstart) < 0) return;
         }
