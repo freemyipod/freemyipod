@@ -19,6 +19,8 @@ REVISIONINT := $(shell echo $(REVISION) | sed -e "s/[^0-9].*$$//")
 TARGETS := $(call preprocess,TARGETS,-I.)
 
 define TARGET_template
+-include target/$(1)/target.mk
+
 SRC_$(1) := $$(call preprocesspaths,SOURCES,-DTARGET_$(1) -Itarget/$(1) -I.)
 OBJ_$(1) := $$(SRC_$(1):%.c=build/$(1)/%.o)
 OBJ_$(1) := $$(OBJ_$(1):%.S=build/$(1)/%.o)
@@ -34,7 +36,7 @@ build/$(1)/$(NAME).bin: build/$(1)/$(NAME).elf
 	$(OBJCOPY) -O binary $$^ $$@
 
 build/$(1)/$(NAME).elf: target/$(1)/ls.x build/$(1)/target/$(1)/crt0.o $$(OBJ_$(1))
-	$(LD) $(LDFLAGS) -o $$@ -T target/$(1)/ls.x $$(OBJ_$(1))
+	$(LD) $(LDFLAGS) $$(LDFLAGS_$(1)) -o $$@ -T target/$(1)/ls.x $$(OBJ_$(1))
 
 build/$(1)/%.o: %.c build/version.h
 ifeq ($(shell uname),WindowsNT)
@@ -42,8 +44,8 @@ ifeq ($(shell uname),WindowsNT)
 else
 	@-mkdir -p $$(dir $$@)
 endif
-	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
-	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
+	$(CC) -c $(CFLAGS) $$(CFLAGS_$(1)) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
+	@$(CC) -MM $(CFLAGS) $$(CFLAGS_$(1)) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
 ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep
@@ -58,8 +60,8 @@ ifeq ($(shell uname),WindowsNT)
 else
 	@-mkdir -p $$(dir $$@)
 endif
-	$(CC) -c $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
-	@$(CC) -MM $(CFLAGS) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
+	$(CC) -c $(CFLAGS) $$(CFLAGS_$(1)) -Itarget/$(1) -DTARGET_$(1) -o $$@ $$<
+	@$(CC) -MM $(CFLAGS) $$(CFLAGS_$(1)) -Itarget/$(1) -DTARGET_$(1) $$< > $$@.dep.tmp
 	@sed -e "s|.*:|$$@:|" < $$@.dep.tmp > $$@.dep
 ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/.*://" -e "s/\\$$$$//" < $$@.dep.tmp | fmt -1 | sed -e "s/^ *//" -e "s/$$$$/:/" >> $$@.dep

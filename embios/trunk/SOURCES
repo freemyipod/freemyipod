@@ -34,7 +34,6 @@ arm/contextswitch.S
 #endif
 
 init.c
-main.c
 util.c
 #ifdef HAVE_LCD
 drawing.S
