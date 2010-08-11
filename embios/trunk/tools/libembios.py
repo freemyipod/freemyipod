@@ -755,264 +755,146 @@ class embios:
       self.__myprint(" done\n, thread ID: 0x%x" % (struct.unpack("<I", response[4:8])), silent)     
     
     
-  def getprocinfo(self, offset, size, silent = 0):
+  def getprocinfo(self, silent = 0):
     """
       printout on console window:
         <silent> = 0: Process information struct version, Process information table size
         <silent> = 1: nothing
-
-      {'regs': [16I], 'cpsr': I, 'state': I, 'namepointer': I, 'cputime_current': I, 'cputime_total': Q, 'startusec': I,
-      'queue_next_pointer': I, 'timeout': I, 'blocked_since': I, 'blocked_by_pointer': I, 'stackpointer': I, 'block_type': B, 'thread_type': B, 'priority': B, 'cpuload': B} 
     """
-    if (size > self.cin_maxsize - 0x10):
-      raise Exception ("The data exceeds the maximum amount that can be received with this instruction.")
+    
     
     self.__myprint("Retrieving process information...", silent)
     
-    self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 15, offset, size, 0))
-    response = self.__getbulk(self.handle, self.__cinep, size + 0x10)
-    self.__checkstatus(response)
+    offset = 0
+    blocklen = size = self.cin_maxsize - 0x10
+    procinfo = ""
+    structversion = 0
+    tablesize = 0
     
-    out = []
-    out[0] = struct.unpack("<I", response[4:8])[0]    # Process information struct version
-    out[1] = struct.unpack("<I", response[8:12])[0]    # Process information table size
-    out[2] = response     # raw received data
+    # reading loop
+    while (offset < size):
+      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 15, offset, size, 0))
+      response = self.__getbulk(self.handle, self.__cinep, size + 0x10)
+      self.__checkstatus(response)
+      
+      size = struct.unpack("<I", response[8:12])[0]
+      
+      if size <= offset + blocklen:
+        procinfo += response[0x10:0x10 + size]
+        structversion = struct.unpack("<I", response[4:])
+        tablesize = struct.unpack("<I", response[8:])
+        break
+      else:
+        procinfo += response[0x10:0x10 + blocklen]
+      
+      size -= blocklen
+      offset += blocklen
+      
+      blocklen = self.cin_maxsize - 0x10
+      if blocklen > size:
+        blocklen = size
     
-    if (struct.unpack("<I", response[4:8])[0] == 1):   # Process information struct version == 1
-      p = 0x10
-      process_n = 3   # actually process 0, but there are alread three other elements in out
-      while True:
-      # regs ==================================================
-        keylen = 16
-        key_offset = 0
-        
-        while (offset > 0) and (key_offset < 0x10):
-          offset -= 0x4
-          out[process_n]['regs'][key_offset] = None
-          key_offset += 1
-        
-        while (p+(keylen*0x4) - 0x10 > size) and (keylen > 0): keylen -= 1
-        if (p+(keylen*0x4) - 0x10 > size): break
-        
-        while (key_offset < keylen):
-          out[process_n]['regs'][key_offset] = struct.unpack("<I", response[p + (key_offset * 0x4) :])[0]
-          key_offset += 1
-       
-        p += 16 * 0x4
-        
-      # cpsr ==================================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['cpsr'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['cpsr'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # state =================================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['state'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['state'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # namepointer ===========================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['namepointer'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['namepointer'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # cputime_current =======================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['cputime_current'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['cputime_current'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # cputime_total =========================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['cputime_total'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['cputime_total'] = struct.unpack("<Q", response[p:])[0]
-        
-        p += 0x8
-        
-      # startusec =============================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['startusec'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['startusec'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # queue_next_pointer ====================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['queue_next_pointer'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['queue_next_pointer'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # timeout ===========================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['timeout'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['timeout'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # blocked_since =========================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['blocked_since'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['blocked_since'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # blocked_by_pointer ====================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['blocked_by_pointer'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['blocked_by_pointer'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # stackpointer ==========================================
-        if (offset > 0):
-          offset -= 4
-          out[process_n]['stackpointer'] = None
-          
-        if (p+0x4 - 0x10 > size): break
-        
-        out[process_n]['stackpointer'] = struct.unpack("<I", response[p:])[0]
-        
-        p += 0x4
-        
-      # block_type ============================================
-        if (offset > 0):
-          offset -= 1
-          out[process_n]['block_type'] = None
-          
-        if (p+0x1 - 0x10 > size): break
-        
-        out[process_n]['block_type'] = struct.unpack("<B", response[p:])[0]
-        
-        p += 0x1
-        
-      # thread_type ===========================================
-        if (offset > 0):
-          offset -= 1
-          out[process_n]['thread_type'] = None
-          
-        if (p+0x1 - 0x10 > size): break
-        
-        out[process_n]['thread_type'] = struct.unpack("<B", response[p:])[0]
-        
-        p += 0x1
-        
-      # priority ==============================================
-        if (offset > 0):
-          offset -= 1
-          out[process_n]['priority'] = None
-          
-        if (p+0x1 - 0x10 > size): break
-        
-        out[process_n]['priority'] = struct.unpack("<B", response[p:])[0]
-        
-        p += 0x1
-        
-      # cpuload ===============================================
-        if (offset > 0):
-          offset -= 1
-          out[process_n]['cpuload'] = None
-          
-        if (p+0x1 - 0x10 > size): break
-        
-        out[process_n]['cpuload'] = struct.unpack("<B", response[p:])[0]
-        
-        p += 0x1
-        
-      process_n += 1
-        
-    procinfoprint = ""
     
-    try:
-      i = 0
-      while out[0] == 1 and not silent:      # Process information struct version == 1 && !silent
+    out = (structversion, tablesize, procinfotolist(procinfo, structversion))
+
+    self.__myprint(" done\n\
+                    Process information struct version: 0x%08x\n\
+                    Total size of process information table: 0x%08x\n\
+                    %s\n\n"
+                  % (out[0], out[1], procinfotostring(out[2], structversion))
+                  , silent)
+    
+    return out
+  
+    def procinfotolist(self, processinfo, structver):
+      if (structver == 1):   # Process information struct version == 1
+        ptr = 0x10
+        process_n = 0
+        retval = []
+        while ptr < len(processinfo):
+          retval.append({})
+          
+          retval[process_n]['regs'] = struct.unpack("<IIIIIIIIIIIIIIII", processinfo[ptr:])
+          ptr += 16 * 0x4
+          retval[process_n]['cpsr'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['state'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['name_ptr'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['cputime_current'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['cputime_total'] = struct.unpack("<Q", processinfo[ptr:])
+          ptr += 1 * 0x8
+          retval[process_n]['startusec'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['queue_next_ptr'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['timeout'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['blocked_since'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['blocked_by_ptr'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['stack_ptr'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['err_no'] = struct.unpack("<I", processinfo[ptr:])
+          ptr += 1 * 0x4
+          retval[process_n]['block_type'] = struct.unpack("<B", processinfo[ptr:])
+          ptr += 1 * 0x1
+          retval[process_n]['thread_type'] = struct.unpack("<B", processinfo[ptr:])
+          ptr += 1 * 0x1
+          retval[process_n]['priority'] = struct.unpack("<B", processinfo[ptr:])
+          ptr += 1 * 0x1
+          retval[process_n]['cpuload'] = struct.unpack("<B", processinfo[ptr:])
+          ptr += 1 * 0x1
+          
+          process_n += 1
+          
+        return retval
+          
+
+    
+    def procinfotostring(self, procinfolist, structver):
+      processinfoprint = ""
+      ptr = 0
+      while structver == 1 and ptr < len(procinfolist):      # Process information struct version == 1
         processinfoprint += "--------------------------------------------------------------------------------"
         processinfoprint += "R0: 0x%08x,  R1: 0x%08x,  R2: 0x%08x,  R3: 0x%08x,\n\
                              R4: 0x%08x,  R5: 0x%08x,  R6: 0x%08x,  R7: 0x%08x,\n\
                              R8: 0x%08x,  R9: 0x%08x,  R10: 0x%08x, R11: 0x%08x,\n\
                              R12: 0x%08x, R13: 0x%08x, LR: 0x%08x,  PC: 0x%08x\n" \
-                             % (out[i+3]['regs'][0], out[i+3]['regs'][1], out[i+3]['regs'][2], out[i+3]['regs'][3], \
-                                out[i+3]['regs'][4], out[i+3]['regs'][5], out[i+3]['regs'][6], out[i+3]['regs'][7], \
-                                out[i+3]['regs'][8], out[i+3]['regs'][9], out[i+3]['regs'][10], out[i+3]['regs'][11], \
-                                out[i+3]['regs'][12], out[i+3]['regs'][13], out[i+3]['regs'][14], out[i+3]['regs'][15] )
-        processinfoprint += "cpsr: 0b%032b      " % (out[i+3]['cpsr'])
-        states = ["THREAD_FREE", "THREAD_SUSPENDED", "THREAD_READY", "THREAD_RUNNING", "THREAD_BLOCKED", "THREAD_DEFUNCT", "THREAD_DEFUNCT_ACK"]
-        processinfoprint += "state: %s      " % (states[out[i+3]['state']])
-        processinfoprint += "nameptr: 0x%08x\n" % (out[i+3]['namepointer'])
-        processinfoprint += "current cpu time: 0x%08x      " % (out[i+3]['cputime_current'])
-        processinfoprint += "total cpu time: 0x%016x\n" % (out[i+3]['cputime_total'])
-        processinfoprint += "startusec: 0x%08x      " % (out[i+3]['startusec'])
-        processinfoprint += "queue next ptr: 0x%08x\n" % (out[i+3]['queue_next_pointer'])
-        processinfoprint += "timeout: 0x%08x\n" % (out[i+3]['timeout'])
-        processinfoprint += "blocked since: 0x%08x      " % (out[i+3]['blocked_since'])
-        processinfoprint += "blocked by ptr: 0x%08x\n" % (out[i+3]['blocked_by_pointer'])
-        processinfoprint += "stackptr: 0x%08x      " % (out[i+3]['stackpointer'])
-        blocktype = ["THREAD_NOT_BLOCKED", "THREAD_BLOCK_SLEEP", "THREAD_BLOCK_MUTEX", "THREAD_BLOCK_WAKEUP", "THREAD_DEFUNCT_STKOV", "THREAD_DEFUNCT_PANIC"]
-        processinfoprint += "block type: %s\n" % (blocktype[out[i+3]['block_type']])
-        threadtype = ["USER_THREAD", "SYSTEM_THREAD"]
-        processinfoprint += "thread type: %s\n" % (threadtype[out[i+3]['thread_type']])
-        processinfoprint += "priority: 0x%02x      " % (out[i+3]['priority'])
-        processinfoprint += "cpu load: 0x%02x\n" % (out[i+3]['cpuload'])
+                             % (procinfolist[ptr]['regs'][0], procinfolist[ptr]['regs'][1], procinfolist[ptr]['regs'][2], procinfolist[ptr]['regs'][3], \
+                                procinfolist[ptr]['regs'][4], procinfolist[ptr]['regs'][5], procinfolist[ptr]['regs'][6], procinfolist[ptr]['regs'][7], \
+                                procinfolist[ptr]['regs'][8], procinfolist[ptr]['regs'][9], procinfolist[ptr]['regs'][10], procinfolist[ptr]['regs'][11], \
+                                procinfolist[ptr]['regs'][12], procinfolist[ptr]['regs'][13], procinfolist[ptr]['regs'][14], procinfolist[ptr]['regs'][15] )
+        processinfoprint += "cpsr: 0b%032b      " %             (procinfolist[ptr]['cpsr'])
+        states = ("THREAD_FREE", "THREAD_SUSPENDED", "THREAD_READY", "THREAD_RUNNING", "THREAD_BLOCKED", "THREAD_DEFUNCT", "THREAD_DEFUNCT_ACK")
+        processinfoprint += "state: %s      " %                 (states[procinfolist[ptr]['state']])
+        processinfoprint += "nameptr: 0x%08x\n" %               (procinfolist[ptr]['name_ptr'])
+        processinfoprint += "current cpu time: 0x%08x      " %  (procinfolist[ptr]['cputime_current'])
+        processinfoprint += "total cpu time: 0x%016x\n" %       (procinfolist[ptr]['cputime_total'])
+        processinfoprint += "startusec: 0x%08x      " %         (procinfolist[ptr]['startusec'])
+        processinfoprint += "queue next ptr: 0x%08x\n" %        (procinfolist[ptr]['queue_next_ptr'])
+        processinfoprint += "timeout: 0x%08x\n" %               (procinfolist[ptr]['timeout'])
+        processinfoprint += "blocked since: 0x%08x      " %     (procinfolist[ptr]['blocked_since'])
+        processinfoprint += "blocked by ptr: 0x%08x\n" %        (procinfolist[ptr]['blocked_by_ptr'])
+        processinfoprint += "err_no: 0x%08x      " %            (procinfolist[ptr]['err_no'])
+        processinfoprint += "nameptr: 0x%08x\n" %               (procinfolist[ptr]['namepointer'])
+        blocktype = ("THREAD_NOT_BLOCKED", "THREAD_BLOCK_SLEEP", "THREAD_BLOCK_MUTEX", "THREAD_BLOCK_WAKEUP", "THREAD_DEFUNCT_STKOV", "THREAD_DEFUNCT_PANIC")
+        processinfoprint += "block type: %s\n" %                (blocktype[procinfolist[ptr]['block_type']])
+        threadtype = ("USER_THREAD", "SYSTEM_THREAD")
+        processinfoprint += "thread type: %s\n" %               (threadtype[procinfolist[ptr]['thread_type']])
+        processinfoprint += "priority: 0x%02x      " %          (procinfolist[ptr]['priority'])
+        processinfoprint += "cpu load: 0x%02x\n" %              (procinfolist[ptr]['cpuload'])
         
-        i += 1
-        
-    except IndexError:
+        ptr += 1
+      
       processinfoprint += "--------------------------------------------------------------------------------"
+      
+      return processinfoprint
     
-    self.__myprint(" done\n\
-                    Process information struct version: 0x%08x\n\
-                    Total size of process information table: 0x%08x\n\
-                    %s"
-                  % (out[0], out[1], procinfoprint)
-                  , silent)
     
-    return out
     
     
   def execimage(self, offset, silent = 0):
