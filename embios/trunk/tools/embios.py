@@ -172,6 +172,18 @@ def usage():
   print "    Executes the emBIOS executable image at <offset>."
   print ""
   print ""
+  print "  readrawbootflash <addr_bootflsh> <addr_mem> <size>"
+  print "    Reads <size> bytes from bootflash to memory."
+  print "      <addr_bootflsh>: the address in bootflash to read from"
+  print "      <addr_mem>: the address in memory to copy the data to"
+  print ""
+  print "  writerawbootflash <addr_mem> <addr_bootflsh> <size>"
+  print "    Writes <size> bytes from memory to bootflash."
+  print "    Don't call this unless you really know what you're doing."
+  print "      <addr_mem>: the address in memory to copy the data from"
+  print "      <addr_bootflsh>: the address in bootflash to write to"
+  print ""
+  print ""
   print "  flushcaches"
   print "    Flushes the CPUs data and instruction caches."
   print ""
@@ -342,9 +354,17 @@ def parsecommand(dev, argv):
     dev.createthread(int(argv[2], 16), int(argv[3], 16), int(argv[4], 16), int(argv[5], 16), int(argv[6], 16), int(argv[7], 16), int(argv[8], 16))
     
   elif argv[1] == "execimage":
-    if len(argv) != 3: usage
+    if len(argv) != 3: usage()
     dev.execimage(int(argv[2], 16))
     
+    
+  elif argv[1] == "readrawbootflash":
+    if len(argv) != 5: usage()
+    dev.readrawbootflash(int(argv[2]), int(argv[3]), int(argv[4]))
+    
+  elif argv[1] == "writerawbootflash":
+    if len(argv) != 5: usage()
+    dev.writerawbootflash(int(argv[2]), int(argv[3]), int(argv[4]))
     
   elif argv[1] == "flushcaches":
     if len(argv) != 2: usage()

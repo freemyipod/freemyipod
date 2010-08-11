@@ -21,7 +21,7 @@
 #
 #
 
-# note: handles commands 1 to 20
+# note: handles commands 1 to 21
 
 import sys
 import math
@@ -1011,7 +1011,7 @@ class embios:
     return out
     
     
-  def execimage(self, offset):
+  def execimage(self, offset, silent = 0):
     self.__myprint("Executing emBIOS executable image at 0x%08x..." % offset, silent)
       
     self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 18, threadid, 0, 0))
@@ -1024,6 +1024,29 @@ class embios:
     
     
 #===================================================================================== 
+
+
+  def readrawbootflash(self, addr_bootflsh, addr_mem, size, silent = 0):
+    self.__myprint("Reading 0x%x bytes from 0x%08x at bootflash to 0x%08x..." % (size, addr_bootflsh, addr_mem), silent)
+      
+    self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 22, addr_mem, addr_bootflsh, size))
+    response = self.__getbulk(self.handle, self.__cinep, 0x10)
+    self.__checkstatus(response)
+    
+    self.__myprint(" done\n", silent)
+
+
+  def writerawbootflash(self, addr_mem, addr_bootflsh, size, silent = 0):
+    self.__myprint("Writing 0x%x bytes from 0x%08x to bootflash at 0x%08x..." % (size, addr_fmem, addr_bootflsh), silent)
+      
+    self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 23, addr_mem, addr_bootflsh, size))
+    response = self.__getbulk(self.handle, self.__cinep, 0x10)
+    self.__checkstatus(response)
+    
+    self.__myprint(" done\n", silent)
+    
+
+#=====================================================================================
 
  
   def flushcaches(self, silent = 0):
