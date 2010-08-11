@@ -420,8 +420,8 @@ class embios:
 
 
   def downloadint(self, offset, silent = 0):
-    self.__myprint("Downloading 0x%08x from 0x%08x..." % (data, offset), silent)
-    data = self.read(offset, data, 0, 0)
+    self.__myprint("Downloading an integer from 0x%08x..." % (offset), silent)
+    data = self.read(offset, 0, 0)
     self.__myprint(" done\nValue was: 0x%08x\n" % (data), silent)
     
     return data
