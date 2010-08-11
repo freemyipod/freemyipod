@@ -7,7 +7,7 @@
 
 #define EMBIOS_APP_HEADER(threadnamestr, stacksizebytes, mainfunc, threadprio)                    \
     uint32_t __embios_thread_stack[stacksizebytes >> 2];                                          \
-    char __embios_thread_name[] = threadnamestr;                                                  \
+    const char __embios_thread_name[] = threadnamestr;                                            \
     struct embios_app_header                                                                      \
     {                                                                                             \
         char signature[8];                                                                        \
@@ -18,7 +18,7 @@
         void* stackaddr;                                                                          \
         int stacksize;                                                                            \
         void* entrypoint;                                                                         \
-        char* threadname;                                                                         \
+        const char* threadname;                                                                   \
         int threadtype;                                                                           \
         int threadpriority;                                                                       \
     } __embios_executable_hdr __attribute__((section(".execheader"))) =                           \
@@ -35,10 +35,15 @@
         .threadtype = 0,                                                                          \
         .threadpriority = threadprio                                                              \
     };                                                                                            \
-    struct embios_syscall_table* __embios_syscall;
+    struct embios_syscall_table* __embios_syscall;                                                \
+    const uint32_t __embios_required_version = EMBIOS_API_VERSION;                                \
+    const char __embios_incompatible_api_str[] = "Incompatible API version!\nGot %d, need %d";
 
 
 #define embios_init()                                                                             \
-    asm volatile("swi\t2\n\tldr\tr1,\t=__embios_syscall\n\tstr\tr0,\t[r1]\n\t"                    \
+    asm volatile("swi\t2\n\tldr\tr3,\t=__embios_required_version\nldr\tr3,\t[r3]\n\t"             \
+                 "ldr\tr2,\t[r0]\n\tcmp\tr3,\tr2\n\tldrls\tr1,\t[r0,#4]\n\tcmpls\tr1,\tr3\n\t"    \
+                 "movhi\tr0,\t#0\n\tldrhi\tr1,\t=__embios_incompatible_api_str\n\t"               \
+                 "swihi\t1\n\tldr\tr1,\t=__embios_syscall\n\tstr\tr0,\t[r1]\n\t"                  \
              ::: "r0", "r1", "r2", "r3", "r12", "lr", "cc", "memory");
 

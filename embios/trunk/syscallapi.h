@@ -56,6 +56,8 @@ enum panic_severity
 
 struct embios_syscall_table
 {
+    uint32_t table_version;
+    uint32_t table_minversion;
 	void (*panic) (enum panic_severity severity, const char* string);
 	void (*panicf) (enum panic_severity severity, const char* fmt, ...);
 };

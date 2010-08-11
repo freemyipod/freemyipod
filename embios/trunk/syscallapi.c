@@ -28,6 +28,8 @@
 
 struct embios_syscall_table syscall_table ICONST_ATTR =
 {
+    .table_version = EMBIOS_API_VERSION,
+    .table_minversion = EMBIOS_MIN_API_VERSION,
 	.panic = panic,
     .panicf = panicf
 };
