@@ -24,6 +24,7 @@
 #include "global.h"
 #include "console.h"
 #include "execimage.h"
+#include "mmu.h"
 
 
 int execimage(void* image)
@@ -49,6 +50,8 @@ int execimage(void* image)
                               "(expected: %08X, got: %08X)\n", header->baseaddr, image);
         return -3;
     }
+    clean_dcache();
+    invalidate_icache();
     return thread_create(header->threadname, header->entrypoint, header->stackaddr,
                          header->stacksize, header->threadtype, header->threadpriority, true);
 }

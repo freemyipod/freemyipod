@@ -33,6 +33,7 @@
 #include "power.h"
 #include "mmu.h"
 #include "shutdown.h"
+#include "execimage.h"
 #ifdef HAVE_I2C
 #include "i2c.h"
 #endif
@@ -53,7 +54,8 @@ enum dbgaction_t
     DBGACTION_POWEROFF,
     DBGACTION_CWRITE,
     DBGACTION_CREAD,
-    DBGACTION_CFLUSH
+    DBGACTION_CFLUSH,
+    DBGACTION_EXECIMAGE
 };
 
 static uint32_t dbgstack[0x100] STACK_ATTR;
@@ -507,6 +509,10 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgsendbuf[0] = 1;
             size = 16;
             break;
+        case 21:  // EXECIMAGE
+            if (set_dbgaction(DBGACTION_EXECIMAGE, 0)) break;
+            dbgactionaddr = dbgrecvbuf[1];
+            break;
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -588,6 +594,11 @@ void dbgthread(void)
             case DBGACTION_CFLUSH:
                 cflush(dbgactionconsoles);
                 dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_EXECIMAGE:
+                dbgasyncsendbuf[0] = 1;
+                dbgasyncsendbuf[1] = execimage((void*)dbgactionaddr);
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             }
