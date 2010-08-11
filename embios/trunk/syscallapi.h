@@ -21,13 +21,13 @@
 //
 
 
-#ifndef __PANIC_H__
-#define __PANIC_H__
+#ifndef __SYSCALLAPI_H__
+#define __SYSCALLAPI_H__
 
 
-#include "global.h"
-#include "_ansi.h"
+#include <stdint.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 
 #ifndef PANIC_SEVERITY_DEFINED
@@ -41,9 +41,24 @@ enum panic_severity
 #endif
 
 
-void panic(enum panic_severity severity, const char* string) ICODE_ATTR;
-void panicf(enum panic_severity severity, const char* string, ...) ICODE_ATTR
-            ATTRIBUTE_PRINTF(2, 3);
+/* increase this every time the api struct changes */
+#define EMBIOS_API_VERSION 0
+
+/* update this to latest version if a change to the api struct breaks
+   backwards compatibility (and please take the opportunity to sort in any
+   new function which are "waiting" at the end of the function table) */
+#define EMBIOS_MIN_API_VERSION 0
+
+/* NOTE: To support backwards compatibility, only add new functions at
+         the end of the structure.  Every time you add a new function,
+         remember to increase EMBIOS_API_VERSION. If you make changes to the
+         existing APIs, also update EMBIOS_MIN_API_VERSION to current version */
+
+struct embios_syscall_table
+{
+	void (*panic) (enum panic_severity severity, const char* string);
+	void (*panicf) (enum panic_severity severity, const char* fmt, ...);
+};
 
 
 #endif

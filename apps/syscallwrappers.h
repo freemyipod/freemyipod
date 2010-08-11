@@ -21,15 +21,18 @@
 //
 
 
-#include "global.h"
-#include "syscall.h"
+#ifndef __SYSCALLWRAPPERS_H__
+#define __SYSCALLWRAPPERS_H__
+
+
 #include "syscallapi.h"
 
 
-extern struct embios_syscall_table syscall_table;
+extern struct embios_syscall_table* __embios_syscall;
 
 
-struct embios_syscall_table* get_syscall_table()
-{
-    return &syscall_table;
-}
+#define panic(severity, string) __embios_syscall->panic(severity, string)
+#define panicf(severity, fmt, args...) __embios_syscall->panic(severity, fmt, ##args)
+
+
+#endif

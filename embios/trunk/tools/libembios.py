@@ -770,7 +770,7 @@ class embios:
     self.__myprint("Retrieving process information...", silent)
     
     self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 15, offset, size, 0))
-    response = self.__getBulk(self.handle, self.__cinep, size + 0x10)
+    response = self.__getbulk(self.handle, self.__cinep, size + 0x10)
     self.__checkstatus(response)
     
     out = []
@@ -1018,7 +1018,7 @@ class embios:
   def execimage(self, offset, silent = 0):
     self.__myprint("Executing emBIOS executable image at 0x%08x..." % offset, silent)
       
-    self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 18, threadid, 0, 0))
+    self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 21, offset, 0, 0))
     response = self.__getbulk(self.handle, self.__cinep, 0x10)
     self.__checkstatus(response)
     

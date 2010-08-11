@@ -103,14 +103,16 @@ _start:
 	bl	init
 	bl	context_switch
 	mov	r0, #0
-idleloop:
-	mcr	p15, 0, r0,c7,c0,4
-	b	idleloop
+	ldr	pc, =idleloop
 .ltorg
 
 
 .section .icode, "ax", %progbits
 .align 2
+idleloop:
+	mcr	p15, 0, r0,c7,c0,4
+	b	idleloop
+
 .global reset
 .global hang
 .type reset, %function

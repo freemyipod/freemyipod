@@ -26,9 +26,10 @@
 
 
 #include "global.h"
+#include "syscallapi.h"
 
 
-void* get_syscall_table() ICODE_ATTR;
+struct embios_syscall_table* get_syscall_table() ICODE_ATTR;
 
 
 #endif

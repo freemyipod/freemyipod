@@ -143,4 +143,4 @@ leave_critical_section:
 .size leave_critical_section, .-leave_critical_section
 
 unknown_swi_string:
-	.ascii "Unhandled SWI %08X\0"
+	.ascii "Unhandled SWI %06X\0"

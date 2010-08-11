@@ -62,6 +62,7 @@ strcasecmp.c
 strlcpy.c
 strlcat.c
 execimage.c
+syscallapi.c
 
 libc/strstr.c
 libc/strtok.c

@@ -22,14 +22,12 @@
 
 
 #include "global.h"
-#include "syscall.h"
 #include "syscallapi.h"
+#include "panic.h"
 
 
-extern struct embios_syscall_table syscall_table;
-
-
-struct embios_syscall_table* get_syscall_table()
+struct embios_syscall_table syscall_table ICONST_ATTR =
 {
-    return &syscall_table;
-}
+	.panic = panic,
+    .panicf = panicf
+};
