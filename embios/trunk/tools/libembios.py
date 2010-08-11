@@ -762,51 +762,7 @@ class embios:
         <silent> = 1: nothing
     """
     
-    
-    self.__myprint("Retrieving process information...", silent)
-    
-    offset = 0
-    blocklen = size = self.cin_maxsize - 0x10
-    procinfo = ""
-    structversion = 0
-    tablesize = 0
-    
-    # reading loop
-    while (offset < size):
-      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 15, offset, size, 0))
-      response = self.__getbulk(self.handle, self.__cinep, size + 0x10)
-      self.__checkstatus(response)
-      
-      size = struct.unpack("<I", response[8:12])[0]
-      
-      if size <= offset + blocklen:
-        procinfo += response[0x10:0x10 + size]
-        structversion = struct.unpack("<I", response[4:])
-        tablesize = struct.unpack("<I", response[8:])
-        break
-      else:
-        procinfo += response[0x10:0x10 + blocklen]
-      
-      size -= blocklen
-      offset += blocklen
-      
-      blocklen = self.cin_maxsize - 0x10
-      if blocklen > size:
-        blocklen = size
-    
-    
-    out = (structversion, tablesize, procinfotolist(procinfo, structversion))
-
-    self.__myprint(" done\n\
-                    Process information struct version: 0x%08x\n\
-                    Total size of process information table: 0x%08x\n\
-                    %s\n\n"
-                  % (out[0], out[1], procinfotostring(out[2], structversion))
-                  , silent)
-    
-    return out
-  
-    def procinfotolist(self, processinfo, structver):
+    def procinfotolist(processinfo, structver):
       if (structver == 1):   # Process information struct version == 1
         ptr = 0x10
         process_n = 0
@@ -853,9 +809,8 @@ class embios:
           
         return retval
           
-
     
-    def procinfotostring(self, procinfolist, structver):
+    def procinfotostring(procinfolist, structver):
       processinfoprint = ""
       ptr = 0
       while structver == 1 and ptr < len(procinfolist):      # Process information struct version == 1
@@ -893,9 +848,51 @@ class embios:
       processinfoprint += "--------------------------------------------------------------------------------"
       
       return processinfoprint
+     
+ 
+    self.__myprint("Retrieving process information...", silent)
+    
+    offset = 0
+    blocklen = size = self.cin_maxsize - 0x10
+    procinfo = ""
+    structversion = 0
+    tablesize = 0
+    
+    # reading loop
+    while (offset < size):
+      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 15, offset, size, 0))
+      response = self.__getbulk(self.handle, self.__cinep, size + 0x10)
+      self.__checkstatus(response)
+      
+      size = struct.unpack("<I", response[8:12])[0]
+      
+      if size <= offset + blocklen:
+        procinfo += response[0x10:0x10 + size]
+        structversion = struct.unpack("<I", response[4:])[0]
+        tablesize = struct.unpack("<I", response[8:])[0]
+        break
+      else:
+        procinfo += response[0x10:0x10 + blocklen]
+      
+      size -= blocklen
+      offset += blocklen
+      
+      blocklen = self.cin_maxsize - 0x10
+      if blocklen > size:
+        blocklen = size
     
     
+    out = (structversion, tablesize, procinfotolist(procinfo, structversion))
+
+    self.__myprint(" done\n\
+                    Process information struct version: 0x%08x\n\
+                    Total size of process information table: 0x%08x\n\
+                    %s\n\n"
+                  % (out[0], out[1], procinfotostring(out[2], structversion))
+                  , silent)
     
+    return out
+  
     
   def execimage(self, offset, silent = 0):
     self.__myprint("Executing emBIOS executable image at 0x%08x..." % offset, silent)

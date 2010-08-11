@@ -26,6 +26,7 @@
 import sys
 import time
 import libembios
+import struct
 
 
 def usage():
@@ -135,10 +136,8 @@ def usage():
   print "      <bitmask>: the bitmask of the consoles to be flushed"
   print ""
   print ""
-  print "  getprocessinformation <offset> <size> / getprocinfo <offset> <size>"
+  print "  getprocessinformation / getprocinfo"
   print "    Fetches data on the currently running processes"
-  print "      <offset> the offset in the data field"
-  print "      <size> the number of bytes to be fetched"
   print "     ATTENTION: this function will be print the information to the console window."
   print "                If several threads are running this might overflow the window,"
   print "                causing not everything to be shown."
@@ -326,8 +325,8 @@ def parsecommand(dev, argv):
    
    
   elif argv[1] == "getprocessinformation" or argv[1] == "getprocinfo":
-    if len(argv) != 4: usage()
-    dev.getprocinfo(int(argv[2], 16), int(argv[3], 16))
+    if len(argv) != 2: usage()
+    dev.getprocinfo()
     
   elif argv[1] == "lockscheduler":
     if len(argv) != 2: usage()
