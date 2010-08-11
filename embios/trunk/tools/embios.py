@@ -168,6 +168,9 @@ def usage():
   print "      <priority> the priority of the thread, from 1 to 255"
   print "      <state> the thread's initial state, valid are: 1 => ready, 0 => suspended"
   print ""
+  print "  execimage <offset>"
+  print "    Executes the emBIOS executable image at <offset>."
+  print ""
   print ""
   print "  flushcaches"
   print "    Flushes the CPUs data and instruction caches."
@@ -338,13 +341,16 @@ def parsecommand(dev, argv):
     if len(argv) != 9: usage()
     dev.createthread(int(argv[2], 16), int(argv[3], 16), int(argv[4], 16), int(argv[5], 16), int(argv[6], 16), int(argv[7], 16), int(argv[8], 16))
     
+  elif argv[1] == "execimage":
+    if len(argv) != 3: usage
+    dev.execimage(int(argv[2], 16))
+    
     
   elif argv[1] == "flushcaches":
     if len(argv) != 2: usage()
     dev.flushcaches()
     
   else: usage()
-
 
 dev = libembios.embios()
 parsecommand(dev, sys.argv)

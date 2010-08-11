@@ -380,7 +380,7 @@ class embios:
 
  
   def uploadfile(self, offset, file, usedma = 1, freezesched = 0, silent = 0):
-    self.__myprint("Uploading %s to 0x%8x..." % (file, offset), silent)
+    self.__myprint("Uploading %s to 0x%08x..." % (file, offset), silent)
     f = open(file, "rb")
 
     while True:
@@ -394,7 +394,7 @@ class embios:
     
   
   def downloadfile(self, offset, size, file, usedma = 1, freezesched = 0, silent = 0):
-    self.__myprint("Downloading 0x%x bytes from 0x%8x to %s..." % (size, offset, file), silent)
+    self.__myprint("Downloading 0x%x bytes from 0x%08x to %s..." % (size, offset, file), silent)
     f = open(file, "wb")
 
     while True:
@@ -410,15 +410,15 @@ class embios:
     
     
   def uploadint(self, offset, data, silent = 0):
-    self.__myprint("Uploading 0x%8x to 0x%8x..." % (data, offset), silent)
+    self.__myprint("Uploading 0x%08x to 0x%08x..." % (data, offset), silent)
     self.write(offset, data, 0, 0)
     self.__myprint(" done\n", silent)
 
 
   def downloadint(self, offset, silent = 0):
-    self.__myprint("Downloading 0x%8x from 0x%8x..." % (data, offset), silent)
+    self.__myprint("Downloading 0x%08x from 0x%08x..." % (data, offset), silent)
     data = self.read(offset, data, 0, 0)
-    self.__myprint(" done\nValue was: 0x%8x\n" % (data), silent)
+    self.__myprint(" done\nValue was: 0x%08x\n" % (data), silent)
     
     return data
     
@@ -715,10 +715,10 @@ class embios:
     
   def suspendthread(self, suspend, threadid, silent = 0):
     if (suspend):
-      self.__myprint("Suspending thread 0x%8x...", silent) % threadid
+      self.__myprint("Suspending thread 0x%08x..." % threadid, silent)
       suspend = 1
     else:
-      self.__myprint("Unsuspending thread 0x%8x...", silent) % threadid
+      self.__myprint("Unsuspending thread 0x%08x..." % threadid, silent)
       suspend = 0
       
     self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 17, suspend, threadid, 0))
@@ -729,7 +729,7 @@ class embios:
 
 
   def killthread(self, threadid, silent = 0):
-    self.__myprint("Killing thread 0x%8x...", silent) % threadid
+    self.__myprint("Killing thread 0x%08x..." % threadid, silent)
       
     self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 18, threadid, 0, 0))
     response = self.__getbulk(self.handle, self.__cinep, 0x10)
@@ -1002,14 +1002,25 @@ class embios:
       processinfoprint += "--------------------------------------------------------------------------------"
     
     self.__myprint(" done\n\
-                    Process information struct version: 0x%8x\n\
-                    Total size of process information table: 0x%8x\n\
+                    Process information struct version: 0x%08x\n\
+                    Total size of process information table: 0x%08x\n\
                     %s"
                   % (out[0], out[1], procinfoprint)
                   , silent)
     
     return out
     
+    
+  def execimage(self, offset):
+    self.__myprint("Executing emBIOS executable image at 0x%08x..." % offset, silent)
+      
+    self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 18, threadid, 0, 0))
+    response = self.__getbulk(self.handle, self.__cinep, 0x10)
+    self.__checkstatus(response)
+    
+    self.__myprint(" done\n    execimage() return code: 0x%08x\n" % struct.unpack("<I", response[4:8]), silent)
+    
+    return struct.unpack("<I", response[4:8])
     
     
 #===================================================================================== 
