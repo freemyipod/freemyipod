@@ -33,6 +33,11 @@
 .ltorg
 
 
+.section .inithead,"ax",%progbits
+.global __start
+__start:
+	b	_start
+
 .section .initcode,"ax",%progbits
 .global _start
 _start:

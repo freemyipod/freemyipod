@@ -71,7 +71,7 @@ static const char initthreadname[] INITCONST_ATTR = "Initialisation thread";
 static uint32_t initstack[0x400] INITSTACK_ATTR;
 extern int _loadspaceend;
 extern int _initstart;
-const struct bootinfo_t bootinfo_src INITCONST_ATTR =
+struct bootinfo_t bootinfo_src INITHEAD_ATTR =
 {
     .signature = "emBIboot",
     .version = 0,

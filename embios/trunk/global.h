@@ -29,6 +29,7 @@
 #define ICONST_ATTR __attribute__((section(".irodata")))
 #define IDATA_ATTR __attribute__((section(".idata")))
 #define IBSS_ATTR __attribute__((section(".ibss")))
+#define INITHEAD_ATTR __attribute__((section(".inithead")))
 #define INITCODE_ATTR __attribute__((section(".initcode")))
 #define INITCONST_ATTR __attribute__((section(".initrodata")))
 #define INITDATA_ATTR __attribute__((section(".initdata")))

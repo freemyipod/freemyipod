@@ -1,4 +1,4 @@
-ENTRY(_start)
+ENTRY(__start)
 OUTPUT_FORMAT(elf32-littlearm)
 OUTPUT_ARCH(arm)
 STARTUP(build/ipodnano2g/target/ipodnano2g/crt0.o)
@@ -16,6 +16,7 @@ SECTIONS
     .init :
     {
         _initstart = .;
+	*(.inithead*)
         *(.initcode*)
         *(.initrodata*)
         *(.initdata*)
