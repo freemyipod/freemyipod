@@ -29,7 +29,7 @@
 #endif
 #include "disk.h"
 #include "util.h"
-#include <string.h>
+#include "libc/include/string.h"
 
 /* Partition table entry layout:
    -----------------------
