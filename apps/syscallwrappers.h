@@ -31,8 +31,8 @@
 extern struct embios_syscall_table* __embios_syscall;
 
 
-#define panic(severity, string) __embios_syscall->panic(severity, string)
-#define panicf(severity, fmt, args...) __embios_syscall->panic(severity, fmt, ##args)
+#define panic(args...) __embios_syscall->panic(##args)
+#define panicf(args...) __embios_syscall->panicf(##args)
 
 
 #endif
