@@ -13,7 +13,7 @@
  ****************************************************************************/
 
 #include "global.h"
-#include <string.h>
+#include "include/string.h"
 
 /**
  * strstr - Find the first substring in a %NUL terminated string

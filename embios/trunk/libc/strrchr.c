@@ -34,7 +34,7 @@ QUICKREF
 */
 
 #include "global.h"
-#include <string.h>
+#include "include/string.h"
 
 char *
 _DEFUN (strrchr, (s, i),

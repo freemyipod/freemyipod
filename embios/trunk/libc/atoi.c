@@ -20,8 +20,8 @@
  ****************************************************************************/
 
 #include "global.h"
-#include <stdlib.h>
-#include "libc/include/ctype.h"
+#include "include/stdlib.h"
+#include "include/ctype.h"
 
 int atoi (const char *str)
 {

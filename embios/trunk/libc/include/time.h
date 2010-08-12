@@ -7,7 +7,7 @@
 #ifndef _TIME_H_
 #define _TIME_H_
 
-#include "global.h"
+#include "../../global.h"
 
 struct tm
 {

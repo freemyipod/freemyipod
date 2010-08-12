@@ -1,7 +1,6 @@
 #include "global.h"
 #include <stdarg.h>
-#include <string.h>
-#include <stdbool.h>
+#include "include/string.h"
 
 int isspace(int c)
 {

@@ -22,7 +22,7 @@
 
 #ifndef HAVE_STRTOK_R
 #include <stddef.h>
-#include <string.h>
+#include "include/string.h"
 
 char *
 strtok_r(char *ptr, const char *sep, char **end)

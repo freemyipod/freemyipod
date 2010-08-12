@@ -20,8 +20,8 @@
  ****************************************************************************/
 #include "global.h"
 #include "thread.h"
-#include "string.h"
-#include "stdio.h"
+#include "libc/include/string.h"
+#include "libc/include/stdio.h"
 #include "fat.h"
 #include "storage.h"
 #include "debug.h"

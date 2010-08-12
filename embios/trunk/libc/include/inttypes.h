@@ -22,8 +22,8 @@
 #ifndef __INTTYPES_H__
 #define __INTTYPES_H__
 
-#include "global.h"
-#include <stdint.h>
+#include "../../global.h"
+#include "stdint.h"
 
 /* could possibly have (f)scanf format specifiers here */
 

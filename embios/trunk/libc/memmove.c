@@ -36,8 +36,8 @@ QUICKREF
 */
 
 #include "global.h"
-#include <_ansi.h>
-#include <string.h>
+#include "include/string.h"
+#include "include/_ansi.h"
 
 /* Nonzero if either X or Y is not aligned on a "long" boundary.  */
 #define UNALIGNED(X, Y) \

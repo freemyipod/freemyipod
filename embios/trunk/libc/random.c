@@ -46,7 +46,7 @@
 */
  
 #include "global.h"
-#include <stdlib.h>
+#include "include/stdlib.h"
 
 /* Period parameters */
 #define N            624

@@ -58,7 +58,7 @@
 #ifndef __USB_CH9_H__
 #define __USB_CH9_H__
 
-#include <inttypes.h>
+#include "../libc/include/inttypes.h"
 
 /*-------------------------------------------------------------------------*/
 

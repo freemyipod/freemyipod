@@ -29,11 +29,11 @@
 
 /*
  * include string.h for size_t for convinence */
-#include "global.h"
-#include <string.h>
+#include "../../../global.h"
+#include "../string.h"
 /* make some (debian, ubuntu...) systems happy that inappropriately include
  * sys/types.h to get intN_t ... */
-#include <inttypes.h>
+#include "../inttypes.h"
 
 #if !defined(__ssize_t_defined) && !defined(_SSIZE_T_) && !defined(ssize_t) && !defined(_SSIZE_T_DECLARED)
 #define __ssize_t_defined

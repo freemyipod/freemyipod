@@ -32,8 +32,8 @@ QUICKREF
 */
 
 #include "global.h"
-#include <_ansi.h>
-#include <string.h>
+#include "include/_ansi.h"
+#include "include/string.h"
 #include <limits.h>
 
 #define LBLOCKSIZE   (sizeof (long))

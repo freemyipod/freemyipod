@@ -22,7 +22,7 @@
 #ifndef __STDINT_H__
 #define __STDINT_H__
 
-#include "global.h"
+#include "../../global.h"
 #include <limits.h>
 
 /* 8 bit */

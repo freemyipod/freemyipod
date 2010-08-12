@@ -6,7 +6,7 @@ extern "C" {
 #endif
 #define  _MATH_H_
 
-#include "global.h"
+#include "../../global.h"
 #include "_ansi.h"
 
 #ifndef __STRICT_ANSI__

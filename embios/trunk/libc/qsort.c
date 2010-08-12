@@ -75,8 +75,8 @@ PORTABILITY
  */
 
 #include "global.h"
-#include <_ansi.h>
-#include <stdlib.h>
+#include "include/_ansi.h"
+#include "include/stdlib.h"
 
 #ifndef __GNUC__
 #define inline

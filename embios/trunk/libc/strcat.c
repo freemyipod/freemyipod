@@ -1,5 +1,5 @@
 #include "global.h"
-#include <string.h>
+#include "include/string.h"
 
 char *strcat(char *s1,
              const char *s2)

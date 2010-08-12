@@ -1,4 +1,4 @@
-#include "libc/include/ctype.h"
+#include "include/ctype.h"
 
 const unsigned char _ctype_[257]={
     0,

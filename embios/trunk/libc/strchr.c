@@ -34,7 +34,7 @@ QUICKREF
 */
 
 #include "global.h"
-#include <string.h>
+#include "include/string.h"
 #include <limits.h>
 
 /* Nonzero if X is not aligned on a "long" boundary.  */

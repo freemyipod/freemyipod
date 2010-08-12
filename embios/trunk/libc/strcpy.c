@@ -33,7 +33,7 @@ QUICKREF
 */
 
 #include "global.h"
-#include <string.h>
+#include "include/string.h"
 #include <limits.h>
 
 /*SUPPRESS 560*/
