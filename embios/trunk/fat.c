@@ -26,7 +26,7 @@
 #include "storage.h"
 #include "debug.h"
 #include "panic.h"
-#include "ctype.h"
+#include "libc/include/ctype.h"
 
 #define BYTES2INT16(array,pos) \
           (array[pos] | (array[pos+1] << 8 ))

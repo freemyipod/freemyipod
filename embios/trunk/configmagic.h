@@ -33,8 +33,8 @@
 #define STORAGE_RAMDISK 0x10
 
 
-#include "config.h"
-#include "target.h"
+#include CONFIG_H
+#include TARGET_H
 
 
 #ifndef SCHEDULER_TICK

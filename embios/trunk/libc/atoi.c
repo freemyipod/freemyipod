@@ -21,7 +21,7 @@
 
 #include "global.h"
 #include <stdlib.h>
-#include "ctype.h"
+#include "libc/include/ctype.h"
 
 int atoi (const char *str)
 {

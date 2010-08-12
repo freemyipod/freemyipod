@@ -85,8 +85,6 @@
 #define THDATA1      (*((volatile uint32_t*)(0x3C70010C)))
 #define THPRE        (*((volatile uint32_t*)(0x3C700110)))
 #define THCNT        (*((volatile uint32_t*)(0x3C700114)))
-uint64_t read_42nsec_timer();
-#define FOURTYTWO_NSEC_TIMER (read_42nsec_timer()) /* 64bit 24MHz timer */
 
 
 /////USB/////

@@ -30,8 +30,8 @@
  * 2004 Apr 08 Jose Da Silva, digital@joescat@com */
 
 #include "global.h"
-#include <string.h>
-#include <ctype.h>
+#include "string.h"
+#include "libc/include/ctype.h"
 
 typedef unsigned chartype;
 

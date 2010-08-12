@@ -20,7 +20,7 @@
  ****************************************************************************/
 
 
-#include <stdarg.h>
+#include "global.h"
 #include <limits.h>
 #include <string.h>
 

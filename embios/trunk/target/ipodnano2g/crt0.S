@@ -202,14 +202,14 @@ syscall_text:
 
 .section .icode.usec_timer, "ax", %progbits
 .align 2
-.global read_5usec_timer
-.type read_5usec_timer, %function
-read_5usec_timer:
+.global read_native_timer
+.type read_native_timer, %function
+read_native_timer:
 	ldr	r0, val_3c700000
 	ldr	r1, [r0,#0x80]
 	ldr	r0, [r0,#0x84]
 	bx	lr
-.size read_5usec_timer, .-read_5usec_timer
+.size read_native_timer, .-read_native_timer
 
 .global read_usec_timer
 .type read_usec_timer, %function

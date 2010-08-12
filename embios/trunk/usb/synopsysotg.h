@@ -29,12 +29,12 @@
 
 
 #ifdef TARGET_ipodnano2g
-#include "s5l8701.h"
+#include "target/ipodnano2g/s5l8701.h"
 #define SYNOPSYSOTG_CLOCK 0
 #define SYNOPSYSOTG_AHBCFG 0x27
 #endif
 #ifdef TARGET_ipodnano4g
-#include "s5l8720.h"
+#include "target/ipodnano4g/s5l8720.h"
 #define SYNOPSYSOTG_CLOCK 0x11
 #define SYNOPSYSOTG_AHBCFG 0x2B
 #endif

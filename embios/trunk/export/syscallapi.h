@@ -25,11 +25,29 @@
 #define __SYSCALLAPI_H__
 
 
-#include <stdint.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include "../panic.h"
-
+#include "../global.h"
+#include "../panic.h"  
+#include "../console.h"
+#include "../dir.h"
+#include "../file.h"
+#include "../format.h"
+#include "../lcdconsole.h"
+#include "../storage.h"
+#include "../shutdown.h"
+#include "../thread.h"
+#include "../ucl.h"
+#include "../bootflash.h"
+#include "../timer.h"
+#include "../i2c.h"
+#include "../interrupt.h"
+#include "../lcd.h"
+#include "../mmu.h"
+#include "../nand.h"
+#include "../power.h"
+#include "../execimage.h"
+#include "../libc/include/string.h"
+#include "../libc/include/stdlib.h"
+#include "../libc/include/stdio.h"
 
 /* increase this every time the api struct changes */
 #define EMBIOS_API_VERSION 0
@@ -48,8 +66,120 @@ struct embios_syscall_table
 {
     uint32_t table_version;
     uint32_t table_minversion;
-	void (*panic) (enum panic_severity severity, const char* string);
-	void (*panicf) (enum panic_severity severity, const char* fmt, ...);
+	typeof(panic) *panic;
+	typeof(panicf) *panicf;
+    typeof(cprintf) *cprintf;
+    typeof(cvprintf) *cvprintf;
+    typeof(cputc) *cputc;
+    typeof(cputs) *cputs;
+    typeof(cwrite) *cwrite;
+    typeof(cflush) *cflush;
+    typeof(cgetc) *cgetc;
+    typeof(cread) *cread;
+    typeof(creada) *creada;
+    typeof(opendir) *opendir;
+    typeof(closedir) *closedir;
+    typeof(readdir) *readdir;
+    typeof(mkdir) *mkdir;
+    typeof(rmdir) *rmdir;
+    typeof(renderbmp) *renderbmp;
+    typeof(renderchar) *renderchar;
+    typeof(execimage) *execimage;
+    typeof(ftruncate) *ftruncate;
+    typeof(fsync) *fsync;
+    typeof(close) *close;
+    typeof(write) *write;
+    typeof(read) *read;
+    typeof(lseek) *lseek;
+    typeof(remove) *remove;
+    typeof(file_open) *file_open;
+    typeof(rename) *rename;
+    typeof(file_creat) *file_creat;
+    typeof(filesize) *filesize;
+    typeof(format) *format;
+    typeof(vuprintf) *vuprintf;
+    typeof(lcdconsole_putc_noblit) *lcdconsole_putc_noblit;
+    typeof(lcdconsole_puts_noblit) *lcdconsole_puts_noblit;
+    typeof(lcdconsole_write_noblit) *lcdconsole_write_noblit;
+    typeof(lcdconsole_update) *lcdconsole_update;
+    typeof(lcdconsole_putc) *lcdconsole_putc;
+    typeof(lcdconsole_puts) *lcdconsole_puts;
+    typeof(lcdconsole_write) *lcdconsole_write;
+    typeof(shutdown) *shutdown;
+    typeof(storage_read_sectors) *storage_read_sectors;
+    typeof(storage_write_sectors) *storage_write_sectors;
+    typeof(strcasecmp) *strcasecmp;
+    typeof(strncasecmp) *strncasecmp;
+    typeof(strcasestr) *strcasestr;
+    typeof(strlcat) *strlcat;
+    typeof(strlcpy) *strlcpy;
+    typeof(mutex_init) *mutex_init;
+    typeof(mutex_lock) *mutex_lock;
+    typeof(mutex_unlock) *mutex_unlock;
+    typeof(wakeup_init) *wakeup_init;
+    typeof(wakeup_wait) *wakeup_wait;
+    typeof(wakeup_signal) *wakeup_signal;
+    typeof(sleep) *sleep;
+    typeof(thread_create) *thread_create;
+    typeof(thread_exit) *thread_exit;
+    typeof(thread_suspend) *thread_suspend;
+    typeof(thread_resume) *thread_resume;
+    typeof(thread_terminate) *thread_terminate;
+    typeof(__errno) *__errno;
+    typeof(ucl_decompress) *ucl_decompress;
+    typeof(bootflash_filesize) *bootflash_filesize;
+    typeof(bootflash_attributes) *bootflash_attributes;
+    typeof(bootflash_getaddr) *bootflash_getaddr;
+    typeof(bootflash_read) *bootflash_read;
+    typeof(bootflash_readraw) *bootflash_readraw;
+    typeof(bootflash_writeraw) *bootflash_writeraw;
+    typeof(bootflash_getrawaddr) *bootflash_getrawaddr;
+    typeof(read_native_timer) *read_native_timer;
+    typeof(read_usec_timer) *read_usec_timer;
+    typeof(i2c_send) *i2c_send;
+    typeof(i2c_recv) *i2c_recv;
+    typeof(i2c_sendbyte) *i2c_sendbyte;
+    typeof(i2c_recvbyte) *i2c_recvbyte;
+    typeof(interrupt_enable) *interrupt_enable;
+    typeof(interrupt_set_handler) *interrupt_set_handler;
+    typeof(int_timer_set_handler) *int_timer_set_handler;
+    typeof(displaylcd) *displaylcd;
+    typeof(displaylcd_sync) *displaylcd_sync;
+    typeof(displaylcd_busy) *displaylcd_busy;
+    typeof(displaylcd_safe) *displaylcd_safe;
+    typeof(clean_dcache) *clean_dcache;
+    typeof(invalidate_dcache) *invalidate_dcache;
+    typeof(invalidate_icache) *invalidate_icache;
+    typeof(nand_read_page) *nand_read_page;
+    typeof(nand_block_erase) *nand_block_erase;
+    typeof(nand_read_page_fast) *nand_read_page_fast;
+    typeof(nand_write_page) *nand_write_page;
+    typeof(nand_write_page_start) *nand_write_page_start;
+    typeof(nand_write_page_collect) *nand_write_page_collect;
+    typeof(nand_get_device_type) *nand_get_device_type;
+    typeof(power_off) *power_off;
+    typeof(charging_state) *charging_state;
+    typeof(atoi) *atoi;
+    typeof(memchr) *memchr;
+    typeof(memcmp) *memcmp;
+    typeof(memcpy) *memcpy;
+    typeof(memmove) *memmove;
+    typeof(memset) *memset;
+    typeof(qsort) *qsort;
+    typeof(srand) *srand;
+    typeof(rand) *rand;
+    typeof(snprintf) *snprintf;
+    typeof(vsnprintf) *vsnprintf;
+    typeof(sscanf) *sscanf;
+    typeof(strcat) *strcat;
+    typeof(strchr) *strchr;
+    typeof(strcmp) *strcmp;
+    typeof(strcpy) *strcpy;
+    typeof(strlen) *strlen;
+    typeof(strncmp) *strncmp;
+    typeof(strrchr) *strrchr;
+    typeof(strstr) *strstr;
+    typeof(strtok_r) *strtok_r;
 };
 
 

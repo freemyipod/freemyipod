@@ -26,6 +26,10 @@
 #include "util.h"
 #include "mv.h" /* for volume definitions */
 
+#ifndef SECTOR_SIZE
+#define SECTOR_SIZE 512
+#endif
+
 /* Number of bytes reserved for a file name (including the trailing \0).
    Since names are stored in the entry as UTF-8, we won't be able to
    store all names allowed by FAT. In FAT, a name can have max 255

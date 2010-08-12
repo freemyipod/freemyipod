@@ -1,7 +1,7 @@
 #ifndef _STDIO_H_
 #define _STDIO_H_
 
-#include "global.h"
+#include "../../global.h"
 #include <_ansi.h>
 
 #define __need_size_t

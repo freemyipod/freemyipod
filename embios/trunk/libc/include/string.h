@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "global.h"
+#include "../../global.h"
 #include "_ansi.h"
 
 #define __need_size_t

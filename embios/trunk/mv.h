@@ -22,7 +22,7 @@
 #ifndef __MV_H__
 #define __MV_H__
 
-#include "config.h"
+#include "global.h"
 
 /* FixMe: These macros are a bit nasty and perhaps misplaced here.
    We'll get rid of them once decided on how to proceed with multivolume. */

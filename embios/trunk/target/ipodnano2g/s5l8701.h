@@ -268,8 +268,6 @@
 #define TDDATA1      (*((volatile uint32_t*)(0x3C70006C)))
 #define TDPRE        (*((volatile uint32_t*)(0x3C700070)))
 #define TDCNT        (*((volatile uint32_t*)(0x3C700074)))
-uint64_t read_5usec_timer();
-#define FIVE_USEC_TIMER (read_5usec_timer()) /* 64bit 5usec timer */
 
 
 /////USB/////

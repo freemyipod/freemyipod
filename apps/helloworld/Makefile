@@ -29,21 +29,25 @@ all: $(NAME)
 $(NAME): build/$(NAME).embiosapp.ucl
 
 build/$(NAME).embiosapp.ucl: build/$(NAME).embiosapp
-	$(UCLPACK) $^ $@
+	@echo [UCL]    $<
+	@$(UCLPACK) $^ $@
 
 build/$(NAME).embiosapp: build/$(NAME).elf
-	$(OBJCOPY) -O binary $^ $@
+	@echo [OC]     $<
+	@$(OBJCOPY) -O binary $^ $@
 
 build/$(NAME).elf: ls.x $(OBJ)
-	$(LD) $(LDFLAGS) -o $@ -T ls.x $(OBJ)
+	@echo [LD]     $@
+	@$(LD) $(LDFLAGS) -o $@ -T ls.x $(OBJ)
 
 build/%.o: %.c build/version.h
+	@echo [CC]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
 else
 	@-mkdir -p $(dir $@)
 endif
-	$(CC) -c $(CFLAGS) -o $@ $<
+	@$(CC) -c $(CFLAGS) -o $@ $<
 	@$(CC) -MM $(CFLAGS) $< > $@.dep.tmp
 	@sed -e "s|.*:|$@:|" < $@.dep.tmp > $@.dep
 ifeq ($(shell uname),WindowsNT)
@@ -54,12 +58,13 @@ endif
 	@rm -f $@.dep.tmp
 
 build/%.o: %.S build/version.h
+	@echo [CC]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
 else
 	@-mkdir -p $(dir $@)
 endif
-	$(CC) -c $(CFLAGS) -o $@ $<
+	@$(CC) -c $(CFLAGS) -o $@ $<
 	@$(CC) -MM $(CFLAGS) $< > $@.dep.tmp
 	@sed -e "s|.*:|$@:|" < $@.dep.tmp > $@.dep
 ifeq ($(shell uname),WindowsNT)
@@ -70,6 +75,7 @@ endif
 	@rm -f $@.dep.tmp
 
 build/version.h: version.h .svn/entries build
+	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
 else

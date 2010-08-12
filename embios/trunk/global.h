@@ -38,6 +38,7 @@
 #define STACK_ATTR __attribute__((section(".stack")))
 
 #ifndef ASM_FILE
+#include <stdarg.h>
 #include "errno.h"
 #include "inttypes.h"
 #include "math.h"
@@ -50,8 +51,10 @@ typedef int bool;
 #define false 0
 #endif
 
+#ifndef IN_APPLICATION_CODE
 #include "build/version.h"
 #include "configmagic.h"
+#endif
 #include "debug.h"
 
 

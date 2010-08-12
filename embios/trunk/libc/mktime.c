@@ -22,7 +22,6 @@
 
 #include "global.h"
 #include <time.h>
-#include "config.h"
 
 #if CONFIG_RTC
 /* mktime() code taken from lynx-2.8.5 source, written

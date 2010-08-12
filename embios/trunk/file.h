@@ -25,6 +25,7 @@
 #define MAX_PATH 260
 
 #include "global.h"
+#include "libc/include/_ansi.h"
 #include "thread.h"
 
 #ifndef MAX_OPEN_FILES

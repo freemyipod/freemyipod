@@ -21,26 +21,32 @@
 //
 
 
-#ifndef __LCD_H__
-#define __LCD_H__
-
+#ifndef __TIMER_H__
+#define __TIMER_H__
 
 #include "global.h"
 
 
-#define LCD_WIDTH 240
-#define LCD_HEIGHT 320
-#define LCD_FORMAT rgb565
-#define LCD_BYTESPERPIXEL 2
-#define LCD_FRAMEBUFSIZE (LCD_WIDTH * LCD_HEIGHT * LCD_BYTESPERPIXEL)
+#define TIME_AFTER(a,b)         ((long)(b) - (long)(a) < 0)
+#define TIME_BEFORE(a,b)        TIME_AFTER(b,a)
+#define TIMEOUT_EXPIRED(a,b)    TIME_AFTER(USEC_TIMER,a + b)
 
 
-void lcd_init();
-void displaylcd(unsigned int startx, unsigned int endx,
-                unsigned int starty, unsigned int endy, void* data, int color);
-void displaylcd_sync();
-bool displaylcd_busy();
-bool displaylcd_safe();
+uint64_t read_native_timer();
+#define NATIVE_TIMER (read_native_timer())
+uint32_t read_usec_timer();
+#define USEC_TIMER (read_usec_timer())
+
+
+static inline void udelay(long duration)  /* in usec steps */
+{
+    long timestamp = USEC_TIMER;
+    while (!TIMEOUT_EXPIRED(timestamp, duration));
+}
+
+
+void setup_tick() INITCODE_ATTR;
+void INT_TIMERB() ICODE_ATTR;
 
 
 #endif

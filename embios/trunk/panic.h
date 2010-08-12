@@ -25,11 +25,9 @@
 #define __PANIC_H__
 
 
-#ifndef __SYSCALLAPI_H__
 #include "global.h"
-#include "_ansi.h"
+#include "libc/include/_ansi.h"
 #include <stdarg.h>
-#endif
 
 
 enum panic_severity
@@ -40,11 +38,9 @@ enum panic_severity
 };
 
 
-#ifndef __SYSCALLAPI_H__
 void panic(enum panic_severity severity, const char* string) ICODE_ATTR;
 void panicf(enum panic_severity severity, const char* string, ...) ICODE_ATTR
             ATTRIBUTE_PRINTF(2, 3);
-#endif
 
 
 #endif

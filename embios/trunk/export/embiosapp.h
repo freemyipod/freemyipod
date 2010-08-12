@@ -1,7 +1,3 @@
-#include <stdint.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include "syscallapi.h"
 #include "syscallwrappers.h"
 
 

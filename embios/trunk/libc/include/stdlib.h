@@ -10,7 +10,7 @@ extern "C" {
 #endif
 #define _STDLIB_H_
 
-#include "global.h"
+#include "../../global.h"
 #include "_ansi.h"
 
 #define __need_size_t

@@ -26,7 +26,7 @@
 
 
 #include "global.h"
-#include <stdarg.h>
+#include "libc/include/_ansi.h"
 
 
 void console_init() INITCODE_ATTR;
