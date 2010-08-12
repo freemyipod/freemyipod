@@ -28,14 +28,13 @@
 #include "global.h"
 
 
-#define LCD_WIDTH 176
-#define LCD_HEIGHT 132
-#define LCD_FORMAT rgb565
-#define LCD_BYTESPERPIXEL 2
 #define LCD_FRAMEBUFSIZE (LCD_WIDTH * LCD_HEIGHT * LCD_BYTESPERPIXEL)
 
 
 void lcd_init();
+int lcd_get_width();
+int lcd_get_height();
+int lcd_get_bytes_per_pixel();
 void displaylcd(unsigned int startx, unsigned int endx,
                 unsigned int starty, unsigned int endy, void* data, int color);
 void displaylcd_sync();

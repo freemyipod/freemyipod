@@ -76,6 +76,11 @@ int storage_read_sectors(IF_MD2(int drive,) unsigned long start, int count,
 
 }
 
+int storage_read_sectors_md(int drive, unsigned long start, int count, void* buf)
+{
+    return storage_read_sectors(IF_MD2(drive,) start, count, buf);
+}
+
 int storage_write_sectors(IF_MD2(int drive,) unsigned long start, int count,
                           const void* buf)
 {
@@ -117,16 +122,12 @@ int storage_write_sectors(IF_MD2(int drive,) unsigned long start, int count,
 #endif /* CONFIG_STORAGE_MULTI */
 }
 
+int storage_write_sectors_md(int drive, unsigned long start, int count, const void* buf)
+{
+    return storage_write_sectors(IF_MD2(drive,) start, count, buf);
+}
+
 #ifdef CONFIG_STORAGE_MULTI
-
-#define DRIVER_MASK     0xff000000
-#define DRIVER_OFFSET   24
-#define DRIVE_MASK      0x00ff0000
-#define DRIVE_OFFSET    16
-#define PARTITION_MASK  0x0000ff00
-
-static unsigned int storage_drivers[NUM_DRIVES];
-static unsigned int num_drives;
 
 int storage_num_drives(void)
 {

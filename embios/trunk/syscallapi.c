@@ -139,8 +139,8 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .rename = rename,
     .file_creat = file_creat,
     .filesize = filesize,
-    .storage_read_sectors = storage_read_sectors,
-    .storage_write_sectors = storage_write_sectors,
+    .storage_read_sectors_md = storage_read_sectors_md,
+    .storage_write_sectors_md = storage_write_sectors_md,
 #endif
 #ifdef HAVE_LCD
     .lcdconsole_putc_noblit = lcdconsole_putc_noblit,
@@ -154,6 +154,9 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .displaylcd_sync = displaylcd_sync,
     .displaylcd_busy = displaylcd_busy,
     .displaylcd_safe = displaylcd_safe,
+    .lcd_get_width = lcd_get_width,
+    .lcd_get_height = lcd_get_height,
+    .lcd_get_bytes_per_pixel = lcd_get_bytes_per_pixel,
 #endif
 #ifdef HAVE_BOOTFLASH
     .bootflash_filesize = bootflash_filesize,
@@ -171,6 +174,6 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .nand_write_page = nand_write_page,
     .nand_write_page_start = nand_write_page_start,
     .nand_write_page_collect = nand_write_page_collect,
-    .nand_get_device_type = nand_get_device_type
+    .nand_get_device_type = nand_get_device_type,
 #endif
 };

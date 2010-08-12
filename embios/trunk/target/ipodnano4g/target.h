@@ -41,8 +41,13 @@
 #define USB_NUM_ENDPOINTS 5
 
 #define HAVE_LCD
+#define LCD_WIDTH 240
+#define LCD_HEIGHT 320
+#define LCD_FORMAT rgb565
+#define LCD_BYTESPERPIXEL 2
 
 #define HAVE_I2C
+
 //#define HAVE_STORAGE
 //#define HAVE_FLASH_STORAGE
 //#define HAVE_STORAGE_FLUSH

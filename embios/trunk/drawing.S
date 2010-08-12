@@ -26,27 +26,27 @@
 .global renderbmp
 .type renderbmp, %function
 renderbmp:
-	ldrh	r2, [r1]
-	sub	r2, r2, #0x4d00
-	subs	r2, r2, #0x42
+	ldrh	r3, [r1]
+	sub	r3, r3, #0x4d00
+	subs	r3, r3, #0x42
 	movne	pc, lr
 	stmfd	sp!, {r4,lr}
-	ldrh	r2, [r1,#18]
+	ldrh	r4, [r1,#18]
 	ldrh	r12, [r1,#20]
-	orr	r2, r2, r12,lsl#16
-	ldrh	r4, [r1,#22]
-	ldrh	r12, [r1,#24]
 	orr	r4, r4, r12,lsl#16
+	ldrh	r3, [r1,#22]
+	ldrh	r12, [r1,#24]
+	orr	r3, r3, r12,lsl#16
 	ldrh	lr, [r1,#10]
 	ldrh	r12, [r1,#12]
 	orr	lr, lr, r12,lsl#16
 	add	r1, r1, lr
 	mov	r12, #352
-	mul	lr, r12, r4
+	mul	lr, r12, r3
 	add	r0, r0, lr
 renderbmp_row:
-	mov	r12, r2
-	sub	r0, r0, r3
+	mov	r12, r4
+	sub	r0, r0, r2
 renderbmp_pixel:
 	ldrb	lr, [r1,#1]
 	strb	lr, [r0], #1
@@ -54,10 +54,10 @@ renderbmp_pixel:
 	strb	lr, [r0], #1
 	subs	r12, r12, #1
 	bne	renderbmp_pixel
-	tst	r2, #1
+	tst	r4, #1
 	addne	r1, r1, #2
-	sub	r0, r0, r2,lsl#1
-	subs	r4, r4, #1
+	sub	r0, r0, r4,lsl#1
+	subs	r3, r3, #1
 	bne	renderbmp_row
 	ldmfd	sp!, {r4,pc}
 .size renderbmp, .-renderbmp

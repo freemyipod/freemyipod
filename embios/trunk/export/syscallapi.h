@@ -106,8 +106,8 @@ struct embios_syscall_table
     typeof(lcdconsole_puts) *lcdconsole_puts;
     typeof(lcdconsole_write) *lcdconsole_write;
     typeof(shutdown) *shutdown;
-    typeof(storage_read_sectors) *storage_read_sectors;
-    typeof(storage_write_sectors) *storage_write_sectors;
+    typeof(storage_read_sectors_md) *storage_read_sectors_md;
+    typeof(storage_write_sectors_md) *storage_write_sectors_md;
     typeof(strcasecmp) *strcasecmp;
     typeof(strncasecmp) *strncasecmp;
     typeof(strcasestr) *strcasestr;
@@ -147,6 +147,9 @@ struct embios_syscall_table
     typeof(displaylcd_sync) *displaylcd_sync;
     typeof(displaylcd_busy) *displaylcd_busy;
     typeof(displaylcd_safe) *displaylcd_safe;
+    typeof(lcd_get_width) *lcd_get_width;
+    typeof(lcd_get_height) *lcd_get_height;
+    typeof(lcd_get_bytes_per_pixel) *lcd_get_bytes_per_pixel;
     typeof(clean_dcache) *clean_dcache;
     typeof(invalidate_dcache) *invalidate_dcache;
     typeof(invalidate_icache) *invalidate_icache;

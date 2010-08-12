@@ -34,6 +34,33 @@ lcd_init:
 	mov	pc, lr
 .size lcd_init, .-lcd_init
 
+.section .text.lcd_get_width, "ax", %progbits
+.align 2
+.global lcd_get_width
+.type lcd_get_width, %function
+lcd_get_width:
+	mov	r0, #176
+	mov	pc, lr
+.size lcd_get_width, .-lcd_get_width
+
+.section .text.lcd_get_height, "ax", %progbits
+.align 2
+.global lcd_get_height
+.type lcd_get_height, %function
+lcd_get_height:
+	mov	r0, #132
+	mov	pc, lr
+.size lcd_get_height, .-lcd_get_height
+
+.section .text.lcd_get_bytes_per_pixel, "ax", %progbits
+.align 2
+.global lcd_get_bytes_per_pixel
+.type lcd_get_heightbytes_per_pixel, %function
+lcd_get_bytes_per_pixel:
+	mov	r0, #2
+	mov	pc, lr
+.size lcd_get_bytes_per_pixel, .-lcd_get_bytes_per_pixel
+
 .section .icode.displaylcd, "ax", %progbits
 .align 2
 .global displaylcd

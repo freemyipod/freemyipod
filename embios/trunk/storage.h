@@ -205,5 +205,7 @@ bool storage_present(int drive);
 #endif /* NOT CONFIG_STORAGE_MULTI */
 
 int storage_read_sectors(IF_MD2(int drive,) unsigned long start, int count, void* buf);
+int storage_read_sectors_md(int drive, unsigned long start, int count, void* buf);
 int storage_write_sectors(IF_MD2(int drive,) unsigned long start, int count, const void* buf);
+int storage_write_sectors_md(int drive, unsigned long start, int count, const void* buf);
 #endif
