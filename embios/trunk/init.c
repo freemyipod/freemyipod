@@ -67,7 +67,7 @@ struct bootinfo_t
 
 
 static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSION_SVN "\n\n";
-static const char initthreadname[] INITCONST_ATTR = "Initialisation thread";
+static const char initthreadname[] INITCONST_ATTR = "Initialization thread";
 static uint32_t initstack[0x400] INITSTACK_ATTR;
 extern int _loadspaceend;
 extern int _initstart;

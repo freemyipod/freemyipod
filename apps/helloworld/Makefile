@@ -1,5 +1,7 @@
 NAME := helloworld
 
+EMBIOSDIR ?= ../../embios/trunk/
+
 CROSS   ?= arm-none-eabi-
 CC      := $(CROSS)gcc
 AS      := $(CROSS)as
@@ -7,7 +9,7 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I.. -ffunction-sections -fdata-sections
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMBIOSDIR)/export -ffunction-sections -fdata-sections
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")

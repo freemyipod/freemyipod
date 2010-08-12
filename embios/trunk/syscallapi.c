@@ -22,8 +22,8 @@
 
 
 #include "global.h"
-#include "syscallapi.h"
 #include "panic.h"
+#include "syscallapi.h"  // This must be the last include!
 
 
 struct embios_syscall_table syscall_table ICONST_ATTR =

@@ -28,17 +28,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdbool.h>
-
-
-#ifndef PANIC_SEVERITY_DEFINED
-#define PANIC_SEVERITY_DEFINED
-enum panic_severity
-{
-    PANIC_KILLTHREAD = 0,
-    PANIC_KILLUSERTHREADS = 1,
-    PANIC_FATAL = 2
-};
-#endif
+#include "../panic.h"
 
 
 /* increase this every time the api struct changes */
