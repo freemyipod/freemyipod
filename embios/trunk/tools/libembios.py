@@ -421,7 +421,7 @@ class embios:
 
   def downloadint(self, offset, silent = 0):
     self.__myprint("Downloading an integer from 0x%08x..." % (offset), silent)
-    data = self.read(offset, 0, 0)
+    data = self.read(offset, 4, 0, 0)
     self.__myprint(" done\nValue was: 0x%08x\n" % (data), silent)
     
     return data
@@ -498,7 +498,7 @@ class embios:
       response = self.__getbulk(self.handle, self.__cinep, blocklen + 0x10)
       self.__checkstatus(response)
       
-      readbytes, buffersize, bytesleft = struct.unpack("<III", response[:12])
+      readbytes, buffersize, bytesleft = struct.unpack("<III", response[4:])
       out_data += response[0x10:0x10+readbytes]
       size -= blocklen
       
@@ -565,7 +565,7 @@ class embios:
       response = self.__getbulk(self.handle, self.__cinep, 0x10)
       self.__checkstatus(response)
       
-      sendbytes = struct.unpack("<I", response[4:8])[0]
+      sendbytes = struct.unpack("<I", response[4:])[0]
       if sendbytes < blocklen:   # not everything has been written, need to resent some stuff but wait a bit before doing so
         time.sleep(0.1)
         timeoutcounter += 1
@@ -617,7 +617,7 @@ class embios:
       response = self.__getbulk(self.handle, self.__cinep, blocklen + 0x10)
       self.__checkstatus(response)
       
-      readbytes = struct.unpack("<III", response[4:8])[0]
+      readbytes = struct.unpack("<III", response[4:])[0]
       out_data += response[0x10:0x10+readbytes]
       size -= blocklen
       
@@ -749,10 +749,10 @@ class embios:
     response = self.__getbulk(self.handle, self.__cinep, 0x10)
     self.__checkstatus(response)
     
-    if (struct.unpack("<i", response[4:8]) < 0):
-      self.__myprint(" failed, error code: 0x%x" % (struct.unpack("<i", response[4:8])), silent)
+    if (struct.unpack("<i", response[4:8])[0] < 0):
+      self.__myprint(" failed, error code: 0x%x" % (struct.unpack("<i", response[4:8])[0]), silent)
     else:
-      self.__myprint(" done\n, thread ID: 0x%x" % (struct.unpack("<I", response[4:8])), silent)     
+      self.__myprint(" done\n, thread ID: 0x%x" % (struct.unpack("<I", response[4:8])[0]), silent)     
     
     
   def getprocinfo(self, silent = 0):
@@ -770,7 +770,7 @@ class embios:
         while ptr < len(processinfo):
           retval.append({})
           
-          retval[process_n]['regs'] = struct.unpack("<IIIIIIIIIIIIIIII", processinfo[ptr:])[0]
+          retval[process_n]['regs'] = struct.unpack("<IIIIIIIIIIIIIIII", processinfo[ptr:])
           ptr += 16 * 0x4
           retval[process_n]['cpsr'] = struct.unpack("<I", processinfo[ptr:])[0]
           ptr += 1 * 0x4
@@ -860,11 +860,11 @@ class embios:
     
     # reading loop
     while (offset < size):
-      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 15, offset, size, 0))
-      response = self.__getbulk(self.handle, self.__cinep, size + 0x10)
+      self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 15, offset, blocklen, 0))
+      response = self.__getbulk(self.handle, self.__cinep, blocklen + 0x10)
       self.__checkstatus(response)
       
-      size = struct.unpack("<I", response[8:12])[0]
+      size = struct.unpack("<I", response[8:])[0]
       
       if size <= offset + blocklen:
         procinfo += response[0x10:0x10 + size]
@@ -901,9 +901,9 @@ class embios:
     response = self.__getbulk(self.handle, self.__cinep, 0x10)
     self.__checkstatus(response)
     
-    self.__myprint(" done\n    execimage() return code: 0x%08x\n" % struct.unpack("<I", response[4:8]), silent)
+    self.__myprint(" done\n    execimage() return code: 0x%08x\n" % struct.unpack("<I", response[4:])[0], silent)
     
-    return struct.unpack("<I", response[4:8])
+    return struct.unpack("<I", response[4:])[0]
     
     
 #===================================================================================== 
