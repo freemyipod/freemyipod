@@ -21,14 +21,22 @@
 //
 
 
-#ifndef __BACKLIGHT_H__
-#define __BACKLIGHT_H__
-
 #include "global.h"
+#include "i2c.h"
+#include "backlight.h"
 
-// fade is only used on the 2G but keep it here for a common API (use anything)
-void backlight_set(double brightness, uint8_t fade);
-void backlight_on(uint8_t fade);
-void backlight_off(uint8_t fade);
 
-#endif
+void backlight_on(bool on)
+{
+    i2c_sendbyte(0, 0xe6, 0x29, on ? 1 : 0);
+}
+
+void backlight_set_fade(uint8_t fade)
+{
+    i2c_sendbyte(0, 0xe6, 0x2b, fade);
+}
+
+void backlight_set_brightness(uint8_t brightness)
+{
+    i2c_sendbyte(0, 0xe6, 0x28, (46 * (brightness & 0xff)) >> 8);
+}

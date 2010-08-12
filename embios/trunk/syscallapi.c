@@ -42,6 +42,7 @@
 #include "nand.h"
 #include "power.h"
 #include "execimage.h"
+#include "backlight.h"
 #include "libc/include/string.h"
 #include "libc/include/stdlib.h"
 #include "libc/include/stdio.h"
@@ -157,6 +158,11 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .lcd_get_width = lcd_get_width,
     .lcd_get_height = lcd_get_height,
     .lcd_get_bytes_per_pixel = lcd_get_bytes_per_pixel,
+#endif
+#ifdef HAVE_BACKLIGHT
+    .backlight_on = backlight_on,
+    .backlight_set_fade = backlight_set_fade,
+    .backlight_set_brightness = backlight_set_brightness,
 #endif
 #ifdef HAVE_BOOTFLASH
     .bootflash_filesize = bootflash_filesize,

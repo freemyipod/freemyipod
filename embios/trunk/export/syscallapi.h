@@ -45,6 +45,7 @@
 #include "../nand.h"
 #include "../power.h"
 #include "../execimage.h"
+#include "../backlight.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
 #include "../libc/include/stdio.h"
@@ -183,6 +184,9 @@ struct embios_syscall_table
     typeof(strrchr) *strrchr;
     typeof(strstr) *strstr;
     typeof(strtok_r) *strtok_r;
+    typeof(backlight_on) *backlight_on;
+    typeof(backlight_set_fade) *backlight_set_fade;
+    typeof(backlight_set_brightness) *backlight_set_brightness;
 };
 
 

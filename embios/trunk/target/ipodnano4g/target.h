@@ -46,6 +46,8 @@
 #define LCD_FORMAT rgb565
 #define LCD_BYTESPERPIXEL 2
 
+#define HAVE_BACKLIGHT
+
 #define HAVE_I2C
 
 //#define HAVE_STORAGE

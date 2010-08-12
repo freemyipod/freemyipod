@@ -152,6 +152,9 @@ extern struct embios_syscall_table* __embios_syscall;
 #define strrchr(args...) __embios_syscall->strrchr(args)
 #define strstr(args...) __embios_syscall->strstr(args)
 #define strtok_r(args...) __embios_syscall->strtok_r(args)
+#define backlight_on(args...) __embios_syscall->backlight_on(args)
+#define backlight_set_fade(args...) __embios_syscall->backlight_set_fade(args)
+#define backlight_set_brightness(args...) __embios_syscall->backlight_set_brightness(args)
 
 
 #endif

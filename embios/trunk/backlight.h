@@ -21,25 +21,13 @@
 //
 
 
+#ifndef __BACKLIGHT_H__
+#define __BACKLIGHT_H__
+
 #include "global.h"
-#include "i2c.h"
-#include "backlight.h"
 
+void backlight_on(bool on);
+void backlight_set_fade(uint8_t fade);
+void backlight_set_brightness(uint8_t brightness);
 
-static bool backlight_fade;
-
-
-void backlight_on(bool on)
-{
-    i2c_sendbyte(0, 0xe6, 0x31, (backlight_fade ? 2 : 0) + (on ? 1 : 0));
-}
-
-void backlight_set_fade(uint8_t fade)
-{
-    backlight_fade = fade;
-}
-
-void backlight_set_brightness(uint8_t brightness)
-{
-    i2c_sendbyte(0, 0xe6, 0x30, (250 * (brightness & 0xff)) >> 8);
-}
+#endif

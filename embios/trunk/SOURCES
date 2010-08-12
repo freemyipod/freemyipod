@@ -13,6 +13,7 @@ target/ipodnano2g/ftl.c
 target/ipodnano2g/storage_nand.c
 target/ipodnano2g/clockgates.c
 target/ipodnano2g/bootflash.c
+target/ipodnano2g/backlight.c
 usb/synopsysotg.c
 #endif
 
