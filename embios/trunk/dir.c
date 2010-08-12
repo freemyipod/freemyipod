@@ -19,8 +19,8 @@
  *
  ****************************************************************************/
 #include "global.h"
-#include <errno.h>
-#include <string.h>
+#include "libc/include/errno.h"
+#include "libc/include/string.h"
 #include "fat.h"
 #include "dir.h"
 #include "debug.h"
