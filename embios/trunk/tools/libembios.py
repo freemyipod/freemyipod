@@ -498,7 +498,7 @@ class embios:
       response = self.__getbulk(self.handle, self.__cinep, blocklen + 0x10)
       self.__checkstatus(response)
       
-      readbytes, buffersize, bytesleft = struct.unpack("<III", response[4:])
+      readbytes, buffersize, bytesleft = struct.unpack("<III", response[4:16])
       out_data += response[0x10:0x10+readbytes]
       size -= blocklen
       
@@ -565,7 +565,7 @@ class embios:
       response = self.__getbulk(self.handle, self.__cinep, 0x10)
       self.__checkstatus(response)
       
-      sendbytes = struct.unpack("<I", response[4:])[0]
+      sendbytes = struct.unpack("<I", response[4:8])[0]
       if sendbytes < blocklen:   # not everything has been written, need to resent some stuff but wait a bit before doing so
         time.sleep(0.1)
         timeoutcounter += 1
@@ -617,7 +617,7 @@ class embios:
       response = self.__getbulk(self.handle, self.__cinep, blocklen + 0x10)
       self.__checkstatus(response)
       
-      readbytes = struct.unpack("<III", response[4:])[0]
+      readbytes = struct.unpack("<III", response[4:8])[0]
       out_data += response[0x10:0x10+readbytes]
       size -= blocklen
       
@@ -770,39 +770,39 @@ class embios:
         while ptr < len(processinfo):
           retval.append({})
           
-          retval[process_n]['regs'] = struct.unpack("<IIIIIIIIIIIIIIII", processinfo[ptr:])
+          retval[process_n]['regs'] = struct.unpack("<IIIIIIIIIIIIIIII", processinfo[ptr:ptr+64])
           ptr += 16 * 0x4
-          retval[process_n]['cpsr'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['cpsr'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['state'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['state'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['name_ptr'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['name_ptr'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['cputime_current'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['cputime_current'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['cputime_total'] = struct.unpack("<Q", processinfo[ptr:])[0]
+          retval[process_n]['cputime_total'] = struct.unpack("<Q", processinfo[ptr:ptr+8])[0]
           ptr += 1 * 0x8
-          retval[process_n]['startusec'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['startusec'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['queue_next_ptr'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['queue_next_ptr'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['timeout'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['timeout'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['blocked_since'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['blocked_since'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['blocked_by_ptr'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['blocked_by_ptr'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['stack_ptr'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['stack_ptr'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['err_no'] = struct.unpack("<I", processinfo[ptr:])[0]
+          retval[process_n]['err_no'] = struct.unpack("<I", processinfo[ptr:ptr+4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['block_type'] = struct.unpack("<B", processinfo[ptr:])[0]
+          retval[process_n]['block_type'] = struct.unpack("<B", processinfo[ptr:ptr+1])[0]
           ptr += 1 * 0x1
-          retval[process_n]['thread_type'] = struct.unpack("<B", processinfo[ptr:])[0]
+          retval[process_n]['thread_type'] = struct.unpack("<B", processinfo[ptr:ptr+1])[0]
           ptr += 1 * 0x1
-          retval[process_n]['priority'] = struct.unpack("<B", processinfo[ptr:])[0]
+          retval[process_n]['priority'] = struct.unpack("<B", processinfo[ptr:ptr+1])[0]
           ptr += 1 * 0x1
-          retval[process_n]['cpuload'] = struct.unpack("<B", processinfo[ptr:])[0]
+          retval[process_n]['cpuload'] = struct.unpack("<B", processinfo[ptr:ptr+1])[0]
           ptr += 1 * 0x1
           
           process_n += 1
@@ -864,12 +864,12 @@ class embios:
       response = self.__getbulk(self.handle, self.__cinep, blocklen + 0x10)
       self.__checkstatus(response)
       
-      size = struct.unpack("<I", response[8:])[0]
+      size = struct.unpack("<I", response[8:12])[0]
       
       if size <= offset + blocklen:
         procinfo += response[0x10:0x10 + size]
-        structversion = struct.unpack("<I", response[4:])[0]
-        tablesize = struct.unpack("<I", response[8:])[0]
+        structversion = struct.unpack("<I", response[4:8])[0]
+        tablesize = struct.unpack("<I", response[8:12])[0]
         break
       else:
         procinfo += response[0x10:0x10 + blocklen]
@@ -901,9 +901,9 @@ class embios:
     response = self.__getbulk(self.handle, self.__cinep, 0x10)
     self.__checkstatus(response)
     
-    self.__myprint(" done\n    execimage() return code: 0x%08x\n" % struct.unpack("<I", response[4:])[0], silent)
+    self.__myprint(" done\n    execimage() return code: 0x%08x\n" % struct.unpack("<I", response[4:8])[0], silent)
     
-    return struct.unpack("<I", response[4:])[0]
+    return struct.unpack("<I", response[4:8])[0]
     
     
 #===================================================================================== 
