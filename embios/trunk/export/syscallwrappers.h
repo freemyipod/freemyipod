@@ -155,6 +155,7 @@ extern struct embios_syscall_table* __embios_syscall;
 #define backlight_on(args...) __embios_syscall->backlight_on(args)
 #define backlight_set_fade(args...) __embios_syscall->backlight_set_fade(args)
 #define backlight_set_brightness(args...) __embios_syscall->backlight_set_brightness(args)
+#define get_platform_id(args...) __embios_syscall->get_platform_id(args)
 
 
 #endif

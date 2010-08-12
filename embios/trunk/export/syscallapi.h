@@ -46,6 +46,7 @@
 #include "../power.h"
 #include "../execimage.h"
 #include "../backlight.h"
+#include "../syscall.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
 #include "../libc/include/stdio.h"
@@ -187,6 +188,7 @@ struct embios_syscall_table
     typeof(backlight_on) *backlight_on;
     typeof(backlight_set_fade) *backlight_set_fade;
     typeof(backlight_set_brightness) *backlight_set_brightness;
+    typeof(get_platform_id) *get_platform_id;
 };
 
 

@@ -43,6 +43,7 @@
 #include "power.h"
 #include "execimage.h"
 #include "backlight.h"
+#include "syscall.h"
 #include "libc/include/string.h"
 #include "libc/include/stdlib.h"
 #include "libc/include/stdio.h"
@@ -120,6 +121,7 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .strrchr = strrchr,
     .strstr = strstr,
     .strtok_r = strtok_r,
+    .get_platform_id = get_platform_id,
 #ifdef HAVE_STORAGE
     .opendir = opendir,
     .closedir = closedir,

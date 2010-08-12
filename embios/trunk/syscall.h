@@ -26,7 +26,12 @@
 
 
 #include "global.h"
-#include "syscallapi.h"
+
+
+uint32_t get_platform_id() ICODE_ATTR;
+
+
+#include "syscallapi.h"  // must be below get_platform_id
 
 
 struct embios_syscall_table* get_syscall_table() ICODE_ATTR;

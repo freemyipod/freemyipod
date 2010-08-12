@@ -33,3 +33,8 @@ struct embios_syscall_table* get_syscall_table()
 {
     return &syscall_table;
 }
+
+uint32_t get_platform_id()
+{
+    return PLATFORM_ID;
+}
