@@ -23,30 +23,6 @@
 
 #include "global.h"
 #include "syscallapi.h"
-#include "panic.h"
-#include "console.h"
-#include "dir.h"
-#include "file.h"
-#include "format.h"
-#include "lcdconsole.h"
-#include "storage.h"
-#include "shutdown.h"
-#include "thread.h"
-#include "ucl.h"
-#include "bootflash.h"
-#include "timer.h"
-#include "i2c.h"
-#include "interrupt.h"
-#include "lcd.h"
-#include "mmu.h"
-#include "nand.h"
-#include "power.h"
-#include "execimage.h"
-#include "backlight.h"
-#include "syscall.h"
-#include "libc/include/string.h"
-#include "libc/include/stdlib.h"
-#include "libc/include/stdio.h"
 
 
 struct embios_syscall_table syscall_table ICONST_ATTR =
@@ -153,6 +129,12 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .lcdconsole_putc = lcdconsole_putc,
     .lcdconsole_puts = lcdconsole_puts,
     .lcdconsole_write = lcdconsole_write,
+    .lcdconsole_get_current_x = lcdconsole_get_current_x,
+    .lcdconsole_get_current_y = lcdconsole_get_current_y,
+    .lcdconsole_get_lineend_x = lcdconsole_get_lineend_x,
+    .lcdconsole_get_lineend_y = lcdconsole_get_lineend_y,
+    .progressbar_init = progressbar_init,
+    .progressbar_setpos = progressbar_setpos,
     .displaylcd = displaylcd,
     .displaylcd_sync = displaylcd_sync,
     .displaylcd_busy = displaylcd_busy,
@@ -160,6 +142,7 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .lcd_get_width = lcd_get_width,
     .lcd_get_height = lcd_get_height,
     .lcd_get_bytes_per_pixel = lcd_get_bytes_per_pixel,
+    .lcd_translate_color = lcd_translate_color,
 #endif
 #ifdef HAVE_BACKLIGHT
     .backlight_on = backlight_on,

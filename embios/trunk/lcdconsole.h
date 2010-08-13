@@ -45,6 +45,10 @@ void lcdconsole_puts_noblit(const char* string, int fgcolor, int bgcolor) ICODE_
 void lcdconsole_write_noblit(const char* string, size_t length, int fgcolor, int bgcolor) ICODE_ATTR;
 void lcdconsole_update() ICODE_ATTR;
 void lcdconsole_callback() ICODE_ATTR;
+int lcdconsole_get_current_x() ICODE_ATTR;
+int lcdconsole_get_current_y() ICODE_ATTR;
+int lcdconsole_get_lineend_x() ICODE_ATTR;
+int lcdconsole_get_lineend_y() ICODE_ATTR;
 
 
 #endif

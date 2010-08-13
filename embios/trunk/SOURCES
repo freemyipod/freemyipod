@@ -40,6 +40,7 @@ util.c
 #ifdef HAVE_LCD
 drawing.S
 lcdconsole.c
+progressbar.c
 #endif
 format.c
 panic.c

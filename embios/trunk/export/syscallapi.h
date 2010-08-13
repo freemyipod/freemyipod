@@ -47,6 +47,7 @@
 #include "../execimage.h"
 #include "../backlight.h"
 #include "../syscall.h"
+#include "../progressbar.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
 #include "../libc/include/stdio.h"
@@ -107,6 +108,12 @@ struct embios_syscall_table
     typeof(lcdconsole_putc) *lcdconsole_putc;
     typeof(lcdconsole_puts) *lcdconsole_puts;
     typeof(lcdconsole_write) *lcdconsole_write;
+    typeof(lcdconsole_get_current_x) *lcdconsole_get_current_x;
+    typeof(lcdconsole_get_current_y) *lcdconsole_get_current_y;
+    typeof(lcdconsole_get_lineend_x) *lcdconsole_get_lineend_x;
+    typeof(lcdconsole_get_lineend_y) *lcdconsole_get_lineend_y;
+    typeof(progressbar_init) *progressbar_init;
+    typeof(progressbar_setpos) *progressbar_setpos;
     typeof(shutdown) *shutdown;
     typeof(storage_read_sectors_md) *storage_read_sectors_md;
     typeof(storage_write_sectors_md) *storage_write_sectors_md;
@@ -152,6 +159,7 @@ struct embios_syscall_table
     typeof(lcd_get_width) *lcd_get_width;
     typeof(lcd_get_height) *lcd_get_height;
     typeof(lcd_get_bytes_per_pixel) *lcd_get_bytes_per_pixel;
+    typeof(lcd_translate_color) *lcd_translate_color;
     typeof(clean_dcache) *clean_dcache;
     typeof(invalidate_dcache) *invalidate_dcache;
     typeof(invalidate_icache) *invalidate_icache;

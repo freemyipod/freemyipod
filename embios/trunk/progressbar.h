@@ -21,26 +21,32 @@
 //
 
 
-#ifndef __LCD_H__
-#define __LCD_H__
+#ifndef __PROGRESSBAR_H__
+#define __PROGRESSBAR_H__
 
 
 #include "global.h"
+#include "lcd.h"
 
 
-#define LCD_FRAMEBUFSIZE (LCD_WIDTH * LCD_HEIGHT * LCD_BYTESPERPIXEL)
+struct progressbar_state
+{
+    int startx;
+    int endx;
+    int starty;
+    int endy;
+    int bordercolor;
+    int bgcolor;
+    int fgcolor;
+    int currentx;
+    int min;
+    int max;
+};
 
 
-void lcd_init() INITCODE_ATTR;
-int lcd_get_width() ICODE_ATTR;
-int lcd_get_height() ICODE_ATTR;
-int lcd_get_bytes_per_pixel() ICODE_ATTR;
-int lcd_translate_color(uint8_t alpha, uint8_t red, uint8_t green, uint8_t blue) ICODE_ATTR;
-void displaylcd(unsigned int startx, unsigned int endx,
-                unsigned int starty, unsigned int endy, void* data, int color) ICODE_ATTR;
-void displaylcd_sync() ICODE_ATTR;
-bool displaylcd_busy() ICODE_ATTR;
-bool displaylcd_safe() ICODE_ATTR;
+void progressbar_init(struct progressbar_state* state, int startx, int endx, int starty, int endy,
+                      int bordercolor, int bgcolor, int fgcolor, int min, int max);
+void progressbar_setpos(struct progressbar_state* state, int value, bool redraw);
 
 
 #endif

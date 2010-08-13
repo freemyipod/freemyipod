@@ -89,7 +89,7 @@ displaylcd:
 	add	r3, r3, #1
 	mul	r2, r1, r3
 	ldr	r1, [sp,#0x10]
-	cmp	r1, #0x40000000
+	cmp	r1, #-1
 	bne	displaylcd_framebuf
 displaylcd_color:
 	ldr	r0, [sp,#0x14]
@@ -144,3 +144,21 @@ displaylcd_safe:
 	mov	pc, lr
 .size displaylcd_safe, .-displaylcd_safe
 
+.section .icode.lcd_translate_color, "ax", %progbits
+.align 2
+.global lcd_translate_color
+.type lcd_translate_color, %function
+lcd_translate_color:
+	cmp	r0, #0xff
+	moveq	r0, #-1
+	moveq	pc, lr
+	cmp	r0, #0
+	movne	r0, #0xff000000
+	orrne	r0, r0, #0xff0000
+	mov	r2, r2,lsr#2
+	mov	r1, r1,lsr#3
+	orr	r0, r0, r3,lsr#3
+	orr	r0, r0, r2,lsl#5
+	orr	r0, r0, r1,lsl#11
+	mov	pc, lr
+.size lcd_translate_color, .-lcd_translate_color

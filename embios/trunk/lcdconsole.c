@@ -133,3 +133,23 @@ void lcdconsole_callback()
         lcdconsole_needs_update = false;
     }
 }
+
+int lcdconsole_get_current_x()
+{
+    return (current_col + 1) * FONT_WIDTH + OFFSETX;
+}
+
+int lcdconsole_get_current_y()
+{
+    return current_row * FONT_HEIGHT + OFFSETY;
+}
+
+int lcdconsole_get_lineend_x()
+{
+    return LCDCONSOLE_COLS * FONT_WIDTH + OFFSETX - 1;
+}
+
+int lcdconsole_get_lineend_y()
+{
+    return (current_row + 1) * FONT_HEIGHT + OFFSETY - 1;
+}
