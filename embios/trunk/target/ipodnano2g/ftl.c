@@ -431,6 +431,7 @@ static uint32_t firstfree INITBSS_ATTR;
 
 
 static struct mutex ftl_mtx;
+bool ftl_initialized;
 
 
 
@@ -1309,6 +1310,8 @@ uint32_t ftl_read(uint32_t sector, uint32_t count, void* buffer)
     uint32_t ppb = ftl_nand_type->pagesperblock * ftl_banks;
     uint32_t error = 0;
 
+    if (!ftl_initialized) return 1;
+
 #ifdef FTL_TRACE
     DEBUGF("FTL: Reading %d sectors starting at %d", count, sector);
 #endif
@@ -1969,6 +1972,8 @@ uint32_t ftl_write(uint32_t sector, uint32_t count, const void* buffer)
     uint32_t i, j, k;
     uint32_t ppb = ftl_nand_type->pagesperblock * ftl_banks;
 
+    if (!ftl_initialized) return 1;
+
 #ifdef FTL_TRACE
     DEBUGF("FTL: Writing %d sectors starting at %d", count, sector);
 #endif
@@ -2152,6 +2157,9 @@ uint32_t ftl_sync(void)
     uint32_t i;
     uint32_t rc = 0;
     uint32_t ppb = ftl_nand_type->pagesperblock * ftl_banks;
+
+    if (!ftl_initialized) return 1;
+
     if (ftl_cxt.clean_flag == 1) return 0;
 
     mutex_lock(&ftl_mtx, TIMEOUT_BLOCK);
@@ -2545,7 +2553,10 @@ uint32_t ftl_init(void)
     if (ftl_vfl_open() == 0)
 	{
         if (ftl_open() == 0)
+        {
+            ftl_initialized = true;
             return 0;
+        }
 		cprintf(CONSOLE_BOOT, "The FTL seems to be damaged. Forcing check.\n");
 		if (ftl_repair() != 0)
 			cprintf(CONSOLE_BOOT, "FTL recovery failed. Use disk mode to recover.\n");
@@ -2553,7 +2564,10 @@ uint32_t ftl_init(void)
 		{
 			cprintf(CONSOLE_BOOT, "FTL recovery finished. Trying to mount again...\n");
 	        if (ftl_open() == 0)
-	            return 0;
+            {
+                ftl_initialized = true;
+                return 0;
+            }
 			cprintf(CONSOLE_BOOT, "Mounting FTL failed again, use disk mode to recover.\n");
 		}
 	}
