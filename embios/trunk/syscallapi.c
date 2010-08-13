@@ -179,4 +179,8 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .nand_write_page_collect = nand_write_page_collect,
     .nand_get_device_type = nand_get_device_type,
 #endif
+#ifdef HAVE_BUTTON
+    .button_register_handler = button_register_handler,
+    .button_unregister_handler = button_unregister_handler,
+#endif
 };

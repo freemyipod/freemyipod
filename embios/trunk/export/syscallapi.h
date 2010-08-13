@@ -48,6 +48,7 @@
 #include "../backlight.h"
 #include "../syscall.h"
 #include "../progressbar.h"
+#include "../button.h"
 #include "../contextswitch.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
@@ -211,6 +212,8 @@ struct embios_syscall_table
     typeof(tlsf_block_size) *tlsf_block_size;
     typeof(tlsf_overhead) *tlsf_overhead;
     typeof(execfirmware) *execfirmware;
+    typeof(button_register_handler) *button_register_handler;
+    typeof(button_unregister_handler) *button_unregister_handler;
 };
 
 

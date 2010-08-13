@@ -60,6 +60,9 @@ file.c
 dir.c
 storage.c
 #endif
+#ifdef HAVE_BUTTON
+button.c
+#endif
 strcasestr.c
 strcasecmp.c
 strlcpy.c

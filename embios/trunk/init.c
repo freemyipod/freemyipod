@@ -170,6 +170,9 @@ void initthread()
 #ifdef HAVE_USB
     usb_init();
 #endif
+#ifdef HAVE_BUTTON
+    button_init();
+#endif
 #ifdef HAVE_STORAGE
     DEBUGF("Initializing storage drivers...");
     storage_init();

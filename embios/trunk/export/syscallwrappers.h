@@ -175,6 +175,8 @@ extern struct embios_syscall_table* __embios_syscall;
 #define tlsf_block_size(args...) __embios_syscall->tlsf_block_size(args)
 #define tlsf_overhead(args...) __embios_syscall->tlsf_overhead(args)
 #define execfirmware(args...) __embios_syscall->execfirmware(args)
+#define button_register_handler(args...) __embios_syscall->button_register_handler(args)
+#define button_unregister_handler(args...) __embios_syscall->button_unregister_handler(args)
 
 
 #endif

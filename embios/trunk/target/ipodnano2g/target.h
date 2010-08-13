@@ -50,6 +50,8 @@
 
 #define HAVE_I2C
 
+#define HAVE_BUTTON
+
 #define HAVE_BOOTFLASH
 #define BOOTFLASH_IS_MEMMAPPED
 

@@ -30,6 +30,9 @@
 #include "dir.h"
 #include "file.h"
 #endif
+#ifdef HAVE_BUTTON
+#include "button.h"
+#endif
 
 
 struct scheduler_thread scheduler_threads[MAX_THREADS] IBSS_ATTR;
@@ -437,6 +440,9 @@ int thread_terminate(int thread)
 #ifdef HAVE_STORAGE
         close_all_of_process(t);
         closedir_all_of_process(t);
+#endif
+#ifdef HAVE_BUTTON
+        button_unregister_all_of_thread(t);
 #endif
     }
 
