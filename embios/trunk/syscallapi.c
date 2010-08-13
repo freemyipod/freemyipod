@@ -174,4 +174,7 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .button_register_handler = button_register_handler,
     .button_unregister_handler = button_unregister_handler,
 #endif
+#ifdef HAVE_CLICKWHEEL
+    .clickwheel_get_state = clickwheel_get_state,
+#endif
 };

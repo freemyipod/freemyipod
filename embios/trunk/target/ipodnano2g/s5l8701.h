@@ -292,6 +292,7 @@
 #define IRQ_DMA      10
 #define IRQ_USB_FUNC 16
 #define IRQ_ECC      19
+#define IRQ_WHEEL    26
 #define IRQ_IIC      27
 
 

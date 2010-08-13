@@ -62,7 +62,7 @@ default_interrupt(INT_UART0);
 default_interrupt(INT_SPDIF_OUT);
 default_interrupt(INT_SDCI);
 default_interrupt(INT_LCD);
-default_interrupt(INT_SPI);
+default_interrupt(INT_WHEEL);
 default_interrupt(INT_IIC);
 default_interrupt(RESERVED2);
 default_interrupt(INT_MSTICK);
@@ -118,7 +118,7 @@ static void (* irqvector[])(void) IDATA_ATTR =
     EXT0,EXT1,EXT2,EINT_VBUS,EINTG,INT_TIMER,INT_WDT,INT_UNK1,
     INT_UNK2,INT_UNK3,INT_DMA,INT_ALARM_RTC,INT_PRI_RTC,RESERVED1,INT_UART,INT_USB_HOST,
     INT_USB_FUNC,INT_LCDC_0,INT_LCDC_1,INT_CALM,INT_ATA,INT_UART0,INT_SPDIF_OUT,INT_ECC,
-    INT_SDCI,INT_LCD,INT_SPI,INT_IIC,RESERVED2,INT_MSTICK,INT_ADC_WAKEUP,INT_ADC
+    INT_SDCI,INT_LCD,INT_WHEEL,INT_IIC,RESERVED2,INT_MSTICK,INT_ADC_WAKEUP,INT_ADC
 };
 
 void irqhandler(void)

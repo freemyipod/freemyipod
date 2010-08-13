@@ -77,7 +77,7 @@ void button_send_event(enum button_event eventtype, int which, int value)
     int i;
     for (i = 0; i < BUTTON_MAX_HOOKS; i++)
         if (button_hooks[i].owner != NULL)
-            handler(eventtype, which, value);
+            button_hooks[i].handler(eventtype, which, value);
 }
 
 void button_unregister_all_of_thread(struct scheduler_thread* process)

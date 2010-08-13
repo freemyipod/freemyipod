@@ -65,7 +65,8 @@ enum thread_block
 enum thread_type
 {
     USER_THREAD = 0,
-    SYSTEM_THREAD
+    OS_THREAD,
+    CORE_THREAD
 };
 
 

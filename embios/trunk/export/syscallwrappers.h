@@ -170,6 +170,7 @@ extern struct embios_syscall_table* __embios_syscall;
 #define execfirmware(args...) __embios_syscall->execfirmware(args)
 #define button_register_handler(args...) __embios_syscall->button_register_handler(args)
 #define button_unregister_handler(args...) __embios_syscall->button_unregister_handler(args)
+#define clickwheel_get_state(args...) __embios_syscall->clickwheel_get_state(args)
 
 
 #endif

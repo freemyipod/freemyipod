@@ -15,6 +15,7 @@ target/ipodnano2g/clockgates.c
 target/ipodnano2g/bootflash.c
 target/ipodnano2g/backlight.c
 target/ipodnano2g/targetinit.c
+target/ipodnano2g/clickwheel.c
 usb/synopsysotg.c
 #endif
 

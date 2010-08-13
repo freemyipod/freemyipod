@@ -22,6 +22,7 @@
 
 
 #include "global.h"
+#include "clickwheel.h"
 
 
 #define nor ((uint8_t*)0x24000000)
@@ -33,6 +34,8 @@
 void targetinit_late()
 {
     int i;
+
+    clickwheel_init();
 
     uint32_t scfg_size = norword[0x401];
     uint32_t scfg_entrycount = norword[0x405];

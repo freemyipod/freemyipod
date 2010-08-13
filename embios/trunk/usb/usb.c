@@ -660,7 +660,7 @@ void usb_init(void)
     wakeup_init(&dbgconsendwakeup);
     wakeup_init(&dbgconrecvwakeup);
     dbgconsoleattached = false;
-    thread_create("Debugger", dbgthread, dbgstack, sizeof(dbgstack), 255, SYSTEM_THREAD, true);
+    thread_create("Debugger", dbgthread, dbgstack, sizeof(dbgstack), 255, CORE_THREAD, true);
     usb_drv_init();
 }
 

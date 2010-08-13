@@ -48,6 +48,7 @@
 #include "../syscall.h"
 #include "../progressbar.h"
 #include "../button.h"
+#include "../clickwheel.h"
 #include "../contextswitch.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
@@ -206,6 +207,7 @@ struct embios_syscall_table
     typeof(execfirmware) *execfirmware;
     typeof(button_register_handler) *button_register_handler;
     typeof(button_unregister_handler) *button_unregister_handler;
+    typeof(clickwheel_get_state) *clickwheel_get_state;
 };
 
 
