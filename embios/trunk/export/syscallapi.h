@@ -42,7 +42,6 @@
 #include "../interrupt.h"
 #include "../lcd.h"
 #include "../mmu.h"
-#include "../nand.h"
 #include "../power.h"
 #include "../execimage.h"
 #include "../backlight.h"
@@ -167,13 +166,6 @@ struct embios_syscall_table
     typeof(clean_dcache) *clean_dcache;
     typeof(invalidate_dcache) *invalidate_dcache;
     typeof(invalidate_icache) *invalidate_icache;
-    typeof(nand_read_page) *nand_read_page;
-    typeof(nand_block_erase) *nand_block_erase;
-    typeof(nand_read_page_fast) *nand_read_page_fast;
-    typeof(nand_write_page) *nand_write_page;
-    typeof(nand_write_page_start) *nand_write_page_start;
-    typeof(nand_write_page_collect) *nand_write_page_collect;
-    typeof(nand_get_device_type) *nand_get_device_type;
     typeof(power_off) *power_off;
     typeof(charging_state) *charging_state;
     typeof(atoi) *atoi;

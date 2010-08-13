@@ -170,15 +170,6 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .bootflash_writeraw = bootflash_writeraw,
     .bootflash_getrawaddr = bootflash_getrawaddr,
 #endif
-#ifdef HAVE_NAND
-    .nand_read_page = nand_read_page,
-    .nand_block_erase = nand_block_erase,
-    .nand_read_page_fast = nand_read_page_fast,
-    .nand_write_page = nand_write_page,
-    .nand_write_page_start = nand_write_page_start,
-    .nand_write_page_collect = nand_write_page_collect,
-    .nand_get_device_type = nand_get_device_type,
-#endif
 #ifdef HAVE_BUTTON
     .button_register_handler = button_register_handler,
     .button_unregister_handler = button_unregister_handler,
