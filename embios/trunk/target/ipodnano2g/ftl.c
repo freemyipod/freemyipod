@@ -29,6 +29,9 @@
 #include "thread.h"
 #include "panic.h"
 #include "debug.h"
+#include "console.h"
+#include "progressbar.h"
+#include "lcdconsole.h"
 
 
 
@@ -362,13 +365,13 @@ const struct nand_device_info_type* ftl_nand_type;
 uint32_t ftl_banks;
 
 /* Block map, used vor pBlock to vBlock mapping */
-static uint16_t ftl_map[0x2000];
+static uint16_t ftl_map[0x2000] CACHEALIGN_ATTR;
 
 /* VFL context for each bank */
 static struct ftl_vfl_cxt_type ftl_vfl_cxt[4];
 
 /* FTL context */
-static struct ftl_cxt_type ftl_cxt;
+static struct ftl_cxt_type ftl_cxt CACHEALIGN_ATTR;
 
 /* Temporary data buffers for internal use by the FTL */
 static uint8_t ftl_buffer[0x800] CACHEALIGN_ATTR;
@@ -383,7 +386,7 @@ static union ftl_spare_data_type ftl_sparebuffer[FTL_WRITESPARE_SIZE] CACHEALIGN
 static uint8_t ftl_bbt[4][0x410];
 
 /* Erase counters for the vBlocks */
-static uint16_t ftl_erasectr[0x2000];
+static uint16_t ftl_erasectr[0x2000] CACHEALIGN_ATTR;
 
 /* Used by ftl_log */
 static uint16_t ftl_offsets[0x11][0x200];
@@ -411,6 +414,19 @@ static union ftl_spare_data_type ftl_copyspare[FTL_COPYBUF_SIZE] CACHEALIGN_ATTR
    back if something fails while compacting a scattered page block. */
 static uint16_t ftl_offsets_backup[0x200] CACHEALIGN_ATTR;
 
+/* Buffers needed for FTL recovery */
+static uint32_t blk_usn[0x2000] INITBSS_ATTR;
+static uint8_t blk_type[0x2000] INITBSS_ATTR;
+static uint32_t erasectr_usn[8] INITBSS_ATTR;
+static uint32_t pageusn[0x200] INITBSS_ATTR;
+static uint8_t pagedata[0x200][0x800] INITBSS_ATTR CACHEALIGN_ATTR;
+
+/* State information needed for FTL recovery */
+static uint32_t meta_usn INITBSS_ATTR;
+static uint32_t user_usn INITBSS_ATTR;
+static uint32_t allocmode INITBSS_ATTR;
+static uint32_t firstfree INITBSS_ATTR;
+
 #endif
 
 
@@ -420,6 +436,7 @@ static struct mutex ftl_mtx;
 
 /* Finds a device info page for the specified bank and returns its number.
    Used to check if one is present, and to read the lowlevel BBT. */
+static uint32_t ftl_find_devinfo(uint32_t bank) INITCODE_ATTR;
 static uint32_t ftl_find_devinfo(uint32_t bank)
 {
     /* Scan the last 10% of the flash for device info pages */
@@ -444,6 +461,7 @@ static uint32_t ftl_find_devinfo(uint32_t bank)
 
 
 /* Checks if all banks have proper device info pages */
+static uint32_t ftl_has_devinfo(void) INITCODE_ATTR;
 static uint32_t ftl_has_devinfo(void)
 {
     uint32_t i;
@@ -454,6 +472,7 @@ static uint32_t ftl_has_devinfo(void)
 
 /* Loads the lowlevel BBT for a bank to the specified buffer.
    This is based on some cryptic disassembly and not fully understood yet. */
+static uint32_t ftl_load_bbt(uint32_t bank, uint8_t* bbt) INITCODE_ATTR;
 static uint32_t ftl_load_bbt(uint32_t bank, uint8_t* bbt)
 {
     uint32_t i, j;
@@ -604,6 +623,7 @@ static uint32_t ftl_vfl_commit_cxt(uint32_t bank)
 /* Returns a pointer to the most recently updated VFL context,
    used to find out the current FTL context vBlock numbers
    (planetbeing's "maxthing") */
+static struct ftl_vfl_cxt_type* ftl_vfl_get_newest_cxt(void) INITCODE_ATTR;
 static struct ftl_vfl_cxt_type* ftl_vfl_get_newest_cxt(void)
 {
     uint32_t i, maxusn;
@@ -621,6 +641,7 @@ static struct ftl_vfl_cxt_type* ftl_vfl_get_newest_cxt(void)
 
 /* Checks if the specified pBlock is marked bad in the supplied lowlevel BBT.
    Only used while mounting the VFL. */
+static uint32_t ftl_is_good_block(uint8_t* bbt, uint32_t block) INITCODE_ATTR;
 static uint32_t ftl_is_good_block(uint8_t* bbt, uint32_t block)
 {
     if ((bbt[block >> 3] & (1 << (block & 7))) == 0) return 0;
@@ -650,6 +671,9 @@ static void ftl_vfl_set_good_block(uint32_t bank, uint32_t block, uint32_t isgoo
 
 
 /* Tries to read a VFL context from the specified bank, pBlock and page */
+static uint32_t ftl_vfl_read_page(uint32_t bank, uint32_t block,
+                                  uint32_t startpage, void* databuffer,
+                                  union ftl_spare_data_type* sparebuffer) INITCODE_ATTR;
 static uint32_t ftl_vfl_read_page(uint32_t bank, uint32_t block,
                                   uint32_t startpage, void* databuffer,
                                   union ftl_spare_data_type* sparebuffer)
@@ -1019,7 +1043,8 @@ static uint32_t ftl_vfl_write(uint32_t vpage, uint32_t count,
 
 
 /* Mounts the VFL on all banks */
-static uint32_t ftl_vfl_open(void)
+static uint32_t ftl_vfl_open(void) INITCODE_ATTR;
+static uint32_t ftl_vfl_open()
 {
     uint32_t i, j, k;
     uint32_t minusn, vflcxtidx, last;
@@ -1112,7 +1137,8 @@ static uint32_t ftl_vfl_open(void)
 
 
 /* Mounts the actual FTL */
-static uint32_t ftl_open(void)
+static uint32_t ftl_open(void) INITCODE_ATTR;
+static uint32_t ftl_open()
 {
     uint32_t i;
     uint32_t ret;
@@ -1227,7 +1253,7 @@ static uint32_t ftl_open(void)
     {
         uint32_t badblocks = 0;
 #ifndef FTL_READONLY
-        for (j = 0; j < (*ftl_nand_type).blocks >> 3; j++)
+        for (j = 0; j < ftl_nand_type->blocks >> 3; j++)
         {
             uint8_t bbtentry = ftl_bbt[i][j];
             for (k = 0; k < 8; k++) if ((bbtentry & (1 << k)) == 0) badblocks++;
@@ -1246,14 +1272,14 @@ static uint32_t ftl_open(void)
     }
 #ifndef FTL_READONLY
     uint32_t min = 0xFFFFFFFF, max = 0, total = 0;
-    for (i = 0; i < (*ftl_nand_type).userblocks + 23; i++)
+    for (i = 0; i < ftl_nand_type->userblocks + 23; i++)
     {
         if (ftl_erasectr[i] > max) max = ftl_erasectr[i];
         if (ftl_erasectr[i] < min) min = ftl_erasectr[i];
         total += ftl_erasectr[i];
     }
     DEBUGF("FTL: Erase counters: Minimum: %d, maximum %d, average: %d, total: %d",
-           min, max, total / ((*ftl_nand_type).userblocks + 23), total);
+           min, max, total / (ftl_nand_type->userblocks + 23), total);
 #endif
 #endif
 
@@ -2167,10 +2193,313 @@ uint32_t ftl_sync(void)
 #endif
 
 
+/* Block allocator for FTL recovery */
+static uint32_t ftl_alloc_block() INITCODE_ATTR;
+static uint32_t ftl_alloc_block()
+{
+    while (1)
+    {
+        for (; firstfree < ftl_nand_type->userblocks + 0x17; firstfree++)
+            if (!blk_type[firstfree]) break;
+            else if (allocmode && blk_type[firstfree] != 1)
+            {
+                if (ftl_erase_block(firstfree))
+                {
+                    cprintf(CONSOLE_BOOT, "Couldn't erase vBlock %d (pool alloc)!\n", firstfree);
+                    return 1;
+                }
+                break;
+            }
+        if (firstfree < ftl_nand_type->userblocks + 0x17)
+        {
+            blk_type[firstfree] = 1;
+            return firstfree++;
+        }
+        if (!allocmode)
+        {
+            allocmode = 1;
+            firstfree = 0;
+        }
+        else
+        {
+            cputs(CONSOLE_BOOT, "Out of empty blocks!\n");
+            return 1;
+        }
+    }
+}
+
+
+static uint32_t ftl_repair(void) INITCODE_ATTR;
+static uint32_t ftl_repair()
+{
+    uint32_t i, j, k;
+#ifdef HAVE_LCD
+    struct progressbar_state progressbar;
+#endif
+
+    cputs(CONSOLE_BOOT, "Scanning flash...\n");
+#ifdef HAVE_LCD
+    lcdconsole_progressbar(&progressbar, 0, ftl_nand_type->userblocks + 0x17);
+#endif
+    uint32_t ppb = ftl_nand_type->pagesperblock * ftl_banks;
+    memset(&ftl_cxt, 0x00, 0x800);
+    memset(ftl_map, 0xff, 0x4000);
+    memset(blk_usn, 0x00, 0x8000);
+    memset(blk_type, 0x00, 0x2000);
+    memset(ftl_erasectr, 0x00, 0x4000);
+    memset(erasectr_usn, 0xff, 32);
+    user_usn = 0;
+    meta_usn = 0xffffffff;
+    for (i = 0; i < ftl_nand_type->userblocks + 0x17; i++)
+    {
+        uint32_t ret = ftl_vfl_read((i + 1) * ppb - 1, 0, &ftl_sparebuffer[0], 1, 0);
+        if ((ret & 0x11F) == 0 && ftl_sparebuffer[0].meta.type == 0x41)
+        {
+            uint32_t lbn = ftl_sparebuffer[0].user.lpn / ppb;
+            if (ftl_sparebuffer[0].user.usn > user_usn)
+                user_usn = ftl_sparebuffer[0].user.usn;
+            if (ftl_sparebuffer[0].user.usn > blk_usn[lbn])
+            {
+                if (ftl_map[lbn] != 0xffff)
+                    blk_type[ftl_map[lbn]] = 5;
+                blk_usn[lbn] = ftl_sparebuffer[0].user.usn;
+                ftl_map[lbn] = i;
+                blk_type[i] = 1;
+            }
+            else blk_type[i] = 5;
+        }
+        else
+            for (j = 0; j < ppb; j++)
+            {
+                ret = ftl_vfl_read(i * ppb + j, 0, &ftl_sparebuffer[0], 1, 0);
+                if (ret & 2) break;
+                if (ret & 0x11F)
+                {
+                    blk_type[i] = 4;
+                    continue;
+                }
+                if (ftl_sparebuffer[0].meta.type == 0x40)
+                {
+                    blk_type[i] = 2;
+                    break;
+                }
+                else if (ftl_sparebuffer[0].meta.type - 0x43 <= 4)
+                {
+                    blk_type[i] = 3;
+                    if (ftl_sparebuffer[0].meta.type == 0x46)
+                    {
+                        uint32_t idx = ftl_sparebuffer[0].meta.idx;
+                        if (ftl_sparebuffer[0].meta.usn < meta_usn)
+                            meta_usn = ftl_sparebuffer[0].meta.usn;
+                        if (ftl_sparebuffer[0].meta.usn < erasectr_usn[idx])
+                        {
+                            erasectr_usn[idx] = ftl_sparebuffer[0].meta.usn;
+                            ret = ftl_vfl_read(i * ppb + j, &ftl_erasectr[idx << 10],
+                                               &ftl_sparebuffer[0], 1, 0);
+                            if (ret & 0x11f) memset(&ftl_erasectr[idx << 10], 0, 0x800);
+                        }
+                    }
+                }
+                else
+                {
+                    cprintf(CONSOLE_BOOT, "Invalid block type %02X while reading vPage %d\n",
+                            ftl_sparebuffer[0].meta.type, i * ppb + j);
+                    return 1;
+                }
+            }
+#ifdef HAVE_LCD
+        progressbar_setpos(&progressbar, i + 1, false);
+#endif
+    }
+
+    uint32_t sum = 0;
+    uint32_t count = 0;
+    for (i = 0; i < 0x2000; i++)
+        if (ftl_erasectr[i])
+        {
+            sum += ftl_erasectr[i];
+            count++;
+        }
+    uint32_t average = sum / count;
+    for (i = 0; i < 0x2000; i++)
+        if (!ftl_erasectr[i])
+            ftl_erasectr[i] = average;
+
+    cputs(CONSOLE_BOOT, "Committing scattered pages...\n");
+    count = 0;
+    for (i = 0; i < ftl_nand_type->userblocks + 0x17; i++)
+        if (blk_type[i] == 2) count++;
+    uint32_t block;
+    uint32_t dirty;
+    if (count)
+    {
+#ifdef HAVE_LCD
+        lcdconsole_progressbar(&progressbar, 0, count * ppb);
+#endif
+        count = 0;
+        for (i = 0; i < ftl_nand_type->userblocks + 0x17; i++)
+            if (blk_type[i] == 2)
+            {
+                block = 0xffff;
+                for (j = 0; j < ftl_nand_type->pagesperblock * ftl_banks; j++)
+                {
+                    uint32_t ret = ftl_vfl_read(i * ppb + j, ftl_buffer,
+                                                &ftl_sparebuffer[0], 1, 0);
+                    if (ret & 0x11F) continue;
+                    if (ftl_sparebuffer[0].user.type != 0x40)
+                    {
+                        cprintf(CONSOLE_BOOT, "Invalid block type %02X while reading "
+                                              "vPage %d (scattered page)!\n",
+                                ftl_sparebuffer[0].meta.type, i * ppb + j);
+                        return 1;
+                    }
+                    if (block == 0xffff)
+                    {
+                        block = ftl_sparebuffer[0].user.lpn / ppb;
+                        memset(pageusn, 0x00, 0x800);
+                        memset(pagedata, 0x00, 0x100000);
+                        if (ftl_map[block] != 0xffff)
+                            for (k = 0; k < ppb; k++)
+                            {
+                                uint32_t ret = ftl_vfl_read(ftl_map[block] * ppb + k, pagedata[k],
+                                                            &ftl_copyspare[0], 1, 0);
+                                if (ret & 0x11F) continue;
+                                if (ftl_copyspare[0].user.type != 0x40
+                                 && ftl_copyspare[0].user.type != 0x41)
+                                {
+                                    cprintf(CONSOLE_BOOT, "Invalid block type %02X while reading "
+                                                          "vPage %d (scattered page orig)!\n",
+                                            ftl_sparebuffer[0].meta.type,
+                                            ftl_map[block] * ppb + k);
+                                    return 1;
+                                }
+                                if (block != ftl_copyspare[0].user.lpn / ppb)
+                                {
+                                    cprintf(CONSOLE_BOOT, "Foreign page in scattered page orig "
+                                                          "block (vPage %d, LPN %d)!\n",
+                                            ftl_map[block] * ppb + k,
+                                            ftl_sparebuffer[0].user.usn);
+                                    return 1;
+                                }
+                                pageusn[k] = ftl_copyspare[0].user.usn;
+                            }
+                        dirty = 0;
+                    }
+                    if (block != ftl_sparebuffer[0].user.lpn / ppb)
+                    {
+                        cprintf(CONSOLE_BOOT, "Foreign page in scattered page block "
+                                              "block (vPage %d, LPN %d)!\n",
+                                i * ppb + j, ftl_sparebuffer[0].user.lpn);
+                        return 1;
+                    }
+                    uint32_t idx = ftl_sparebuffer[0].user.lpn % ppb;
+                    if (ftl_sparebuffer[0].user.usn > user_usn)
+                        user_usn = ftl_sparebuffer[0].user.usn;
+                    if (ftl_sparebuffer[0].user.usn > pageusn[idx])
+                    {
+                        pageusn[idx] = ftl_sparebuffer[0].user.usn;
+                        memcpy(pagedata[idx], ftl_buffer, 0x800);
+                        dirty = 1;
+                    }
+                }
+                if (dirty)
+                {
+                    if (ftl_erase_block(i))
+                    {
+                        cprintf(CONSOLE_BOOT, "Couldn't erase vBlock %d "
+                                              "(scattered page commit)!\n", i);
+                        return 1;
+                    }
+                    for (j = 0; j < ppb; j++)
+                    {
+                        memset(&ftl_sparebuffer[0], 0xFF, 0x40);
+                        ftl_sparebuffer[0].user.lpn = block * ppb + j;
+                        ftl_sparebuffer[0].user.usn = pageusn[j];
+                        ftl_sparebuffer[0].user.type = 0x40;
+                        if (j == ppb - 1) ftl_sparebuffer[0].user.type = 0x41;
+                        if (ftl_vfl_write(i * ppb + j, 1, pagedata[j], &ftl_sparebuffer[0]))
+                        {
+                            cprintf(CONSOLE_BOOT, "Couldn't write vPage %d "
+                                                  "(scattered page commit)!\n", i * ppb + j);
+                            return 1;
+                        }
+#ifdef HAVE_LCD
+                        progressbar_setpos(&progressbar, count * ppb + j, false);
+#endif
+                    }
+                    if (ftl_map[block] != 0xffff) blk_type[ftl_map[block]] = 5;
+                    blk_type[i] = 1;
+                    ftl_map[block] = i;
+                }
+                else blk_type[i] = 5;
+#ifdef HAVE_LCD
+                progressbar_setpos(&progressbar, ++count * ppb, false);
+#endif
+            }
+    }
+
+    cputs(CONSOLE_BOOT, "Fixing block map...\n");
+    allocmode = 0;
+    firstfree = 0;
+    for (i = 0; i < 3; i++) ftl_cxt.ftlctrlblocks[i] = ftl_alloc_block();
+    for (i = 0; i < 20; i++) ftl_cxt.blockpool[i] = ftl_alloc_block();
+    for (i = 0; i < ftl_nand_type->userblocks; i++)
+        if (ftl_map[i] == 0xffff)
+            ftl_map[i] = ftl_alloc_block();
+    ftl_cxt.usn = meta_usn - 1;
+    ftl_cxt.nextblockusn = user_usn + 1;
+    ftl_cxt.freecount = 20;
+    ftl_cxt.clean_flag = 1;
+
+    cputs(CONSOLE_BOOT, "Committing FTL context...\n");
+    uint32_t blockmappages = ftl_nand_type->userblocks >> 10;
+    if ((ftl_nand_type->userblocks & 0x1FF) != 0) blockmappages++;
+    uint32_t erasectrpages = (ftl_nand_type->userblocks + 23) >> 10;
+    if (((ftl_nand_type->userblocks + 23) & 0x1FF) != 0) erasectrpages++;
+    uint32_t page = ftl_cxt.ftlctrlblocks[0] * ppb;
+    for (i = 0; i < erasectrpages; i++)
+    {
+        memset(&ftl_sparebuffer, 0xFF, 0x40);
+        ftl_sparebuffer[0].meta.usn = ftl_cxt.usn;
+        ftl_sparebuffer[0].meta.idx = i;
+        ftl_sparebuffer[0].meta.type = 0x46;
+        if (ftl_vfl_write(page, 1, &ftl_erasectr[i << 10], &ftl_sparebuffer[0]))
+        {
+            cprintf(CONSOLE_BOOT, "Couldn't write vPage %d (save erase counters)!\n", page);
+            return 1;
+        }
+        ftl_cxt.ftl_erasectr_pages[i] = page++;
+    }
+    for (i = 0; i < blockmappages; i++)
+    {
+        memset(&ftl_sparebuffer[0], 0xFF, 0x40);
+        ftl_sparebuffer[0].meta.usn = ftl_cxt.usn;
+        ftl_sparebuffer[0].meta.idx = i;
+        ftl_sparebuffer[0].meta.type = 0x44;
+        if (ftl_vfl_write(page, 1, &ftl_map[i << 10], &ftl_sparebuffer[0]))
+        {
+            cprintf(CONSOLE_BOOT, "Couldn't write vPage %d (save block map)!\n", page);
+            return 1;
+        }
+        ftl_cxt.ftl_map_pages[i] = page++;
+    }
+    ftl_cxt.ftlctrlpage = page;
+    memset(&ftl_sparebuffer[0], 0xFF, 0x40);
+    ftl_sparebuffer[0].meta.usn = ftl_cxt.usn;
+    ftl_sparebuffer[0].meta.type = 0x43;
+    if (ftl_vfl_write(page, 1, &ftl_cxt, &ftl_sparebuffer[0]))
+    {
+        cprintf(CONSOLE_BOOT, "Couldn't write vPage %d (save FTL context)!\n", page);
+        return 1;
+    }
+    ftl_store_ctrl_block_list();
+}
+
+
 /* Initializes and mounts the FTL.
    As long as nothing was written, you won't need to unmount it.
    Before shutting down after writing something, call ftl_sync(),
-   which will just do nothing if everything was already clean. */
+   which will return immediately if everything was already clean. */
 uint32_t ftl_init(void)
 {
     mutex_init(&ftl_mtx);
@@ -2214,8 +2543,20 @@ uint32_t ftl_init(void)
         return 1;
     }
     if (ftl_vfl_open() == 0)
+	{
         if (ftl_open() == 0)
             return 0;
+		cprintf(CONSOLE_BOOT, "The FTL seems to be damaged. Forcing check.\n");
+		if (ftl_repair() != 0)
+			cprintf(CONSOLE_BOOT, "FTL recovery failed. Use disk mode to recover.\n");
+		else
+		{
+			cprintf(CONSOLE_BOOT, "FTL recovery finished. Trying to mount again...\n");
+	        if (ftl_open() == 0)
+	            return 0;
+			cprintf(CONSOLE_BOOT, "Mounting FTL failed again, use disk mode to recover.\n");
+		}
+	}
 
     DEBUGF("FTL: Initialization failed!");
 

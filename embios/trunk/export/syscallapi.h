@@ -112,6 +112,7 @@ struct embios_syscall_table
     typeof(lcdconsole_get_current_y) *lcdconsole_get_current_y;
     typeof(lcdconsole_get_lineend_x) *lcdconsole_get_lineend_x;
     typeof(lcdconsole_get_lineend_y) *lcdconsole_get_lineend_y;
+    typeof(lcdconsole_progressbar) *lcdconsole_progressbar;
     typeof(progressbar_init) *progressbar_init;
     typeof(progressbar_setpos) *progressbar_setpos;
     typeof(shutdown) *shutdown;

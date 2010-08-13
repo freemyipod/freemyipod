@@ -26,10 +26,10 @@
 #include "lcd.h"
 
 
-static void progressbar_drawborderbg(struct progressbar_state* state)
+static void progressbar_drawborderbg(struct progressbar_state* state, int bgstart)
 {
     state->currentx = state->startx;
-    displaylcd(state->startx + 1, state->endx - 1, state->starty + 1, state->endy - 1,
+    displaylcd(bgstart + 1, state->endx - 1, state->starty + 1, state->endy - 1,
                (void*)-1, state->bgcolor);
     displaylcd(state->startx, state->endx, state->starty, state->starty,
                (void*)-1, state->bordercolor);
@@ -53,7 +53,7 @@ void progressbar_init(struct progressbar_state* state, int startx, int endx, int
     state->fgcolor = fgcolor;
     state->min = min;
     state->max = max;
-    progressbar_drawborderbg(state);
+    progressbar_drawborderbg(state, state->startx);
 }
 
 void progressbar_setpos(struct progressbar_state* state, int value, bool redraw)
@@ -62,7 +62,7 @@ void progressbar_setpos(struct progressbar_state* state, int value, bool redraw)
     if (value < state->min) value = state->min;
     int newx = (value - state->min) * (state->endx - state->startx - 1)
              / (state->max - state->min) + state->startx;
-    if (redraw || newx < state->currentx) progressbar_drawborderbg(state);
+    if (redraw || newx < state->currentx) progressbar_drawborderbg(state, newx);
     if (newx > state->currentx)
         displaylcd(state->currentx + 1, newx, state->starty + 1, state->endy - 1,
                    (void*)-1, state->fgcolor);

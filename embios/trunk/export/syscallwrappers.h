@@ -75,6 +75,7 @@ extern struct embios_syscall_table* __embios_syscall;
 #define lcdconsole_get_current_y(args...) __embios_syscall->lcdconsole_get_current_y(args)
 #define lcdconsole_get_lineend_x(args...) __embios_syscall->lcdconsole_get_lineend_x(args)
 #define lcdconsole_get_lineend_y(args...) __embios_syscall->lcdconsole_get_lineend_y(args)
+#define lcdconsole_progressbar(args...) __embios_syscall->lcdconsole_progressbar(args)
 #define progressbar_init(args...) __embios_syscall->progressbar_init(args)
 #define progressbar_setpos(args...) __embios_syscall->progressbar_setpos(args)
 #define shutdown(args...) __embios_syscall->shutdown(args)

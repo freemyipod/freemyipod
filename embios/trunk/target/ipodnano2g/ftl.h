@@ -31,7 +31,7 @@ extern const struct nand_device_info_type* ftl_nand_type;
 extern uint32_t ftl_banks;
 
 
-uint32_t ftl_init(void);
+uint32_t ftl_init(void) INITCODE_ATTR;
 uint32_t ftl_read(uint32_t sector, uint32_t count, void* buffer);
 uint32_t ftl_write(uint32_t sector, uint32_t count, const void* buffer);
 uint32_t ftl_sync(void);

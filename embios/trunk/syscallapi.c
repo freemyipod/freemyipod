@@ -133,6 +133,7 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .lcdconsole_get_current_y = lcdconsole_get_current_y,
     .lcdconsole_get_lineend_x = lcdconsole_get_lineend_x,
     .lcdconsole_get_lineend_y = lcdconsole_get_lineend_y,
+    .lcdconsole_progressbar = lcdconsole_progressbar,
     .progressbar_init = progressbar_init,
     .progressbar_setpos = progressbar_setpos,
     .displaylcd = displaylcd,
