@@ -31,7 +31,7 @@
 uint32_t get_platform_id() ICODE_ATTR;
 
 
-#include "syscallapi.h"  // must be below get_platform_id
+#include "syscallapi.h"  // must be between get_platform_id and get_syscall_table
 
 
 struct embios_syscall_table* get_syscall_table() ICODE_ATTR;
