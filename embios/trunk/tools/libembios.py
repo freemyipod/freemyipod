@@ -415,6 +415,7 @@ class embios:
     
   def uploadint(self, offset, data, silent = 0):
     self.__myprint("Uploading 0x%08x to 0x%08x..." % (data, offset), silent)
+    data = struct.pack('<I', data)
     self.write(offset, data, 0, 0)
     self.__myprint(" done\n", silent)
 
@@ -422,7 +423,8 @@ class embios:
   def downloadint(self, offset, silent = 0):
     self.__myprint("Downloading an integer from 0x%08x..." % (offset), silent)
     data = self.read(offset, 4, 0, 0)
-    self.__myprint(" done\nValue was: 0x%08x\n" % (data), silent)
+    number = struct.unpack('<I', data)
+    self.__myprint(" done\nValue was: 0x%08x\n" % (number), silent)
     
     return data
     
