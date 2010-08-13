@@ -59,6 +59,7 @@ enum dbgaction_t
     DBGACTION_CREAD,
     DBGACTION_CFLUSH,
     DBGACTION_EXECIMAGE,
+    DBGACTION_EXECFIRMWARE,
     DBGACTION_READBOOTFLASH,
     DBGACTION_WRITEBOOTFLASH
 };
@@ -533,6 +534,10 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgactionlength = dbgrecvbuf[3];
             break;
 #endif
+        case 24:  // EXECFIRMWARE
+            if (set_dbgaction(DBGACTION_EXECFIRMWARE, 0)) break;
+            dbgactionaddr = dbgrecvbuf[1];
+            break;
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -593,11 +598,11 @@ void dbgthread(void)
                 break;
 #endif
             case DBGACTION_POWEROFF:
-                if (dbgactiontype) shutdown();
+                if (dbgactiontype) shutdown(true);
                 power_off();
                 break;
             case DBGACTION_RESET:
-                shutdown();
+                shutdown(false);
                 reset();
                 break;
             case DBGACTION_CWRITE:
@@ -621,6 +626,11 @@ void dbgthread(void)
                 dbgasyncsendbuf[1] = execimage((void*)dbgactionaddr);
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
+            case DBGACTION_EXECFIRMWARE:
+                shutdown(false);
+                dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                execfirmware((void*)dbgactionaddr);
 #ifdef HAVE_BOOTFLASH
             case DBGACTION_READBOOTFLASH:
                 bootflash_readraw((void*)dbgactionaddr, dbgactionoffset, dbgactionlength);

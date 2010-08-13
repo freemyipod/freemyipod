@@ -142,5 +142,12 @@ leave_critical_section:
 	mov	pc, lr
 .size leave_critical_section, .-leave_critical_section
 
+.global execfirmware
+.type execfirmware, %function
+execfirmware:
+	msr	cpsr_c, #0xd3
+	bx	r0
+.size execfirmware, .-execfirmware
+
 unknown_swi_string:
 	.ascii "Unhandled SWI %06X\0"

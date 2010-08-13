@@ -25,7 +25,7 @@
 #include "storage.h"
 
 
-void shutdown()
+void shutdown(bool shutdownhw)
 {
     DEBUGF("Shutting down...");
 #ifdef HAVE_STORAGE_FLUSH

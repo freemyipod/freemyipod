@@ -108,6 +108,7 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .tlsf_check_heap = tlsf_check_heap,
     .tlsf_block_size = tlsf_block_size,
     .tlsf_overhead = tlsf_overhead,
+    .execfirmware = execfirmware,
 #ifdef HAVE_STORAGE
     .opendir = opendir,
     .closedir = closedir,

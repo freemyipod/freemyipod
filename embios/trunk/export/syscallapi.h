@@ -48,6 +48,7 @@
 #include "../backlight.h"
 #include "../syscall.h"
 #include "../progressbar.h"
+#include "../contextswitch.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
 #include "../libc/include/stdio.h"
@@ -209,6 +210,7 @@ struct embios_syscall_table
     typeof(tlsf_check_heap) *tlsf_check_heap;
     typeof(tlsf_block_size) *tlsf_block_size;
     typeof(tlsf_overhead) *tlsf_overhead;
+    typeof(execfirmware) *execfirmware;
 };
 
 

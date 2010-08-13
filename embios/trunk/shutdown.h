@@ -28,7 +28,7 @@
 #include "global.h"
 
 
-void shutdown();
+void shutdown(bool shutdownhw);
 
 
 #endif
