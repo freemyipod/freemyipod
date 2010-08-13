@@ -810,8 +810,32 @@ class embios:
           process_n += 1
           
         return retval
-          
-    
+      
+      
+    def state2name(state):
+      if state == 0: return "THREAD_FREE"
+      elif state == 1: return "THREAD_SUSPENDED"
+      elif state == 2: return "THREAD_READY"
+      elif state == 3: return "THREAD_RUNNING"
+      elif state == 4: return "THREAD_BLOCKED"
+      elif state == 5: return "THREAD_DEFUNCT"
+      elif state == 6: return "THREAD_DEFUNCT_ACK"
+      else: return "UNKNOWN"
+      
+    def blocktype2name(blocktype):
+      if blocktype == 0: return "THREAD_NOT_BLOCKED"
+      elif blocktype == 1: return "THREAD_BLOCK_SLEEP"
+      elif blocktype == 2: return "THREAD_BLOCK_MUTEX"
+      elif blocktype == 3: return "THREAD_BLOCK_WAKEUP"
+      elif blocktype == 4: return "THREAD_DEFUNCT_STKOV"
+      elif blocktype == 5: return "THREAD_DEFUNCT_PANIC"
+      else: return "UNKNOWN"
+      
+    def threadtype2name (threadtype):
+      if threadtype == 0: return "USER_THREAD"
+      elif threadtype == 1: return "SYSTEM_THREAD"
+      else: return "UNKNOWN"
+      
     def procinfotostring(procinfolist, structver):
       processinfoprint = ""
       ptr = 0
@@ -826,8 +850,7 @@ class embios:
                             + "R12: 0x%08x, SP: 0x%08x,  LR: 0x%08x,  PC: 0x%08x\n" \
                             % (procinfolist[ptr]['regs'][12], procinfolist[ptr]['regs'][13], procinfolist[ptr]['regs'][14], procinfolist[ptr]['regs'][15])
         processinfoprint += "cpsr: 0x%08x      " %             (procinfolist[ptr]['cpsr'])
-        states = ("THREAD_FREE", "THREAD_SUSPENDED", "THREAD_READY", "THREAD_RUNNING", "THREAD_BLOCKED", "THREAD_DEFUNCT", "THREAD_DEFUNCT_ACK")
-        processinfoprint += "state: %s      " %                 (states[procinfolist[ptr]['state']])
+        processinfoprint += "state: %s      " %                 (state2name([procinfolist[ptr]['state']]))
         processinfoprint += "nameptr: 0x%08x\n" %               (procinfolist[ptr]['name_ptr'])
         processinfoprint += "current cpu time: 0x%08x      " %  (procinfolist[ptr]['cputime_current'])
         processinfoprint += "total cpu time: 0x%016x\n" %       (procinfolist[ptr]['cputime_total'])
@@ -837,10 +860,8 @@ class embios:
         processinfoprint += "blocked since: 0x%08x      " %     (procinfolist[ptr]['blocked_since'])
         processinfoprint += "blocked by ptr: 0x%08x\n" %        (procinfolist[ptr]['blocked_by_ptr'])
         processinfoprint += "err_no: 0x%08x      " %            (procinfolist[ptr]['err_no'])
-        blocktype = ("THREAD_NOT_BLOCKED", "THREAD_BLOCK_SLEEP", "THREAD_BLOCK_MUTEX", "THREAD_BLOCK_WAKEUP", "THREAD_DEFUNCT_STKOV", "THREAD_DEFUNCT_PANIC")
-        processinfoprint += "block type: %s\n" %                (blocktype[procinfolist[ptr]['block_type']])
-        threadtype = ("USER_THREAD", "SYSTEM_THREAD")
-        processinfoprint += "thread type: %s\n" %               (threadtype[procinfolist[ptr]['thread_type']])
+        processinfoprint += "block type: %s\n" %                (blocktype2name([procinfolist[ptr]['block_type']]))
+        processinfoprint += "thread type: %s\n" %               (threadtype2name([procinfolist[ptr]['thread_type']]))
         processinfoprint += "priority: 0x%02x      " %          (procinfolist[ptr]['priority'])
         processinfoprint += "cpu load: 0x%02x\n" %              (procinfolist[ptr]['cpuload'])
           
