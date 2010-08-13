@@ -164,6 +164,16 @@ extern struct embios_syscall_table* __embios_syscall;
 #define backlight_set_fade(args...) __embios_syscall->backlight_set_fade(args)
 #define backlight_set_brightness(args...) __embios_syscall->backlight_set_brightness(args)
 #define get_platform_id(args...) __embios_syscall->get_platform_id(args)
+#define tlsf_create(args...) __embios_syscall->tlsf_create(args)
+#define tlsf_destroy(args...) __embios_syscall->tlsf_destroy(args)
+#define tlsf_malloc(args...) __embios_syscall->tlsf_malloc(args)
+#define tlsf_memalign(args...) __embios_syscall->tlsf_memalign(args)
+#define tlsf_realloc(args...) __embios_syscall->tlsf_realloc(args)
+#define tlsf_free(args...) __embios_syscall->tlsf_free(args)
+#define tlsf_walk_heap(args...) __embios_syscall->tlsf_walk_heap(args)
+#define tlsf_check_heap(args...) __embios_syscall->tlsf_check_heap(args)
+#define tlsf_block_size(args...) __embios_syscall->tlsf_block_size(args)
+#define tlsf_overhead(args...) __embios_syscall->tlsf_overhead(args)
 
 
 #endif

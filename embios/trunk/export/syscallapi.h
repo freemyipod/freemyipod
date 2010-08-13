@@ -51,6 +51,7 @@
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
 #include "../libc/include/stdio.h"
+#include "../libc/tlsf/tlsf.h"
 
 /* increase this every time the api struct changes */
 #define EMBIOS_API_VERSION 0
@@ -198,6 +199,16 @@ struct embios_syscall_table
     typeof(backlight_set_fade) *backlight_set_fade;
     typeof(backlight_set_brightness) *backlight_set_brightness;
     typeof(get_platform_id) *get_platform_id;
+    typeof(tlsf_create) *tlsf_create;
+    typeof(tlsf_destroy) *tlsf_destroy;
+    typeof(tlsf_malloc) *tlsf_malloc;
+    typeof(tlsf_memalign) *tlsf_memalign;
+    typeof(tlsf_realloc) *tlsf_realloc;
+    typeof(tlsf_free) *tlsf_free;
+    typeof(tlsf_walk_heap) *tlsf_walk_heap;
+    typeof(tlsf_check_heap) *tlsf_check_heap;
+    typeof(tlsf_block_size) *tlsf_block_size;
+    typeof(tlsf_overhead) *tlsf_overhead;
 };
 
 

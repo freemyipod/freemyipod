@@ -87,3 +87,4 @@ libc/strcpy.c
 libc/strlen.c
 libc/strncmp.c
 libc/strrchr.c
+libc/tlsf/tlsf.c
