@@ -814,15 +814,15 @@ class embios:
       processinfoprint = ""
       ptr = 0
       while structver == 1 and ptr < len(procinfolist):      # Process information struct version == 1
-        processinfoprint += "--------------------------------------------------------------------------------"
-        processinfoprint += "R0: 0x%08x,  R1: 0x%08x,  R2: 0x%08x,  R3: 0x%08x,\n\
-                             R4: 0x%08x,  R5: 0x%08x,  R6: 0x%08x,  R7: 0x%08x,\n\
-                             R8: 0x%08x,  R9: 0x%08x,  R10: 0x%08x, R11: 0x%08x,\n\
-                             R12: 0x%08x, SP: 0x%08x,  LR: 0x%08x,  PC: 0x%08x\n" \
-                             % (procinfolist[ptr]['regs'][0], procinfolist[ptr]['regs'][1], procinfolist[ptr]['regs'][2], procinfolist[ptr]['regs'][3], \
-                                procinfolist[ptr]['regs'][4], procinfolist[ptr]['regs'][5], procinfolist[ptr]['regs'][6], procinfolist[ptr]['regs'][7], \
-                                procinfolist[ptr]['regs'][8], procinfolist[ptr]['regs'][9], procinfolist[ptr]['regs'][10], procinfolist[ptr]['regs'][11], \
-                                procinfolist[ptr]['regs'][12], procinfolist[ptr]['regs'][13], procinfolist[ptr]['regs'][14], procinfolist[ptr]['regs'][15] )
+        processinfoprint += "--------------------------------------------------------------------------------\n"
+        processinfoprint += "R0: 0x%08x,  R1: 0x%08x,  R2: 0x%08x,  R3: 0x%08x,\n"\
+                            % (procinfolist[ptr]['regs'][0], procinfolist[ptr]['regs'][1], procinfolist[ptr]['regs'][2], procinfolist[ptr]['regs'][3])\
+                            + "R4: 0x%08x,  R5: 0x%08x,  R6: 0x%08x,  R7: 0x%08x,\n"\
+                            % (procinfolist[ptr]['regs'][4], procinfolist[ptr]['regs'][5], procinfolist[ptr]['regs'][6], procinfolist[ptr]['regs'][7])\
+                            + "R8: 0x%08x,  R9: 0x%08x,  R10: 0x%08x, R11: 0x%08x,\n"\
+                            % (procinfolist[ptr]['regs'][8], procinfolist[ptr]['regs'][9], procinfolist[ptr]['regs'][10], procinfolist[ptr]['regs'][11])\
+                            + "R12: 0x%08x, SP: 0x%08x,  LR: 0x%08x,  PC: 0x%08x\n" \
+                            % (procinfolist[ptr]['regs'][12], procinfolist[ptr]['regs'][13], procinfolist[ptr]['regs'][14], procinfolist[ptr]['regs'][15])
         processinfoprint += "cpsr: 0x%08x      " %             (procinfolist[ptr]['cpsr'])
         states = ("THREAD_FREE", "THREAD_SUSPENDED", "THREAD_READY", "THREAD_RUNNING", "THREAD_BLOCKED", "THREAD_DEFUNCT", "THREAD_DEFUNCT_ACK")
         processinfoprint += "state: %s      " %                 (states[procinfolist[ptr]['state']])
@@ -835,18 +835,17 @@ class embios:
         processinfoprint += "blocked since: 0x%08x      " %     (procinfolist[ptr]['blocked_since'])
         processinfoprint += "blocked by ptr: 0x%08x\n" %        (procinfolist[ptr]['blocked_by_ptr'])
         processinfoprint += "err_no: 0x%08x      " %            (procinfolist[ptr]['err_no'])
-        processinfoprint += "nameptr: 0x%08x\n" %               (procinfolist[ptr]['namepointer'])
         blocktype = ("THREAD_NOT_BLOCKED", "THREAD_BLOCK_SLEEP", "THREAD_BLOCK_MUTEX", "THREAD_BLOCK_WAKEUP", "THREAD_DEFUNCT_STKOV", "THREAD_DEFUNCT_PANIC")
         processinfoprint += "block type: %s\n" %                (blocktype[procinfolist[ptr]['block_type']])
         threadtype = ("USER_THREAD", "SYSTEM_THREAD")
         processinfoprint += "thread type: %s\n" %               (threadtype[procinfolist[ptr]['thread_type']])
         processinfoprint += "priority: 0x%02x      " %          (procinfolist[ptr]['priority'])
         processinfoprint += "cpu load: 0x%02x\n" %              (procinfolist[ptr]['cpuload'])
-        
+          
         ptr += 1
-      
-      processinfoprint += "--------------------------------------------------------------------------------"
-      
+        
+      processinfoprint += "--------------------------------------------------------------------------------\n"
+        
       return processinfoprint
      
  
@@ -864,11 +863,14 @@ class embios:
       self.__checkstatus(response)
       
       tablesize = struct.unpack("<I", response[8:12])[0]
-      procinfo += response[0x10:0x10 + blocklen]
       
       if tablesize <= offset + blocklen:
+        blocklen = tablesize - offset
+        procinfo += response[0x10:0x10 + blocklen]
         structversion = struct.unpack("<I", response[4:8])[0]
         tablesize = struct.unpack("<I", response[8:12])[0]
+      else:
+        procinfo += response[0x10:0x10 + blocklen]
       
       offset += blocklen
       
@@ -879,12 +881,11 @@ class embios:
     
     out = (structversion, tablesize, procinfotolist(procinfo, structversion))
 
-    self.__myprint(" done\n\
-                    Process information struct version: 0x%08x\n\
-                    Total size of process information table: 0x%08x\n\
-                    %s\n\n"
-                  % (out[0], out[1], procinfotostring(out[2], structversion))
-                  , silent)
+    self.__myprint(" done\n"\
+                   + "Process information struct version: 0x%08x\n" % out[0]\
+                   + "Total size of process information table: 0x%08x\n" % out[1]\
+                   + procinfotostring(out[2], 1)\
+                   + "\n\n")
     
     return out
   

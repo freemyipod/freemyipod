@@ -112,6 +112,8 @@ def usage():
   print "      Optional params <offset> <length>: specify the range in <file> to write"
   print "  writeusbconsole direct <i1> <i2> ... <iN>"
   print "    Writes the integers <i1> ... <iN> to the USB console."
+  print "  writeusbconsole string <str>"
+  print "    Writes the string <str> to the USB console."
   print ""
   print "  readdevconsole <bitmask> <size> <outtype> <file>"
   print "    Reads data from one or more of the device's consoles."
@@ -130,6 +132,8 @@ def usage():
   print "  writedevconsole direct <bitmask> <i1> <i2> ... <iN>"
   print "    Writes the integers <i1> ... <iN> to the device consoles specified"
   print "                         by <bitmask>"
+  print "  writedevconsole string <bitmask> <str>"
+  print "    Writes the string <str> to the device consoles specified by <bitmask>"
   print ""
   print "  flushconsolebuffers <bitmask>"
   print "    flushes one or more of the device consoles' buffers."
@@ -286,6 +290,12 @@ def parsecommand(dev, argv):
         data += struct.pack("<I", int(argv[ptr], 16))
         ptr += 1
       dev.writeusbcon(data)
+      
+    if argv[2] == "string":
+      if len(argv) > 4: usage()
+      dev.writeusbcon(argv[3])
+    
+    else: usage()
   
   elif argv[1] == "readdevconsole":
     if len(argv) not in [5, 6]: usage()
@@ -318,6 +328,12 @@ def parsecommand(dev, argv):
         data += struct.pack("<I", int(argv[ptr], 16))
         ptr += 1
       dev.writeusbcon(int(argv[3], 16), data)
+      
+    if argv[2] == "string":
+      if len(argv) > 5: usage()
+      dev.writedevcon(int(argv[3], 16), argv[4])
+    
+    else: usage()
   
   elif argv[1] == "flushconsolebuffers":
     if len(argv) != 3: usage()
