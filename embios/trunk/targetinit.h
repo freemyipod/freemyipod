@@ -21,40 +21,16 @@
 //
 
 
-#ifndef __TARGET_H__
-#define __TARGET_H__
+#ifndef __TARGETINIT_H__
+#define __TARGETINIT_H__
 
 
-#define PLATFORM_ID 0x47344e49
+#include "global.h"
 
 
-#define ARM_ARCH 6
-#define LITTLE_ENDIAN
-#define CACHEALIGN_BITS 4
-#define CPU_FREQ 191692800
-
-
-#define CONSOLE_BOOT 3
-
-
-#define HAVE_USB
-#define USB_NUM_ENDPOINTS 5
-
-#define HAVE_LCD
-#define LCD_WIDTH 240
-#define LCD_HEIGHT 320
-#define LCD_FORMAT rgb565
-#define LCD_BYTESPERPIXEL 2
-
-#define HAVE_BACKLIGHT
-
-#define HAVE_I2C
-
-//#define HAVE_STORAGE
-//#define HAVE_FLASH_STORAGE
-//#define HAVE_STORAGE_FLUSH
-//#define CONFIG_STORAGE STORAGE_NAND
-//#define SECTOR_SIZE 4096
+void targetinit_veryearly() INITCODE_ATTR;
+void targetinit_early() INITCODE_ATTR;
+void targetinit_late() INITCODE_ATTR;
 
 
 #endif

@@ -29,6 +29,7 @@
 #include "ucl.h"
 #include "util.h"
 #include "execimage.h"
+#include "targetinit.h"
 #ifdef HAVE_LCD
 #include "lcd.h"
 #include "lcdconsole.h"
@@ -162,14 +163,14 @@ void initthread() INITCODE_ATTR;
 void initthread()
 {
     cputs(CONSOLE_BOOT, welcomestring);
-	#ifdef HAVE_I2C
+#ifdef HAVE_I2C
     i2c_init();
-	#endif
+#endif
     power_init();
-	#ifdef HAVE_USB
+#ifdef HAVE_USB
     usb_init();
-	#endif
-	#ifdef HAVE_STORAGE
+#endif
+#ifdef HAVE_STORAGE
     DEBUGF("Initializing storage drivers...");
     storage_init();
     DEBUGF("Initializing storage subsystem...");
@@ -178,7 +179,10 @@ void initthread()
     disk_init();
     DEBUGF("Mounting partitions...");
     disk_mount_all();
-	#endif
+#endif
+#ifdef HAVE_TARGETINIT_LATE
+    targetinit_late();
+#endif
     DEBUGF("Finished initialisation sequence");
     boot();
 }
@@ -186,12 +190,18 @@ void initthread()
 void init() INITCODE_ATTR;
 void init()
 {
+#ifdef HAVE_TARGETINIT_VERYEARLY
+    targetinit_veryearly();
+#endif
     scheduler_init();
     console_init();
-	#ifdef HAVE_LCD
+#ifdef HAVE_LCD
     lcd_init();
     lcdconsole_init();
-	#endif
+#endif
+#ifdef HAVE_TARGETINIT_EARLY
+    targetinit_early();
+#endif
     interrupt_init();
     thread_create(initthreadname, initthread, initstack,
                   sizeof(initstack), USER_THREAD, 127, true);

@@ -34,7 +34,7 @@
 #define CPU_FREQ 191692800
 
 
-#define CONSOLE_BOOT 1
+#define CONSOLE_BOOT 3
 
 
 #define HAVE_USB
@@ -58,6 +58,8 @@
 #define HAVE_STORAGE_FLUSH
 #define CONFIG_STORAGE STORAGE_NAND
 #define SECTOR_SIZE 2048
+
+#define HAVE_TARGETINIT_LATE
 
 
 #endif
