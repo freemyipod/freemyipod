@@ -6,9 +6,10 @@ STARTUP(build/ipodnano2g/target/ipodnano2g/crt0.o)
 MEMORY
 {
     INIT : ORIGIN = 0x08000000, LENGTH = 0x01eff000
-    INITSTACK : ORIGIN = 0x09eff000, LENGTH = 0x00001000
+    INITBSS : ORIGIN = 0x09e00000, LENGTH = 0x0017f000
+    INITSTACK : ORIGIN = 0x09f7f000, LENGTH = 0x00001000
     SRAM : ORIGIN = 0x22000000, LENGTH = 0x0002bdf0
-    SDRAM : ORIGIN = 0x09f00000, LENGTH = 0x00100000
+    SDRAM : ORIGIN = 0x09f80000, LENGTH = 0x00100000
 }
 
 SECTIONS
@@ -61,7 +62,7 @@ SECTIONS
         . += 0x400;
         _initstackend = .;
         _initbssend = .;
-    } > INIT
+    } > INITBSS
 
     .ibss (NOLOAD) :
     {

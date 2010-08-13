@@ -99,7 +99,7 @@ void boot()
             if (ucl_decompress(addr, size, &_initstart, (uint32_t*)&size)) goto dataflashfailed;
         }
         else if (read(fd, &_initstart, size) != size) goto dataflashfailed;
-        if (execimage(&_initstart) < 0) return;
+        if (execimage(&_initstart) >= 0) return;
     }
 dataflashfailed:
 #endif
@@ -114,14 +114,14 @@ dataflashfailed:
         if (bootinfo.bootflashflags & 1)
         {
             if (ucl_decompress(addr, size, &_initstart, (uint32_t*)&size)) goto bootflashfailed;
-            if (execimage(&_initstart) < 0) return;
+            if (execimage(&_initstart) >= 0) return;
         }
         else if (bootinfo.bootflashflags & 2)
         {
             memcpy(&_initstart, addr, size);
-            if (execimage(&_initstart) < 0) return;
+            if (execimage(&_initstart) >= 0) return;
         }
-        else execimage(addr);
+        else if (execimage(addr) >= 0) return;
 #else
         if (bootinfo.bootflashflags & 1)
         {
@@ -132,7 +132,7 @@ dataflashfailed:
         }
         else if (bootflash_read(bootinfo.bootimagename, &_initstart, 0, size) != size)
             goto bootflashfailed;
-        if (execimage(&_initstart) < 0) return;
+        if (execimage(&_initstart) >= 0) return;
 #endif
     }
 bootflashfailed:
@@ -140,18 +140,18 @@ bootflashfailed:
     if (bootinfo.trymemmapped)
     {
         int size = bootinfo.memmappedsize;
-        if (bootinfo.bootflashflags & 1)
+        if (bootinfo.memmappedflags & 1)
         {
             if (ucl_decompress(bootinfo.memmappedaddr, size, &_initstart, (uint32_t*)&size))
                 goto memmappedfailed;
-            if (execimage(&_initstart) < 0) return;
+            if (execimage(&_initstart) >= 0) return;
         }
-        else if (bootinfo.bootflashflags & 2)
+        else if (bootinfo.memmappedflags & 2)
         {
             memcpy(&_initstart, bootinfo.memmappedaddr, size);
-            if (execimage(&_initstart) < 0) return;
+            if (execimage(&_initstart) >= 0) return;
         }
-        else if (execimage(bootinfo.memmappedaddr) < 0) return;
+        else if (execimage(bootinfo.memmappedaddr) >= 0) return;
     }
 memmappedfailed:
     if (bootinfo.trydataflash || bootinfo.trybootflash || bootinfo.trymemmapped)
