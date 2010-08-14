@@ -763,48 +763,50 @@ class embios:
         <silent> = 0: Process information struct version, Process information table size
         <silent> = 1: nothing
     """
-    
+    # inline functions ----------------------------------------------
     def procinfotolist(processinfo, structver):
       if (structver == 1):   # Process information struct version == 1
         ptr = 0
         process_n = 0
         retval = []
         while ptr < len(processinfo):
+          if struct.unpack("<I", processinfo[ptr:ptr + 4])[0] == 0: continue    # THREAD_FREE
+          
           retval.append({})
           
           retval[process_n]['regs'] = struct.unpack("<IIIIIIIIIIIIIIII", processinfo[ptr:ptr + 64])
           ptr += 16 * 0x4
-          retval[process_n]['cpsr'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['cpsr'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['state'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['state'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['name_ptr'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['name_ptr'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['cputime_current'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['cputime_current'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
           retval[process_n]['cputime_total'] = struct.unpack("<Q", processinfo[ptr:ptr + 8])[0]
           ptr += 1 * 0x8
-          retval[process_n]['startusec'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['startusec'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['queue_next_ptr'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['queue_next_ptr'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['timeout'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['timeout'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['blocked_since'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['blocked_since'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['blocked_by_ptr'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['blocked_by_ptr'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['stack_ptr'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['stack_ptr'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['err_no'] = int(struct.unpack("<I", processinfo[ptr:ptr + 4])[0])
+          retval[process_n]['err_no'] = struct.unpack("<I", processinfo[ptr:ptr + 4])[0]
           ptr += 1 * 0x4
-          retval[process_n]['block_type'] = int(struct.unpack("<B", processinfo[ptr:ptr + 1])[0])
+          retval[process_n]['block_type'] = struct.unpack("<B", processinfo[ptr:ptr + 1])[0]
           ptr += 1 * 0x1
-          retval[process_n]['thread_type'] = int(struct.unpack("<B", processinfo[ptr:ptr + 1])[0])
+          retval[process_n]['thread_type'] = struct.unpack("<B", processinfo[ptr:ptr + 1])[0]
           ptr += 1 * 0x1
-          retval[process_n]['priority'] = int(struct.unpack("<B", processinfo[ptr:ptr + 1])[0])
+          retval[process_n]['priority'] = struct.unpack("<B", processinfo[ptr:ptr + 1])[0]
           ptr += 1 * 0x1
-          retval[process_n]['cpuload'] = int(struct.unpack("<B", processinfo[ptr:ptr + 1])[0])
+          retval[process_n]['cpuload'] = struct.unpack("<B", processinfo[ptr:ptr + 1])[0]
           ptr += 1 * 0x1
           
           process_n += 1
@@ -812,28 +814,35 @@ class embios:
         return retval
       
       
-    def state2name(state):
-      if state == 0: return "THREAD_FREE"
-      elif state == 1: return "THREAD_SUSPENDED"
-      elif state == 2: return "THREAD_READY"
-      elif state == 3: return "THREAD_RUNNING"
-      elif state == 4: return "THREAD_BLOCKED"
-      elif state == 5: return "THREAD_DEFUNCT"
-      elif state == 6: return "THREAD_DEFUNCT_ACK"
+    def state2name(state, structver):
+      if structver == 1:
+        if state == 0: return "THREAD_FREE"
+        elif state == 1: return "THREAD_SUSPENDED"
+        elif state == 2: return "THREAD_READY"
+        elif state == 3: return "THREAD_RUNNING"
+        elif state == 4: return "THREAD_BLOCKED"
+        elif state == 5: return "THREAD_DEFUNCT"
+        elif state == 6: return "THREAD_DEFUNCT_ACK"
+        else: return "UNKNOWN"
       else: return "UNKNOWN"
       
-    def blocktype2name(blocktype):
-      if blocktype == 0: return "THREAD_NOT_BLOCKED"
-      elif blocktype == 1: return "THREAD_BLOCK_SLEEP"
-      elif blocktype == 2: return "THREAD_BLOCK_MUTEX"
-      elif blocktype == 3: return "THREAD_BLOCK_WAKEUP"
-      elif blocktype == 4: return "THREAD_DEFUNCT_STKOV"
-      elif blocktype == 5: return "THREAD_DEFUNCT_PANIC"
+    def blocktype2name(blocktype, structver):
+      if structver == 1:
+        if blocktype == 0: return "THREAD_NOT_BLOCKED"
+        elif blocktype == 1: return "THREAD_BLOCK_SLEEP"
+        elif blocktype == 2: return "THREAD_BLOCK_MUTEX"
+        elif blocktype == 3: return "THREAD_BLOCK_WAKEUP"
+        elif blocktype == 4: return "THREAD_DEFUNCT_STKOV"
+        elif blocktype == 5: return "THREAD_DEFUNCT_PANIC"
+        else: return "UNKNOWN"
       else: return "UNKNOWN"
       
-    def threadtype2name (threadtype):
-      if threadtype == 0: return "USER_THREAD"
-      elif threadtype == 1: return "SYSTEM_THREAD"
+    def threadtype2name (threadtype, structver):
+      if structver == 1:
+        if threadtype == 0: return "USER_THREAD"
+        elif threadtype == 1: return "OS_THREAD"
+        elif threadtype == 2: return "CORE_THREAD"
+        else: return "UNKNOWN"
       else: return "UNKNOWN"
       
     def procinfotostring(procinfolist, structver):
@@ -850,7 +859,7 @@ class embios:
                             + "R12: 0x%08x, SP: 0x%08x,  LR: 0x%08x,  PC: 0x%08x\n" \
                             % (procinfolist[ptr]['regs'][12], procinfolist[ptr]['regs'][13], procinfolist[ptr]['regs'][14], procinfolist[ptr]['regs'][15])
         processinfoprint += "cpsr: 0x%08x      " %             (procinfolist[ptr]['cpsr'])
-        processinfoprint += "state: %s      " %                 (state2name([procinfolist[ptr]['state']]))
+        processinfoprint += "state: %s      " %                 (state2name([procinfolist[ptr]['state']], structver))
         processinfoprint += "nameptr: 0x%08x\n" %               (procinfolist[ptr]['name_ptr'])
         processinfoprint += "current cpu time: 0x%08x      " %  (procinfolist[ptr]['cputime_current'])
         processinfoprint += "total cpu time: 0x%016x\n" %       (procinfolist[ptr]['cputime_total'])
@@ -860,8 +869,8 @@ class embios:
         processinfoprint += "blocked since: 0x%08x      " %     (procinfolist[ptr]['blocked_since'])
         processinfoprint += "blocked by ptr: 0x%08x\n" %        (procinfolist[ptr]['blocked_by_ptr'])
         processinfoprint += "err_no: 0x%08x      " %            (procinfolist[ptr]['err_no'])
-        processinfoprint += "block type: %s\n" %                (blocktype2name([procinfolist[ptr]['block_type']]))
-        processinfoprint += "thread type: %s\n" %               (threadtype2name([procinfolist[ptr]['thread_type']]))
+        processinfoprint += "block type: %s\n" %                (blocktype2name([procinfolist[ptr]['block_type']], structver))
+        processinfoprint += "thread type: %s\n" %               (threadtype2name([procinfolist[ptr]['thread_type']], structver))
         processinfoprint += "priority: 0x%02x      " %          (procinfolist[ptr]['priority'])
         processinfoprint += "cpu load: 0x%02x\n" %              (procinfolist[ptr]['cpuload'])
           
@@ -871,7 +880,7 @@ class embios:
         
       return processinfoprint
      
- 
+    # reading code --------------------------------------------------
     self.__myprint("Retrieving process information...", silent)
     
     offset = 0
