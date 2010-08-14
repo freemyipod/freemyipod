@@ -475,7 +475,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgsendbuf[0] = 1;
             dbgsendbuf[1] = SCHEDULER_THREAD_INFO_VERSION;
             dbgsendbuf[2] = MAX_THREADS * sizeof(struct scheduler_thread);
-            memcpy(&dbgsendbuf[4], (void*)((uint32_t)scheduler_threads + dbgrecvbuf[1]),
+            memcpy(&dbgsendbuf[4], (void*)(((uint32_t)&scheduler_threads) + dbgrecvbuf[1]),
                    dbgrecvbuf[2]);
             size = dbgrecvbuf[2] + 16;
             break;

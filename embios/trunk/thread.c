@@ -265,7 +265,7 @@ void scheduler_switch(int thread)
         last_tick = usec;
         for (i = 0; i < MAX_THREADS; i++)
         {
-            scheduler_threads[i].cpuload = scheduler_threads[i].cputime_current / SCHEDULER_TICK;
+            scheduler_threads[i].cpuload = 255 * scheduler_threads[i].cputime_current / SCHEDULER_TICK;
             scheduler_threads[i].cputime_current = 0;
         }
     }
