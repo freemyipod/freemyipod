@@ -57,13 +57,16 @@ struct bootinfo_t
     bool trydataflash;
     char dataflashpath[256];
     bool dataflashflags;
+    void* dataflashdest;
     bool trybootflash;
     char bootimagename[8];
     bool bootflashflags;
+    void* bootflashdest;
     bool trymemmapped;
     void* memmappedaddr;
     int memmappedsize;
     bool memmappedflags;
+    void* memmappeddest;
 };
 
 
@@ -71,7 +74,6 @@ static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSI
 static const char initthreadname[] INITCONST_ATTR = "Initialization thread";
 static uint32_t initstack[0x400] INITSTACK_ATTR;
 extern int _loadspaceend;
-extern int _initstart;
 struct bootinfo_t bootinfo_src INITHEAD_ATTR =
 {
     .signature = "emBIboot",
@@ -96,10 +98,11 @@ void boot()
         {
             void* addr = (void*)((((uint32_t)&_loadspaceend) - size) & ~(CACHEALIGN_SIZE - 1));
             if (read(fd, addr, size) != size) goto dataflashfailed;
-            if (ucl_decompress(addr, size, &_initstart, (uint32_t*)&size)) goto dataflashfailed;
+            if (ucl_decompress(addr, size, bootinfo.dataflashdest, (uint32_t*)&size))
+                goto dataflashfailed;
         }
-        else if (read(fd, &_initstart, size) != size) goto dataflashfailed;
-        if (execimage(&_initstart) >= 0) return;
+        else if (read(fd, bootinfo.dataflashdest, size) != size) goto dataflashfailed;
+        if (execimage(bootinfo.dataflashdest) >= 0) return;
     }
 dataflashfailed:
 #endif
@@ -113,13 +116,14 @@ dataflashfailed:
         if (!addr) goto bootflashfailed;
         if (bootinfo.bootflashflags & 1)
         {
-            if (ucl_decompress(addr, size, &_initstart, (uint32_t*)&size)) goto bootflashfailed;
-            if (execimage(&_initstart) >= 0) return;
+            if (ucl_decompress(addr, size, bootinfo.bootflashdest, (uint32_t*)&size))
+                goto bootflashfailed;
+            if (execimage(bootinfo.bootflashdest) >= 0) return;
         }
         else if (bootinfo.bootflashflags & 2)
         {
-            memcpy(&_initstart, addr, size);
-            if (execimage(&_initstart) >= 0) return;
+            memcpy(bootinfo.bootflashdest, addr, size);
+            if (execimage(bootinfo.bootflashdest) >= 0) return;
         }
         else if (execimage(addr) >= 0) return;
 #else
@@ -128,11 +132,12 @@ dataflashfailed:
             void* addr = (void*)((((uint32_t)&_loadspaceend) - size) & ~(CACHEALIGN_SIZE - 1));
             if (bootflash_read(bootinfo.bootimagename, addr, 0, size) != size)
                 goto bootflashfailed;
-            if (ucl_decompress(addr, size, &_initstart, (uint32_t*)&size)) goto bootflashfailed;
+            if (ucl_decompress(addr, size, bootinfo.bootflashdest, (uint32_t*)&size))
+                goto bootflashfailed;
         }
-        else if (bootflash_read(bootinfo.bootimagename, &_initstart, 0, size) != size)
+        else if (bootflash_read(bootinfo.bootimagename, bootinfo.bootflashdest, 0, size) != size)
             goto bootflashfailed;
-        if (execimage(&_initstart) >= 0) return;
+        if (execimage(bootinfo.bootflashdest) >= 0) return;
 #endif
     }
 bootflashfailed:
@@ -142,14 +147,15 @@ bootflashfailed:
         int size = bootinfo.memmappedsize;
         if (bootinfo.memmappedflags & 1)
         {
-            if (ucl_decompress(bootinfo.memmappedaddr, size, &_initstart, (uint32_t*)&size))
+            if (ucl_decompress(bootinfo.memmappedaddr, size,
+                               bootinfo.memmappeddest, (uint32_t*)&size))
                 goto memmappedfailed;
-            if (execimage(&_initstart) >= 0) return;
+            if (execimage(bootinfo.memmappeddest) >= 0) return;
         }
         else if (bootinfo.memmappedflags & 2)
         {
-            memcpy(&_initstart, bootinfo.memmappedaddr, size);
-            if (execimage(&_initstart) >= 0) return;
+            memcpy(bootinfo.memmappeddest, bootinfo.memmappedaddr, size);
+            if (execimage(bootinfo.memmappeddest) >= 0) return;
         }
         else if (execimage(bootinfo.memmappedaddr) >= 0) return;
     }

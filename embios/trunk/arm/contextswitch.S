@@ -145,8 +145,15 @@ leave_critical_section:
 .global execfirmware
 .type execfirmware, %function
 execfirmware:
+	str	r0, [sp,#-4]!
+	bl	clean_dcache
+	ldr	r1, [sp], #4
 	msr	cpsr_c, #0xd3
-	bx	r0
+	mrc	p15, 0, r0,c1,c0
+	bic	r0, r0, #1
+	mcr	p15, 0, r0,c1,c0
+	mcr	p15, 0, r0,c7,c5
+	bx	r1
 .size execfirmware, .-execfirmware
 
 unknown_swi_string:

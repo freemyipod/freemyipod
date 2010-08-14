@@ -9,7 +9,7 @@ uint16_t lcdbuffer[240 * 320];
 uint16_t backdrop[240 * 320];
 
 uint32_t config[0x4000];
-uint32_t nordir[0x200];
+uint32_t nordir[0x400];
 
 struct mutex eventmtx;
 struct wakeup eventwakeup;
@@ -197,7 +197,8 @@ configfound:
                 {
                     if (bootflash_is_memmapped)
                     {
-                        if (ucl_decompress(filename, size, (void*)config[pc + 1], &size))
+                        if (ucl_decompress(bootflash_getaddr(filename), size,
+                                           (void*)config[pc + 1], &size))
                             pc = errhandler;
                         else pc += 3;
                     }

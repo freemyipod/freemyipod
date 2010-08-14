@@ -77,10 +77,10 @@ endif
 build/version.h: version.h .svn/entries
 	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
-	@-if not exist $$(subst /,\,$$(dir $$@)) md $$(subst /,\,$$(dir $$@))
+	@-if not exist build md build
 	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
 else
-	@-mkdir -p $$(dir $$@)
+	@-mkdir -p build
 	@sed -e 's/\$$REVISION\$$/$(REVISION)/' -e 's/\$$REVISIONINT\$$/$(REVISIONINT)/' < $< > $@
 endif
 
