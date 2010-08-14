@@ -21,23 +21,16 @@
 //
 
 
-#ifndef __DRAWING_H__
-#define __DRAWING_H__
+#ifndef __VERSION_H__
+#define __VERSION_H__
 
 
-#include "global.h"
-
-
-#define FONT_WIDTH 6
-#define FONT_HEIGHT 8
-
-
-void renderchar(void* buffer, int fgcol, int bgcol, char text, int stride);
-void rendertext(void* buffer, int fgcol, int bgcol, char* text, int stride);
-void renderbmp(void* buffer, void* bitmap, int stride);
-void renderfillrect(uint16_t* buffer, int x, int y, int width, int height, int color, int stride);
-int get_font_width(void);
-int get_font_height(void);
+#define VERSION "0.0.1pre"
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 0
+#define VERSION_PATCH 1
+#define VERSION_SVN "$REVISION$"
+#define VERSION_SVN_INT $REVISIONINT$
 
 
 #endif

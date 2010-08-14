@@ -35,6 +35,7 @@ int bootflash_read(const char* filename, void* addr, int offset, int size);
 void bootflash_readraw(void* addr, int offset, int size);
 void bootflash_writeraw(void* addr, int offset, int size);
 void* bootflash_getrawaddr(int offset);
+bool bootflash_is_memmapped(void);
 
 
 #endif

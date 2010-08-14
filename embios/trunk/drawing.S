@@ -21,11 +21,100 @@
 @
 
 
+#define ASM_FILE
+#include "global.h"
+
+
+.section .icode.get_font_width, "ax", %progbits
+.align 2
+.global get_font_width
+.type get_font_width, %function
+get_font_width:
+	mov	r0, #6
+	mov	pc, lr
+.size get_font_width, .-get_font_width
+
+
+.section .icode.get_font_height, "ax", %progbits
+.align 2
+.global get_font_height
+.type get_font_height, %function
+get_font_height:
+	mov	r0, #8
+	mov	pc, lr
+.size get_font_height, .-get_font_height
+
+
+.section .icode.rendertext, "ax", %progbits
+.align 2
+.global rendertext
+.type rendertext, %function
+rendertext:
+	stmfd	sp!, {r0-r2,r4,r5,lr}
+	ldr	r4, [sp,#0x18]
+	str	r4, [sp,#-4]!
+	mov	r4, r3
+	mov	r5, #6 * LCD_BYTESPERPIXEL
+rendertext_loop:
+	ldrb	r3, [r4], #1
+	cmp	r3, #0
+	beq	rendertext_done
+	bl	renderchar
+	ldmed	sp, {r0-r2}
+	add	r0, r0, r5
+	str	r0, [sp,#4]
+	b	rendertext_loop
+rendertext_done:
+	ldmfd	sp!, {r0-r5,pc}
+.size rendertext, .-rendertext
+
+
+.section .icode.renderfillrect, "ax", %progbits
+.align 2
+.global renderfillrect
+.type renderfillrect, %function
+renderfillrect:
+	ldr	r12, [sp,#8]
+	mla	r1, r12, r2, r1
+#if (LCD_BYTESPERPIXEL == 1)
+	add	r0, r0, r1
+#elif (LCD_BYTESPERPIXEL == 2)
+	add	r0, r0, r1,lsl#1
+#elif (LCD_BYTESPERPIXEL == 4)
+	add	r0, r0, r1,lsl#2
+#else
+#error Unknown number of bytes per pixel!
+#endif
+	ldmfd	sp, {r1,r2}
+renderfillrect_y:
+	cmp	r1, #0
+	moveq	pc, lr
+	sub	r1, r1, #1
+	mov	r12, r3
+renderfillrect_x:
+	cmp	r12, #0
+	beq	renderfillrect_y
+	sub	r12, r12, #1
+#if (LCD_BYTESPERPIXEL == 1)
+	strb	r2, [r0], #1
+#elif (LCD_BYTESPERPIXEL == 2)
+	strh	r2, [r0], #2
+#elif (LCD_BYTESPERPIXEL == 4)
+	str	r2, [r0], #4
+#else
+#error Unknown number of bytes per pixel!
+#endif
+	b	renderfillrect_x
+.size renderfillrect, .-renderfillrect
+
+
+#if (LCD_BYTESPERPIXEL == 2)
 .section .icode.renderbmp, "ax", %progbits
 .align 2
 .global renderbmp
 .type renderbmp, %function
 renderbmp:
+	mov	r2, r2,lsl#1
 	ldrh	r3, [r1]
 	sub	r3, r3, #0x4d00
 	subs	r3, r3, #0x42
@@ -41,8 +130,7 @@ renderbmp:
 	ldrh	r12, [r1,#12]
 	orr	lr, lr, r12,lsl#16
 	add	r1, r1, lr
-	mov	r12, #352
-	mul	lr, r12, r3
+	mul	lr, r2, r3
 	add	r0, r0, lr
 renderbmp_row:
 	mov	r12, r4
@@ -93,7 +181,7 @@ renderchar_blendcol:
 	strh	lr, [r6], #2
 	subs	r5, r5, #1
 	bne	renderchar_blendcol
-	add	r6, r6, r7
+	add	r6, r6, r7,lsl#1
 	sub	r6, r6, #12
 	subs	r4, r4, #1
 	bne	renderchar_blendrow
@@ -104,7 +192,7 @@ renderchar_opaquecol:
 	strh	r2, [r6], #2
 	subs	r5, r5, #1
 	bne	renderchar_opaquecol
-	add	r6, r6, r7
+	add	r6, r6, r7,lsl#1
 	sub	r6, r6, #12
 	subs	r4, r4, #1
 	bne	renderchar_opaquerow
@@ -121,7 +209,7 @@ renderchar_col:
 renderchar_row:
 	tst	r4, #1
 	strneh	r1, [r6]
-	add	r6, r6, r7
+	add	r6, r6, r7,lsl#1
 	movs	r4, r4,lsr#1
 	bne	renderchar_row
 	add	r0, r0, #2
@@ -228,3 +316,6 @@ renderchar_font:
 	.byte 2, 1, 2, 4, 2
 .align 2
 .size renderchar, .-renderchar
+#else
+#error Unknown number of bytes per pixel!
+#endif

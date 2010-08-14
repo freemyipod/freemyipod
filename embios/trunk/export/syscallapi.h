@@ -31,6 +31,7 @@
 #include "../dir.h"
 #include "../file.h"
 #include "../format.h"
+#include "../drawing.h"
 #include "../lcdconsole.h"
 #include "../storage.h"
 #include "../shutdown.h"
@@ -49,6 +50,7 @@
 #include "../progressbar.h"
 #include "../button.h"
 #include "../clickwheel.h"
+#include "../clockgates.h"
 #include "../contextswitch.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
@@ -90,6 +92,10 @@ struct embios_syscall_table
     typeof(rmdir) *rmdir;
     typeof(renderbmp) *renderbmp;
     typeof(renderchar) *renderchar;
+    typeof(rendertext) *rendertext;
+    typeof(renderfillrect) *renderfillrect;
+    typeof(get_font_width) *get_font_width;
+    typeof(get_font_height) *get_font_height;
     typeof(execimage) *execimage;
     typeof(ftruncate) *ftruncate;
     typeof(fsync) *fsync;
@@ -147,6 +153,7 @@ struct embios_syscall_table
     typeof(bootflash_readraw) *bootflash_readraw;
     typeof(bootflash_writeraw) *bootflash_writeraw;
     typeof(bootflash_getrawaddr) *bootflash_getrawaddr;
+    typeof(bootflash_is_memmapped) *bootflash_is_memmapped;
     typeof(read_native_timer) *read_native_timer;
     typeof(read_usec_timer) *read_usec_timer;
     typeof(i2c_send) *i2c_send;
@@ -208,6 +215,7 @@ struct embios_syscall_table
     typeof(button_register_handler) *button_register_handler;
     typeof(button_unregister_handler) *button_unregister_handler;
     typeof(clickwheel_get_state) *clickwheel_get_state;
+    typeof(clockgate_enable) *clockgate_enable;
 };
 
 

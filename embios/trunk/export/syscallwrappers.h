@@ -50,6 +50,10 @@ extern struct embios_syscall_table* __embios_syscall;
 #define rmdir(args...) __embios_syscall->rmdir(args)
 #define renderbmp(args...) __embios_syscall->renderbmp(args)
 #define renderchar(args...) __embios_syscall->renderchar(args)
+#define rendertext(args...) __embios_syscall->rendertext(args)
+#define renderfillrect(args...) __embios_syscall->renderfillrect(args)
+#define get_font_width(args...) __embios_syscall->get_font_width(args)
+#define get_font_height(args...) __embios_syscall->get_font_height(args)
 #define execimage(args...) __embios_syscall->execimage(args)
 #define ftruncate(args...) __embios_syscall->ftruncate(args)
 #define fsync(args...) __embios_syscall->fsync(args)
@@ -107,6 +111,7 @@ extern struct embios_syscall_table* __embios_syscall;
 #define bootflash_readraw(args...) __embios_syscall->bootflash_readraw(args)
 #define bootflash_writeraw(args...) __embios_syscall->bootflash_writeraw(args)
 #define bootflash_getrawaddr(args...) __embios_syscall->bootflash_getrawaddr(args)
+#define bootflash_is_memmapped(args...) __embios_syscall->bootflash_is_memmapped(args)
 #define read_native_timer(args...) __embios_syscall->read_native_timer(args)
 #define read_usec_timer(args...) __embios_syscall->read_usec_timer(args)
 #define i2c_send(args...) __embios_syscall->i2c_send(args)
@@ -171,6 +176,7 @@ extern struct embios_syscall_table* __embios_syscall;
 #define button_register_handler(args...) __embios_syscall->button_register_handler(args)
 #define button_unregister_handler(args...) __embios_syscall->button_unregister_handler(args)
 #define clickwheel_get_state(args...) __embios_syscall->clickwheel_get_state(args)
+#define clockgate_enable(args...) __embios_syscall->clockgate_enable(args)
 
 
 #endif

@@ -162,7 +162,6 @@ memmappedfailed:
 void initthread() INITCODE_ATTR;
 void initthread()
 {
-    cputs(CONSOLE_BOOT, welcomestring);
 #ifdef HAVE_I2C
     i2c_init();
 #endif
@@ -170,6 +169,7 @@ void initthread()
 #ifdef HAVE_USB
     usb_init();
 #endif
+    cputs(CONSOLE_BOOT, welcomestring);
 #ifdef HAVE_BUTTON
     button_init();
 #endif

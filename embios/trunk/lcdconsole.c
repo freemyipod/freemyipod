@@ -82,7 +82,7 @@ void lcdconsole_putc_noblit(char string, int fgcolor, int bgcolor)
         current_row = LCDCONSOLE_ROWS - 1;
     }
     renderchar(&framebuf[OFFSETBYTES + ROWBYTES * current_row + COLBYTES * current_col],
-        fgcolor, bgcolor, string, LINEBYTES);
+               fgcolor, bgcolor, string, LCD_WIDTH);
 }
 
 void lcdconsole_puts_noblit(const char* string, int fgcolor, int bgcolor)

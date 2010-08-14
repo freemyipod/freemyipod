@@ -109,14 +109,13 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .tlsf_block_size = tlsf_block_size,
     .tlsf_overhead = tlsf_overhead,
     .execfirmware = execfirmware,
+    .clockgate_enable = clockgate_enable,
 #ifdef HAVE_STORAGE
     .opendir = opendir,
     .closedir = closedir,
     .readdir = readdir,
     .mkdir = mkdir,
     .rmdir = rmdir,
-    .renderbmp = renderbmp,
-    .renderchar = renderchar,
     .execimage = execimage,
     .ftruncate = ftruncate,
     .fsync = fsync,
@@ -155,6 +154,12 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .lcd_get_height = lcd_get_height,
     .lcd_get_bytes_per_pixel = lcd_get_bytes_per_pixel,
     .lcd_translate_color = lcd_translate_color,
+    .renderbmp = renderbmp,
+    .renderchar = renderchar,
+    .rendertext = rendertext,
+    .renderfillrect = renderfillrect,
+    .get_font_width = get_font_width,
+    .get_font_height = get_font_height,
 #endif
 #ifdef HAVE_BACKLIGHT
     .backlight_on = backlight_on,
@@ -169,6 +174,7 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .bootflash_readraw = bootflash_readraw,
     .bootflash_writeraw = bootflash_writeraw,
     .bootflash_getrawaddr = bootflash_getrawaddr,
+    .bootflash_is_memmapped = bootflash_is_memmapped,
 #endif
 #ifdef HAVE_BUTTON
     .button_register_handler = button_register_handler,

@@ -38,6 +38,8 @@ static int oldpos IBSS_ATTR;
 static int oldbuttons IBSS_ATTR;
 static uint32_t lastpacket IBSS_ATTR;
 static int packets IBSS_ATTR;
+static int collect IBSS_ATTR;
+static int lastdiff IBSS_ATTR;
 
 
 void clickwheel_thread(void) ICODE_ATTR;
@@ -68,22 +70,27 @@ void clickwheel_thread()
             {
                 if (!oldtouched) button_send_event(WHEEL_TOUCH, 0, newpos);
                 button_send_event(WHEEL_POSITION, 0, newpos);
-                if (TIMEOUT_EXPIRED(lastpacket, 200000)) packets = 5;
-                else packets++;
-                if (packets > 100) packets = 100;
                 int distance = newpos - oldpos;
+                if (TIMEOUT_EXPIRED(lastpacket, 200000) || lastdiff * distance < 0) packets = 10;
+                else packets++;
+                lastdiff = distance;
+                if (packets > 200) packets = 200;
                 if (distance < -48) distance += 96;
                 else if (distance > 48) distance -= 96;
-                distance *= packets;
+                collect += distance * packets;
                 button_send_event(WHEEL_MOVED, 0, distance);
-                enum button_event e = distance > 0 ? WHEEL_FORWARD : WHEEL_BACKWARD;
-                distance = distance > 0 ? distance : -distance;
-                button_send_event(e, 0, distance >> 6);
+                enum button_event e = collect > 0 ? WHEEL_FORWARD : WHEEL_BACKWARD;
+                int data = (collect > 0 ? collect : -collect) / 128;
+                if (data) button_send_event(e, 0, data);
+                collect %= 128;
             }
             else if (oldtouched)
             {
                 button_send_event(WHEEL_POSITION, 0, newpos);
                 button_send_event(WHEEL_UNTOUCH, 0, newpos);
+                collect = 0;
+                packets = 0;
+                lastdiff = 0;
             }
 
             oldbuttons = newbuttons;
@@ -103,6 +110,8 @@ void clickwheel_init()
     oldtouched = false;
     oldbuttons = 0;
     lastpacket = 0;
+    collect = 0;
+    lastdiff = 0;
     INTMSK |= 1 << IRQ_WHEEL;
     PWRCON(1) &= ~1;
     PCON15 = (PCON15 & ~0xFFFF0000) | 0x22220000;

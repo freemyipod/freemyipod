@@ -127,3 +127,12 @@ void* bootflash_getrawaddr(int offset)
 {
     return &nor[offset];
 }
+
+bool bootflash_is_memmapped()
+{
+#ifdef BOOTFLASH_IS_MEMMAPPED
+    return true;
+#else
+    return false;
+#endif
+}
