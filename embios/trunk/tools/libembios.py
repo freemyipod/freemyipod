@@ -925,6 +925,18 @@ class embios:
     return struct.unpack("<I", response[4:8])[0]
     
     
+  def execfirmware(self, offset, silent = 0):
+    self.__myprint("Executing firmware image at 0x%08x..." % offset, silent)
+      
+    self.handle.bulkWrite(self.__coutep, struct.pack("<IIII", 24, offset, 0, 0))
+    response = self.__getbulk(self.handle, self.__cinep, 0x10)
+    self.__checkstatus(response)
+    
+    self.__myprint(" done\n", silent)
+    
+    return
+    
+    
 #===================================================================================== 
 
 
