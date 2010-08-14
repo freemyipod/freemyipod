@@ -2342,15 +2342,18 @@ static uint32_t ftl_repair()
     if (count)
     {
 #ifdef HAVE_LCD
-        lcdconsole_progressbar(&progressbar, 0, count * ppb);
+        lcdconsole_progressbar(&progressbar, 0, count * ppb * 2);
 #endif
         count = 0;
         for (i = 0; i < ftl_nand_type->userblocks + 0x17; i++)
             if (blk_type[i] == 2)
             {
                 block = 0xffff;
-                for (j = 0; j < ftl_nand_type->pagesperblock * ftl_banks; j++)
+                for (j = 0; j < ppb; j++)
                 {
+#ifdef HAVE_LCD
+                    progressbar_setpos(&progressbar, count * ppb * 2 + j, false);
+#endif
                     uint32_t ret = ftl_vfl_read(i * ppb + j, ftl_buffer,
                                                 &ftl_sparebuffer[0], 1, 0);
                     if (ret & 0x11F) continue;
@@ -2420,6 +2423,9 @@ static uint32_t ftl_repair()
                     }
                     for (j = 0; j < ppb; j++)
                     {
+#ifdef HAVE_LCD
+                        progressbar_setpos(&progressbar, count * ppb * 2 + ppb + j, false);
+#endif
                         memset(&ftl_sparebuffer[0], 0xFF, 0x40);
                         ftl_sparebuffer[0].user.lpn = block * ppb + j;
                         ftl_sparebuffer[0].user.usn = pageusn[j];
@@ -2431,9 +2437,6 @@ static uint32_t ftl_repair()
                                                   "(scattered page commit)!\n", i * ppb + j);
                             return 1;
                         }
-#ifdef HAVE_LCD
-                        progressbar_setpos(&progressbar, count * ppb + j, false);
-#endif
                     }
                     if (ftl_map[block] != 0xffff) blk_type[ftl_map[block]] = 5;
                     blk_type[i] = 1;
@@ -2441,7 +2444,7 @@ static uint32_t ftl_repair()
                 }
                 else blk_type[i] = 5;
 #ifdef HAVE_LCD
-                progressbar_setpos(&progressbar, ++count * ppb, false);
+                progressbar_setpos(&progressbar, ++count * ppb * 2, false);
 #endif
             }
     }
@@ -2501,6 +2504,7 @@ static uint32_t ftl_repair()
         return 1;
     }
     ftl_store_ctrl_block_list();
+    return 0;
 }
 
 
@@ -2565,6 +2569,7 @@ uint32_t ftl_init(void)
 			cprintf(CONSOLE_BOOT, "FTL recovery finished. Trying to mount again...\n");
 	        if (ftl_open() == 0)
             {
+			    cprintf(CONSOLE_BOOT, "Mount succeeded.\n");
                 ftl_initialized = true;
                 return 0;
             }
