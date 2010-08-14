@@ -770,7 +770,10 @@ class embios:
         process_n = 0
         retval = []
         while ptr < len(processinfo):
-          if struct.unpack("<I", processinfo[ptr:ptr + 4])[0] == 0: continue    # THREAD_FREE
+          if struct.unpack("<I", processinfo[ptr + 68:ptr + 72])[0] == 0:    # THREAD_FREE
+            ptr += 120
+            process_n += 1
+            continue
           
           retval.append({})
           

@@ -375,6 +375,9 @@ def parsecommand(dev, argv):
     if len(argv) != 3: usage()
     dev.execimage(int(argv[2], 16))
     
+  elif argv[1] == "execfirmware":
+    if len(argv) != 3: usage()
+    dev.execfirmware(int(argv[2], 16))
     
   elif argv[1] == "readrawbootflash":
     if len(argv) != 5: usage()
