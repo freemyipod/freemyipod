@@ -189,6 +189,11 @@ configfound:
                 cputs(1, "iLoader terminated on user's behalf\n");
                 return;
 
+            case 0x2:
+                cputs(1, &((char*)config)[config[pc + 1]]);
+                pc += 2;
+                break;
+
             case 0x3:
                 filename = &((char*)config)[config[pc + 2]];
                 size = bootflash_filesize(filename);
@@ -425,6 +430,12 @@ configfound:
             case 0x14:
                 if (ucl_decompress((void*)config[pc + 1], size, (void*)config[pc + 2], &size))
                     pc = errhandler;
+                else pc += 3;
+                break;
+
+            case 0x15:
+                execimage((void*)config[pc + 1]);
+                if (config[pc + 2]) return;
                 else pc += 3;
                 break;
 

@@ -22,27 +22,28 @@
 #
 
 
-# 0 = nop
-# 1 = terminate
-# 2 = undefined
-# 3 = readflash <addr> <*filename>
-# 4 = readfile <addr> <*filename>
-# 5 = script <baseaddr> <entrypoint>
-# 6 = error <*addr>
-# 7 = jmp <*addr>
-# 8 = button <*addrcenter> <*addrright> <*addrleft> <*addrplay> <*addrmenu> <timeout>
-# 9 = menu <*entries> <selected> <*addrright> <*addrleft> <*addrplay> <*addrmenu> <timeout>
-# a = fillrect <x> <y> <width> <height> <color>
-# b = text <x> <y> <fgcolor> <bgcolor> <*text>
-# c = displaybmp <x> <y> <addr>
-# d = blit
-# e = backlight <state> <brightness> <fade>
-# f = poweroff
+# 00 = nop
+# 01 = terminate
+# 02 = cputs <*text>
+# 03 = readflash <addr> <*filename>
+# 04 = readfile <addr> <*filename>
+# 05 = script <baseaddr> <entrypoint>
+# 06 = error <*addr>
+# 07 = jmp <*addr>
+# 08 = button <*addrcenter> <*addrright> <*addrleft> <*addrplay> <*addrmenu> <timeout>
+# 09 = menu <*entries> <selected> <*addrright> <*addrleft> <*addrplay> <*addrmenu> <timeout>
+# 0a = fillrect <x> <y> <width> <height> <color>
+# 0b = text <x> <y> <fgcolor> <bgcolor> <*text>
+# 0c = displaybmp <x> <y> <addr>
+# 0d = blit
+# 0e = backlight <state> <brightness> <fade>
+# 0f = poweroff
 # 10 = rbchecksum <addr>
 # 11 = sleep <microseconds>
 # 12 = clockgate <gateid> <onoff>
 # 13 = exec <addr>
 # 14 = unpackucl <src> <dest>
+# 15 = execembiosapp <addr> <terminate>
 
 # <*text> <x> <y> <fgcolor> <bgcolor> <fgactive> <bgactive> <*addr>
 
@@ -55,6 +56,7 @@ if len(sys.argv) != 3:
   exit(2)
 
 opcodes = {"terminate":     (1, 0), \
+           "readflash":     (2, 1), \
            "readflash":     (3, 2), \
            "readfile":      (4, 2), \
            "script":        (5, 2), \
@@ -73,6 +75,7 @@ opcodes = {"terminate":     (1, 0), \
            "clockgate":     (18, 2), \
            "exec":          (19, 1), \
            "unpackucl":     (20, 2), \
+           "execembiosapp": (21, 2), \
            ".word":         (-1, 1), \
            ".ascii":        (-2, 1), \
            ".menuentry":    (-3, 8)}
