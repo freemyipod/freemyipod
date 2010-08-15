@@ -23,6 +23,9 @@
   1.1 - 2007-09-15
   -- Stuff added to guess the header versions.
 
+  1.2 - 2010-08-15
+  -- Added Nano 4G firmware support.
+
   Todo list:
   -- Debug
 */
@@ -36,7 +39,7 @@
 #include "extract2g.h"
 
 #define VERSION_H 1
-#define VERSION_L 1
+#define VERSION_L 2
 
 #define B (0x0FFFFFFF)
 
@@ -230,14 +233,15 @@ void usage(int status)
     fputs("Usage: extract_2g [OPTION] [FILE]\n", stdout);
     fprintf(stdout,"Read & extract iPod Nano 2G data parts from a FILE dump.\n\
 \n\
- -l, --list               only list avaible parts according to the dump directory\n\n\
- -H, --hash               do a hash on every part of the dump\n\n\
- -A, --all                extract ALL founded parts from dump (default names used)\n\n\
- -e, --extract=NAME       select which part you want to extract (default none)\n\
- -o, --output=FILE        put the extracted part into FILE (default NAME.fw)\n\n\
- -d, --directory-address  specify the directory address (default 0x%X )\n\
- -a, --header-length      specify the header length of each part (default 0x800)\n\n\
- -h, --help               display this help and exit\n", ADDR_DIR_DEFAULT);
+-l, --list               only list avaible parts according to the dump directory\n\n\
+-H, --hash               do a hash on every part of the dump\n\n\
+-A, --all                extract ALL founded parts from dump (default names used)\n\n\
+-4, --nano4g-compat      forces iPod Nano 3G firmwares to be recognised as iPod Nano 4G's\n\n\
+-e, --extract=NAME       select which part you want to extract (default none)\n\
+-o, --output=FILE        put the extracted part into FILE (default NAME.fw)\n\n\
+-d, --directory-address  specify the directory address (default 0x%X )\n\
+-a, --header-length      specify the header length of each part (default 0x800)\n\n\
+-h, --help               display this help and exit\n", ADDR_DIR_DEFAULT);
   }
 
   exit(status);
@@ -252,6 +256,7 @@ int main(int argc, char **argv)
 
   char extract_is_set = 0;
   char extract_all = 0;
+  char nano4g_compat = 0;
   char list_directories = 0;
   char is_found = 0;
   char hash_parts = 0;
@@ -271,7 +276,7 @@ int main(int argc, char **argv)
   int length_header = LEN_HEADER;
 
   /* Getopt short options */
-  static char const short_options[] = "e:o:d:a:AHlhv";
+  static char const short_options[] = "e:o:d:a:AHl4hv";
   
   /* Getopt long options */
   static struct option const long_options[] = {
@@ -282,6 +287,7 @@ int main(int argc, char **argv)
     {"all", no_argument, NULL, 'A'},
     {"directory-address", required_argument, NULL, 'd'},
     {"header-length", required_argument, NULL, 'a'},
+    {"nano4g-compat", no_argument, NULL, '4'},
     {"help", no_argument, NULL, 'h'},
     {"version", no_argument, NULL, 'v'},
     {NULL, 0, NULL, 0}
@@ -340,6 +346,10 @@ int main(int argc, char **argv)
         extract_all = 1;
       break;
 
+    case '4':
+        nano4g_compat = 1;
+      break;
+
     case 'h':
       usage(EXIT_SUCCESS);
       break;
@@ -375,6 +385,9 @@ There is NO WARRANTY, to the extent permitted by law.\n", stdout);
   else
     addr_directory = ADDR_DIR_DEFAULT;
 
+  if (addr_directory == ADDR_DIR_3G && nano4g_compat)
+    printf("> iPod nano 4g compat. mode enabled\n");
+
 
   fseek(file, addr_directory, SEEK_SET);
    
@@ -404,7 +417,10 @@ There is NO WARRANTY, to the extent permitted by law.\n", stdout);
         fprintf(stderr,"Memory allocation failure.\n");
         exit(EXIT_FAILURE);
       }
-
+	  
+	  if (addr_directory == ADDR_DIR_3G && nano4g_compat)
+        dir.devOffset += 4096;
+	  
       memcpy(directories + directories_size - 1, &dir, sizeof(DIRECTORY));
     }
     else
