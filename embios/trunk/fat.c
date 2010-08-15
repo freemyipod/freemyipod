@@ -493,7 +493,7 @@ int fat_unmount(int volume, bool flush)
         for(i = 0;i < FAT_CACHE_SIZE;i++)
         {
             struct fat_cache_entry *fce = &fat_cache[i];
-            if(fce->inuse
+            if((fce->valid || fce->locked)
 #ifdef HAVE_MULTIVOLUME
                && fce->fat_vol == fat_bpb
 #endif

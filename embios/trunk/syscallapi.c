@@ -110,6 +110,8 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .tlsf_overhead = tlsf_overhead,
     .execfirmware = execfirmware,
     .clockgate_enable = clockgate_enable,
+    .context_switch = context_switch,
+    .reset = reset,
 #ifdef HAVE_STORAGE
     .opendir = opendir,
     .closedir = closedir,
@@ -130,6 +132,10 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .filesize = filesize,
     .storage_read_sectors_md = storage_read_sectors_md,
     .storage_write_sectors_md = storage_write_sectors_md,
+#ifdef HAVE_HOTSWAP
+    .disk_mount = disk_mount,
+    .disk_unmount = disk_unmount,
+#endif
 #endif
 #ifdef HAVE_LCD
     .lcdconsole_putc_noblit = lcdconsole_putc_noblit,
@@ -182,5 +188,11 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
 #endif
 #ifdef HAVE_CLICKWHEEL
     .clickwheel_get_state = clickwheel_get_state,
+#endif
+#ifdef HAVE_HWKEYAES
+    .hwkeyaes = hwkeyaes,
+#endif
+#ifdef HAVE_HMACSHA1
+    .hmacsha1 = hmacsha1
 #endif
 };

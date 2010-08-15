@@ -41,6 +41,9 @@ __start:
 .section .initcode,"ax",%progbits
 .global _start
 _start:
+	mrc	p15, 0, r0,c1,c0
+	orr	r0, r0, #1
+	mcr	p15, 0, r0,c1,c0
 	ldr	r0, =_sramsource
 	ldr	r1, =_sramstart
 	ldr	r2, =_sramend

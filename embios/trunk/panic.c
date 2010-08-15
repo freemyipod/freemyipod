@@ -33,7 +33,6 @@
 
 extern struct scheduler_thread* scheduler_threads;
 extern struct scheduler_thread* current_thread;
-void hang();
 
 
 void handle_panic(enum panic_severity severity)

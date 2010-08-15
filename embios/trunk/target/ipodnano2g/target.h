@@ -50,6 +50,10 @@
 
 #define HAVE_I2C
 
+#define HAVE_HWKEYAES
+
+#define HAVE_HMACSHA1
+
 #define HAVE_BUTTON
 #define HAVE_CLICKWHEEL
 
@@ -59,6 +63,7 @@
 #define HAVE_STORAGE
 #define HAVE_FLASH_STORAGE
 #define HAVE_STORAGE_FLUSH
+#define HAVE_HOTSWAP
 #define CONFIG_STORAGE STORAGE_NAND
 #define SECTOR_SIZE 2048
 

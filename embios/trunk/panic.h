@@ -38,6 +38,10 @@ enum panic_severity
 };
 
 
+extern void hang();
+extern void reset();
+
+
 void panic(enum panic_severity severity, const char* string) ICODE_ATTR;
 void panicf(enum panic_severity severity, const char* string, ...) ICODE_ATTR
             ATTRIBUTE_PRINTF(2, 3);

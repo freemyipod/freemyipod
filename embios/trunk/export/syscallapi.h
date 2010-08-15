@@ -28,6 +28,7 @@
 #include "../global.h"
 #include "../panic.h"  
 #include "../console.h"
+#include "../disk.h"
 #include "../dir.h"
 #include "../file.h"
 #include "../format.h"
@@ -52,6 +53,8 @@
 #include "../clickwheel.h"
 #include "../clockgates.h"
 #include "../contextswitch.h"
+#include "../hwkeyaes.h"
+#include "../hmacsha1.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
 #include "../libc/include/stdio.h"
@@ -216,6 +219,12 @@ struct embios_syscall_table
     typeof(button_unregister_handler) *button_unregister_handler;
     typeof(clickwheel_get_state) *clickwheel_get_state;
     typeof(clockgate_enable) *clockgate_enable;
+    typeof(context_switch) *context_switch;
+    typeof(disk_mount) *disk_mount;
+    typeof(disk_unmount) *disk_unmount;
+    typeof(hwkeyaes) *hwkeyaes;
+    typeof(hmacsha1) *hmacsha1;
+    typeof(reset) *reset;
 };
 
 

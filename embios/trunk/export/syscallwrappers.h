@@ -177,6 +177,12 @@ extern struct embios_syscall_table* __embios_syscall;
 #define button_unregister_handler(args...) __embios_syscall->button_unregister_handler(args)
 #define clickwheel_get_state(args...) __embios_syscall->clickwheel_get_state(args)
 #define clockgate_enable(args...) __embios_syscall->clockgate_enable(args)
+#define context_switch(args...) __embios_syscall->context_switch(args)
+#define disk_mount(args...) __embios_syscall->disk_mount(args)
+#define disk_unmount(args...) __embios_syscall->disk_unmount(args)
+#define hwkeyaes(args...) __embios_syscall->hwkeyaes(args)
+#define hmacsha1(args...) __embios_syscall->hmacsha1(args)
+#define reset(args...) __embios_syscall->reset(args)
 
 
 #endif

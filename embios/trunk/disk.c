@@ -124,7 +124,7 @@ int disk_mount_all(void)
     int i;
     
 #ifdef HAVE_HOTSWAP
-    mutex_lock(&disk_mutex);
+    mutex_lock(&disk_mutex, TIMEOUT_BLOCK);
 #endif
 
     fat_init(); /* reset all mounted partitions */
@@ -169,7 +169,7 @@ int disk_mount(int drive)
     struct partinfo* pinfo;
 
 #ifdef HAVE_HOTSWAP
-    mutex_lock(&disk_mutex);
+    mutex_lock(&disk_mutex, TIMEOUT_BLOCK);
 #endif
 
     volume = get_free_volume();
@@ -216,7 +216,7 @@ int disk_unmount(int drive)
 {
     int unmounted = 0;
     int i;
-    mutex_lock(&disk_mutex);
+    mutex_lock(&disk_mutex, TIMEOUT_BLOCK);
     for (i=0; i<NUM_VOLUMES; i++)
     {
         if (vol_drive[i] == drive)
