@@ -64,7 +64,7 @@ build/$(NAME).integrated.bin: $(EMBIOSDIR)/build/ipodnano2g/embios.bin build/$(N
 	@$(EMBIOSEMBEDAPP) $^ $@ --run-from=08000000
 
 build/$(NAME).embiosapp: build/$(NAME).plain.embiosapp $(BITMAPS)
-	@echo [GENINS]     $<
+	@echo [GENINS] $<
 	@$(GENINSTALLER) $< $@ 
 
 build/bootstub.bin: build/bootstub.elf
