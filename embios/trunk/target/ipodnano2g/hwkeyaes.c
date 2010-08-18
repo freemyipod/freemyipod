@@ -42,7 +42,6 @@ void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, ui
     AESINSIZE = 0x10;
     AESSIZE3 = 0x10;
     ptr = direction == HWKEYAES_ENCRYPT ? 0 : (size >> 2) - 4;
-    clean_dcache();
     while (true)
     {
         if (direction == HWKEYAES_ENCRYPT)
@@ -55,16 +54,20 @@ void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, ui
         AESOUTADDR = (uint32_t)data + (ptr << 2);
         AESINADDR = (uint32_t)data + (ptr << 2);
         AESAUXADDR = (uint32_t)data + (ptr << 2);
+	    clean_dcache();
         AESSTATUS = 6;
         AESGO = go;
         go = 3;
         while ((AESSTATUS & 6) == 0) yield();
+	    invalidate_dcache();
         if (direction == HWKEYAES_DECRYPT)
+		{
+			if (!ptr) break;
             for (i = 0; i < 4; i++)
                 ((uint32_t*)data)[ptr + i] ^= ((uint32_t*)data)[ptr + i - 4];
+		}
         ptr += direction == HWKEYAES_ENCRYPT ? 4 : -4;
     }
-    invalidate_dcache();
     AESCONTROL = 0;
     PWRCON(1) |= 0x400;
 }
