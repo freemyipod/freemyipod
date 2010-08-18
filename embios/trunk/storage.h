@@ -25,6 +25,8 @@
 #include "global.h"
 #include "mv.h"
 
+#define STORAGE_GET_INFO
+
 #if (CONFIG_STORAGE & STORAGE_SD)
 #include "storage_sd.h"
 #endif
@@ -73,9 +75,6 @@ struct storage_info
         #define storage_last_disk_activity() ata_last_disk_activity()
         #define storage_get_identify() ata_get_identify()
 
-        #ifdef STORAGE_GET_INFO
-            #define storage_get_info(drive, info) ata_get_info(IF_MD2(drive,) info)
-        #endif
         #ifdef HAVE_HOTSWAP
             #define storage_removable(drive) ata_removable(IF_MD(drive))
             #define storage_present(drive) ata_present(IF_MD(drive))
@@ -97,9 +96,6 @@ struct storage_info
         #define storage_last_disk_activity() sd_last_disk_activity()
         #define storage_get_identify() sd_get_identify()
 
-        #ifdef STORAGE_GET_INFO
-            #define storage_get_info(drive, info) sd_get_info(IF_MD2(drive,) info)
-        #endif
         #ifdef HAVE_HOTSWAP
             #define storage_removable(drive) sd_removable(IF_MD(drive))
             #define storage_present(drive) sd_present(IF_MD(drive))
@@ -121,9 +117,6 @@ struct storage_info
         #define storage_last_disk_activity() mmc_last_disk_activity()
         #define storage_get_identify() mmc_get_identify()
        
-        #ifdef STORAGE_GET_INFO
-            #define storage_get_info(drive, info) mmc_get_info(IF_MD2(drive,) info)
-        #endif
         #ifdef HAVE_HOTSWAP
             #define storage_removable(drive) mmc_removable(IF_MD(drive))
             #define storage_present(drive) mmc_present(IF_MD(drive))
@@ -145,9 +138,6 @@ struct storage_info
         #define storage_last_disk_activity() nand_last_disk_activity()
         #define storage_get_identify() nand_get_identify()
        
-        #ifdef STORAGE_GET_INFO
-            #define storage_get_info(drive, info) nand_get_info(IF_MD2(drive,) info)
-        #endif
         #ifdef HAVE_HOTSWAP
             #define storage_removable(drive) nand_removable(IF_MD(drive))
             #define storage_present(drive) nand_present(IF_MD(drive))
@@ -169,9 +159,6 @@ struct storage_info
         #define storage_last_disk_activity() ramdisk_last_disk_activity()
         #define storage_get_identify() ramdisk_get_identify()
        
-        #ifdef STORAGE_GET_INFO
-            #define storage_get_info(drive, info) ramdisk_get_info(IF_MD2(drive,) info)
-        #endif
         #ifdef HAVE_HOTSWAP
             #define storage_removable(drive) ramdisk_removable(IF_MD(drive))
             #define storage_present(drive) ramdisk_present(IF_MD(drive))
@@ -194,9 +181,6 @@ void storage_spin(void);
 void storage_spindown(int seconds);
 long storage_last_disk_activity(void);
 int storage_num_drives(void);
-#ifdef STORAGE_GET_INFO
-void storage_get_info(int drive, struct storage_info *info);
-#endif
 #ifdef HAVE_HOTSWAP
 bool storage_removable(int drive);
 bool storage_present(int drive);
@@ -208,4 +192,7 @@ int storage_read_sectors(IF_MD2(int drive,) unsigned long start, int count, void
 int storage_read_sectors_md(int drive, unsigned long start, int count, void* buf);
 int storage_write_sectors(IF_MD2(int drive,) unsigned long start, int count, const void* buf);
 int storage_write_sectors_md(int drive, unsigned long start, int count, const void* buf);
+#ifdef STORAGE_GET_INFO
+void storage_get_info(int drive, struct storage_info *info);
+#endif
 #endif

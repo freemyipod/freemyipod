@@ -127,6 +127,46 @@ int storage_write_sectors_md(int drive, unsigned long start, int count, const vo
     return storage_write_sectors(IF_MD2(drive,) start, count, buf);
 }
 
+#ifdef STORAGE_GET_INFO
+void storage_get_info(int drive, struct storage_info *info)
+{
+#ifdef CONFIG_STORAGE_MULTI
+    int driver=(storage_drivers[drive] & DRIVER_MASK)>>DRIVER_OFFSET;
+    int ldrive=(storage_drivers[drive] & DRIVE_MASK)>>DRIVE_OFFSET;
+    
+    switch(driver)
+    {
+#if (CONFIG_STORAGE & STORAGE_ATA)
+    case STORAGE_ATA:
+        return ata_get_info(ldrive,info);
+#endif
+
+#if (CONFIG_STORAGE & STORAGE_MMC)
+    case STORAGE_MMC:
+        return mmc_get_info(ldrive,info);
+#endif
+
+#if (CONFIG_STORAGE & STORAGE_SD)
+    case STORAGE_SD:
+        return sd_get_info(ldrive,info);
+#endif
+
+#if (CONFIG_STORAGE & STORAGE_NAND)
+    case STORAGE_NAND:
+        return nand_get_info(ldrive,info);
+#endif
+
+#if (CONFIG_STORAGE & STORAGE_RAMDISK)
+    case STORAGE_RAMDISK:
+        return ramdisk_get_info(ldrive,info);
+#endif
+    }
+#else /* CONFIG_STORAGE_MULTI */
+    return STORAGE_FUNCTION(get_info)(IF_MD2(drive,)info);
+#endif /* CONFIG_STORAGE_MULTI */
+}
+#endif /* STORAGE_GET_INFO */
+
 #ifdef CONFIG_STORAGE_MULTI
 
 int storage_num_drives(void)
@@ -452,42 +492,6 @@ long storage_last_disk_activity(void)
 
     return max;
 }
-
-#ifdef STORAGE_GET_INFO
-void storage_get_info(int drive, struct storage_info *info)
-{
-    int driver=(storage_drivers[drive] & DRIVER_MASK)>>DRIVER_OFFSET;
-    int ldrive=(storage_drivers[drive] & DRIVE_MASK)>>DRIVE_OFFSET;
-    
-    switch(driver)
-    {
-#if (CONFIG_STORAGE & STORAGE_ATA)
-    case STORAGE_ATA:
-        return ata_get_info(ldrive,info);
-#endif
-
-#if (CONFIG_STORAGE & STORAGE_MMC)
-    case STORAGE_MMC:
-        return mmc_get_info(ldrive,info);
-#endif
-
-#if (CONFIG_STORAGE & STORAGE_SD)
-    case STORAGE_SD:
-        return sd_get_info(ldrive,info);
-#endif
-
-#if (CONFIG_STORAGE & STORAGE_NAND)
-    case STORAGE_NAND:
-        return nand_get_info(ldrive,info);
-#endif
-
-#if (CONFIG_STORAGE & STORAGE_RAMDISK)
-    case STORAGE_RAMDISK:
-        return ramdisk_get_info(ldrive,info);
-#endif
-    }
-}
-#endif /* STORAGE_GET_INFO */
 
 #ifdef HAVE_HOTSWAP
 bool storage_removable(int drive)
