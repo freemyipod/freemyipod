@@ -1150,7 +1150,7 @@ static int write_long_name(struct fat_file* file,
             }
             if (rc==0)
                 /* end of dir */
-                memset(buf, 0, sizeof buf);
+                memset(buf, 0, SECTOR_SIZE);
 
             sector++;
             idx = 0;
@@ -1201,7 +1201,7 @@ static int write_long_name(struct fat_file* file,
             entry[FATDIR_FSTCLUSLO] = 0;
             entry[FATLONG_TYPE] = 0;
             entry[FATLONG_CHKSUM] = chksum;
-            DEBUGF("Longname entry %d: %s", idx, name+nameidx);
+            DEBUGF("Longname entry %d (%d): %s", idx, nameidx, name+nameidx);
         }
         else {
             /* shortname entry */
@@ -1236,6 +1236,7 @@ static int write_long_name(struct fat_file* file,
     if (rc<1)
         return rc * 10 - 7;
 
+    DEBUGF("write_long_name: success");
     return 0;
 }
 
@@ -1391,7 +1392,7 @@ static int add_dir_entry(struct fat_dir* dir,
             fat_release_sector_buffer();
             return rc * 10 - 4;
         }
-        memset(buf, 0, sizeof buf);
+        memset(buf, 0, SECTOR_SIZE);
 
         /* we must clear whole clusters */
         for (; (entries_found < entries_needed) ||
@@ -1721,7 +1722,6 @@ int fat_create_dir(const char* name,
 #else
     struct bpb* fat_bpb = &fat_bpbs[0];
 #endif
-    unsigned char buf[4];
     int i;
     long sector;
     int rc;
@@ -1746,13 +1746,18 @@ int fat_create_dir(const char* name,
     update_fat_entry(IF_MV2(fat_bpb,) newdir->file.firstcluster, FAT_EOF_MARK);
 
     /* Clear the entire cluster */
-    memset(buf, 0, sizeof buf);
+    unsigned char* buf = fat_get_sector_buffer();
+    memset(buf, 0, SECTOR_SIZE);
     sector = cluster2sec(IF_MV2(fat_bpb,) newdir->file.firstcluster);
     for(i = 0;i < (int)fat_bpb->bpb_secperclus;i++) {
         rc = transfer(IF_MV2(fat_bpb,) sector + i, 1, buf, true );
         if (rc < 0)
+        {
+            fat_release_sector_buffer();
             return rc * 10 - 2;
+        }
     }
+    fat_release_sector_buffer();
 
     /* Then add the "." entry */
     rc = add_dir_entry(newdir, &dummyfile, ".", true, true);
