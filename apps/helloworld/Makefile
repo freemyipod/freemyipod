@@ -9,7 +9,7 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMBIOSDIR)/export -ffunction-sections -fdata-sections
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMBIOSDIR)/export -ffunction-sections -fdata-sections -mcpu=arm940t
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
@@ -18,9 +18,11 @@ preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#"
 REVISION := $(shell svnversion .)
 REVISIONINT := $(shell echo $(REVISION) | sed -e "s/[^0-9].*$$//")
 
+HELPERS := build/__embios_armhelpers.o
+
 SRC := $(call preprocesspaths,SOURCES,-I. -I..)
 OBJ := $(SRC:%.c=build/%.o)
-OBJ := $(OBJ:%.S=build/%.o)
+OBJ := $(OBJ:%.S=build/%.o) $(HELPERS)
 
 all: $(NAME)
 
@@ -73,6 +75,15 @@ else
 	@sed -e 's/.*://' -e 's/\\$$//' < $@.dep.tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $@.dep
 endif
 	@rm -f $@.dep.tmp
+
+build/__embios_%.o: $(EMBIOSDIR)/export/%.S
+	@echo [CC]     $<
+ifeq ($(shell uname),WindowsNT)
+	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
+else
+	@-mkdir -p $(dir $@)
+endif
+	@$(CC) -c $(CFLAGS) -o $@ $<
 
 build/version.h: version.h .svn/entries build
 	@echo [PP]     $<

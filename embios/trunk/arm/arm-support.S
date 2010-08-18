@@ -673,6 +673,13 @@ __aeabi_idivmod:
 #endif
 
 #else
+    .global __clzsi2
+    .type   __clzsi2, %function
+
+__clzsi2:
+    clz	r0, r0
+    bx lr
+
 #ifndef __ARM_EABI__
 __udivsi3:
     ARMV5_UDIV32_BODY r0, r1, r0, "", r2, r3, ip, __div0_wrap, 1
