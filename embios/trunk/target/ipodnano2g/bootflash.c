@@ -108,11 +108,15 @@ void bootflash_writeraw(void* addr, int offset, int size)
                 norflsh[(offset & ~0xfff) >> 1] = 0x30;
                 while (norflsh[(offset & ~0xfff) >> 1] != 0xffff);
             }
-            norflsh[0x5555] = 0xaa;
-            norflsh[0x2aaa] = 0x55;
-            norflsh[0x5555] = 0xa0;
-            norflsh[offset >> 1] = ((uint16_t*)addr)[offset >> 1];
-            while (norflsh[offset >> 1] != ((uint16_t*)addr)[offset >> 1]);
+            for (i = 0; i < remainder; i += 2)
+                if (norflsh[(offset + i) >> 1] != ((uint16_t*)addr)[i >> 1])
+                {
+                    norflsh[0x5555] = 0xaa;
+                    norflsh[0x2aaa] = 0x55;
+                    norflsh[0x5555] = 0xa0;
+                    norflsh[(offset + i) >> 1] = ((uint16_t*)addr)[i >> 1];
+                    while (norflsh[(offset + i) >> 1] != ((uint16_t*)addr)[i >> 1]);
+                }
         }
         addr = (void*)(((uint32_t)addr) + remainder);
         offset += remainder;
