@@ -1,3 +1,26 @@
+//
+//
+//    Copyright 2010 TheSeven
+//
+//
+//    This file is part of emBIOS.
+//
+//    emBIOS is free software: you can redistribute it and/or
+//    modify it under the terms of the GNU General Public License as
+//    published by the Free Software Foundation, either version 2 of the
+//    License, or (at your option) any later version.
+//
+//    emBIOS is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+//    See the GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License along
+//    with emBIOS.  If not, see <http://www.gnu.org/licenses/>.
+//
+//
+
+
 #include "embiosapp.h"
 
 
@@ -71,16 +94,6 @@ uint32_t getfw(const char* filename, uint32_t* sector, uint32_t* size)
     return freeret(2, buffer);
 }
 
-uint32_t readfwptr(const char* filename, void* address, uint32_t* size)
-{
-    uint32_t sector;
-    uint32_t rc = getfw(filename, &sector, size);
-    if (rc) return rc;
-    if (storage_read_sectors_md(0, sector, ((*size + 0x7FF) >> 11), address) != 0) return 1;
-    *size = decryptfw(address, 0x800);
-    return 0;
-}
-
 uint32_t readfw(const char* filename, void** address, uint32_t* size)
 {
     uint32_t sector;
@@ -90,7 +103,7 @@ uint32_t readfw(const char* filename, void** address, uint32_t* size)
     if (storage_read_sectors_md(0, sector, ((*size + 0x7FF) >> 11), *address) != 0)
         return freeret(1, *address);
     *size = decryptfw(*address, 0x800);
-    tlsf_realloc(mallocpool, *address, *size);
+    *address = tlsf_realloc(mallocpool, *address, *size);
     return 0;
 }
 
