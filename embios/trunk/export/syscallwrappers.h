@@ -85,6 +85,7 @@ extern struct embios_syscall_table* __embios_syscall;
 #define shutdown(args...) __embios_syscall->shutdown(args)
 #define storage_read_sectors_md(args...) __embios_syscall->storage_read_sectors_md(args)
 #define storage_write_sectors_md(args...) __embios_syscall->storage_write_sectors_md(args)
+#define storage_get_info(args...) __embios_syscall->storage_get_info(args)
 #define strcasecmp(args...) __embios_syscall->strcasecmp(args)
 #define strncasecmp(args...) __embios_syscall->strncasecmp(args)
 #define strcasestr(args...) __embios_syscall->strcasestr(args)

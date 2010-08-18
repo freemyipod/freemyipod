@@ -130,6 +130,7 @@ struct embios_syscall_table
     typeof(shutdown) *shutdown;
     typeof(storage_read_sectors_md) *storage_read_sectors_md;
     typeof(storage_write_sectors_md) *storage_write_sectors_md;
+    typeof(storage_get_info) *storage_get_info;
     typeof(strcasecmp) *strcasecmp;
     typeof(strncasecmp) *strncasecmp;
     typeof(strcasestr) *strcasestr;

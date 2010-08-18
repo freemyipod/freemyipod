@@ -132,6 +132,7 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .filesize = filesize,
     .storage_read_sectors_md = storage_read_sectors_md,
     .storage_write_sectors_md = storage_write_sectors_md,
+    .storage_get_info = storage_get_info,
 #ifdef HAVE_HOTSWAP
     .disk_mount = disk_mount,
     .disk_unmount = disk_unmount,
