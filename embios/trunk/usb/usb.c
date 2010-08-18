@@ -40,6 +40,12 @@
 #ifdef HAVE_BOOTFLASH
 #include "bootflash.h"
 #endif
+#ifdef HAVE_HWKEYAES
+#include "hwkeyaes.h"
+#endif
+#ifdef HAVE_HMACSHA1
+#include "hmacsha1.h"
+#endif
 
 
 static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
@@ -61,7 +67,9 @@ enum dbgaction_t
     DBGACTION_EXECIMAGE,
     DBGACTION_EXECFIRMWARE,
     DBGACTION_READBOOTFLASH,
-    DBGACTION_WRITEBOOTFLASH
+    DBGACTION_WRITEBOOTFLASH,
+    DBGACTION_HWKEYAES,
+    DBGACTION_HMACSHA1
 };
 
 static uint32_t dbgstack[0x100] STACK_ATTR;
@@ -538,6 +546,21 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             if (set_dbgaction(DBGACTION_EXECFIRMWARE, 0)) break;
             dbgactionaddr = dbgrecvbuf[1];
             break;
+#ifdef HAVE_HWKEYAES
+        case 25:  // HWKEYAES
+            if (set_dbgaction(DBGACTION_HWKEYAES, 0)) break;
+            dbgactiontype = ((uint8_t*)dbgrecvbuf)[4];
+            dbgactionoffset = ((uint16_t*)dbgrecvbuf)[3];
+            dbgactionaddr = dbgrecvbuf[2];
+            dbgactionlength = dbgrecvbuf[3];
+#endif
+#ifdef HAVE_HMACSHA1
+        case 26:  // HMACSHA1
+            if (set_dbgaction(DBGACTION_HMACSHA1, 0)) break;
+            dbgactionaddr = dbgrecvbuf[1];
+            dbgactionlength = dbgrecvbuf[2];
+            dbgactionoffset = dbgrecvbuf[3];
+#endif
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -639,6 +662,21 @@ void dbgthread(void)
                 break;
             case DBGACTION_WRITEBOOTFLASH:
                 bootflash_writeraw((void*)dbgactionaddr, dbgactionoffset, dbgactionlength);
+                dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+#endif
+#ifdef HAVE_HWKEYAES
+            case DBGACTION_HWKEYAES:
+                hwkeyaes((enum hwkeyaes_direction) dbgactiontype, dbgactionoffset,
+                         (void*)dbgactionaddr, dbgactionlength);
+                dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+#endif
+#ifdef HAVE_HMACSHA1
+            case DBGACTION_HMACSHA1:
+                hmacsha1((void*)dbgactionaddr, dbgactionlength, (void*)dbgactionoffset);
                 dbgasyncsendbuf[0] = 1;
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
