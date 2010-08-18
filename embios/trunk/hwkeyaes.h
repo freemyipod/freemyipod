@@ -29,8 +29,8 @@
 
 enum hwkeyaes_direction
 {
-    HWKEYAES_ENCRYPT,
-    HWKEYAES_DECRYPT
+    HWKEYAES_DECRYPT = 0,
+    HWKEYAES_ENCRYPT = 1
 };
 
 
