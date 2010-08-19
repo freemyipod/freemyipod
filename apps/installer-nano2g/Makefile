@@ -61,9 +61,9 @@ build/$(NAME).bin: build/bootstub.bin build/$(NAME).integrated.bin
 
 build/$(NAME).integrated.bin: $(EMBIOSDIR)/build/ipodnano2g/embios.bin build/$(NAME).embiosapp
 	@echo [EMBAPP] $@
-	@$(EMBIOSEMBEDAPP) $^ $@ --run-from=08000000
+	@$(EMBIOSEMBEDAPP) $^ $@ --run-from=0x08000000
 
-build/$(NAME).embiosapp: build/$(NAME).plain.embiosapp $(BITMAPS)
+build/$(NAME).embiosapp: build/$(NAME).plain.embiosapp $(BITMAPS) flashfiles.built
 	@echo [GENINS] $<
 	@$(GENINSTALLER) $< $@ 
 
@@ -151,6 +151,7 @@ else
 endif
 
 flashfiles: $(FLASHFILES)
+	@touch flashfiles.built
 
 flashfiles/uninstaller-nano2g.embiosapp.ucl: $(UNINSTDIR)/build/uninstaller-nano2g.embiosapp.ucl uninstaller-nano2g
 	@echo [CP]     $@
@@ -178,11 +179,11 @@ flashfiles/embios-ipodnano2g.ucl: flashfiles/embios-ipodnano2g.bin
 
  flashfiles/embios-ipodnano2g.bin: $(EMBIOSDIR)/build/ipodnano2g/embios.bin embios
 	@echo [EMBCFG] $@
-	@$(EMBIOSBOOTCFG) $< $@ --file=/iLoader/boot.embiosapp --file-compressed --file-run-from=08000000 \
-	                        --flash="iloader " --flash-compressed --flash-run-from=09e00000
+	@$(EMBIOSBOOTCFG) $< $@ --file=/iLoader/boot.embiosapp --file-compressed --file-run-from=0x08000000 \
+	                        --flash=iloader --flash-compressed --flash-run-from=0x09e00000
 
 embios:
-	@make -C $(EMBIOSDIR)
+	@make -C $(EMBIOSDIR) ipodnano2g
 
 embiosldr-ipodnano2g:
 	@make -C $(EMBIOSDIR)/loader/ipodnano2g

@@ -320,15 +320,17 @@ pmuinitdone:
 	orr	r0, r0, #5
 	orr	r0, r0, #0x1000
 	mcr	p15, 0, r0,c1,c0     @ Re-enable the Protection Unit and caches
-	ldr	r0, _stubend
 	ldr	r1, _stubend + 4
-	add	r1, r1, r0
+	ldr	r0, _stubend
+	add	r0, r1, r0
 	mov	r2, #0x08000000
 movepayloadloop:
-	cmp	r1, r0
-	ldrhi	r3, [r0], #4
+	cmp	r0, r1
+	ldrhi	r3, [r1], #4
 	strhi	r3, [r2], #4
 	bhi	movepayloadloop
+	bl	flushcache
+	mcr	p15, 0, r0,c7,c5
 	mov	pc, #0x08000000
 
 
@@ -905,8 +907,5 @@ sleepmsloop:
 	cmp	r0, r1
 	bmi	sleepmsloop
 	mov	pc, lr
-
-	nop
-	nop
 
 _stubend:

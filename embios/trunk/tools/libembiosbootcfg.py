@@ -48,30 +48,30 @@ def configure(binary, **args):
     if "tryfile" in args: tryfile = 1 if args["tryfile"] else 0
     if "filename" in args: filename = args["filename"].ljust(256, "\0")
     if "filecomp" in args:
-        if args["filecomp"]: fileflags = fileflags | 2
-        else: fileflags = fileflags & ~2
-    if "filecopy" in args:
-        if args["filecopy"]: fileflags = fileflags | 1
+        if args["filecomp"]: fileflags = fileflags | 1
         else: fileflags = fileflags & ~1
+    if "filecopy" in args:
+        if args["filecopy"]: fileflags = fileflags | 2
+        else: fileflags = fileflags & ~2
     if "filedest" in args: filedest = args["filedest"]
     if "tryflash" in args: tryflash = 1 if args["tryflash"] else 0
     if "flashname" in args: flashname = args["flashname"].ljust(8)
     if "flashcomp" in args:
-        if args["flashcomp"]: flashflags = flashflags | 2
-        else: flashflags = flashflags & ~2
-    if "flashcopy" in args:
-        if args["flashcopy"]: flashflags = flashflags | 1
+        if args["flashcomp"]: flashflags = flashflags | 1
         else: flashflags = flashflags & ~1
+    if "flashcopy" in args:
+        if args["flashcopy"]: flashflags = flashflags | 2
+        else: flashflags = flashflags & ~2
     if "flashdest" in args: flashdest = args["flashdest"]
     if "trymmap" in args: trymmap = 1 if args["trymmap"] else 0
     if "mmapaddr" in args: mmapaddr = args["mmapaddr"]
     if "mmapsize" in args: mmapsize = args["mmapsize"]
     if "mmapcomp" in args:
-        if args["mmapcomp"]: mmapflags = mmapflags | 2
-        else: mmapflags = mmapflags & ~2
-    if "mmapcopy" in args:
-        if args["mmapcopy"]: mmapflags = mmapflags | 1
+        if args["mmapcomp"]: mmapflags = mmapflags | 1
         else: mmapflags = mmapflags & ~1
+    if "mmapcopy" in args:
+        if args["mmapcopy"]: mmapflags = mmapflags | 2
+        else: mmapflags = mmapflags & ~2
     if "mmapdest" in args: mmapdest = args["mmapdest"]
     data = struct.pack("<I256sIII8sIIIIIII", tryfile, filename, fileflags, filedest,
                                              tryflash, flashname, flashflags, flashdest,

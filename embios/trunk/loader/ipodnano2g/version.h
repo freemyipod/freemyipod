@@ -25,7 +25,7 @@
 #define __VERSION_H__
 
 
-#define VERSION "0.0.1pre"
+#define VERSION "0.0.1"
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 0
 #define VERSION_PATCH 1
