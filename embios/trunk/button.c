@@ -52,6 +52,7 @@ int button_register_handler(void (*handler)(enum button_event, int which, int va
             button_hooks[i].owner = current_thread;
             button_hooks[i].handler = handler;
             return 0;
+            mutex_unlock(&button_mutex);
         }
     mutex_unlock(&button_mutex);
     return -1;
@@ -66,6 +67,7 @@ int button_unregister_handler(void (*handler)(enum button_event, int which, int 
         {
             button_hooks[i].owner = NULL;
             button_hooks[i].handler = NULL;
+            mutex_unlock(&button_mutex);
             return 0;
         }
     mutex_unlock(&button_mutex);
@@ -89,6 +91,7 @@ void button_unregister_all_of_thread(struct scheduler_thread* process)
         {
             button_hooks[i].owner = NULL;
             button_hooks[i].handler = NULL;
+            mutex_unlock(&button_mutex);
         }
     mutex_unlock(&button_mutex);
 }
