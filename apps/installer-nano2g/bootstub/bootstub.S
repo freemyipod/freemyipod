@@ -320,6 +320,18 @@ pmuinitdone:
 	orr	r0, r0, #5
 	orr	r0, r0, #0x1000
 	mcr	p15, 0, r0,c1,c0     @ Re-enable the Protection Unit and caches
+	mov	r0, #0xe6
+	mov	r1, #0x2b
+	mov	r2, #4
+	bl	i2csendbyte
+	mov	r0, #0xe6
+	mov	r1, #0x28
+	mov	r2, #10
+	bl	i2csendbyte
+	mov	r0, #0xe6
+	mov	r1, #0x29
+	mov	r2, #1
+	bl	i2csendbyte
 	ldr	r1, _stubend + 4
 	ldr	r0, _stubend
 	add	r0, r1, r0

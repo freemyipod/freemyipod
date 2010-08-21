@@ -523,6 +523,9 @@ void main(void)
     ucl_decompress(bitmapdata[BMPIDX_WELCOME], bitmapsize[BMPIDX_WELCOME], bmpbuffer, &dummy);
     renderbmp(&lcdbuffer[176 * 25 + 25], bmpbuffer, 176);
     displaylcd(0, 175, 0, 131, lcdbuffer, 0);
+    backlight_set_fade(32);
+    backlight_set_brightness(177);
+    backlight_on(true);
     if (norword[0x400] == 0x53436667) appleflash = false;
     else if (norword[0x1000] == 0x53436667) appleflash = true;
     else panic(PANIC_KILLTHREAD, "Boot flash contents are damaged! "
