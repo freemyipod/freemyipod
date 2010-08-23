@@ -269,11 +269,11 @@ class Embios(object):
             raise DeviceError("The device returned the error code "+str(resp.id))
         return resp
     
-    def flushcpucache(self):
+    def flushcaches(self):
         """ Flushes the CPU instruction and data cache """
         return self.lib.monitorcommand(struct.pack("IIII", 20, 0, 0, 0), "III", (None, None, None))
     
-    def run(self, addr):
+    def execimage(self, addr):
         """ Runs the emBIOS app at 'addr' """
         return self.lib.monitorcommand(struct.pack("IIII", 21, addr, 0, 0), "III", ("excecimage", None, None))
     

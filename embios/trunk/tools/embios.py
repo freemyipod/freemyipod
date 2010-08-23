@@ -144,7 +144,7 @@ def command(func):
         Decorator for all commands.
         The decorated function is called with (self, all, other, arguments, ...)
     """
-    def decorator(args):
+    def decorator(*args):
         return func(args[0], *args[1:])
     func._command = True
     decorator.func = func
@@ -180,6 +180,7 @@ class Commandline(object):
         except libembios.DeviceNotFoundError:
             self.logger.error("No emBIOS device found!")
             end(1)
+        self.getinfo("version")
         
     def _parsecommand(self, func, args):
         # adds self to the commandline args.
@@ -187,7 +188,7 @@ class Commandline(object):
         args.insert(0, self)
         if func in self.cmddict:
             try:
-                self.cmddict[func](args)
+                self.cmddict[func](*args)
             except ArgumentError, e:
                 usage(e)
             except ArgumentError:
@@ -196,6 +197,8 @@ class Commandline(object):
                 usage(e)
             except NotImplementedError:
                 self.logger.error("This function is not implemented yet!")
+            except libembios.DeviceNotFoundError:
+                self.logger.error("Device not found!")
             except libembios.DeviceError, e:
                 self.logger.error(str(e))
             except TypeError, e:
@@ -263,7 +266,7 @@ class Commandline(object):
         """
         if infotype == "version":
             resp = self.embios.getversioninfo()
-            self.logger.info(libembiosdata.swtypes[resp.swtypeid] + " v" + str(resp.majorv) + "." + str(resp.minorv) +
+            self.logger.info("Connected to "+libembiosdata.swtypes[resp.swtypeid] + " v" + str(resp.majorv) + "." + str(resp.minorv) +
                              "." + str(resp.patchv) + " r" + str(resp.revision) + " running on " + libembiosdata.hwtypes[resp.hwtypeid] + "\n")
         elif infotype == "packetsize":
             resp = self.embios.getpacketsizeinfo()
@@ -546,14 +549,35 @@ class Commandline(object):
         stacksize = self._hexint(stacksize)
         priority = self._hexint(priority)
         self.embios.createthread(nameptr, entrypoint, stackptr, stacksize, type, priority, state)
+    
+    @command
+    def run(self, filename):
+        """
+            Uploads the emBIOS application to an address in the user memory
+            and executes it
+        """
+        try:
+            f = open(filename, "rb")
+        except IOError:
+            raise ArgumentError("File not readable. Does it exist?")
+        data = self.embios.getusermemrange()
+        addr = data.lower
+        maxsize = data.upper - data.lower
+        filesize = os.path.getsize(filename)
+        if filesize > maxsize:
+            raise ArgumentError("The file is too big, it doesn't fit into the user memory.")
+        self.logger.info("Uploading application to "+hex(addr)+" - "+hex(addr+filesize)+"\n")
+        self.embios.write(addr, f.read())
+        self.execute(addr)
 
     @command
-    def run(self, address):
+    def execute(self, addr):
         """
             Executes the emBIOS application at <address>.
         """
-        address = self._hexint(address)
-        raise NotImplementedError
+        addr = self._hexint(addr)
+        self.logger.info("Starting emBIOS app at "+hex(addr)+"\n")
+        self.embios.execimage(addr)
 
     @command
     def readrawbootflash(self, addr_flash, addr_mem, size):
@@ -586,12 +610,14 @@ class Commandline(object):
         """
             Flushes the CPUs data and instruction caches.
         """
-        raise NotImplementedError
+        self.logger.info("Flushing CPU data and instruction caches...")
+        self.embios.flushcaches()
+        self.logger.info("done\n")
     
     @command
     def aesencrypt(self, addr, size, keyindex):
         """
-            Encrypt a buffer using a hardware key
+            Encrypts a buffer using a hardware key
         """
         addr = self._hexint(addr)
         size = self._hexint(size)
@@ -601,12 +627,29 @@ class Commandline(object):
     @command
     def aesdecrypt(self, addr, size, keyindex):
         """
-            Decrypt a buffer using a hardware key
+            Decrypts a buffer using a hardware key
         """
         addr = self._hexint(addr)
         size = self._hexint(size)
         keyindex = self._hexint(keyindex)
         self.embios.aesdecrypt(addr, size, keyindex)
+    
+    @command
+    def hmac_sha1(self, addr, size, destination):
+        """
+            Generates a HMAC-SHA1 hash of the buffer and saves it to 'destination'
+        """
+        addr = self._hexint(addr)
+        size = self._hexint(size)
+        destination = self._hexint(destination)
+        sha1size = 0x14
+        self.logger.info("Generating hmac-sha1 hash from the buffer at "+hex(addr)+" with the size "+hex(size)+
+                         " and saving it to "+hex(destination)+" - "+hex(destination+sha1size)+"...")
+        self.embios.hmac_sha1(addr, size, destination)
+        self.logger.info("done\n")
+        data = self.embios.readmem(destination, sha1size)
+        hash = ord(data)
+        self.logger.info("The generated hash is "+hex(hash))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
