@@ -180,7 +180,11 @@ class Commandline(object):
         except libembios.DeviceNotFoundError:
             self.logger.error("No emBIOS device found!")
             end(1)
-        self.getinfo("version")
+        try:
+            self.getinfo("version")
+        except libembios.DeviceNotFoundError:
+                self.logger.error("Device not found!")
+                exit(2)
         
     def _parsecommand(self, func, args):
         # adds self to the commandline args.
@@ -197,8 +201,6 @@ class Commandline(object):
                 usage(e)
             except NotImplementedError:
                 self.logger.error("This function is not implemented yet!")
-            except libembios.DeviceNotFoundError:
-                self.logger.error("Device not found!")
             except libembios.DeviceError, e:
                 self.logger.error(str(e))
             except TypeError, e:
@@ -257,6 +259,9 @@ class Commandline(object):
             expected = expected[:-2]
             raise ArgumentTypeError("one out of " + expected, "'" + string + "'")
     
+    @staticmethod
+    def _hex(integer):
+        return "0x%x" % integer
     
     @command
     def getinfo(self, infotype):
@@ -273,7 +278,7 @@ class Commandline(object):
             self.logger.info("Maximum packet sizes: "+str(resp))
         elif infotype == "usermemrange":
             resp = self.embios.getusermemrange()
-            self.logger.info("The user memory range is "+hex(resp.lower)+" - "+hex(resp.upper-1))
+            self.logger.info("The user memory range is "+self._hex(resp.lower)+" - "+self._hex(resp.upper-1))
         else:
             raise ArgumentTypeError("one out of 'version', 'packetsize', 'usermemrange'", infotype)
     
@@ -313,7 +318,7 @@ class Commandline(object):
             f = open(filename, 'rb')
         except IOError:
             raise ArgumentError("File not readable. Does it exist?")
-        self.logger.info("Writing file '"+filename+"' to memory at "+hex(addr)+"...")
+        self.logger.info("Writing file '"+filename+"' to memory at "+self._hex(addr)+"...")
         with f:
             self.embios.write(addr, f.read())
         self.logger.info("done\n")
@@ -334,7 +339,7 @@ class Commandline(object):
             f = open(filename, 'wb')
         except IOError:
             raise ArgumentError("Can not open file for write!")
-        self.logger.info("Reading data from address "+hex(addr)+" with the size "+hex(size)+" to '"+filename+"'...")
+        self.logger.info("Reading data from address "+self._hex(addr)+" with the size "+self._hex(size)+" to '"+filename+"'...")
         with f:
             f.write(self.embios.read(addr, size))
         self.logger.info("done\n")
@@ -352,7 +357,7 @@ class Commandline(object):
             raise ArgumentError("Specified integer too long")
         data = chr(integer)
         self.embios.writemem(addr, data)
-        self.logger.info("Integer '"+hex(integer)+"' written successfully to "+hex(addr))
+        self.logger.info("Integer '"+self._hex(integer)+"' written successfully to "+self._hex(addr))
 
     @command
     def downloadint(self, addr):
@@ -363,7 +368,7 @@ class Commandline(object):
         addr = self._hexint(addr)
         data = self.embios.readmem(addr, 1)
         integer = ord(data)
-        self.logger.info("Integer '"+hex(integer)+"' read from address "+hex(addr))
+        self.logger.info("Integer '"+self._hex(integer)+"' read from address "+self._hex(addr))
 
     @command
     def i2crecv(self, bus, slave, addr, size):
@@ -420,7 +425,7 @@ class Commandline(object):
             Writes the file <file> to the USB console.
             Optional params <offset> <length>: specify the range in <file> to write
         """
-        # We don't care about file here, this is done when opening it
+        
         offset = self._hexint(offset)
         length = self._hexint(length)
         raise NotImplementedError
@@ -457,7 +462,7 @@ class Commandline(object):
             Optional params <offset> <length>: specify the range in <file> to write
         """
         bitmask = self._hexint(bitmask)
-        # We don't care about file here, this is done when opening it
+        
         offset = self._hexint(offset)
         length = self._hexint(length)
         raise NotImplementedError
@@ -487,25 +492,37 @@ class Commandline(object):
     def getprocinfo(self):
         """
             Fetches data on the currently running processes
-            ATTENTION: this function will be print the information to the console window.
-                If several threads are running this might overflow the window,
-                causing not everything to be shown.
         """
-        raise NotImplementedError
-
+        import datetime
+        threads = self.embios.getprocinfo()
+        self.logger.info("The device has "+str(len(threads))+" running threads:\n\n")
+        for thread in threads:
+            self.logger.info("  "+thread.name+":\n")
+            self.logger.info("    Thread id: "+str(thread.id)+"\n")
+            self.logger.info("    Thread type: "+thread.type+"\n")
+            self.logger.info("    Thread state: "+thread.state+"\n")
+            self.logger.info("    Priority: "+str(thread.priority)+"/256\n")
+            self.logger.info("    CPU time (total): "+str(datetime.timedelta(microseconds=thread.cputime_total))+"\n")
+            self.logger.info("    Stack address: "+self._hex(thread.stackaddr)+"\n")
+            self.logger.info("    Registers:\n")
+            for register in range(16):
+                self.logger.info("      r"+str(register)+": "+self._hex(thread.regs["r"+str(register)])+"\n")
+            self.logger.info("      cpsr: "+self._hex(thread.regs.cpsr))
+            self.logger.info("\n")
+    
     @command
     def lockscheduler(self):
         """
             Locks (freezes) the scheduler
         """
-        raise NotImplementedError
+        self.embios.lockscheduler()
 
     @command
     def unlockscheduler(self):
         """
             Unlocks (unfreezes) the scheduler
         """
-        raise NotImplementedError
+        self.embios.unlockscheduler()
 
     @command
     def suspendthread(self, threadid):
@@ -513,7 +530,7 @@ class Commandline(object):
             Suspends/resumes the thread with thread ID <threadid>
         """
         threadid = self._hexint(threadid)
-        raise NotImplementedError
+        self.embios.resumethread(threadid)
 
     @command
     def resumethread(self, threadid):
@@ -521,7 +538,7 @@ class Commandline(object):
             Resumes the thread with thread ID <threadid>
         """
         threadid = self._hexint(threadid)
-        raise NotImplementedError
+        self.embios.resumethread(threadid)
 
     @command
     def killthread(self, threadid):
@@ -529,7 +546,7 @@ class Commandline(object):
             Kills the thread with thread ID <threadid>
         """
         threadid = self._hexint(threadid)
-        raise NotImplementedError
+        self.embios.killthread(threadid)
 
     @command
     def createthread(self, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state):
@@ -553,8 +570,8 @@ class Commandline(object):
     @command
     def run(self, filename):
         """
-            Uploads the emBIOS application to an address in the user memory
-            and executes it
+            Uploads the emBIOS application <filename> to
+            the beginning of the user memory and executes it
         """
         try:
             f = open(filename, "rb")
@@ -566,17 +583,17 @@ class Commandline(object):
         filesize = os.path.getsize(filename)
         if filesize > maxsize:
             raise ArgumentError("The file is too big, it doesn't fit into the user memory.")
-        self.logger.info("Uploading application to "+hex(addr)+" - "+hex(addr+filesize)+"\n")
+        self.logger.info("Uploading application to "+self._hex(addr)+" - "+self._hex(addr+filesize)+"\n")
         self.embios.write(addr, f.read())
-        self.execute(addr)
+        self.execimage(addr)
 
     @command
-    def execute(self, addr):
+    def execimage(self, addr):
         """
-            Executes the emBIOS application at <address>.
+            Executes the emBIOS application at <addr>.
         """
         addr = self._hexint(addr)
-        self.logger.info("Starting emBIOS app at "+hex(addr)+"\n")
+        self.logger.info("Starting emBIOS app at "+self._hex(addr)+"\n")
         self.embios.execimage(addr)
 
     @command
@@ -643,13 +660,13 @@ class Commandline(object):
         size = self._hexint(size)
         destination = self._hexint(destination)
         sha1size = 0x14
-        self.logger.info("Generating hmac-sha1 hash from the buffer at "+hex(addr)+" with the size "+hex(size)+
-                         " and saving it to "+hex(destination)+" - "+hex(destination+sha1size)+"...")
+        self.logger.info("Generating hmac-sha1 hash from the buffer at "+self._hex(addr)+" with the size "+self._hex(size)+
+                         " and saving it to "+self._hex(destination)+" - "+self._hex(destination+sha1size)+"...")
         self.embios.hmac_sha1(addr, size, destination)
         self.logger.info("done\n")
         data = self.embios.readmem(destination, sha1size)
         hash = ord(data)
-        self.logger.info("The generated hash is "+hex(hash))
+        self.logger.info("The generated hash is "+self._hex(hash))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

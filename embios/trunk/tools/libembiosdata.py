@@ -1,3 +1,28 @@
+thread_state = (
+    "THREAD_FREE",
+    "THREAD_SUSPENDED",
+    "THREAD_READY",
+    "THREAD_RUNNING",
+    "THREAD_BLOCKED",
+    "THREAD_DEFUNCT",
+    "THREAD_DEFUNCT_ACK"
+)
+
+thread_block = (
+    "THREAD_NOT_BLOCKED",
+    "THREAD_BLOCK_SLEEP",
+    "THREAD_BLOCK_MUTEX",
+    "THREAD_BLOCK_WAKEUP",
+    "THREAD_DEFUNCT_STKOV",
+    "THREAD_DEFUNCT_PANIC"
+)
+
+thread_type = (
+    "USER_THREAD",
+    "OS_THREAD",
+    "ORE_THREAD"
+)
+
 hwtypes = {
     0: "invalid",
     0x47324e49: "iPod nano 2g",

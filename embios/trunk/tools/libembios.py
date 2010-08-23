@@ -199,6 +199,23 @@ class Embios(object):
         self.lib.monitorcommand(struct.pack("IIII", 7, addr, len(data), 0), "III", (None, None, None))
         return self.lib.dev.dout(data)
     
+    def readstring(self, addr, maxlength = 256):
+        """ Reads a zero terminated string from memory 
+            Reads only a maximum of 'maxlength' chars.
+        """
+        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - 0x10
+        string = ""
+        while (len(string) < maxlength or maxlength < 0):
+            data = self.readmem(addr, min(maxlength - len(string), cin_maxsize))
+            length = data.find("\0")
+            if length >= 0:
+                string += data[:length]
+                break
+            else:
+                string += data
+            addr += cin_maxsize
+        return string
+    
     def i2cread(self, index, slaveaddr, startaddr, size):
         """ Reads data from an i2c slave """
     
@@ -225,23 +242,89 @@ class Embios(object):
         """ Flushes the consoles specified with 'bitmask' """
         return self.lib.monitorcommand(struct.pack("IIII", 14, bitmask, 0, 0), "III", (None, None, None))
     
-    def getprocinfo(self, offset, size):
+    def getprocinfo(self):
         """ Gets current state of the scheduler """
+        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - 0x10
+        # Get the size
+        schedulerstate = self.lockscheduler()
+        resp = self.lib.monitorcommand(struct.pack("IIII", 15, 0, 0, 0), "III", ("structver", "tablesize", None))
+        tablesize = resp.tablesize
+        size = tablesize
+        structver = resp.structver
+        offset = 0
+        data = ""
+        while size > 0:
+            if size > cin_maxsize:
+                readsize = cin_maxsize
+            else:
+                readsize = size
+            resp = self.lib.monitorcommand(struct.pack("IIII", 15, offset, readsize, 0), "III%ds" % readsize, ("structver", "tablesize", None, "data"))
+            data += resp.data
+            offset += readsize
+            size -= readsize
+        self.lockscheduler(schedulerstate)
+        threadstructsize = 120
+        registersize = 32
+        if len(data) % threadstructsize != 0:
+            raise DeviceError("The thread struct is not a multiple of "+str(threadsturcsize)+"!")
+        threadcount = len(data) / threadstructsize
+        threads = []
+        id = 0
+        for thread in range(threadcount):
+            offset = threadstructsize * thread
+            threaddata = struct.unpack("<16IIIIIQIIIIIIIBBBB", data[offset:offset+threadstructsize])
+            info = Bunch()
+            info.id = id
+            state = threaddata[17]
+            info.state = libembiosdata.thread_state[state]
+            if info.state == "THREAD_FREE":
+                id += 1
+                continue
+            info.regs = Bunch()
+            for register in range(16):
+                info.regs["r"+str(register)] = threaddata[register]
+            info.regs.cpsr = threaddata[16]
+            info.nameptr = threaddata[18]
+            if info.nameptr == 0:
+                info.name = "Thread %d" % info.id
+            else:
+                info.name = self.readstring(info.nameptr)
+            info.cputime_current = threaddata[19]
+            info.cputime_total = threaddata[20]
+            info.startusec = threaddata[21]
+            info.queue_next_ptr = threaddata[22]
+            info.timeout = threaddata[23]
+            info.blocked_since = threaddata[24]
+            info.blocked_by_ptr = threaddata[25]
+            info.stackaddr = threaddata[26]
+            info.err_no = threaddata[27]
+            info.block_type = libembiosdata.thread_block[threaddata[28]]
+            info.type = libembiosdata.thread_type[threaddata[29]]
+            info.priority = threaddata[30]
+            info.cpuload = threaddata[31]
+            threads.append(info)
+            id += 1
+        return threads
+            
+        
+        return self.lib.monitorcommand(struct.pack("IIII", 15, offset, size, 0), "III%ds" % size, ("structver", "tablesize", None, "data"))
     
-    def freezescheduler(self, freeze=True):
+    def lockscheduler(self, freeze=True):
         """ Freezes/Unfreezes the scheduler """
-        return self.lib.monitorcommand(struct.pack("IIII", 16, 1 if freeze else 0, 0, 0), "III", ("before", None, None))
+        resp = self.lib.monitorcommand(struct.pack("IIII", 16, 1 if freeze else 0, 0, 0), "III", ("before", None, None))
+        return True if resp.before == 1 else False
     
-    def unfreezescheduler(self):
+    def unlockscheduler(self):
         """ Unfreezes the scheduler """
         return self.lib.monitorcommand(struct.pack("IIII", 16, 0, 0, 0), "III", ("before", None, None))
     
     def suspendthread(self, id, suspend=True):
         """ Suspends the thread with the specified id """
-        return self.lib.monitorcommand(struct.pack("IIII", 17, 1 if suspend else 0, id, 0), "III", ("before", None, None))
+        resp = self.lib.monitorcommand(struct.pack("IIII", 17, 1 if suspend else 0, id, 0), "III", ("before", None, None))
+        return True if resp.before == 1 else False
     
-    def unsuspendthread(self, id):
-        """ Suspends the thread with the specified id """
+    def resumethread(self, id):
+        """ Resumes the thread with the specified id """
         return self.lib.monitorcommand(struct.pack("IIII", 17, 0, id, 0), "III", ("before", None, None))
     
     def killthread(self, id):
