@@ -364,11 +364,13 @@ class Embios(object):
         """ Copies the data in the bootflash at 'flashaddr' of the specified size
             to the memory at addr 'memaddr'
         """
+        return self.lib.monitorcommand(struct.pack("IIII", 22, memaddr, flashaddr, size), "III", (None, None, None))
     
     def bootflashwrite(self, memaddr, flashaddr, size):
         """ Copies the data in the memory at 'memaddr' of the specified size
             to the boot flash at addr 'flashaddr'
         """
+        return self.lib.monitorcommand(struct.pack("IIII", 23, memaddr, flashaddr, size), "III", (None, None, None))
     
     def execfirmware(self, addr):
         """ Executes the firmware at 'addr' and passes all control to it. """

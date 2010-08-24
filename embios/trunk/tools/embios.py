@@ -606,21 +606,34 @@ class Commandline(object):
         addr_flash = self._hexint(addr_flash)
         addr_mem = self._hexint(addr_mem)
         size = self._hexint(size)
-        raise NotImplementedError
+        self.logger.info("Dumping boot flash addresses "+self._hex(addr_flash)+" - "+
+                         hex(addr_flash+size)+" to "+self._hex(addr_mem)+" - "+self._hex(addr_mem+size)+"\n")
+        self.embios.bootflashread(addr_flash, addr_mem, size)
 
     @command
-    def writerawbootflash(self, addr_flash, addr_mem, size):
+    def writerawbootflash(self, addr_flash, addr_mem, size, force=False):
         """
             Writes <size> bytes from memory to bootflash.
             ATTENTION: Don't call this unless you really know what you're doing!
             This may BRICK your device (unless it has a good recovery option)
             <addr_mem>: the address in memory to copy the data from
             <addr_bootflsh>: the address in bootflash to write to
+            <force>: Use this flag to suppress the 5 seconds delay
         """
         addr_flash = self._hexint(addr_flash)
         addr_mem = self._hexint(addr_mem)
         size = self._hexint(size)
-        raise NotImplementedError
+        force = self._bool(force)
+        self.logger.info("Writing boot flash from the memory in "+self._hex(addr_mem)+" - "+
+                         hex(addr_mem+size)+" to "+self._hex(addr_flash)+" - "+self._hex(addr_flash+size)+"\n")
+        if force == False:
+            self.logger.info("If this was not what you intended press Ctrl-C NOW")
+            import time
+            for i in range(5):
+                self.logger.info(".")
+                time.sleep(1)
+            self.logger.info("\n")
+        self.embios.bootflashwrite(addr_flash, addr_mem, size)
 
     @command
     def flushcaches(self):
