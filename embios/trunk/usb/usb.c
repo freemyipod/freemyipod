@@ -400,6 +400,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgi2cslave = (dbgrecvbuf[1] >> 8) & 0xff;
             dbgactionaddr = (dbgrecvbuf[1] >> 16) & 0xff;
             dbgactionlength = dbgrecvbuf[1] >> 24;
+            if (!dbgactionlength) dbgactionlength = 256;
             break;
         case 9:  // WRITE I2C
             if (set_dbgaction(DBGACTION_I2CSEND, 0)) break;
@@ -407,6 +408,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgi2cslave = (dbgrecvbuf[1] >> 8) & 0xff;
             dbgactionaddr = (dbgrecvbuf[1] >> 16) & 0xff;
             dbgactionlength = dbgrecvbuf[1] >> 24;
+            if (!dbgactionlength) dbgactionlength = 256;
             memcpy(dbgasyncsendbuf, &dbgsendbuf[4], dbgactionlength);
             break;
 #endif
