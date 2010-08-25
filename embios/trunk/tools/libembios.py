@@ -76,6 +76,7 @@ class Embios(object):
     
     @staticmethod
     def _alignsplit(addr, size, blksize, align):
+        if size <= blksize: return (size, 0, 0)
         end = addr + size
         if addr & (align - 1):
             bodyaddr = (addr + min(size, blksize)) & ~(align - 1)
@@ -155,7 +156,7 @@ class Embios(object):
         (headsize, bodysize, tailsize) = self._alignsplit(addr, len(data), cout_maxsize, 16)
         offset = 0
         if headsize != 0:
-            self.writemem(addr, headsize)
+            self.writemem(addr, data[offset:offset+headsize])
             offset += headsize
             addr += headsize
         while bodysize > 0:

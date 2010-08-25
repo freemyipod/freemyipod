@@ -479,9 +479,13 @@ class Commandline(object):
             self.logger.info("    CPU time (total): "+str(datetime.timedelta(microseconds=thread.cputime_total))+"\n")
             self.logger.info("    Stack address: "+self._hex(thread.stackaddr)+"\n")
             self.logger.info("    Registers:\n")
-            for register in range(16):
-                self.logger.info("      r"+str(register)+": "+self._hex(thread.regs["r"+str(register)])+"\n")
-            self.logger.info("      cpsr: "+self._hex(thread.regs.cpsr))
+            for registerrange in range(4):
+                self.logger.info("      ")
+                for register in range(registerrange, 16, 4):
+                    registerrepr = "r"+str(register)
+                    self.logger.info("{:3s}: 0x{:08X}    ".format(registerrepr, thread.regs["r"+str(register)]))
+                self.logger.info("\n")
+            self.logger.info("      cpsr: 0x{:08X}".format(thread.regs.cpsr))
             self.logger.info("\n")
     
     @command
