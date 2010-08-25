@@ -67,8 +67,12 @@ class Bunch(dict):
 
 
 class Embios(object):
+    """
+        Class for all embios functions.
+    """
     def __init__(self):
-        self.lib = Lib(self)
+        self.lib = Lib()
+        self.getpacketsizeinfo()
     
     @staticmethod
     def _alignsplit(addr, size, blksize, align):
@@ -121,9 +125,7 @@ class Embios(object):
             from the device. This cares about too long packages
             and decides whether to use DMA or not.
         """
-        if not self.lib.connected:
-            self.lib.connect()
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - 0x10
+        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
         din_maxsize = self.lib.dev.packetsizelimit["din"]
         data = ""
         (headsize, bodysize, tailsize) = self._alignsplit(addr, size, cin_maxsize, 16)
@@ -148,9 +150,7 @@ class Embios(object):
             in the memory of the device. This cares about too long packages
             and decides whether to use DMA or not.
         """
-        if not self.lib.connected:
-            self.lib.connect()
-        cout_maxsize = self.lib.dev.packetsizelimit["cout"] - 0x10
+        cout_maxsize = self.lib.dev.packetsizelimit["cout"] - self.lib.headersize
         dout_maxsize = self.lib.dev.packetsizelimit["dout"]
         (headsize, bodysize, tailsize) = self._alignsplit(addr, len(data), cout_maxsize, 16)
         offset = 0
@@ -203,7 +203,7 @@ class Embios(object):
         """ Reads a zero terminated string from memory 
             Reads only a maximum of 'maxlength' chars.
         """
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - 0x10
+        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
         string = ""
         while (len(string) < maxlength or maxlength < 0):
             data = self.readmem(addr, min(maxlength - len(string), cin_maxsize))
@@ -218,25 +218,61 @@ class Embios(object):
     
     def i2cread(self, index, slaveaddr, startaddr, size):
         """ Reads data from an i2c slave """
+        if size > 256 or size < 1:
+            raise ValueError("Size must be a number between 1 and 256")
+        if size == 256:
+            size = 0
+        resp = self.lib.monitorcommand(struct.pack("IBBBBII", 8, index, slaveaddr, startaddr, size, 0, 0), "III%ds" % size, (None, None, None, "data"))
+        return resp.data
     
     def i2cwrite(self, index, slaveaddr, startaddr, data):
         """ Writes data to an i2c slave """
+        size = len(data)
+        if size > 256 or size < 1:
+            raise ValueError("Size must be a number between 1 and 256")
+        if size == 256:
+            size = 0
+        return self.lib.monitorcommand(struct.pack("IBBBBII%ds" % size, 9, index, slaveaddr, startaddr, size, 0, 0, data), "III" % size, (None, None, None))
     
-    def usbcread(self, size):
-        """ Reads data with size 'size' from the USB console """
+    def usbcread(self):
+        """ Reads one packet with the maximal cin size """
+        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        resp = self.lib.monitorcommand(struct.pack("IIII", 10, cin_maxsize, 0, 0), "III%ds" % cin_maxsize, ("validsize", "buffersize", "queuesize", "data"))
+        resp.data = resp.data[:resp.validsize]
+        resp.maxsize = cin_maxsize
+        return resp
     
     def usbcwrite(self, data):
         """ Writes data to the USB console """
+        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        size = len(data)
+        while len(data) > 0:
+            writesize = min(cin_maxsize, len(data))
+            resp = self.lib.monitorcommand(struct.pack("IIII%ds" % writesize, 11, writesize, 0, 0, data[:writesize]), "III", ("validsize", "buffersize", "freesize"))
+            data = data[resp.validsize:]
+        return size
     
-    def cread(self, size, bitmask):
-        """ Reads data with the specified size from the device consoles
+    def cread(self, bitmask=0x1):
+        """ Reads one packet with the maximal cin size from the device consoles
             identified with the specified bitmask
         """
+        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        resp = self.lib.monitorcommand(struct.pack("IIII", 14, cin_maxsize, 0, 0), "III%ds" % cin_maxsize, ("size", None, None))
+        resp.data = resp.data[size:]
+        resp.maxsize = cin_maxsize
+        return resp
 
-    def cwrite(self, data):
+    def cwrite(self, data, bitmask=0x1):
         """ Writes data to the device consoles 
             identified with the specified bitmask.
         """
+        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        size = len(data)
+        while len(data) > 0:
+            writesize = min(cin_maxsize, len(data))
+            resp = self.lib.monitorcommand(struct.pack("IIII%ds" % writesize, 13, writesize, 0, 0, data[:writesize]), "III", (None, None, None))
+            data = data[writesize:]
+        return size
     
     def cflush(self, bitmask):
         """ Flushes the consoles specified with 'bitmask' """
@@ -244,7 +280,7 @@ class Embios(object):
     
     def getprocinfo(self):
         """ Gets current state of the scheduler """
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - 0x10
+        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
         # Get the size
         schedulerstate = self.lockscheduler()
         resp = self.lib.monitorcommand(struct.pack("IIII", 15, 0, 0, 0), "III", ("structver", "tablesize", None))
@@ -338,15 +374,15 @@ class Embios(object):
         elif threadtype == "system":
             threadtype = 1
         else:
-            raise SyntaxError("Threadtype must be either 'system' or 'user'")
+            raise ValueError("Threadtype must be either 'system' or 'user'")
         if priority > 256 or priority < 0:
-            raise SyntaxError("Priority must be a number between 0 and 256")
+            raise ValueError("Priority must be a number between 0 and 256")
         if state == "ready":
             state = 0
         elif state == "suspended":
             state = 1
         else:
-            raise SyntaxError("State must be either 'ready' or 'suspended'")
+            raise ValueError("State must be either 'ready' or 'suspended'")
         resp = self.lib.monitorcommand(struct.pack("IIIIIIII", 19, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state), "III", (id, None, None))
         if resp.id < 0:
             raise DeviceError("The device returned the error code "+str(resp.id))
@@ -394,21 +430,19 @@ class Embios(object):
 
 
 class Lib(object):
-    def __init__(self, embios):
+    def __init__(self):
         self.idVendor = 0xFFFF
         self.idProduct = 0xE000
-
-        self.embios = embios
-        self.connected = False
+        
+        self.headersize = 0x10
+        
+        self.connect()
     
     def connect(self):
         self.dev = Dev(self.idVendor, self.idProduct)
         self.connected = True
-        self.embios.getpacketsizeinfo()
     
     def monitorcommand(self, cmd, rcvdatatypes=None, rcvstruct=None):
-        if not self.connected:
-            self.connect()
         self.dev.cout(cmd)
         if rcvdatatypes:
             rcvdatatypes = "I" + rcvdatatypes # add the response
@@ -441,7 +475,7 @@ class Dev(object):
         
         self.interface = 0
         self.timeout = 100
-        
+
         self.connect()
         self.findEndpoints()
         
@@ -484,13 +518,13 @@ class Dev(object):
     def send(self, endpoint, data):
         size = self.dev.write(endpoint, data, self.interface, self.timeout)
         if size != len(data):
-            raise SendError
+            raise SendError("Not all data was written!")
         return len
     
     def receive(self, endpoint, size):
         read = self.dev.read(endpoint, size, self.interface, self.timeout)
         if len(read) != size:
-            raise ReceiveError
+            raise ReceiveError("Requested size and read size don't match!")
         return read
     
     def cout(self, data):

@@ -25,6 +25,9 @@ import sys
 import os
 import inspect
 import re
+import time
+
+from functools import wraps
 
 import libembios
 from libembios import Error
@@ -144,6 +147,7 @@ def command(func):
         Decorator for all commands.
         The decorated function is called with (self, all, other, arguments, ...)
     """
+    @wraps(func)
     def decorator(*args):
         return func(args[0], *args[1:])
     func._command = True
@@ -179,12 +183,8 @@ class Commandline(object):
             self.embios = libembios.Embios()
         except libembios.DeviceNotFoundError:
             self.logger.error("No emBIOS device found!")
-            end(1)
-        try:
-            self.getinfo("version")
-        except libembios.DeviceNotFoundError:
-                self.logger.error("Device not found!")
-                exit(2)
+            exit(1)
+        self.getinfo("version")
         
     def _parsecommand(self, func, args):
         # adds self to the commandline args.
@@ -194,20 +194,24 @@ class Commandline(object):
             try:
                 self.cmddict[func](*args)
             except ArgumentError, e:
-                usage(e)
+                usage(e, specific=func)
             except ArgumentError:
-                usage("Syntax Error in function '" + func + "'")
+                usage("Syntax Error in function '" + func + "'", specific=func)
             except ArgumentTypeError, e:
-                usage(e)
+                usage(e, specific=func)
             except NotImplementedError:
                 self.logger.error("This function is not implemented yet!")
             except libembios.DeviceError, e:
                 self.logger.error(str(e))
+            except ValueError:
+                usage(specific=func)
             except TypeError, e:
                 if str(e).split(" ", 1)[0] == func + "()":
                     self.logger.error(usage("Argument Error in '" + func + "': Wrong argument count", specific=func))
                 else:
                     raise
+            except libembios.usb.core.USBError:
+                self.logger.error("Problem with USB connection.")
         else:
             usage("No such command")
     
@@ -322,9 +326,7 @@ class Commandline(object):
         with f:
             self.embios.write(addr, f.read())
         self.logger.info("done\n")
-        
-        
-
+    
     @command
     def downloadfile(self, addr, size, filename):
         """
@@ -371,7 +373,7 @@ class Commandline(object):
         self.logger.info("Integer '"+self._hex(integer)+"' read from address "+self._hex(addr))
 
     @command
-    def i2crecv(self, bus, slave, addr, size):
+    def i2cread(self, bus, slave, addr, size):
         """
             Reads data from an I2C device
             <bus> the bus index
@@ -383,101 +385,73 @@ class Commandline(object):
         slave = self._hexint(slave)
         addr = self._hexint(addr)
         size = self._hexint(size)
-        raise NotImplementedError
+        self.embios.i2cread(bus, slave, addr, size)
 
     @command
-    def i2csend(self, bus, slave, addr, *args):
+    def i2cwrite(self, bus, slave, addr, *args):
         """
             Writes data to an I2C device
             <bus> the bus index
             <slave> the slave address
             <addr> the start address on the I2C device
-            <db1> ... <dbN> the data in single bytes, seperated by whitespaces,
-                eg. 0x37 0x56 0x45 0x12
+            <db1> ... <dbN> the data in single bytes, encoded in hex,
+                seperated by whitespaces, eg. 37 56 45 12
         """
         bus = self._hexint(bus)
         slave = self._hexint(slave)
         addr = self._hexint(addr)
-        data = []
+        data = ""
         for arg in args:
-            data.append(self._hexint(arg))
-        raise NotImplementedError
+            data += chr(self._hexint(arg))
+        self.embios.i2cwrite(bus, slave, addr, data)
 
     @command
-    def readusbconsole(self, size, outtype):
+    def console(self):
         """
-            Reads data from the USB console.
-            <size>: the number of bytes to read
-            <outtype>: defines how to output the result:
-                'file': writes the result to file <file>
-                'printstring': writes the result as string to the console window
-                'printhex': writes the result in hexedit notation to the console window
-            <file>: the file to write the result to, can be omitted
-                if <outtype> is not 'file'
+            Reads data from the USB console continuously
         """
-        size = self._hexint(size)
-        raise NotImplementedError
-        
+        while True:
+            resp = self.embios.usbcread()
+            self.logger.log(resp.data)
+            time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
 
     @command
-    def writeusbconsole_file(self, file, offset=0, length=None):
+    def writeusbconsole(self, *args):
         """
-            Writes the file <file> to the USB console.
-            Optional params <offset> <length>: specify the range in <file> to write
+            Writes the string <db1> ... <dbN> to the USB console.
         """
-        
-        offset = self._hexint(offset)
-        length = self._hexint(length)
-        raise NotImplementedError
+        text = ""
+        for word in args:
+            text += word + " "
+        text = text[:-1]
+        self.logger.info("Writing '"+text+"' to the usb console\n")
+        self.embios.usbcwrite(text)
 
     @command
-    def writeusbconsole_direct(self, *args):
+    def readdevconsole(self, bitmask):
         """
-            Writes the strings <db1> ... <dbN> to the USB console."
-        """
-        raise NotImplementedError
-
-    @command
-    def readdevconsole(self, bitmask, size, outtype, file=None):
-        """
-            Reads data from one or more of the device's consoles.
-            <bitmask>: the bitmask of the consoles to read from
-            <size>: the number of bytes to read
-            <outtype>: defines how to output the result:
-                'file': writes the result to file <file>
-                'printstring': writes the result as string to the console window
-                'printhex': writes the result in hexedit notation to the console window
-            <file>: the file to write the result to, can be omitted
-                if <outtype> is not 'file'
+            Reads data continuously from one or more of the device's consoles.
+            <bitmask>: the bitmask of the consoles to read from.
         """
         bitmask = self._hexint(bitmask)
-        size = self._hexint(size)
-        outtype = self._strcheck(['file', 'printstring', 'printhex'])
-        raise NotImplementedError
-
+        while True:
+            resp = self.embios.cread()
+            self.logger.log(resp.data)
+            time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
+    
     @command
-    def writedevconsole_file(self, bitmask, file, offset=0, length=None):
+    def writedevconsole(self, bitmask, *args):
         """
-            Writes the file <file> to the device consoles specified by <bitmask>
-            Optional params <offset> <length>: specify the range in <file> to write
+            Writes the string <db1> ... <dbN> to one or more of the device's consoles.
+            <bitmask>: the bitmask of the consoles to write to
         """
         bitmask = self._hexint(bitmask)
-        
-        offset = self._hexint(offset)
-        length = self._hexint(length)
-        raise NotImplementedError
-
-    @command
-    def writedevconsole_direct(self, bitmask, *args):
-        """
-            Writes the integers <db1> ... <dbN> to the device consoles specified
-            by <bitmask>
-        """
-        bitmask = self._hexint(bitmask)
-        data = []
-        for arg in args:
-            data.append(self._hexint(arg))
-        raise NotImplementedError
+        text = ""
+        for word in args:
+            text += word + " "
+        text = text[:-1]
+        self.logger.info("Writing '"+text+"' to the device consoles identified with "+self._hex(bitmask)+"\n")
+        self.embios.cwrite(text, bitmask)
 
     @command
     def flushconsolebuffers(self, bitmask):
@@ -515,6 +489,7 @@ class Commandline(object):
         """
             Locks (freezes) the scheduler
         """
+        self.logger.info("Will now lock scheduler\n")
         self.embios.lockscheduler()
 
     @command
@@ -522,6 +497,7 @@ class Commandline(object):
         """
             Unlocks (unfreezes) the scheduler
         """
+        self.logger.info("Will now unlock scheduler\n")
         self.embios.unlockscheduler()
 
     @command
@@ -573,19 +549,8 @@ class Commandline(object):
             Uploads the emBIOS application <filename> to
             the beginning of the user memory and executes it
         """
-        try:
-            f = open(filename, "rb")
-        except IOError:
-            raise ArgumentError("File not readable. Does it exist?")
-        data = self.embios.getusermemrange()
-        addr = data.lower
-        maxsize = data.upper - data.lower
-        filesize = os.path.getsize(filename)
-        if filesize > maxsize:
-            raise ArgumentError("The file is too big, it doesn't fit into the user memory.")
-        self.logger.info("Uploading application to "+self._hex(addr)+" - "+self._hex(addr+filesize)+"\n")
-        self.embios.write(addr, f.read())
-        self.execimage(addr)
+        #self.execimage(addr)
+        raise NotImplementedError
 
     @command
     def execimage(self, addr):
@@ -595,9 +560,18 @@ class Commandline(object):
         addr = self._hexint(addr)
         self.logger.info("Starting emBIOS app at "+self._hex(addr)+"\n")
         self.embios.execimage(addr)
-
+    
     @command
-    def readrawbootflash(self, addr_flash, addr_mem, size):
+    def flushcaches(self):
+        """
+            Flushes the CPUs data and instruction caches.
+        """
+        self.logger.info("Flushing CPU data and instruction caches...")
+        self.embios.flushcaches()
+        self.logger.info("done\n")
+    
+    @command
+    def readbootflash(self, addr_flash, addr_mem, size):
         """
             Reads <size> bytes from bootflash to memory.
             <addr_bootflsh>: the address in bootflash to read from
@@ -609,9 +583,9 @@ class Commandline(object):
         self.logger.info("Dumping boot flash addresses "+self._hex(addr_flash)+" - "+
                          hex(addr_flash+size)+" to "+self._hex(addr_mem)+" - "+self._hex(addr_mem+size)+"\n")
         self.embios.bootflashread(addr_flash, addr_mem, size)
-
+    
     @command
-    def writerawbootflash(self, addr_flash, addr_mem, size, force=False):
+    def writebootflash(self, addr_flash, addr_mem, size, force=False):
         """
             Writes <size> bytes from memory to bootflash.
             ATTENTION: Don't call this unless you really know what you're doing!
@@ -628,21 +602,30 @@ class Commandline(object):
                          hex(addr_mem+size)+" to "+self._hex(addr_flash)+" - "+self._hex(addr_flash+size)+"\n")
         if force == False:
             self.logger.info("If this was not what you intended press Ctrl-C NOW")
-            import time
-            for i in range(5):
+            for i in range(10):
                 self.logger.info(".")
                 time.sleep(1)
             self.logger.info("\n")
         self.embios.bootflashwrite(addr_flash, addr_mem, size)
-
+    
     @command
-    def flushcaches(self):
+    def runfirmware(self, addr, filename):
         """
-            Flushes the CPUs data and instruction caches.
+            Uploads the firmware in 'filename' to the beginning of the
+            user memory and executes it
         """
-        self.logger.info("Flushing CPU data and instruction caches...")
-        self.embios.flushcaches()
-        self.logger.info("done\n")
+        addr = self._hexint(addr)
+        self.uploadfile(addr, filename)
+        self.execfirmware(addr)
+    
+    @command
+    def execfirmware(self, addr):
+        """
+            Executes the firmware at addr
+        """
+        addr = self._hexint(addr)
+        self.logger.info("Running firmware at "+self._hex(addr)+". Bye.")
+        self.embios.execfirmware(addr)
     
     @command
     def aesencrypt(self, addr, size, keyindex):
