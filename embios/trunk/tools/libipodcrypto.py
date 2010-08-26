@@ -35,7 +35,7 @@ def nano2gcryptdfu(data):
     header = "87011.0\0\0\x08\0\0" + struct.pack("<I", len(data))
     embios = libembios.Embios()
     embios.write(0x08000000, header.ljust(0x800, "\0") + data)
-    embios.timeout = 20000
+    embios.lib.dev.timeout = 20000
     embios.hmac_sha1(0x08000800, len(data), 0x08000010)
     embios.hmac_sha1(0x08000000, 0x40, 0x08000040)
     embios.aesencrypt(0x08000000, len(data) + 0x800, 1)
@@ -45,7 +45,7 @@ def nano2gcryptdfu(data):
 def nano2gdecryptdfu(data):
     embios = libembios.Embios()
     embios.write(0x08000000, data)
-    embios.timeout = 20000
+    embios.lib.dev.timeout = 20000
     embios.aesdecrypt(0x08000000, len(data), 1)
     return embios.read(0x08000800, len(data) - 0x800)
 
@@ -55,7 +55,7 @@ def nano2gcryptfirmware(data):
     header = "\0\0\0\0\0x02\0\0\0\0x01\0\0\0\0x40\0\0\0\0\0\0\0" + struct.pack("<I", len(data))
     embios = libembios.Embios()
     embios.write(0x08000000, header.ljust(0x800, "\0") + data)
-    embios.timeout = 20000
+    embios.lib.dev.timeout = 20000
     embios.hmac_sha1(0x08000800, len(data), 0x0800001c)
     embios.hmac_sha1(0x08000000, 0x200, 0x080001d4)
     embios.aesencrypt(0x08000800, len(data), 1)
@@ -65,7 +65,7 @@ def nano2gcryptfirmware(data):
 def nano2gdecryptfirmware(data):
     embios = libembios.Embios()
     embios.write(0x08000000, data)
-    embios.timeout = 20000
+    embios.lib.dev.timeout = 20000
     embios.aesdecrypt(0x08000800, len(data) - 0x800, 1)
     return embios.read(0x08000800, len(data) - 0x800)
 
