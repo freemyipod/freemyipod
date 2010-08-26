@@ -153,6 +153,8 @@ endif
 flashfiles: $(FLASHFILES)
 	@touch flashfiles.built
 
+$(UNINSTDIR)/build/uninstaller-nano2g.embiosapp.ucl: uninstaller-nano2g
+
 flashfiles/uninstaller-nano2g.embiosapp.ucl: $(UNINSTDIR)/build/uninstaller-nano2g.embiosapp.ucl uninstaller-nano2g
 	@echo [CP]     $@
 	@cp $< $@
@@ -165,9 +167,13 @@ flashfiles/iloader.cfg.ucl: flashfiles/iloader.cfg
 	@echo [UCL]    $<
 	@$(UCLPACK) $< $@
 
+$(ILOADERDIR)/build/iloader.embiosapp.ucl: iloader
+
 flashfiles/iloader.embiosapp.ucl: $(ILOADERDIR)/build/iloader.embiosapp.ucl iloader
 	@echo [CP]     $@
 	@cp $< $@
+
+$(EMBIOSDIR)/loader/ipodnano2g/build/embiosldr-ipodnano2g.dfu: embiosldr-ipodnano2g
 
 flashfiles/embiosldr-ipodnano2g.dfu: $(EMBIOSDIR)/loader/ipodnano2g/build/embiosldr-ipodnano2g.dfu embiosldr-ipodnano2g
 	@echo [CP]     $@
@@ -177,7 +183,9 @@ flashfiles/embios-ipodnano2g.ucl: flashfiles/embios-ipodnano2g.bin
 	@echo [UCL]    $<
 	@$(UCLPACK) $< $@
 
- flashfiles/embios-ipodnano2g.bin: $(EMBIOSDIR)/build/ipodnano2g/embios.bin embios
+$(EMBIOSDIR)/build/ipodnano2g/embios.bin: embios
+
+flashfiles/embios-ipodnano2g.bin: $(EMBIOSDIR)/build/ipodnano2g/embios.bin embios
 	@echo [EMBCFG] $@
 	@$(EMBIOSBOOTCFG) $< $@ --file=/iLoader/boot.embiosapp --file-compressed --file-run-from=0x08000000 \
 	                        --flash=iloader --flash-compressed --flash-run-from=0x09e00000

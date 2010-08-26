@@ -34,6 +34,69 @@ lcd_init:
 	mov	pc, lr
 .size lcd_init, .-lcd_init
 
+.section .icode.lcd_shutdown, "ax", %progbits
+.align 2
+.global lcd_shutdown
+.type lcd_shutdown, %function
+lcd_shutdown:
+	stmfd	sp!, {r4, lr}
+	bl	displaylcd_detectlcd
+	sub	r12, r12, #0x04900000
+	cmp	r0, #2
+	beq	lcd_shutdown_type2
+	mov	r0, #0x28
+	bl	displaylcd_sendlcdc
+	mov	r0, #0x10
+	bl	displaylcd_sendlcdc
+	b	lcd_shutdown_done
+lcd_shutdown_type2:
+	mov	r0, #0x07
+	bl	displaylcd_sendlcd2c
+	mov	r0, #0x200
+	orr	r0, r0, #0x32
+	bl	displaylcd_sendlcd2d
+	mov	r0, #0x13
+	bl	displaylcd_sendlcd2c
+	mov	r0, #0x1100
+	orr	r0, #0x37
+	bl	displaylcd_sendlcd2d
+	mov	r0, #0x07
+	bl	displaylcd_sendlcd2c
+	mov	r0, #0x200
+	orr	r0, r0, #0x01
+	bl	displaylcd_sendlcd2d
+	mov	r0, #0x13
+	bl	displaylcd_sendlcd2c
+	mov	r0, #0x100
+	orr	r0, #0x37
+	bl	displaylcd_sendlcd2d
+	mov	r0, #0x07
+	bl	displaylcd_sendlcd2c
+	mov	r0, #0x200
+	bl	displaylcd_sendlcd2d
+	mov	r0, #0x10
+	bl	displaylcd_sendlcd2c
+	mov	r0, #0x680
+	bl	displaylcd_sendlcd2d
+	mov	r0, #0x12
+	bl	displaylcd_sendlcd2c
+	mov	r0, #0x160
+	bl	displaylcd_sendlcd2d
+	mov	r0, #0x13
+	bl	displaylcd_sendlcd2c
+	mov	r0, #0x100
+	orr	r0, r0, #0x27
+	bl	displaylcd_sendlcd2d
+	mov	r0, #0x10
+	bl	displaylcd_sendlcd2c
+	mov	r0, #0x600
+	bl	displaylcd_sendlcd2d
+lcd_shutdown_done:
+	ldmfd	sp!, {r4, lr}
+	mov	r0, #5120
+	b	sleep
+.size lcd_shutdown, .-lcd_shutdown
+
 .section .text.lcd_get_width, "ax", %progbits
 .align 2
 .global lcd_get_width

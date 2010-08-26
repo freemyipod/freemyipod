@@ -31,4 +31,14 @@ void shutdown(bool shutdownhw)
 #ifdef HAVE_STORAGE_FLUSH
     storage_flush();
 #endif
+    if (shutdownhw)
+    {
+#ifdef HAVE_BACKLIGHT
+        backlight_set_fade(0);
+        backlight_on(false);
+#endif
+#ifdef HAVE_LCD_SHUTDOWN
+        lcd_shutdown();
+#endif
+    }
 }

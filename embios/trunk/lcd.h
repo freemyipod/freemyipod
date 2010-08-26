@@ -32,6 +32,7 @@
 
 
 void lcd_init() INITCODE_ATTR;
+void lcd_shutdown();
 int lcd_get_width() ICODE_ATTR;
 int lcd_get_height() ICODE_ATTR;
 int lcd_get_bytes_per_pixel() ICODE_ATTR;
