@@ -22,7 +22,7 @@ STUBEMBED := python tools/stubembed.py
 COMPILECONFIG := python $(ILOADERDIR)/tools/compileconfig.py
 EMBIOSBOOTCFG := python $(EMBIOSDIR)/tools/embiosbootcfg.py
 EMBIOSEMBEDAPP := python $(EMBIOSDIR)/tools/embiosembedapp.py
-CRYPTFW := python $(TOOLSDIR)/ipodcrypt.py nano2g-cryptfw
+CRYPTFW := python $(EMBIOSDIR)/tools/ipodcrypt.py nano2g-cryptfirmware
 SCRAMBLE := python $(TOOLSDIR)/scramble.py
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMBIOSDIR)/export -ffunction-sections -fdata-sections -mcpu=arm940t

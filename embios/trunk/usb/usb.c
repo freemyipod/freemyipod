@@ -555,6 +555,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgactionoffset = ((uint16_t*)dbgrecvbuf)[3];
             dbgactionaddr = dbgrecvbuf[2];
             dbgactionlength = dbgrecvbuf[3];
+            break;
 #endif
 #ifdef HAVE_HMACSHA1
         case 26:  // HMACSHA1
@@ -562,6 +563,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgactionaddr = dbgrecvbuf[1];
             dbgactionlength = dbgrecvbuf[2];
             dbgactionoffset = dbgrecvbuf[3];
+            break;
 #endif
         default:
             dbgsendbuf[0] = 2;

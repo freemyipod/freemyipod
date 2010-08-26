@@ -1,7 +1,7 @@
 NAME := embiosldr-ipodnano2g
 BOOTADDR = 24008000
 
-TOOLSDIR ?= ../../../../tools/
+EMBIOSDIR ?= ../../
 
 CROSS   ?= arm-none-eabi-
 CC      := $(CROSS)gcc
@@ -9,7 +9,7 @@ AS      := $(CROSS)as
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
-CRYPTDFU := python $(TOOLSDIR)/ipodcrypt.py nano2g-cryptdfu
+CRYPTDFU := python $(EMBIOSDIR)/tools/ipodcrypt.py nano2g-cryptdfu
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -mcpu=arm940t
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
