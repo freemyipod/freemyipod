@@ -88,6 +88,33 @@ class Embios(object):
         tailsize = end - tailaddr
         return (headsize, tailaddr - bodyaddr, tailsize)
     
+    def _readmem(self, addr, size):
+        """ Reads the memory from location 'addr' with size 'size'
+            from the device.
+        """
+        resp = self.lib.monitorcommand(struct.pack("IIII", 4, addr, size, 0), "III%ds" % size, (None, None, None, "data"))
+        return resp.data
+        
+    def _writemem(self, addr, data):
+        """ Writes the data in 'data' to the location 'addr'
+            in the memory of the device.
+        """
+        return self.lib.monitorcommand(struct.pack("IIII%ds" % len(data), 5, addr, len(data), 0, data), "III", (None, None, None))
+    
+    def _readdma(self, addr, size):
+        """ Reads the memory from location 'addr' with size 'size'
+            from the device. This uses DMA and the data in endpoint.
+        """
+        self.lib.monitorcommand(struct.pack("IIII", 6, addr, size, 0), "III", (None, None, None))
+        return struct.unpack("%ds" % size, self.lib.dev.din(size))[0]
+    
+    def _writedma(self, addr, data):
+        """ Writes the data in 'data' to the location 'addr'
+            in the memory of the device. This uses DMA and the data out endpoint.
+        """
+        self.lib.monitorcommand(struct.pack("IIII", 7, addr, len(data), 0), "III", (None, None, None))
+        return self.lib.dev.dout(data)
+    
     def getversioninfo(self):
         """ This returns the emBIOS version and device information. """
         return self.lib.monitorcommand(struct.pack("IIII", 1, 0, 0, 0), "IBBBBI", ("revision", "majorv", "minorv", "patchv", "swtypeid", "hwtypeid"))
@@ -131,19 +158,19 @@ class Embios(object):
         data = ""
         (headsize, bodysize, tailsize) = self._alignsplit(addr, size, cin_maxsize, 16)
         if headsize != 0:
-            data += self.readmem(addr, headsize)
+            data += self._readmem(addr, headsize)
             addr += headsize
         while bodysize > 0:
             if bodysize >= 2 * cin_maxsize:
                 readsize = min(bodysize, din_maxsize)
-                data += self.readdma(addr, readsize)
+                data += self._readdma(addr, readsize)
             else:
                 readsize = min(bodysize, cin_maxsize)
-                data += self.readmem(addr, readsize)
+                data += self._readmem(addr, readsize)
             addr += readsize
             bodysize -= readsize
         if tailsize != 0:
-            data += self.readmem(addr, tailsize)
+            data += self._readmem(addr, tailsize)
         return data
     
     def write(self, addr, data):
@@ -156,49 +183,22 @@ class Embios(object):
         (headsize, bodysize, tailsize) = self._alignsplit(addr, len(data), cout_maxsize, 16)
         offset = 0
         if headsize != 0:
-            self.writemem(addr, data[offset:offset+headsize])
+            self._writemem(addr, data[offset:offset+headsize])
             offset += headsize
             addr += headsize
         while bodysize > 0:
             if bodysize >= 2 * cout_maxsize:
                 writesize = min(bodysize, dout_maxsize)
-                self.writedma(addr, data[offset:offset+writesize])
+                self._writedma(addr, data[offset:offset+writesize])
             else:
                 writesize = min(bodysize, cout_maxsize)
-                self.writemem(addr, data[offset:offset+writesize])
+                self._writemem(addr, data[offset:offset+writesize])
             offset += writesize
             addr += writesize
             bodysize -= writesize
         if tailsize != 0:
-            self.writemem(addr, data[offset:offset+tailsize])
+            self._writemem(addr, data[offset:offset+tailsize])
         return data
-    
-    def readmem(self, addr, size):
-        """ Reads the memory from location 'addr' with size 'size'
-            from the device.
-        """
-        resp = self.lib.monitorcommand(struct.pack("IIII", 4, addr, size, 0), "III%ds" % size, (None, None, None, "data"))
-        return resp.data
-        
-    def writemem(self, addr, data):
-        """ Writes the data in 'data' to the location 'addr'
-            in the memory of the device.
-        """
-        return self.lib.monitorcommand(struct.pack("IIII%ds" % len(data), 5, addr, len(data), 0, data), "III", (None, None, None))
-    
-    def readdma(self, addr, size):
-        """ Reads the memory from location 'addr' with size 'size'
-            from the device. This uses DMA and the data in endpoint.
-        """
-        self.lib.monitorcommand(struct.pack("IIII", 6, addr, size, 0), "III", (None, None, None))
-        return struct.unpack("%ds" % size, self.lib.dev.din(size))[0]
-    
-    def writedma(self, addr, data):
-        """ Writes the data in 'data' to the location 'addr'
-            in the memory of the device. This uses DMA and the data out endpoint.
-        """
-        self.lib.monitorcommand(struct.pack("IIII", 7, addr, len(data), 0), "III", (None, None, None))
-        return self.lib.dev.dout(data)
     
     def readstring(self, addr, maxlength = 256):
         """ Reads a zero terminated string from memory 
@@ -207,7 +207,7 @@ class Embios(object):
         cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
         string = ""
         while (len(string) < maxlength or maxlength < 0):
-            data = self.readmem(addr, min(maxlength - len(string), cin_maxsize))
+            data = self._readmem(addr, min(maxlength - len(string), cin_maxsize))
             length = data.find("\0")
             if length >= 0:
                 string += data[:length]
@@ -342,9 +342,6 @@ class Embios(object):
             threads.append(info)
             id += 1
         return threads
-            
-        
-        return self.lib.monitorcommand(struct.pack("IIII", 15, offset, size, 0), "III%ds" % size, ("structver", "tablesize", None, "data"))
     
     def lockscheduler(self, freeze=True):
         """ Freezes/Unfreezes the scheduler """

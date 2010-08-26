@@ -325,6 +325,7 @@ class Commandline(object):
         self.logger.info("Writing file '"+filename+"' to memory at "+self._hex(addr)+"...")
         with f:
             self.embios.write(addr, f.read())
+        f.close()
         self.logger.info("done\n")
     
     @command
@@ -344,6 +345,7 @@ class Commandline(object):
         self.logger.info("Reading data from address "+self._hex(addr)+" with the size "+self._hex(size)+" to '"+filename+"'...")
         with f:
             f.write(self.embios.read(addr, size))
+        f.close()
         self.logger.info("done\n")
 
     @command
@@ -358,7 +360,7 @@ class Commandline(object):
         if integer > 0xFFFFFFFF:
             raise ArgumentError("Specified integer too long")
         data = chr(integer)
-        self.embios.writemem(addr, data)
+        self.embios.write(addr, data)
         self.logger.info("Integer '"+self._hex(integer)+"' written successfully to "+self._hex(addr))
 
     @command
@@ -368,7 +370,7 @@ class Commandline(object):
             <offset>: the address to download the integer from
         """
         addr = self._hexint(addr)
-        data = self.embios.readmem(addr, 1)
+        data = self.embios.read(addr, 1)
         integer = ord(data)
         self.logger.info("Integer '"+self._hex(integer)+"' read from address "+self._hex(addr))
 
@@ -495,7 +497,7 @@ class Commandline(object):
         """
         self.logger.info("Will now lock scheduler\n")
         self.embios.lockscheduler()
-
+    
     @command
     def unlockscheduler(self):
         """
@@ -503,7 +505,7 @@ class Commandline(object):
         """
         self.logger.info("Will now unlock scheduler\n")
         self.embios.unlockscheduler()
-
+    
     @command
     def suspendthread(self, threadid):
         """
@@ -664,7 +666,7 @@ class Commandline(object):
                          " and saving it to "+self._hex(destination)+" - "+self._hex(destination+sha1size)+"...")
         self.embios.hmac_sha1(addr, size, destination)
         self.logger.info("done\n")
-        data = self.embios.readmem(destination, sha1size)
+        data = self.embios.read(destination, sha1size)
         hash = ord(data)
         self.logger.info("The generated hash is "+self._hex(hash))
 
