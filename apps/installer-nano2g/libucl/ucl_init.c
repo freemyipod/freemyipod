@@ -28,8 +28,7 @@
 
 #include "ucl_conf.h"
 #include "ucl_util.h"
-#include <stdio.h>
-
+#include "embiosapp.h"
 
 #if 0
 #  define IS_SIGNED(type)       (((type) (1ul << (8 * sizeof(type) - 1))) < 0)

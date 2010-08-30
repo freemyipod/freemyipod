@@ -163,6 +163,10 @@ flashfiles/iloader.cfg: flashfiles/iloader.conf
 	@echo [COMCFG] $@
 	@$(COMPILECONFIG) $< $@
 
+flashfiles/iloader.conf:
+	@echo [CP]     $@
+	@cp $(ILOADERDIR)/themes/default/source/iloader.conf flashfiles/iloader.conf
+
 flashfiles/iloader.cfg.ucl: flashfiles/iloader.cfg
 	@echo [UCL]    $<
 	@$(UCLPACK) $< $@
@@ -204,5 +208,6 @@ uninstaller-nano2g:
 
 clean:
 	@rm -rf build
+	@rm -rf flashfiles
 
 .PHONY: all clean uninstaller-nano2g iloader embios embiosldr-ipodnano2g libucl flashfiles $(NAME)

@@ -45,9 +45,7 @@
 // memory checkers
 ************************************************************************/
 
-#if defined(__BOUNDS_CHECKING_ON)
-#  include <unchecked.h>
-#else
+#if !defined(__BOUNDS_CHECKING_ON)
 #  define BOUNDS_CHECKING_OFF_DURING(stmt)      stmt
 #  define BOUNDS_CHECKING_OFF_IN_EXPR(expr)     (expr)
 #endif
@@ -58,27 +56,10 @@
 ************************************************************************/
 
 #if !defined(UCL_HAVE_CONFIG_H)
-#  include <stddef.h>           /* ptrdiff_t, size_t */
-#  include <string.h>           /* memcpy, memmove, memcmp, memset */
-#  if !defined(NO_STDLIB_H)
-#    include <stdlib.h>
-#  endif
 #  define HAVE_MEMCMP
 #  define HAVE_MEMCPY
 #  define HAVE_MEMMOVE
 #  define HAVE_MEMSET
-#else
-#  include <sys/types.h>
-#  if defined(STDC_HEADERS)
-#    include <string.h>
-#    include <stdlib.h>
-#  endif
-#  if defined(HAVE_STDDEF_H)
-#    include <stddef.h>
-#  endif
-#  if defined(HAVE_MEMORY_H)
-#    include <memory.h>
-#  endif
 #endif
 
 #if defined(__UCL_DOS16) || defined(__UCL_WIN16)
@@ -91,12 +72,6 @@
 #if !defined(UCL_DEBUG)
 #  define NDEBUG
 #endif
-#if 1 || defined(UCL_DEBUG) || !defined(NDEBUG)
-#  if !defined(NO_STDIO_H)
-#    include <stdio.h>
-#  endif
-#endif
-#include <assert.h>
 
 
 #if !defined(UCL_UNUSED)

@@ -36,11 +36,8 @@
 #define UCL_DEBUG
 #endif
 
-#include <stdio.h>
-
 #if 0 && !defined(UCL_DEBUG)
 #undef NDEBUG
-#include <assert.h>
 #endif
 
 

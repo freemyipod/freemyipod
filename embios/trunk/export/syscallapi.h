@@ -25,8 +25,10 @@
 #define __SYSCALLAPI_H__
 
 
+#include "../libc/include/assert.h"
+
 #include "../global.h"
-#include "../panic.h"  
+#include "../panic.h"
 #include "../console.h"
 #include "../disk.h"
 #include "../dir.h"
