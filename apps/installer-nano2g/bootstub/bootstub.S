@@ -823,7 +823,7 @@ i2csend:
 	str	r0, [r12,#0x0c]
 	mov	r4, #0xf0
 	str	r4, [r12,#0x04]
-	mov	r4, #0xf3
+	mov	r4, #0xb7
 	str	r4, [r12]
 	bl	i2cwait
 	str	r1, [r12,#0x0c]
@@ -861,7 +861,7 @@ i2crecv:
 	str	r0, [r12,#0x0c]
 	mov	r4, #0xf0
 	str	r4, [r12,#0x04]
-	mov	r4, #0xf3
+	mov	r4, #0xb7
 	str	r4, [r12]
 	bl	i2cwait
 	str	r1, [r12,#0x0c]
@@ -876,7 +876,7 @@ i2crecv:
 	bl	i2cwait
 i2crecv_read:
 	subs	r3, r3, #1
-	moveq	r4, #0x73
+	moveq	r4, #0x37
 	str	r4, [r12]
 	bl	i2cwait
 	ldr	r0, [r12,#0x0c]
@@ -886,7 +886,7 @@ i2crecv_read:
 	bne	i2crecv_read
 	mov	r1, #0x90
 	str	r1, [r12,#0x04]
-	mov	r1, #0xf3
+	mov	r1, #0xb7
 	str	r1, [r12]
 i2crecv_wait:
 	ldr	r1, [r12,#0x04]
