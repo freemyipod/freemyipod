@@ -52,7 +52,7 @@ def nano2gdecryptdfu(data):
 
 def nano2gcryptfirmware(data):
     data = data.ljust((len(data) + 0x3f) & ~0x3f, "\0")
-    header = "\0\0\0\0\0x02\0\0\0\0x01\0\0\0\0x40\0\0\0\0\0\0\0" + struct.pack("<I", len(data))
+    header = "\0\0\0\0\x02\0\0\0\x01\0\0\0\x40\0\0\0\0\0\0\0" + struct.pack("<I", len(data))
     embios = libembios.Embios()
     embios.write(0x08000000, header.ljust(0x800, "\0") + data)
     embios.lib.dev.timeout = 20000
