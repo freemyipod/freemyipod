@@ -398,8 +398,19 @@ configfound:
                     uint8_t* image = (uint8_t*)config[pc + 1];
                     uint32_t checksum = image[3] | (image[2] << 8)
                                       | (image[1] << 16) | (image[0] << 24);
-                    uint32_t mysum = 62;
-                    if (*((uint32_t*)&image[4]) != get_platform_id()) pc = errhandler;
+                    uint32_t mysum;
+                    uint32_t platform;
+                    switch (get_platform_id())
+                    {
+                        case 0x47324e49:  // IN2G
+                            mysum = 62;
+                            platform = 0x67326e6e;  // nn2g
+                            break;
+                        default:
+                            panic(PANIC_KILLTHREAD,
+                                  "No known Rockbox checksum format for this target");
+                    }
+                    if (*((uint32_t*)&image[4]) != platform) pc = errhandler;
                     else
                     {
                         for (i = 0; i < size - 8; i++)
