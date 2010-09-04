@@ -48,7 +48,7 @@
 #ifdef HAVE_BOOTFLASH
 #include "bootflash.h"
 #endif
-#ifdef HAVE_BOOTFLASH
+#ifdef HAVE_BACKLIGHT
 #include "backlight.h"
 #endif
 
