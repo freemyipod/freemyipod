@@ -48,6 +48,9 @@
 #ifdef HAVE_BOOTFLASH
 #include "bootflash.h"
 #endif
+#ifdef HAVE_BOOTFLASH
+#include "backlight.h"
+#endif
 
 
 struct bootinfo_t
@@ -176,6 +179,9 @@ void initthread()
     usb_init();
 #endif
     cputs(CONSOLE_BOOT, welcomestring);
+#ifdef HAVE_BACKLIGHT
+    backlight_init();
+#endif
 #ifdef HAVE_BUTTON
     button_init();
 #endif

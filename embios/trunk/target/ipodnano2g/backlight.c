@@ -26,6 +26,11 @@
 #include "backlight.h"
 
 
+void backlight_init()
+{
+    i2c_sendbyte(0, 0xe6, 0x2a, 6);
+}
+
 void backlight_on(bool on)
 {
     i2c_sendbyte(0, 0xe6, 0x29, on ? 1 : 0);

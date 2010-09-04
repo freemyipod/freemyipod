@@ -29,6 +29,10 @@
 static bool backlight_fade;
 
 
+void backlight_init()
+{
+}
+
 void backlight_on(bool on)
 {
     i2c_sendbyte(0, 0xe6, 0x31, (backlight_fade ? 2 : 0) + (on ? 1 : 0));
