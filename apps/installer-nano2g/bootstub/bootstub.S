@@ -50,7 +50,7 @@ flushcache_loop:
 
 cacheflush_done:
 	adr	r0, _start
-	adr	r1, _stubend + 4
+	adr	r1, _stubend + 16  @ should be +4, increased to make it fit into a shifter arg
 	mov	r2, #0x22000000
 copyloop:
 	cmp	r1, r0
