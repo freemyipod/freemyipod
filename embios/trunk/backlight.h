@@ -26,6 +26,7 @@
 
 #include "global.h"
 
+void backlight_init() INITCODE_ATTR;
 void backlight_on(bool on);
 void backlight_set_fade(uint8_t fade);
 void backlight_set_brightness(uint8_t brightness);
