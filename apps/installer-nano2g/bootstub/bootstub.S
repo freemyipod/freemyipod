@@ -50,7 +50,7 @@ flushcache_loop:
 
 cacheflush_done:
 	adr	r0, _start
-	adr	r1, _stubend + 16  @ should be +4, increased to make it fit into a shifter arg
+	adr	r1, _stubend + 4
 	mov	r2, #0x22000000
 copyloop:
 	cmp	r1, r0
@@ -169,7 +169,6 @@ pmuinitdata:
 	.byte 9, 0x13, 3, 0, 0, 7, 0, 5, 2, 0x6b, 0
 	.byte 4, 0x1e, 0x12, 1, 0, 0x10
 	.byte 6, 0x22, 0x2f, 1, 0, 0x10, 9, 1
-	.byte 1, 0x2a, 6
 	.byte 6, 0x31, 0x15, 1, 0x0f, 3, 0x15, 0
 	.byte 1, 0x43, 0
 	.byte 1, 0x4e, 0
@@ -320,6 +319,10 @@ pmuinitdone:
 	orr	r0, r0, #5
 	orr	r0, r0, #0x1000
 	mcr	p15, 0, r0,c1,c0     @ Re-enable the Protection Unit and caches
+	mov	r0, #0xe6
+	mov	r1, #0x2a
+	mov	r2, #6
+	bl	i2csendbyte
 	mov	r0, #0xe6
 	mov	r1, #0x2b
 	mov	r2, #4

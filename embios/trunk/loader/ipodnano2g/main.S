@@ -160,7 +160,6 @@ pmuinitdata:
 	.byte 9, 0x13, 3, 0, 0, 7, 0, 5, 2, 0x6b, 0
 	.byte 4, 0x1e, 0x12, 1, 0, 0x10
 	.byte 6, 0x22, 0x2f, 1, 0, 0x10, 9, 1
-	.byte 1, 0x2a, 6
 	.byte 6, 0x31, 0x15, 1, 0x0f, 3, 0x15, 0
 	.byte 1, 0x43, 0
 	.byte 1, 0x4e, 0
@@ -334,6 +333,10 @@ fillbuff:
 	mov	r3, #131
 	str	r11, [sp]
 	bl	displaylcd
+	mov	r0, #0xe6
+	mov	r1, #0x2a
+	mov	r2, #6
+	bl	i2csendbyte
 	mov	r0, #0xe6
 	mov	r1, #0x2b
 	mov	r2, #4
