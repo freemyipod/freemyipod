@@ -47,9 +47,10 @@
 #include "libc/include/string.h"
 #include "libc/include/sys/types.h"
 typedef int bool;
+#endif
 #define true 1
 #define false 0
-#endif
+
 
 #ifndef IN_APPLICATION_CODE
 #include "build/version.h"
