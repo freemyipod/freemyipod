@@ -23,6 +23,7 @@ void handler(enum button_event eventtype, int which, int value)
     if (eventtype == BUTTON_PRESS) button |= 1 << which;
     if (eventtype == WHEEL_FORWARD) increment += value;
     else if (eventtype == WHEEL_BACKWARD) increment -= value;
+    cprintf(2, "iLoader got button event, presses: %02X", button);
     mutex_unlock(&eventmtx);
     wakeup_signal(&eventwakeup);
 }
@@ -136,6 +137,8 @@ void main(void)
     int width = lcd_get_width();
     int height = lcd_get_height();
 
+    button = 0;
+    increment = 0;
     mutex_init(&eventmtx);
     wakeup_init(&eventwakeup);
     button_register_handler(handler);
