@@ -76,6 +76,7 @@ int button_unregister_handler(void (*handler)(enum button_event, int which, int 
 
 void button_send_event(enum button_event eventtype, int which, int value)
 {
+    DEBUGF("Sending button event: %d, %02X, %02X", eventtype, which, value);
     int i;
     for (i = 0; i < BUTTON_MAX_HOOKS; i++)
         if (button_hooks[i].owner != NULL)

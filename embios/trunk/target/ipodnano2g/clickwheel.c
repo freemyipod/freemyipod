@@ -49,16 +49,21 @@ void clickwheel_thread()
     while (true)
     {
         wakeup_wait(&clickwheel_wakeup, TIMEOUT_BLOCK);
+        DEBUGF("Got clickwheel packet");
         uint32_t mode = enter_critical_section();
         uint32_t data = clickwheel_packet;
         leave_critical_section(mode);
+        DEBUGF("Acquired clickwheel packet: %08X", data);
         if ((data & 0x800000FF) == 0x8000001A)
         {
             int newbuttons = (data >> 8) & 0x1f;
             int newpos = (data >> 16) & 0xff;
             bool newtouched = (data & 0x40000000) ? true : false;
 
+            DEBUGF("This is a change packet, button state: %02X, position: %02d, touched: %d",
+                   newbuttons, newpos, newtouched);
             int buttonschanged = oldbuttons ^ newbuttons;
+            DEBUGF("Changed buttons: %02X", buttonschanged);
             for (i = 0; i < 5; i++)
                 if ((buttonschanged >> i) & 1)
                 {
@@ -71,21 +76,35 @@ void clickwheel_thread()
                 if (!oldtouched) button_send_event(WHEEL_TOUCH, 0, newpos);
                 button_send_event(WHEEL_POSITION, 0, newpos);
                 int distance = newpos - oldpos;
-                if (TIMEOUT_EXPIRED(lastpacket, 200000) || lastdiff * distance < 0) packets = 10;
+                DEBUGF("Time since last packet: %d microseconds", USEC_TIMER - lastpacket);
+                if (TIMEOUT_EXPIRED(lastpacket, 200000))
+                {
+                    DEBUGF("Resetting accel due to timeout");
+                    packets = 10;
+                }
+                else if (lastdiff * distance < 0)
+                {
+                    DEBUGF("Resetting accel due to direction change");
+                    packets = 10;
+                }
                 else packets++;
                 lastdiff = distance;
                 if (packets > 200) packets = 200;
                 if (distance < -48) distance += 96;
                 else if (distance > 48) distance -= 96;
-                collect += distance * packets;
+                DEBUGF("Wheel moved %d units without accel", distance);
+                DEBUGF("Wheel moved %d units with accel", distance * packets);
                 button_send_event(WHEEL_MOVED, 0, distance);
+                collect += distance * packets;
                 enum button_event e = collect > 0 ? WHEEL_FORWARD : WHEEL_BACKWARD;
                 int data = (collect > 0 ? collect : -collect) / 128;
                 if (data) button_send_event(e, 0, data);
                 collect %= 128;
+                DEBUGF("Wheel moved %d steps (%d left)", data, collect);
             }
             else if (oldtouched)
             {
+                DEBUGF("Wheel was untouched");
                 button_send_event(WHEEL_POSITION, 0, newpos);
                 button_send_event(WHEEL_UNTOUCH, 0, newpos);
                 collect = 0;
@@ -98,8 +117,11 @@ void clickwheel_thread()
             oldtouched = newtouched;
             lastpacket = USEC_TIMER;
         }
-        else if ((data & 0x8000FFFF) == 0x8000023A && (data & 0x1F0000))
-            oldbuttons = (data >> 16) & 0x1F;
+        else if ((data & 0x8000FFFF) == 0x8000023A)
+        {
+            if (data & 0x1F0000) oldbuttons = (data >> 16) & 0x1F;
+            DEBUGF("This is an init packet, button state: %02X", oldbuttons);
+        }
     }
 }
 
