@@ -27,6 +27,6 @@
 #include "../../global.h"
 #include "../../panic.h"
 
-#define assert(expr) if (!expr) panicf(PANIC_KILLTHREAD, "%s:%d: Assertion failed: %s", __FILE__, __LINE__, #expr)
+#define assert(expr) if (!(expr)) panicf(PANIC_KILLTHREAD, "%s:%d: Assertion failed: %s", __FILE__, __LINE__, #expr)
 
 #endif
