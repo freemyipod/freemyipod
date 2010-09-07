@@ -2161,7 +2161,7 @@ uint32_t ftl_sync(void)
     uint32_t rc = 0;
     uint32_t ppb = ftl_nand_type->pagesperblock * ftl_banks;
 
-    if (!ftl_initialized) return 1;
+    if (!ftl_initialized) return 0;
 
     if (ftl_cxt.clean_flag == 1) return 0;
 
