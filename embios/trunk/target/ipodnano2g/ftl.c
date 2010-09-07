@@ -431,7 +431,7 @@ static uint32_t firstfree INITBSS_ATTR;
 
 
 static struct mutex ftl_mtx;
-bool ftl_initialized;
+bool ftl_initialized = false;
 
 
 
@@ -2517,6 +2517,7 @@ static uint32_t ftl_repair()
    which will return immediately if everything was already clean. */
 uint32_t ftl_init(void)
 {
+    if (ftl_initialized) return 0;
     mutex_init(&ftl_mtx);
     uint32_t i;
     uint32_t result = 0;
