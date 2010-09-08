@@ -409,7 +409,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgactionaddr = (dbgrecvbuf[1] >> 16) & 0xff;
             dbgactionlength = dbgrecvbuf[1] >> 24;
             if (!dbgactionlength) dbgactionlength = 256;
-            memcpy(dbgasyncsendbuf, &dbgsendbuf[4], dbgactionlength);
+            memcpy(dbgasyncsendbuf, &dbgrecvbuf[4], dbgactionlength);
             break;
 #endif
         case 10:  // READ CONSOLE
