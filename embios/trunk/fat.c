@@ -1070,7 +1070,7 @@ static void fat_time(unsigned short* date,
         *tenth = (tm->tm_sec & 1) * 100;
 #else
 
-    if (date) *date = (1 << 5) | 1;
+    if (date) *date = 0;
     if (time) *time = 0;
     if (tenth) *tenth = 0;
 
@@ -1714,7 +1714,6 @@ int fat_create_file(const char* name,
 }
 
 int fat_create_dir(const char* name,
-                   struct fat_dir* newdir,
                    struct fat_dir* dir)
 {
 #ifdef HAVE_MULTIVOLUME
@@ -1725,31 +1724,40 @@ int fat_create_dir(const char* name,
     int i;
     long sector;
     int rc;
-    struct fat_file dummyfile;
+    struct fat_file newdir;
 
-    DEBUGF("fat_create_dir(\"%s\",%lx,%lx)",name,(long)newdir,(long)dir);
-
-    memset(newdir, 0, sizeof(struct fat_dir));
-    memset(&dummyfile, 0, sizeof(struct fat_file));
+    DEBUGF("fat_create_dir(\"%s\",%lx)",name,(long)dir);
 
     /* First, add the entry in the parent directory */
-    rc = add_dir_entry(dir, &newdir->file, name, true, false);
+    rc = add_dir_entry(dir, &newdir, name, true, false);
     if (rc < 0)
         return rc * 10 - 1;
 
     /* Allocate a new cluster for the directory */
-    newdir->file.firstcluster = find_free_cluster(IF_MV2(fat_bpb,)
-                                                  fat_bpb->fsinfo.nextfree);
-    if(newdir->file.firstcluster == 0)
-        return -1;
+    newdir.firstcluster = find_free_cluster(IF_MV2(fat_bpb,)
+                                            fat_bpb->fsinfo.nextfree);
+    if(newdir.firstcluster == 0)
+        return -6;
 
-    update_fat_entry(IF_MV2(fat_bpb,) newdir->file.firstcluster, FAT_EOF_MARK);
+    update_fat_entry(IF_MV2(fat_bpb,) newdir.firstcluster, FAT_EOF_MARK);
 
     /* Clear the entire cluster */
     unsigned char* buf = fat_get_sector_buffer();
-    memset(buf, 0, SECTOR_SIZE);
-    sector = cluster2sec(IF_MV2(fat_bpb,) newdir->file.firstcluster);
+    sector = cluster2sec(IF_MV2(fat_bpb,) newdir.firstcluster);
     for(i = 0;i < (int)fat_bpb->bpb_secperclus;i++) {
+        memset(buf, 0, SECTOR_SIZE);
+        if (!i)
+        {
+            memcpy(buf, ".          \0x10", 12);
+            memcpy(&buf[0x20], "..         \0x10", 12);
+            ((uint16_t*)buf)[0xd] = newdir.firstcluster;
+            ((uint16_t*)buf)[0xa] = newdir.firstcluster >> 16;
+            if(dir->file.firstcluster == fat_bpb->bpb_rootclus)
+            {
+                ((uint16_t*)buf)[0x1d] = fat_bpb->bpb_rootclus;
+                ((uint16_t*)buf)[0x1a] = fat_bpb->bpb_rootclus >> 16;
+            }
+        }
         rc = transfer(IF_MV2(fat_bpb,) sector + i, 1, buf, true );
         if (rc < 0)
         {
@@ -1759,33 +1767,14 @@ int fat_create_dir(const char* name,
     }
     fat_release_sector_buffer();
 
-    /* Then add the "." entry */
-    rc = add_dir_entry(newdir, &dummyfile, ".", true, true);
-    if (rc < 0)
-        return rc * 10 - 3;
-    dummyfile.firstcluster = newdir->file.firstcluster;
-    update_short_entry(&dummyfile, 0, FAT_ATTR_DIRECTORY);
-
-    /* and the ".." entry */
-    rc = add_dir_entry(newdir, &dummyfile, "..", true, true);
-    if (rc < 0)
-        return rc * 10 - 4;
-
-    /* The root cluster is cluster 0 in the ".." entry */
-    if(dir->file.firstcluster == fat_bpb->bpb_rootclus)
-        dummyfile.firstcluster = 0;
-    else
-        dummyfile.firstcluster = dir->file.firstcluster;
-    update_short_entry(&dummyfile, 0, FAT_ATTR_DIRECTORY);
-
     /* Set the firstcluster field in the direntry */
-    update_short_entry(&newdir->file, 0, FAT_ATTR_DIRECTORY);
+    update_short_entry(&newdir, 0, FAT_ATTR_DIRECTORY);
 
     rc = flush_fat(IF_MV(fat_bpb));
     if (rc < 0)
         return rc * 10 - 5;
 
-    return rc;
+    return 0;
 }
 
 int fat_truncate(const struct fat_file *file)
@@ -1983,7 +1972,6 @@ int fat_rename(struct fat_file* file,
                 int attr)
 {
     int rc;
-    struct fat_dir olddir;
     struct fat_file newfile = *file;
     unsigned char* entry = NULL;
     unsigned short* clusptr = NULL;
@@ -2003,11 +1991,6 @@ int fat_rename(struct fat_file* file,
         DEBUGF("File has no dir cluster!");
         return -2;
     }
-
-    /* create a temporary file handle */
-    rc = fat_opendir(IF_MV2(file->volume,) &olddir, file->dircluster, NULL);
-    if (rc < 0)
-        return rc * 10 - 1;
 
     /* create new name */
     rc = add_dir_entry(dir, &newfile, newname, false, false);
@@ -2031,19 +2014,19 @@ int fat_rename(struct fat_file* file,
     /* if renaming a directory, update the .. entry to make sure
        it points to its parent directory (we don't check if it was a move) */
     if(FAT_ATTR_DIRECTORY == attr) {
-        /* open the dir that was renamed, we re-use the olddir struct */
-        rc = fat_opendir(IF_MV2(file->volume,) &olddir, newfile.firstcluster,
-                                                                          NULL);
+        /* open the dir that was renamed, we re-use the newfile struct */
+
+        rc = fat_open(IF_MV2(volume,) newfile.firstcluster, &newfile, NULL);
         if (rc < 0)
             return rc * 10 - 6;
 
         /* get the first sector of the dir */
-        rc = fat_seek(&olddir.file, 0);
+        rc = fat_seek(&newfile, 0);
         if (rc < 0)
             return rc * 10 - 7;
 
         unsigned char* buf = fat_get_sector_buffer();
-        rc = fat_readwrite(&olddir.file, 1, buf, false);
+        rc = fat_readwrite(&newfile, 1, buf, false);
         if (rc < 0)
         {
             fat_release_sector_buffer();
@@ -2071,14 +2054,14 @@ int fat_rename(struct fat_file* file,
         *clusptr = htole16(parentcluster & 0xffff);
 
         /* write back this sector */
-        rc = fat_seek(&olddir.file, 0);
+        rc = fat_seek(&newfile, 0);
         if (rc < 0)
         {
             fat_release_sector_buffer();
             return rc * 10 - 7;
         }
 
-        rc = fat_readwrite(&olddir.file, 1, buf, true);
+        rc = fat_readwrite(&newfile, 1, buf, true);
         fat_release_sector_buffer();
         if (rc < 1)
             return rc * 10 - 8;

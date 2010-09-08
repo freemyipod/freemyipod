@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
  *   Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
@@ -217,7 +217,6 @@ int mkdir(const char *name)
     char *basename;
     char *parent;
     struct dirent *entry;
-    struct fat_dir newdir;
     int rc;
 
     if ( name[0] != '/' ) {
@@ -262,9 +261,7 @@ int mkdir(const char *name)
         }
     }
 
-    memset(&newdir, 0, sizeof(struct fat_dir));
-    
-    rc = fat_create_dir(basename, &newdir, &(dir->fatdir));
+    rc = fat_create_dir(basename, &(dir->fatdir));
     closedir(dir);
     
     return rc;

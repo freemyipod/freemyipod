@@ -104,7 +104,6 @@ extern void fat_size(IF_MV2(int volume,) /* public for info */
                      unsigned long* free);
 extern void fat_recalc_free(IF_MV_NONVOID(int volume)); /* public for debug info screen */
 extern int fat_create_dir(const char* name,
-                          struct fat_dir* newdir,
                           struct fat_dir* dir);
 extern int fat_open(IF_MV2(int volume,)
                     long cluster,

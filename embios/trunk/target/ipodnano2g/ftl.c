@@ -2565,19 +2565,19 @@ uint32_t ftl_init(void)
             ftl_initialized = true;
             return 0;
         }
-        cprintf(CONSOLE_BOOT, "The FTL seems to be damaged. Forcing check.\n");
+        cputs(CONSOLE_BOOT, "The FTL seems to be damaged. Forcing check.\n");
         if (ftl_repair() != 0)
-            cprintf(CONSOLE_BOOT, "FTL recovery failed. Use disk mode to recover.\n");
+            cputs(CONSOLE_BOOT, "FTL recovery failed. Use disk mode to recover.\n");
         else
         {
-            cprintf(CONSOLE_BOOT, "FTL recovery finished. Trying to mount again...\n");
+            cputs(CONSOLE_BOOT, "FTL recovery finished. Trying to mount again...\n");
             if (ftl_open() == 0)
             {
-                cprintf(CONSOLE_BOOT, "Mount succeeded.\n");
+                cputs(CONSOLE_BOOT, "Mount succeeded.\n");
                 ftl_initialized = true;
                 return 0;
             }
-            cprintf(CONSOLE_BOOT, "Mounting FTL failed again, use disk mode to recover.\n");
+            cputs(CONSOLE_BOOT, "Mounting FTL failed again, use disk mode to recover.\n");
         }
     }
 
