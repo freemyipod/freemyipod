@@ -2331,7 +2331,8 @@ static uint32_t ftl_repair()
             sum += ftl_erasectr[i];
             count++;
         }
-    uint32_t average = sum / count;
+    uint32_t average = 0;
+    if (count) average = sum / count;
     for (i = 0; i < 0x2000; i++)
         if (!ftl_erasectr[i])
             ftl_erasectr[i] = average;
