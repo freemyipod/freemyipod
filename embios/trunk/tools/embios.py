@@ -26,6 +26,7 @@ import os
 import inspect
 import re
 import time
+import struct
 
 from functools import wraps
 
@@ -387,7 +388,8 @@ class Commandline(object):
         slave = self._hexint(slave)
         addr = self._hexint(addr)
         size = self._hexint(size)
-        self.embios.i2cread(bus, slave, addr, size)
+        for i in range(size):
+            print("%02X: %02X" % (addr + i, struct.unpack("B", self.embios.i2cread(bus, slave, addr + i, 1))[0]))
 
     @command
     def i2cwrite(self, bus, slave, addr, *args):

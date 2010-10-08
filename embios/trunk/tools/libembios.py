@@ -233,7 +233,7 @@ class Embios(object):
             raise ValueError("Size must be a number between 1 and 256")
         if size == 256:
             size = 0
-        return self.lib.monitorcommand(struct.pack("IBBBBII%ds" % size, 9, index, slaveaddr, startaddr, size, 0, 0, data), "III" % size, (None, None, None))
+        return self.lib.monitorcommand(struct.pack("IBBBBII%ds" % size, 9, index, slaveaddr, startaddr, size, 0, 0, data), "III", (None, None, None))
     
     def usbcread(self):
         """ Reads one packet with the maximal cin size """
@@ -258,7 +258,7 @@ class Embios(object):
             identified with the specified bitmask
         """
         cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
-        resp = self.lib.monitorcommand(struct.pack("IIII", 14, cin_maxsize, 0, 0), "III%ds" % cin_maxsize, ("size", None, None))
+        resp = self.lib.monitorcommand(struct.pack("IIII", 13, cin_maxsize, 0, 0), "III%ds" % cin_maxsize, ("size", None, None))
         resp.data = resp.data[size:]
         resp.maxsize = cin_maxsize
         return resp
@@ -271,7 +271,7 @@ class Embios(object):
         size = len(data)
         while len(data) > 0:
             writesize = min(cin_maxsize, len(data))
-            resp = self.lib.monitorcommand(struct.pack("IIII%ds" % writesize, 13, writesize, 0, 0, data[:writesize]), "III", (None, None, None))
+            resp = self.lib.monitorcommand(struct.pack("IIII%ds" % writesize, 12, writesize, 0, 0, data[:writesize]), "III", (None, None, None))
             data = data[writesize:]
         return size
     
