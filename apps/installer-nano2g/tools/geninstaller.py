@@ -101,7 +101,7 @@ for f in firstinstfiles:
     statusfirst = statusfirst + f[2]
   else:
     if type(f[2]) == str:
-      file = open("../iloader/themes/default/iloader/" + f[2], "rb")
+      file = open("../iloader/themes/default/iLoader/" + f[2], "rb")
       fdata = file.read()
       file.close()
       ptr = scriptsize + len(filedata)
