@@ -145,7 +145,7 @@ int cgetc(unsigned int consoles, int timeout)
 #ifdef HAVE_USB
     if ((consoles & 2) && (result = dbgconsole_getc(timeout)) != -1) return result;
 #endif
-    mutex_unlock(&console_mutex);
+    mutex_unlock(&console_readmutex);
 }
 
 int cread(unsigned int consoles, char* buffer, size_t length, int timeout)
@@ -155,7 +155,7 @@ int cread(unsigned int consoles, char* buffer, size_t length, int timeout)
 #ifdef HAVE_USB
     if ((consoles & 2) && (result = dbgconsole_read(buffer, length, timeout))) return result;
 #endif
-    mutex_unlock(&console_mutex);
+    mutex_unlock(&console_readmutex);
 }
 
 void creada(unsigned int consoles, char* buffer, size_t length, int timeout)
@@ -172,5 +172,5 @@ void creada(unsigned int consoles, char* buffer, size_t length, int timeout)
         }
 #endif
     }
-    mutex_unlock(&console_mutex);
+    mutex_unlock(&console_readmutex);
 }
