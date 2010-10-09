@@ -177,3 +177,9 @@ void interrupt_init(void)
 {
     VIC0INTENABLE = 1 << IRQ_TIMER;
 }
+
+void interrupt_shutdown(void)
+{
+    VIC0INTENCLEAR = 0xffffffff;
+    VIC1INTENCLEAR = 0xffffffff;
+}

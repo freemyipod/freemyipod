@@ -149,6 +149,7 @@ leave_critical_section:
 .type execfirmware, %function
 execfirmware:
 	str	r0, [sp,#-4]!
+	bl	interrupt_shutdown
 	bl	clean_dcache
 	ldr	r1, [sp], #4
 	msr	cpsr_c, #0xd3

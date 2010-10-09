@@ -151,3 +151,8 @@ void interrupt_init(void)
 {
     INTMSK = (1 << IRQ_TIMER) | (1 << IRQ_DMA);
 }
+
+void interrupt_shutdown(void)
+{
+    INTMSK = 0;
+}
