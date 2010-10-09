@@ -33,5 +33,5 @@ src/libucl.a:
 	$(MAKE) -C src
 
 clean:
-	rm -f $(TARGET) uclpack.o ucl2e10singleblk.o ucl2e10singleblkunpack.o
+	rm -f $(ALL) uclpack.o ucl2e10singleblk.o ucl2e10singleblkunpack.o
 	$(MAKE) -C src clean
