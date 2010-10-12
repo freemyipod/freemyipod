@@ -41,3 +41,13 @@ bool charging_state(void)
 {
     return false;
 }
+
+bool external_power_state(void)
+{
+    return true;
+}
+
+bool vbus_state(void)
+{
+    return true;
+}

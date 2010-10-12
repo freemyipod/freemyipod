@@ -30,5 +30,8 @@
 void power_off(void);
 void power_init(void);
 bool charging_state(void);
+bool external_power_state(void);
+bool vbus_state(void);
+
 
 #endif

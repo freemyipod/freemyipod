@@ -188,7 +188,7 @@ configfound:
                 break;
 
             case 0x1:
-                cputs(1, "iLoader terminated on user's behalf\n");
+                cputs(1, "iLoader terminated on user's request\n");
                 return;
 
             case 0x2:

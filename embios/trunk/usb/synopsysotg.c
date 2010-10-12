@@ -33,6 +33,7 @@
 #include "util.h"
 #include "interrupt.h"
 #include "clockgates.h"
+#include "power.h"
 
 
 struct ep_type
@@ -47,6 +48,7 @@ struct ep_type
 
 static struct ep_type endpoints[5];
 static struct usb_ctrlrequest ctrlreq CACHEALIGN_ATTR;
+static uint32_t synopsysotg_stack[0x40] STACK_ATTR;
 
 int usb_drv_port_speed(void)
 {
@@ -351,6 +353,45 @@ void usb_drv_stall(int endpoint, bool stall, bool in)
     }
 }
 
+void usb_drv_power_up(void)
+{
+    /* Enable USB clock */
+    clockgate_enable(CLOCKGATE_USB_1, true);
+    clockgate_enable(CLOCKGATE_USB_2, true);
+    PCGCCTL = 0;
+
+    /* reset the beast */
+    usb_reset();
+}
+
+void usb_drv_power_down(void)
+{
+    DCTL = 0x802;  /* Soft Disconnect */
+
+    ORSTCON = 1;  /* Put the PHY into reset (needed to get current down) */
+    PCGCCTL = 1;  /* Shut down PHY clock */
+    OPHYPWR = 0xF;  /* PHY: Power down */
+    
+    clockgate_enable(CLOCKGATE_USB_1, false);
+    clockgate_enable(CLOCKGATE_USB_2, false);
+}
+
+void usb_check_vbus()
+{
+    bool oldstate = false;
+    while (true)
+    {
+        sleep(200000);
+        bool newstate = vbus_state();
+        if (oldstate != newstate)
+        {
+            if (newstate) usb_drv_power_up();
+            else usb_drv_power_down();
+            oldstate = newstate;
+        }
+    }
+}
+
 void usb_drv_init(void)
 {
     unsigned int i;
@@ -365,8 +406,10 @@ void usb_drv_init(void)
     /* unmask irq */
     interrupt_enable(IRQ_USB_FUNC, true);
 
-    /* reset the beast */
-    usb_reset();
+    thread_create("synopsysotg", usb_check_vbus, synopsysotg_stack,
+                  sizeof(synopsysotg_stack), OS_THREAD, 63, true);
+
+    usb_drv_power_down();
 }
 
 int usb_drv_get_max_out_size()

@@ -50,9 +50,19 @@ void power_init(void)
 {
     pmu_init();
     pmu_write(0x1e, 15);  /* Vcore = 1.000V */
-}
+}                          
 
 bool charging_state(void)
 {
     return (PDAT11 & 0x10) ? false : true;
+}
+
+bool external_power_state(void)
+{
+    return (PDAT14 & 8) ? false : true;
+}
+
+bool vbus_state(void)
+{
+    return (PDAT14 & 8) ? false : true;
 }
