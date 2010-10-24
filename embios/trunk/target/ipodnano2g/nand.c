@@ -375,6 +375,9 @@ uint32_t nand_read_page(uint32_t bank, uint32_t page, void* databuffer,
                         void* sparebuffer, uint32_t doecc,
                         uint32_t checkempty)
 {
+#ifdef NAND_TRACE
+    DEBUGF("NAND: Read bank %d, page %d", bank, page);
+#endif
     uint8_t* data = (uint8_t*)databuffer;
     uint8_t* spare = nand_spare;
     if (sparebuffer) spare = (uint8_t*)sparebuffer;
@@ -430,7 +433,26 @@ uint32_t nand_read_page(uint32_t bank, uint32_t page, void* databuffer,
         else memcpy(sparebuffer, nand_ctrl, 0xC);
     }
     if (checkempty) rc |= nand_check_empty(spare) << 1;
+#ifdef NAND_DEBUG
+    if ((rc & 2) == 0)
+    {
+        if ((rc & 0x10) != 0)
+            DEBUGF("NAND: ECC failed to correct bank %d page %d user data!", bank, page);
+        if ((rc & 0xE0) != 0)
+            DEBUGF("NAND: ECC corrected %d errors in bank %d page %d user data!", rc >> 5, bank, page);
+        if ((rc & 0x100) != 0)
+            DEBUGF("NAND: ECC failed to correct bank %d page %d control data!", bank, page);
+        if ((rc & 0xE00) != 0)
+            DEBUGF("NAND: ECC corrected %d errors in bank %d page %d control data!", (rc >> 9) & 7, bank, page);
+    }
+#ifdef NAND_TRACE
+    else DEBUGF("NAND: Bank %d page %d: Erased page!", bank, page);
+#endif
+#endif
 
+#ifdef NAND_TRACE
+    DEBUGF("NAND: Read success, RC=%X", rc);
+#endif
     return nand_unlock(rc);
 }
 
@@ -438,6 +460,9 @@ static uint32_t nand_write_page_int(uint32_t bank, uint32_t page,
                                     void* databuffer, void* sparebuffer,
                                     uint32_t doecc, uint32_t wait)
 {
+#ifdef NAND_TRACE
+    DEBUGF("NAND: Write bank %d, page %d", bank, page);
+#endif
     uint8_t* data = (uint8_t*)databuffer;
     uint8_t* spare = nand_spare;
     if (sparebuffer) spare = (uint8_t*)sparebuffer;
@@ -480,6 +505,9 @@ static uint32_t nand_write_page_int(uint32_t bank, uint32_t page,
 
 uint32_t nand_block_erase(uint32_t bank, uint32_t page)
 {
+#ifdef NAND_TRACE
+    DEBUGF("NAND: Block erase starting at bank %d, page %d", bank, page);
+#endif
     mutex_lock(&nand_mtx, TIMEOUT_BLOCK);
     nand_last_activity_value = USEC_TIMER;
     if (!nand_powered) nand_power_up();
@@ -498,6 +526,9 @@ uint32_t nand_read_page_fast(uint32_t page, void* databuffer,
                              void* sparebuffer, uint32_t doecc,
                              uint32_t checkempty)
 {
+#ifdef NAND_TRACE
+    DEBUGF("NAND: Read all banks, page %d", page);
+#endif
     uint32_t i, rc = 0;
     if (((uint32_t)databuffer & 0xf) || ((uint32_t)sparebuffer & 0xf)
      || !databuffer || !sparebuffer || !doecc)
@@ -629,6 +660,9 @@ uint32_t nand_write_page(uint32_t bank, uint32_t page, void* databuffer,
 uint32_t nand_write_page_start(uint32_t bank, uint32_t page, void* databuffer,
                                void* sparebuffer, uint32_t doecc)
 {
+#ifdef NAND_TRACE
+    DEBUGF("NAND: Write all banks, page %d", page);
+#endif
     if (((uint32_t)databuffer & 0xf) || ((uint32_t)sparebuffer & 0xf)
      || !databuffer || !sparebuffer || !doecc || !nand_interleaved)
         return nand_write_page_int(bank, page, databuffer, sparebuffer, doecc, !nand_interleaved);
