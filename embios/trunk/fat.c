@@ -1748,8 +1748,8 @@ int fat_create_dir(const char* name,
         memset(buf, 0, SECTOR_SIZE);
         if (!i)
         {
-            memcpy(buf, ".          \0x10", 12);
-            memcpy(&buf[0x20], "..         \0x10", 12);
+            memcpy(buf, ".          \x10", 12);
+            memcpy(&buf[0x20], "..         \x10", 12);
             ((uint16_t*)buf)[0xd] = newdir.firstcluster;
             ((uint16_t*)buf)[0xa] = newdir.firstcluster >> 16;
             if(dir->file.firstcluster == fat_bpb->bpb_rootclus)
