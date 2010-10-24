@@ -2253,12 +2253,12 @@ static uint32_t ftl_repair()
     lcdconsole_progressbar(&progressbar, 0, ftl_nand_type->userblocks + 0x17);
 #endif
     uint32_t ppb = ftl_nand_type->pagesperblock * ftl_banks;
-    memset(&ftl_cxt, 0x00, 0x800);
-    memset(ftl_map, 0xff, 0x4000);
-    memset(blk_usn, 0x00, 0x8000);
-    memset(blk_type, 0x00, 0x2000);
-    memset(ftl_erasectr, 0x00, 0x4000);
-    memset(erasectr_usn, 0xff, 32);
+    memset(&ftl_cxt, 0x00, sizeof(ftl_cxt));
+    memset(ftl_map, 0xff, sizeof(ftl_map));
+    memset(blk_usn, 0x00, sizeof(blk_usn));
+    memset(blk_type, 0x00, sizeof(blk_type));
+    memset(ftl_erasectr, 0x00, sizeof(ftl_erasectr));
+    memset(erasectr_usn, 0xff, sizeof(erasectr_usn));
     user_usn = 0;
     meta_usn = 0xffffffff;
     for (i = 0; i < ftl_nand_type->userblocks + 0x17; i++)
@@ -2521,43 +2521,18 @@ uint32_t ftl_init(void)
     if (ftl_initialized) return 0;
     mutex_init(&ftl_mtx);
     uint32_t i;
-    uint32_t result = 0;
-    uint32_t foundsignature, founddevinfo, blockwiped, repaired, skip;
     int rc;
-    if ((rc = nand_device_init()) != 0) //return 1;
+    if ((rc = nand_device_init()) != 0)
         panicf(PANIC_FATAL, "FTL: Lowlevel NAND driver init failed: %d", rc);
     ftl_banks = 0;
     for (i = 0; i < 4; i++)
         if (nand_get_device_type(i) != 0) ftl_banks = i + 1;
     ftl_nand_type = nand_get_device_type(0);
-    foundsignature = 0;
-    blockwiped = 1;
-    for (i = 0; i < ftl_nand_type->pagesperblock; i++)
-    {
-        result = nand_read_page(0, i, ftl_buffer, NULL, 1, 1);
-        if ((result & 0x11F) == 0)
-        {
-            blockwiped = 0;
-            if (((uint32_t*)ftl_buffer)[0] != 0x41303034) continue;
-            foundsignature = 1;
-            break;
-        }
-        else if ((result & 2) != 2) blockwiped = 0;
-    }
 
-    founddevinfo = ftl_has_devinfo();
-
-    repaired = 0;
-    skip = 0;
-    if (founddevinfo == 0)
+    if (!ftl_has_devinfo())
     {
            DEBUGF("FTL: No DEVICEINFO found!");
         return -1;
-    }
-    if (foundsignature != 0 && (result & 0x11F) != 0)
-    {
-        DEBUGF("FTL: Problem with the signature!");
-        return -2;
     }
     if (ftl_vfl_open() == 0)
     {
@@ -2584,5 +2559,5 @@ uint32_t ftl_init(void)
 
     DEBUGF("FTL: Initialization failed!");
 
-    return -3;
+    return -2;
 }
