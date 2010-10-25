@@ -2282,7 +2282,7 @@ static uint32_t ftl_repair()
         else
             for (j = 0; j < ppb; j++)
             {
-                ret = ftl_vfl_read(i * ppb + j, 0, &ftl_sparebuffer[0], 1, 0);
+                ret = ftl_vfl_read(i * ppb + j, ftl_buffer, &ftl_sparebuffer[0], 1, 0);
                 if (ret & 2) break;
                 if (ret & 0x11F)
                 {
@@ -2315,6 +2315,26 @@ static uint32_t ftl_repair()
                 {
                     cprintf(CONSOLE_BOOT, "Invalid block type %02X while reading vPage %d\n",
                             ftl_sparebuffer[0].meta.type, i * ppb + j);
+                    for (i = 0; i < 64; i += 8)
+                        cprintf(CONSOLE_BOOT, "%02X %02X %02X %02X  %02X %02X %02X %02X\n",
+                                ((uint8_t*)(ftl_sparebuffer))[i], ((uint8_t*)(ftl_sparebuffer))[i + 1], ((uint8_t*)(ftl_sparebuffer))[i + 2], ((uint8_t*)(ftl_sparebuffer))[i + 3],
+                                ((uint8_t*)(ftl_sparebuffer))[i + 4], ((uint8_t*)(ftl_sparebuffer))[i + 5], ((uint8_t*)(ftl_sparebuffer))[i + 6], ((uint8_t*)(ftl_sparebuffer))[i + 7]);
+                    for (i = 0; i < 2048; i += 16)
+                        cprintf(CONSOLE_BOOT, "%02X %02X %02X %02X  %02X %02X %02X %02X  %02X %02X %02X %02X  %02X %02X %02X %02X\n",
+                                ftl_buffer[i], ftl_buffer[i + 1], ftl_buffer[i + 2], ftl_buffer[i + 3], ftl_buffer[i + 4], ftl_buffer[i + 5], ftl_buffer[i + 6], ftl_buffer[i + 7],
+                                ftl_buffer[i + 8], ftl_buffer[i + 9], ftl_buffer[i + 10], ftl_buffer[i + 11], ftl_buffer[i + 12], ftl_buffer[i + 13], ftl_buffer[i + 14], ftl_buffer[i + 15]);
+                    cprintf(CONSOLE_BOOT, "Remaps:");
+                    for (j = 0; j < ftl_banks; j++)
+                    {
+                        cprintf(CONSOLE_BOOT, "\nBank %d", j);
+                        for (i = 0; i < ftl_vfl_cxt[j].spareused; i++)
+                        {
+                            cprintf(CONSOLE_BOOT, ": %d => %d ",
+                                    ftl_vfl_cxt[j].remaptable[i], ftl_vfl_cxt[j].firstspare + i);
+                            if (ftl_vfl_is_good_block(j, i) != 1) cprintf(CONSOLE_BOOT, "(NOT IN BBT) ");
+                        }
+                    }
+                    cprintf(CONSOLE_BOOT, "\n");
                     return 1;
                 }
             }

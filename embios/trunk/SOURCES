@@ -18,6 +18,7 @@ target/ipodnano2g/targetinit.c
 target/ipodnano2g/clickwheel.c
 target/ipodnano2g/hwkeyaes.c
 target/ipodnano2g/hmacsha1.c
+target/ipodnano2g/usbtarget.c
 usb/synopsysotg.c
 #endif
 

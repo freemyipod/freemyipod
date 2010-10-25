@@ -672,6 +672,64 @@ class Commandline(object):
         hash = ord(data)
         self.logger.info("The generated hash is "+self._hex(hash))
 
+    @command
+    def ipodnano2g_getnandinfo(self):
+        """
+            Target-specific function: ipodnano2g
+            Gathers some information about the NAND chip used
+        """
+        data = self.embios.ipodnano2g_getnandinfo()
+        self.logger.info("NAND chip type: "+self._hex(data["type"])+"\n")
+        self.logger.info("Number of banks: "+str(data["banks"])+"\n")
+        self.logger.info("Number of blocks: "+str(data["blocks"])+"\n")
+        self.logger.info("Number of user blocks: "+str(data["userblocks"])+"\n")
+        self.logger.info("Pages per block: "+str(data["pagesperblock"]))
+
+    @command
+    def ipodnano2g_nandread(self, addr, start, count, doecc, checkempty):
+        """
+            Target-specific function: ipodnano2g
+            Reads data from the NAND chip into memory
+        """
+        addr = self._hexint(addr)
+        start = self._hexint(start)
+        count = self._hexint(count)
+        doecc = int(doecc)
+        checkempty = int(checkempty)
+        self.logger.info("Reading "+self._hex(count)+" NAND pages starting at "+self._hex(start)+" to "+self._hex(addr)+"...")
+        self.embios.lib.dev.timeout = 20000
+        self.embios.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
+        self.logger.info("done\n")
+
+    @command
+    def ipodnano2g_nandwrite(self, addr, start, count, doecc):
+        """
+            Target-specific function: ipodnano2g
+            Writes data to the NAND chip
+        """
+        addr = self._hexint(addr)
+        start = self._hexint(start)
+        count = self._hexint(count)
+        doecc = int(doecc)
+        self.logger.info("Writing "+self._hex(count)+" NAND pages starting at "+self._hex(start)+" from "+self._hex(addr)+"...")
+        self.embios.lib.dev.timeout = 20000
+        self.embios.ipodnano2g_nandwrite(addr, start, count, doecc)
+        self.logger.info("done\n")
+
+    @command
+    def ipodnano2g_nanderase(self, addr, start, count):
+        """
+            Target-specific function: ipodnano2g
+            Erases blocks on the NAND chip and stores the results to memory
+        """
+        addr = self._hexint(addr)
+        start = self._hexint(start)
+        count = self._hexint(count)
+        self.logger.info("Erasing "+self._hex(count)+" NAND blocks starting at "+self._hex(start)+" and logging to "+self._hex(addr)+"...")
+        self.embios.lib.dev.timeout = 20000
+        self.embios.ipodnano2g_nanderase(addr, start, count)
+        self.logger.info("done\n")
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         usage("No command specified")

@@ -426,6 +426,30 @@ class Embios(object):
         """ Generates a HMAC-SHA1 hash of the buffer and saves it to 'destination' """
         return self.lib.monitorcommand(struct.pack("IIII", 26, addr, size, destination), "III", (None, None, None))
 
+    def ipodnano2g_getnandinfo(self):
+        """ Target-specific function: ipodnano2g
+            Gathers some information about the NAND chip used
+        """
+        return self.lib.monitorcommand(struct.pack("IIII", 0xffff0001, 0, 0, 0), "IHHHH", ("type", "pagesperblock", "banks", "userblocks", "blocks"))
+    
+    def ipodnano2g_nandread(self, addr, start, count, doecc, checkempty):
+        """ Target-specific function: ipodnano2g
+            Reads data from the NAND chip into memory
+        """
+        return self.lib.monitorcommand(struct.pack("IIII", 0xffff0002, addr | (0x80000000 if doecc != 0 else 0) | (0x40000000 if checkempty != 0 else 0), start, count), "III", (None, None, None))
+    
+    def ipodnano2g_nandwrite(self, addr, start, count, doecc):
+        """ Target-specific function: ipodnano2g
+            Writes data to the NAND chip
+        """
+        return self.lib.monitorcommand(struct.pack("IIII", 0xffff0003, addr | (0x80000000 if doecc != 0 else 0), start, count), "III", (None, None, None))
+    
+    def ipodnano2g_nanderase(self, addr, start, count):
+        """ Target-specific function: ipodnano2g
+            Erases blocks on the NAND chip and stores the results to memory
+        """
+        return self.lib.monitorcommand(struct.pack("IIII", 0xffff0004, addr, start, count), "III", (None, None, None))
+    
 
 class Lib(object):
     def __init__(self):
