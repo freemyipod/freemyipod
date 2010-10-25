@@ -697,7 +697,7 @@ class Commandline(object):
         doecc = int(doecc)
         checkempty = int(checkempty)
         self.logger.info("Reading "+self._hex(count)+" NAND pages starting at "+self._hex(start)+" to "+self._hex(addr)+"...")
-        self.embios.lib.dev.timeout = 20000
+        self.embios.lib.dev.timeout = 30000
         self.embios.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
         self.logger.info("done\n")
 
@@ -712,7 +712,7 @@ class Commandline(object):
         count = self._hexint(count)
         doecc = int(doecc)
         self.logger.info("Writing "+self._hex(count)+" NAND pages starting at "+self._hex(start)+" from "+self._hex(addr)+"...")
-        self.embios.lib.dev.timeout = 20000
+        self.embios.lib.dev.timeout = 30000
         self.embios.ipodnano2g_nandwrite(addr, start, count, doecc)
         self.logger.info("done\n")
 
@@ -726,8 +726,69 @@ class Commandline(object):
         start = self._hexint(start)
         count = self._hexint(count)
         self.logger.info("Erasing "+self._hex(count)+" NAND blocks starting at "+self._hex(start)+" and logging to "+self._hex(addr)+"...")
-        self.embios.lib.dev.timeout = 20000
+        self.embios.lib.dev.timeout = 30000
         self.embios.ipodnano2g_nanderase(addr, start, count)
+        self.logger.info("done\n")
+
+    @command
+    def ipodnano2g_dumpnand(self, filenameprefix):
+        """
+            Target-specific function: ipodnano2g
+            Dumps the whole NAND chip to four files
+        """
+        info = self.embios.ipodnano2g_getnandinfo()
+        self.logger.info("Dumping NAND contents...")
+        try:
+            infofile = open(filenameprefix+"_info.txt", 'wb')
+            datafile = open(filenameprefix+"_data.bin", 'wb')
+            sparefile = open(filenameprefix+"_spare.bin", 'wb')
+            statusfile = open(filenameprefix+"_status.bin", 'wb')
+        except IOError:
+            raise ArgumentError("Can not open file for writing!")
+        infofile.write("NAND chip type: "+self._hex(info["type"])+"\r\n")
+        infofile.write("Number of banks: "+str(info["banks"])+"\r\n")
+        infofile.write("Number of blocks: "+str(info["blocks"])+"\r\n")
+        infofile.write("Number of user blocks: "+str(info["userblocks"])+"\r\n")
+        infofile.write("Pages per block: "+str(info["pagesperblock"])+"\r\n")
+        self.embios.lib.dev.timeout = 30000
+        for i in range(info["banks"] * info["blocks"] * info["pagesperblock"] / 8192):
+            self.logger.info(".")
+            self.embios.ipodnano2g_nandread(0x08000000, i * 8192, 8192, 1, 1)
+            datafile.write(self.embios.read(0x08000000, 0x01000000))
+            sparefile.write(self.embios.read(0x09000000, 0x00080000))
+            statusfile.write(self.embios.read(0x09080000, 0x00008000))
+        infofile.close()
+        datafile.close()
+        sparefile.close()
+        statusfile.close()
+        self.logger.info("done\n")
+
+    @command
+    def ipodnano2g_wipenand(self, filename, force=False):
+        """
+            Target-specific function: ipodnano2g
+            Wipes the whole NAND chip and logs the result to a file
+            <force>: Use this flag to suppress the 5 seconds delay
+        """
+        self.logger.info("Wiping the whole NAND chip!\n")
+        if force == False:
+            self.logger.info("If this was not what you intended press Ctrl-C NOW")
+            for i in range(10):
+                self.logger.info(".")
+                time.sleep(1)
+            self.logger.info("\n")
+        info = self.embios.ipodnano2g_getnandinfo()
+        self.logger.info("Wiping NAND contents...")
+        try:
+            statusfile = open(filename, 'wb')
+        except IOError:
+            raise ArgumentError("Can not open file for writing!")
+        self.embios.lib.dev.timeout = 30000
+        for i in range(info["banks"] * info["blocks"] / 64):
+            self.logger.info(".")
+            self.embios.ipodnano2g_nanderase(0x08000000, i * 64, 64, 1, 1)
+            statusfile.write(self.embios.read(0x08000000, 0x00000100))
+        statusfile.close()
         self.logger.info("done\n")
 
 if __name__ == "__main__":
