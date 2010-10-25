@@ -46,6 +46,9 @@
 #ifdef HAVE_HMACSHA1
 #include "hmacsha1.h"
 #endif
+#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
+#include "usbtarget.h"
+#endif
 
 
 static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
@@ -69,7 +72,8 @@ enum dbgaction_t
     DBGACTION_READBOOTFLASH,
     DBGACTION_WRITEBOOTFLASH,
     DBGACTION_HWKEYAES,
-    DBGACTION_HMACSHA1
+    DBGACTION_HMACSHA1,
+    DBGACTION_TARGETSPECIFIC
 };
 
 static uint32_t dbgstack[0x100] STACK_ATTR;
@@ -332,6 +336,15 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
     int size = 0;
     if (endpoint == dbgendpoints[0])
     {
+#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
+        if (dbgrecvbuf[0] >= 0xffff0000)
+        {
+            if (!set_dbgaction(DBGACTION_TARGETSPECIFIC, 0))
+                memcpy(dbgasyncsendbuf, dbgrecvbuf, sizeof(dbgasyncsendbuf));
+            usb_setup_dbg_listener();
+            return;
+        }
+#endif
         switch (dbgrecvbuf[0])
         {
         case 1:  // GET INFO
@@ -641,7 +654,7 @@ void dbgthread(void)
                 dbgasyncsendbuf[0] = 1;
                 dbgasyncsendbuf[1] = cread(dbgactionconsoles, (char*)&dbgasyncsendbuf[4],
                                            dbgactionlength, 0);
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16 + dbgactionlength);
                 break;
             case DBGACTION_CFLUSH:
                 cflush(dbgactionconsoles);
@@ -684,6 +697,14 @@ void dbgthread(void)
                 dbgasyncsendbuf[0] = 1;
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
+#endif
+#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
+            case DBGACTION_TARGETSPECIFIC:
+            {
+                int size = usb_target_handle_request(dbgasyncsendbuf, sizeof(dbgasyncsendbuf));
+                if (size) usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, size);
+                break;
+            }
 #endif
             }
             dbgaction = DBGACTION_IDLE;
