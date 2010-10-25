@@ -71,8 +71,7 @@ int usb_target_handle_request(uint32_t* buffer, int bufsize)
             {
                 int lpage = buffer[2] + i;
                 int bank = lpage % banks;
-                int page = (lpage / banks) % type->pagesperblock;
-                int block = lpage / banks / type->pagesperblock;
+                int page = lpage / banks;
                 int result;
                 if (buffer[0] == 0xffff0002)
                     result = nand_read_page(bank, page, (void*)(database + i * 2048),
