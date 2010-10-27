@@ -786,7 +786,7 @@ class Commandline(object):
         self.embios.lib.dev.timeout = 30000
         for i in range(info["banks"] * info["blocks"] / 64):
             self.logger.info(".")
-            self.embios.ipodnano2g_nanderase(0x08000000, i * 64, 64, 1, 1)
+            self.embios.ipodnano2g_nanderase(0x08000000, i * 64, 64)
             statusfile.write(self.embios.read(0x08000000, 0x00000100))
         statusfile.close()
         self.logger.info("done\n")
