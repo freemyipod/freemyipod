@@ -34,6 +34,7 @@ import libembios
 from libembios import Error
 import libembiosdata
 
+
 class NotImplementedError(Error):
     pass
 
@@ -252,17 +253,6 @@ class Commandline(object):
             return None
         else:
             raise ArgumentTypeError("hexadecimal coded integer", "'"+str(something)+"'")
-
-    @staticmethod
-    def _strcheck(string, values):
-        if string in values:
-            return string
-        else:
-            expected = ""
-            for item in values:
-                expected += "'" + item + "', "
-            expected = expected[:-2]
-            raise ArgumentTypeError("one out of " + expected, "'" + string + "'")
     
     @staticmethod
     def _hex(integer):
@@ -362,18 +352,18 @@ class Commandline(object):
             raise ArgumentError("Specified integer too long")
         data = chr(integer)
         self.embios.write(addr, data)
-        self.logger.info("Integer '"+self._hex(integer)+"' written successfully to "+self._hex(addr))
+        self.logger.info("Integer '"+self._hex(integer)+"' written successfully to "+self._hex(addr)+"\n")
 
     @command
     def downloadint(self, addr):
         """
             Downloads a single integer from the device and prints it to the console window
-            <offset>: the address to download the integer from
+            <addr>: the address to download the integer from
         """
         addr = self._hexint(addr)
         data = self.embios.read(addr, 1)
         integer = ord(data)
-        self.logger.info("Integer '"+self._hex(integer)+"' read from address "+self._hex(addr))
+        self.logger.info("Integer '"+self._hex(integer)+"' read from address "+self._hex(addr)+"\n")
 
     @command
     def i2cread(self, bus, slave, addr, size):
@@ -388,8 +378,11 @@ class Commandline(object):
         slave = self._hexint(slave)
         addr = self._hexint(addr)
         size = self._hexint(size)
-        for i in range(size):
-            print("%02X: %02X" % (addr + i, struct.unpack("B", self.embios.i2cread(bus, slave, addr + i, 1))[0]))
+        data = self.embios.i2cread(bus, slave, addr, size)
+        bytes = struct.unpack("%dB" % len(data), data)
+        self.logger.info("Data read from I2C:\n")
+        for index, byte in enumerate(bytes):
+            self.logger.info("%02X: %02X\n" % (index, byte))
 
     @command
     def i2cwrite(self, bus, slave, addr, *args):
@@ -399,7 +392,7 @@ class Commandline(object):
             <slave> the slave address
             <addr> the start address on the I2C device
             <db1> ... <dbN> the data in single bytes, encoded in hex,
-                seperated by whitespaces, eg. 37 56 45 12
+                seperated by whitespaces, eg. 37 5A 4F EB
         """
         bus = self._hexint(bus)
         slave = self._hexint(slave)
@@ -407,7 +400,9 @@ class Commandline(object):
         data = ""
         for arg in args:
             data += chr(self._hexint(arg))
+        self.logger.info("Writing data to I2C...\n")
         self.embios.i2cwrite(bus, slave, addr, data)
+        self.logger.info("done\n")
 
     @command
     def console(self):
@@ -428,7 +423,7 @@ class Commandline(object):
         for word in args:
             text += word + " "
         text = text[:-1]
-        self.logger.info("Writing '"+text+"' to the usb console\n")
+        self.logger.info("Writing '"+ text +"' to the usb console\n")
         self.embios.usbcwrite(text)
 
     @command
@@ -464,7 +459,8 @@ class Commandline(object):
             <bitmask>: the bitmask of the consoles to be flushed
         """
         bitmask = self._hexint(bitmask)
-        raise NotImplementedError
+        self.logger.info("Flushing consoles identified with the bitmask "+self._hex(bitmask)+"\n")
+        self.embios.cflush(bitmask)
 
     @command
     def getprocinfo(self):
@@ -514,7 +510,8 @@ class Commandline(object):
             Suspends/resumes the thread with thread ID <threadid>
         """
         threadid = self._hexint(threadid)
-        self.embios.resumethread(threadid)
+        self.logger.info("Suspending the thread with the threadid "+self._hex(threadid)+"\n")
+        self.embios.suspendthread(threadid)
 
     @command
     def resumethread(self, threadid):
@@ -522,6 +519,7 @@ class Commandline(object):
             Resumes the thread with thread ID <threadid>
         """
         threadid = self._hexint(threadid)
+        self.logger.info("Resuming the thread with the threadid "+self._hex(threadid)+"\n")
         self.embios.resumethread(threadid)
 
     @command
@@ -530,6 +528,7 @@ class Commandline(object):
             Kills the thread with thread ID <threadid>
         """
         threadid = self._hexint(threadid)
+        self.logger.info("Killing the thread with the threadid " + self._hex(threadid) + "\n")
         self.embios.killthread(threadid)
 
     @command
@@ -549,16 +548,45 @@ class Commandline(object):
         stackpointer = self._hexint(stackpointer)
         stacksize = self._hexint(stacksize)
         priority = self._hexint(priority)
-        self.embios.createthread(nameptr, entrypoint, stackptr, stacksize, type, priority, state)
+        data = self.embios.createthread(nameptr, entrypoint, stackptr, stacksize, type, priority, state)
+        name = self.embios.readstring(nameptr)
+        self.logger.info("Created a thread with the threadid " + data.id + ", the name \"" + name + "\", the entrypoint at " + self._hex(entrypoint) + ", the stack at " + self._hex(stackpointer) + " with a size of " + self._hex(stacksize) + " and a priority of " + self._hex(priority) + "\n")
     
     @command
     def run(self, filename):
         """
             Uploads the emBIOS application <filename> to
-            the beginning of the user memory and executes it
+            the memory and executes it
         """
-        #self.execimage(addr)
-        raise NotImplementedError
+        try:
+            f = open(filename, 'rb')
+        except IOError:
+            raise ArgumentError("File not readable. Does it exist?")
+        try:
+            appheader = struct.unpack("<8sIIIIIIIIII", f.read(48))
+            header = appheader[0]
+            if header != "emBIexec":
+                raise ArgumentError("The specified file is not an emBIOS application")
+            baseaddr = appheader[2]
+            threadnameptr = appheader[8]
+            f.seek(threadnameptr - baseaddr)
+            name = ""
+            while True:
+                char = f.read(1)
+                if ord(char) == 0:
+                    break
+                name += char
+            self.logger.info("Writing emBIOS application \"" + name + "\" to the memory at " + self._hex(baseaddr) + "...")
+            f.seek(0)
+            self.embios.write(baseaddr, f.read())
+        except IOError:
+            raise ArgumentError("The specified file is not an emBIOS application")
+        except struct.error:
+            raise ArgumentError("The specified file is not an emBIOS application")
+        finally:
+            f.close()
+        self.logger.info("done\n")
+        self.execimage(baseaddr)
 
     @command
     def execimage(self, addr):

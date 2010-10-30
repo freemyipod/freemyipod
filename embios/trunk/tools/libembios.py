@@ -219,12 +219,11 @@ class Embios(object):
     
     def i2cread(self, index, slaveaddr, startaddr, size):
         """ Reads data from an i2c slave """
-        if size > 256 or size < 1:
-            raise ValueError("Size must be a number between 1 and 256")
-        if size == 256:
-            size = 0
-        resp = self.lib.monitorcommand(struct.pack("IBBBBII", 8, index, slaveaddr, startaddr, size, 0, 0), "III%ds" % size, (None, None, None, "data"))
-        return resp.data
+        data = ""
+        for i in range(size):
+            resp = self.lib.monitorcommand(struct.pack("IBBBBII", 8, index, slaveaddr, startaddr + i, 1, 0, 0), "III1s", (None, None, None, "data"))
+            data += resp.data
+        return data
     
     def i2cwrite(self, index, slaveaddr, startaddr, data):
         """ Writes data to an i2c slave """
