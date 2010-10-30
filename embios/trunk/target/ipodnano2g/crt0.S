@@ -85,6 +85,17 @@ _start:
 	bic	r0, r0, #0x10000
 	str	r0, [r1]
 	mov	r0, #0
+.cleancache:
+        mcr	p15, 0, r0,c7,c10,2
+        add	r1, r0, #0x10
+        mcr	p15, 0, r1,c7,c10,2
+        add	r1, r1, #0x10
+        mcr	p15, 0, r1,c7,c10,2
+        add	r1, r1, #0x10
+        mcr	p15, 0, r1,c7,c10,2
+        adds	r0, r0, #0x04000000
+        bne	.cleancache
+        mcr	p15, 0, r0,c7,c10,4
 	mcr	p15, 0, r0,c7,c5,0
 	mov	r1, #0x39c00000
 	str	r0, [r1,#4]
