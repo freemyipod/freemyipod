@@ -28,7 +28,7 @@
 #include "global.h"
 
 
-void i2c_init();
+void i2c_init() INITCODE_ATTR;
 void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* data, uint32_t length);
 void i2c_recv(uint32_t bus, uint32_t device, uint32_t address, uint8_t* data, uint32_t length);
 void i2c_sendbyte(uint32_t bus, uint32_t device, uint32_t address, uint32_t data);
