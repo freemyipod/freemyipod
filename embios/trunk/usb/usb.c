@@ -276,16 +276,17 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
             {
             case 0:
                 addr = &lang_descriptor;
-                size = sizeof(lang_descriptor);
+                size = lang_descriptor.bLength;
                 break;
             case 1:
                 string_devicename.bLength = 14;
                 addr = &string_devicename;
-                size = 14;
+                size = string_devicename.bLength;
+                break;
             case 2:
                 string_devicename.bLength = sizeof(string_devicename);
                 addr = &string_devicename;
-                size = sizeof(string_devicename);
+                size = string_devicename.bLength;
                 break;
             }
             break;
