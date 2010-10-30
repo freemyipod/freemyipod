@@ -284,7 +284,7 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
                 size = string_devicename.bLength;
                 break;
             case 2:
-                string_devicename.bLength = sizeof(string_devicename);
+                string_devicename.bLength = 32;
                 addr = &string_devicename;
                 size = string_devicename.bLength;
                 break;
