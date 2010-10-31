@@ -562,34 +562,9 @@ class Commandline(object):
             f = open(filename, 'rb')
         except IOError:
             raise ArgumentError("File not readable. Does it exist?")
-        try:
-            appheader = struct.unpack("<8sIIIIIIIIII", f.read(48))
-            header = appheader[0]
-            if header != "emBIexec":
-                raise ArgumentError("The specified file is not an emBIOS application (header)")
-            baseaddr = appheader[2]
-            threadnameptr = appheader[8]
-            f.seek(threadnameptr - baseaddr)
-            name = ""
-            while True:
-                char = f.read(1)
-                if ord(char) == 0:
-                    break
-                name += char
-            usermem = self.embios.getusermemrange()
-            if usermem.lower > baseaddr or usermem.upper < baseaddr + os.stat(filename).st_size:
-                raise ArgumentError("The baseaddress of the specified emBIOS application is out of range of the user memory range on the device. Are you sure that this application is compatible with your device?")
-            self.logger.info("Writing emBIOS application \"" + name + "\" to the memory at " + self._hex(baseaddr) + "...")
-            f.seek(0)
-            self.embios.write(baseaddr, f.read())
-        except IOError:
-            raise ArgumentError("The specified file is not an emBIOS application (IOError)")
-        except struct.error:
-            raise ArgumentError("The specified file is not an emBIOS application (struct.error)")
-        finally:
-            f.close()
-        self.logger.info("done\n")
-        self.execimage(baseaddr)
+        with f:
+            data = self.embios.run(f.read())
+        self.logger.info("Executed emBIOS application \"" + data.name + "\" at address " + self._hex(data.baseaddr))
 
     @command
     def execimage(self, addr):

@@ -393,6 +393,36 @@ class Embios(object):
         """ Runs the emBIOS app at 'addr' """
         return self.lib.monitorcommand(struct.pack("IIII", 21, addr, 0, 0), "III", ("excecimage", None, None))
     
+    def run(self, app):
+        """ Uploads and runs the emBIOS app in the string 'app' """
+        try:
+            appheader = struct.unpack("<8sIIIIIIIIII", app[:48])
+        except struct.error:
+            raise ArgumentError("The specified file is not an emBIOS application")
+        header = appheader[0]
+        if header != "emBIexec":
+            raise ArgumentError("The specified file is not an emBIOS application")
+        baseaddr = appheader[2]
+        threadnameptr = appheader[8]
+        nameptr = threadnameptr - baseaddr
+        name = ""
+        while True:
+            char = app[nameptr:nameptr+1]
+            try:
+                if ord(char) == 0:
+                    break
+            except TypeError:
+                raise ArgumentError("The specified file is not an emBIOS application")
+            name += char
+            nameptr += 1
+        usermem = self.getusermemrange()
+        if usermem.lower > baseaddr or usermem.upper < baseaddr + len(app):
+            raise ArgumentError("The baseaddress of the specified emBIOS application is out of range of the user memory range on the device. Are you sure that this application is compatible with your device?")
+        self.write(baseaddr, app)
+        self.execimage(baseaddr)
+        return Bunch(baseaddr=baseaddr, name=name)
+    
+    
     def bootflashread(self, memaddr, flashaddr, size):
         """ Copies the data in the bootflash at 'flashaddr' of the specified size
             to the memory at addr 'memaddr'
