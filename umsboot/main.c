@@ -87,7 +87,7 @@ int fat16_write_mbr(uint8_t* buffer, int sectors)
     ((uint16_t*)buffer)[0xb] = fatsectors;
     buffer[0x24] = 0x80;
     buffer[0x26] = 0x29;
-    memcpy(&buffer[0x27], "UMSbUMSboot    FAT16   ", 0x17);
+    memcpy(&buffer[0x27], "UBRDUMSboot    FAT16   ", 0x17);
     ((uint16_t*)buffer)[0xff] = 0xaa55;
     return fatsectors;
 }
@@ -167,8 +167,8 @@ void main()
     while (cluster != 0xffff)
     {
         swap(fatsectors + cluster, dest++);
-        cluster = *((uint16_t*)&ramdisk[swapmap[1 + (cluster / RAMDISK_SECTORSIZE)]]
-                                       [(cluster % RAMDISK_SECTORSIZE) * 2]); 
+        cluster = *((uint16_t*)&ramdisk[swapmap[1 + (cluster / (RAMDISK_SECTORSIZE / 2))]]
+                                       [(cluster % (RAMDISK_SECTORSIZE / 2)) * 2]); 
     }
     lcdconsole_puts("Rearranging files...\n", 0, 0xffff);
     uint16_t offset = RAMDISK_SECTORS - totalclusters - 2;
@@ -191,10 +191,10 @@ void main()
                 while (cluster != 0xffff)
                 {
                     swap(fatsectors + cluster, offset + dest++);
-                    cluster = *((uint16_t*)&ramdisk[swapmap[1 + (cluster / RAMDISK_SECTORSIZE)]]
-                                                   [(cluster % RAMDISK_SECTORSIZE) * 2]);
-                    if (cluster == 0xffff) ((uint16_t*)newfat)[dest - 1] = 0xffff;
-                    else ((uint16_t*)newfat)[dest - 1] = dest;
+                    cluster = *((uint16_t*)&ramdisk[swapmap[1 + (cluster / (RAMDISK_SECTORSIZE / 2))]]
+                                                   [(cluster % (RAMDISK_SECTORSIZE / 2)) * 2]);
+                    if (cluster == 0xffff) newfat[dest - 1] = 0xffff;
+                    else newfat[dest - 1] = dest;
                 }
             }
             newptr += 0x20;
