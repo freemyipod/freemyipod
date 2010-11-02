@@ -115,6 +115,7 @@ int thread_create(const char* name, const void* code, void* stack,
 int thread_suspend(int thread);
 int thread_resume(int thread);
 int thread_terminate(int thread);
+enum thread_state thread_get_state(int thread);
 void thread_exit();
 void mutex_init(struct mutex* obj) ICODE_ATTR;
 int mutex_lock(struct mutex* obj, int timeout) ICODE_ATTR;

@@ -453,6 +453,11 @@ int thread_terminate(int thread)
     return ret;
 }
 
+enum thread_state thread_get_state(int thread)
+{
+    return scheduler_threads[thread].state;
+}
+
 void thread_exit()
 {
     thread_terminate(-1);

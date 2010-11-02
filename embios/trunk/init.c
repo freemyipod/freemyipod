@@ -77,6 +77,11 @@ static const char welcomestring[] INITCONST_ATTR = "emBIOS v" VERSION " r" VERSI
 static const char initthreadname[] INITCONST_ATTR = "Initialization thread";
 static uint32_t initstack[0x400] INITSTACK_ATTR;
 extern int _loadspaceend;
+#ifdef HAVE_STORAGE
+static const char storageinitthreadname[] INITCONST_ATTR = "Storage init thread";
+static uint32_t storageinitstack[0x400] INITBSS_ATTR;
+static struct wakeup storageinitwakeup;
+#endif
 struct bootinfo_t bootinfo_src INITHEAD_ATTR =
 {
     .signature = "emBIboot",
@@ -168,24 +173,10 @@ memmappedfailed:
     cputs(CONSOLE_BOOT, "Waiting for USB commands\n\n");
 }
 
-void initthread() INITCODE_ATTR;
-void initthread()
-{
-#ifdef HAVE_I2C
-    i2c_init();
-#endif
-    power_init();
-#ifdef HAVE_USB
-    usb_init();
-#endif
-    cputs(CONSOLE_BOOT, welcomestring);
-#ifdef HAVE_BACKLIGHT
-    backlight_init();
-#endif
-#ifdef HAVE_BUTTON
-    button_init();
-#endif
 #ifdef HAVE_STORAGE
+void storageinitthread() INITCODE_ATTR;
+void storageinitthread()
+{
     DEBUGF("Initializing storage drivers...");
     storage_init();
     DEBUGF("Initializing storage subsystem...");
@@ -194,9 +185,51 @@ void initthread()
     disk_init();
     DEBUGF("Mounting partitions...");
     disk_mount_all();
+    DEBUGF("Storage init finished.");
+    wakeup_signal(&storageinitwakeup);
+}
+#endif
+
+void initthread() INITCODE_ATTR;
+void initthread()
+{
+#ifdef HAVE_I2C
+    i2c_init();
+#endif
+    power_init();
+    cputs(CONSOLE_BOOT, welcomestring);
+#ifdef HAVE_STORAGE
+    wakeup_init(&storageinitwakeup);
+    int storagethread = thread_create(storageinitthreadname, storageinitthread, storageinitstack,
+                                      sizeof(storageinitstack), USER_THREAD, 127, true);
+#endif
+#ifdef HAVE_USB
+    usb_init();
+#endif
+#ifdef HAVE_BACKLIGHT
+    backlight_init();
+#endif
+#ifdef HAVE_BUTTON
+    button_init();
 #endif
 #ifdef HAVE_TARGETINIT_LATE
     targetinit_late();
+#endif
+#ifdef HAVE_STORAGE
+    while (true)
+    {
+        if (wakeup_wait(&storageinitwakeup, 100000) == THREAD_OK) break;
+        enum thread_state state = thread_get_state(storagethread);
+        if (state == THREAD_DEFUNCT || state == THREAD_DEFUNCT_ACK)
+        {
+            if (wakeup_wait(&storageinitwakeup, 0) == THREAD_OK) break;
+            thread_terminate(storagethread);
+            break;
+        }
+    }
+#endif
+#ifdef HAVE_TARGETINIT_VERYLATE
+    targetinit_verylate();
 #endif
     DEBUGF("Finished initialisation sequence");
     boot();

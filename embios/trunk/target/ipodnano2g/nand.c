@@ -346,7 +346,7 @@ void nand_power_up(void)
     for (i = 0; i < 4; i++)
         if (nand_type[i] >= 0)
             if (nand_reset(i))
-				panicf(PANIC_FATAL, "nand_power_up: nand_reset(bank=%d) failed.", (unsigned int)i);
+				panicf(PANIC_KILLTHREAD, "nand_power_up: nand_reset(bank=%d) failed.", (unsigned int)i);
     nand_powered = 1;
     nand_last_activity_value = USEC_TIMER;
     mutex_unlock(&nand_mtx);
@@ -382,11 +382,11 @@ uint32_t nand_read_page(uint32_t bank, uint32_t page, void* databuffer,
     uint8_t* spare = nand_spare;
     if (sparebuffer) spare = (uint8_t*)sparebuffer;
 	if ((uint32_t)databuffer & (CACHEALIGN_SIZE - 1))
-		panicf(PANIC_KILLUSERTHREADS,
+		panicf(PANIC_KILLTHREAD,
 	           "nand_read_page: Misaligned data buffer at %08X (bank %lu, page %lu)",
 			   (unsigned int)databuffer, bank, page);
 	if ((uint32_t)sparebuffer & (CACHEALIGN_SIZE - 1))
-		panicf(PANIC_KILLUSERTHREADS,
+		panicf(PANIC_KILLTHREAD,
 	           "nand_read_page: Misaligned spare buffer at %08X (bank %lu, page %lu)",
 			   (unsigned int)sparebuffer, bank, page);
     mutex_lock(&nand_mtx, TIMEOUT_BLOCK);
@@ -467,11 +467,11 @@ static uint32_t nand_write_page_int(uint32_t bank, uint32_t page,
     uint8_t* spare = nand_spare;
     if (sparebuffer) spare = (uint8_t*)sparebuffer;
 	if ((uint32_t)databuffer & 0xf)
-		panicf(PANIC_KILLUSERTHREADS,
+		panicf(PANIC_KILLTHREAD,
 	           "nand_write_page: Misaligned data buffer at %08X (bank %lu, page %lu)",
 			   (unsigned int)databuffer, bank, page);
 	if ((uint32_t)sparebuffer & 0xf)
-		panicf(PANIC_KILLUSERTHREADS,
+		panicf(PANIC_KILLTHREAD,
 	           "nand_write_page: Misaligned spare buffer at %08X (bank %lu, page %lu)",
 			   (unsigned int)sparebuffer, bank, page);
     mutex_lock(&nand_mtx, TIMEOUT_BLOCK);

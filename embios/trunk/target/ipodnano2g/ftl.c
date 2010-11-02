@@ -615,7 +615,8 @@ static uint32_t ftl_vfl_commit_cxt(uint32_t bank)
         ftl_vfl_cxt[bank].nextcxtpage = 0;
         if (ftl_vfl_store_cxt(bank) == 0) return 0;
     }
-    panicf(PANIC_FATAL, "VFL: Failed to commit VFL CXT!");
+    ftl_initialized = false;
+    panicf(PANIC_KILLTHREAD, "VFL: Failed to commit VFL CXT!");
     return 1;
 }
 #endif
@@ -729,7 +730,8 @@ static uint32_t ftl_vfl_check_remap_scheduled(uint32_t bank, uint32_t block)
 static void ftl_vfl_schedule_block_for_remap(uint32_t bank, uint32_t block)
 {
     if (ftl_vfl_check_remap_scheduled(bank, block) == 1) return;
-    panicf(PANIC_FATAL, "FTL: Scheduling bank %u block %u for remap!",
+    ftl_initialized = false;
+    panicf(PANIC_KILLTHREAD, "FTL: Scheduling bank %u block %u for remap!",
            (unsigned)bank, (unsigned)block);
     if (ftl_vfl_cxt[bank].scheduledstart == ftl_vfl_cxt[bank].spareused)
         return;
@@ -816,7 +818,8 @@ static uint32_t ftl_vfl_remap_block(uint32_t bank, uint32_t block)
 {
     uint32_t i;
     uint32_t newblock = 0, newidx;
-    panicf(PANIC_FATAL, "FTL: Remapping bank %u block %u!",
+    ftl_initialized = false;
+    panicf(PANIC_KILLTHREAD, "FTL: Remapping bank %u block %u!",
            (unsigned)bank, (unsigned)block);
     if (bank >= ftl_banks || block >= ftl_nand_type->blocks) return 0;
     for (i = 0; i < ftl_vfl_cxt[bank].sparecount; i++)
@@ -1009,7 +1012,8 @@ static uint32_t ftl_vfl_write(uint32_t vpage, uint32_t count,
                 if (nand_read_page(bank[ftl_banks], physpage[ftl_banks],
                                    ftl_buffer, &ftl_sparebuffer[0], 1, 1) & 0x11F)
                 {
-                    panicf(PANIC_FATAL, "FTL: write error (2) on vPage %u, bank %u, pPage %u",
+                    ftl_initialized = false;
+                    panicf(PANIC_KILLTHREAD, "FTL: write error (2) on vPage %u, bank %u, pPage %u",
                            (unsigned)(vpage + i - ftl_banks),
                            (unsigned)bank[ftl_banks],
                            (unsigned)physpage[ftl_banks]);
@@ -1021,7 +1025,8 @@ static uint32_t ftl_vfl_write(uint32_t vpage, uint32_t count,
             if (nand_read_page(bank[0], physpage[0], ftl_buffer,
                                &ftl_sparebuffer[0], 1, 1) & 0x11F)
             {
-                panicf(PANIC_FATAL, "FTL: write error (1) on vPage %u, bank %u, pPage %u",
+                ftl_initialized = false;
+                panicf(PANIC_KILLTHREAD, "FTL: write error (1) on vPage %u, bank %u, pPage %u",
                        (unsigned)(vpage + i), (unsigned)bank[0], (unsigned)physpage[0]);
                 ftl_vfl_log_trouble(bank[0], block[0]);
             }
@@ -1032,7 +1037,8 @@ static uint32_t ftl_vfl_write(uint32_t vpage, uint32_t count,
             if (nand_read_page(bank[i - 1], physpage[i - 1],
                                ftl_buffer, &ftl_sparebuffer[0], 1, 1) & 0x11F)
             {
-                panicf(PANIC_FATAL, "FTL: write error (2) on vPage %u, bank %u, pPage %u",
+                ftl_initialized = false;
+                panicf(PANIC_KILLTHREAD, "FTL: write error (2) on vPage %u, bank %u, pPage %u",
                        (unsigned)(vpage + count - i),
                        (unsigned)bank[i - 1], (unsigned)physpage[i - 1]);
                 ftl_vfl_log_trouble(bank[i - 1], block[i - 1]);
@@ -1113,9 +1119,12 @@ static uint32_t ftl_vfl_open()
                         if (ftl_vfl_read_page(i, vflcxtblock[vflcxtidx],
                                               last, ftl_buffer,
                                               &ftl_sparebuffer[0]) != 0)
-                            panicf(PANIC_FATAL, "FTL: Re-reading VFL CXT block "
-                                        "on bank %u failed!?", (unsigned)i);
+                        {
+                            ftl_initialized = false;
+                            panicf(PANIC_KILLTHREAD, "FTL: Re-reading VFL CXT block "
+                                                     "on bank %u failed!?", (unsigned)i);
                             //return 1;
+                        }
                         memcpy(&ftl_vfl_cxt[i], ftl_buffer, 0x800);
                         if (ftl_vfl_verify_checksum(i) != 0) return 1;
 #ifndef FTL_READONLY
@@ -1329,6 +1338,11 @@ uint32_t ftl_read(uint32_t sector, uint32_t count, void* buffer)
     if (count == 0) return 0;
 
     mutex_lock(&ftl_mtx, TIMEOUT_BLOCK);
+    if (!ftl_initialized)
+    {
+        mutex_unlock(&ftl_mtx);
+        return -1;
+    }
 
     for (i = 0; i < count; i++)
     {
@@ -1422,7 +1436,8 @@ static uint32_t ftl_erase_block_internal(uint32_t block)
         }
         if (rc != 0)
         {
-            panicf(PANIC_FATAL, "FTL: Block erase failed on bank %u block %u",
+            ftl_initialized = false;
+            panicf(PANIC_KILLTHREAD, "FTL: Block erase failed on bank %u block %u",
                    (unsigned)i, (unsigned)block);
             if (pblock != block)
             {
@@ -1471,7 +1486,11 @@ static uint32_t ftl_allocate_pool_block(void)
             bestidx = idx;
         }
     }
-    if (bestidx == 0xFFFFFFFF) panicf(PANIC_FATAL, "FTL: Out of pool blocks!");
+    if (bestidx == 0xFFFFFFFF0)
+    {
+        ftl_initialized = false;
+        panicf(PANIC_KILLTHREAD, "FTL: Out of pool blocks!");
+    }
     block = ftl_cxt.blockpool[bestidx];
     if (bestidx != ftl_cxt.nextfreeidx)
     {
@@ -1479,7 +1498,10 @@ static uint32_t ftl_allocate_pool_block(void)
         ftl_cxt.blockpool[ftl_cxt.nextfreeidx] = block;
     }
     if (block > (uint32_t)ftl_nand_type->userblocks + 0x17)
-        panicf(PANIC_FATAL, "FTL: Bad block number in pool: %u", (unsigned)block);
+    {
+        ftl_initialized = false;
+        panicf(PANIC_KILLTHREAD, "FTL: Bad block number in pool: %u", (unsigned)block);
+    }
     if (ftl_erase_block(block) != 0) return 0xFFFFFFFF;
     if (++ftl_cxt.nextfreeidx == 0x14) ftl_cxt.nextfreeidx = 0;
     ftl_cxt.freecount--;
@@ -1493,7 +1515,10 @@ static uint32_t ftl_allocate_pool_block(void)
 static void ftl_release_pool_block(uint32_t block)
 {
     if (block >= (uint32_t)ftl_nand_type->userblocks + 0x17)
-        panicf(PANIC_FATAL, "FTL: Tried to release block %u", (unsigned)block);
+    {
+        ftl_initialized = false;
+        panicf(PANIC_KILLTHREAD, "FTL: Tried to release block %u", (unsigned)block);
+    }
     uint32_t idx = ftl_cxt.nextfreeidx + ftl_cxt.freecount++;
     if (idx >= 0x14) idx -= 0x14;
     ftl_cxt.blockpool[idx] = block;
@@ -1863,7 +1888,11 @@ static struct ftl_log_type* ftl_allocate_log_entry(uint32_t block)
 
     if (entry == NULL)
     {
-        if (ftl_cxt.freecount < 3) panicf(PANIC_FATAL, "FTL: Detected a pool block leak!");
+        if (ftl_cxt.freecount < 3)
+        {
+            ftl_initialized = false;
+            panicf(PANIC_KILLTHREAD, "FTL: Detected a pool block leak!");
+        }
         else if (ftl_cxt.freecount == 3)
             if (ftl_remove_scattered_block(NULL) != 0)
                 return NULL;
@@ -1994,6 +2023,11 @@ uint32_t ftl_write(uint32_t sector, uint32_t count, const void* buffer)
     if (count == 0) return 0;
 
     mutex_lock(&ftl_mtx, TIMEOUT_BLOCK);
+    if (!ftl_initialized)
+    {
+        mutex_unlock(&ftl_mtx);
+        return -1;
+    }
 
     if (ftl_cxt.clean_flag == 1)
     {
@@ -2125,8 +2159,12 @@ uint32_t ftl_write(uint32_t sector, uint32_t count, const void* buffer)
                 }
                 i += cnt;
             }
-            else panicf(PANIC_FATAL, "FTL: Write error: %u %u %u!",
-                        (unsigned)sector, (unsigned)count, (unsigned)i);
+            else
+            {
+                ftl_initialized = false;
+                panicf(PANIC_KILLTHREAD, "FTL: Write error: %u %u %u!",
+                       (unsigned)sector, (unsigned)count, (unsigned)i);
+            }
         }
         if (logentry->pagesused == ppb) ftl_remove_scattered_block(logentry);
     }
@@ -2166,6 +2204,11 @@ uint32_t ftl_sync(void)
     if (ftl_cxt.clean_flag == 1) return 0;
 
     mutex_lock(&ftl_mtx, TIMEOUT_BLOCK);
+    if (!ftl_initialized)
+    {
+        mutex_unlock(&ftl_mtx);
+        return -1;
+    }
     
 #ifdef FTL_TRACE
     DEBUGF("FTL: Syncing");
@@ -2543,7 +2586,7 @@ uint32_t ftl_init(void)
     uint32_t i;
     int rc;
     if ((rc = nand_device_init()) != 0)
-        panicf(PANIC_FATAL, "FTL: Lowlevel NAND driver init failed: %d", rc);
+        panicf(PANIC_KILLTHREAD, "FTL: Lowlevel NAND driver init failed: %d", rc);
     ftl_banks = 0;
     for (i = 0; i < 4; i++)
         if (nand_get_device_type(i) != 0) ftl_banks = i + 1;
@@ -2561,7 +2604,7 @@ uint32_t ftl_init(void)
             ftl_initialized = true;
             return 0;
         }
-        cputs(CONSOLE_BOOT, "The FTL seems to be damaged. Forcing check.\n");
+        cputs(CONSOLE_BOOT, "The FTL seems to be unclean. Forcing check.\n");
         if (ftl_repair() != 0)
             cputs(CONSOLE_BOOT, "FTL recovery failed. Use disk mode to recover.\n");
         else
