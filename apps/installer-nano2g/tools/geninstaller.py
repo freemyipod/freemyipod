@@ -34,6 +34,7 @@ flashfiles = [("diskmode", 1, 0, 1), \
               ("uninst  ", 2, 0, 0, "uninstaller-nano2g.embiosapp.ucl"), \
               ("ildrcfg ", 2, 0, 0, "iloader.cfg.ucl"), \
               ("iloader ", 2, 0, 0, "iloader.embiosapp.ucl"), \
+              ("umsboot ", 2, 0, 0, "umsboot-ipodnano2g.ucl"), \
               ("embiosldr", 4, 8, 0, "embiosldr-ipodnano2g.dfu"), \
               ("embios", 4, 10, 0, "embios-ipodnano2g.ucl")]
 

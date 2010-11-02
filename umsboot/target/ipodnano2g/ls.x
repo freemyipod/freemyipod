@@ -5,69 +5,74 @@ STARTUP(build/ipodnano2g/target/ipodnano2g/crt0.o)
 
 MEMORY
 {
-    INIT : ORIGIN = 0x08000000, LENGTH = 0x01eff000
-    INITBSS : ORIGIN = 0x09e00000, LENGTH = 0x0017f000
-    INITSTACK : ORIGIN = 0x09f7f000, LENGTH = 0x00001000
-    SRAM : ORIGIN = 0x22000000, LENGTH = 0x0002bdf0
-    SDRAM : ORIGIN = 0x09f80000, LENGTH = 0x00100000
+    SRAM : ORIGIN = 0x22000000, LENGTH = 0x0002bffc
+    SDRAM : ORIGIN = 0x08000000, LENGTH = 0x02000000
 }
+_ramdiskptr = 0x2202bffc;
 
 SECTIONS
 {
     .init :
     {
-        _initstart = .;
+        _ramdiskstart = .;
+        . = ALIGN(4);
 	*(.inithead*)
+        . = ALIGN(4);
         *(.initcode*)
+        . = ALIGN(4);
         *(.initrodata*)
+        . = ALIGN(4);
         *(.initdata*)
-        . = ALIGN(0x4);
+        . = ALIGN(4);
         _initend = .;
-    } > INIT
+    } > SDRAM
 
     .sram :
     {
         _sramstart = .;
         KEEP(*(.intvect))
+        . = ALIGN(4);
         *(.intvect)
+        . = ALIGN(4);
         *(.icode*)
-        *(.irodata*)
-        *(.idata*)
-        . = ALIGN(0x4);
-        _sramend = .;
-    } > SRAM AT> INIT
-    _sramsource = LOADADDR(.sram);
-
-    .sdram :
-    {
-        _sdramstart = .;
+        . = ALIGN(4);
         *(.text*)
+        . = ALIGN(4);
         *(.glue_7)
+        . = ALIGN(4);
         *(.glue_7t)
         . = ALIGN(0x4);
+        *(.irodata*)
+        . = ALIGN(4);
         *(.rodata*)
         . = ALIGN(0x4);
+        *(.idata*)
+        . = ALIGN(4);
         *(.data*)
         . = ALIGN(0x4);
-        _sdramend = .;
-    } > SDRAM AT> INIT
-    _sdramsource = LOADADDR(.sdram);
+        _sramend = .;
+    } > SRAM AT> SDRAM
+    _sramsource = LOADADDR(.sram);
 
     .initbss (NOLOAD) :
     {
         _initbssstart = .;
+        . = ALIGN(4);
         *(.initbss*)
         . = ALIGN(0x4);
-        _initstackstart = .;
-        . += 0x400;
-        _initstackend = .;
         _initbssend = .;
-    } > INITBSS
+    } > SDRAM
 
     .ibss (NOLOAD) :
     {
-        _ibssstart = .;
+        _bssstart = .;
+        . = ALIGN(4);
+        . = ALIGN(4);
         *(.ibss*)
+        . = ALIGN(4);
+	*(.bss*)
+        . = ALIGN(4);
+	*(COMMON)
         . = ALIGN(0x4);
         _irqstackstart = .;
         . += 0x400;
@@ -75,30 +80,20 @@ SECTIONS
         _abortstackstart = .;
         . += 0x400;
         _abortstackend = .;
-        *(.stack*)
-        _ibssend = .;
-    } > SRAM
-
-    .bss (NOLOAD) :
-    {
-        _bssstart = .;
-        *(.bss*)
-        *(COMMON)
-        . = ALIGN(0x4);
+	_mainstackstart = .;
+	. += 0x1000;
+	_mainstackend = .;
         _bssend = .;
-    } > SDRAM
-
-    .initstack (NOLOAD) :
-    {
-        _loadspaceend = .;
-        *(.initstack*)
-        *(COMMON)
-        . = ALIGN(0x4);
-    } > INITSTACK
+    } > SRAM
 
     /DISCARD/ :
     {
         *(.eh_frame)
     }
 
+    .ramdisk _ramdiskstart (NOLOAD) :
+    {
+        *(.ramdisk*)
+        _ramdiskend = .;
+    } > SDRAM
 }

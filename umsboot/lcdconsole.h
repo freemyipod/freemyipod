@@ -28,7 +28,6 @@
 #include "global.h"
 #include "drawing.h"
 #include "lcd.h"
-#include "progressbar.h"
 
 
 #define LCDCONSOLE_COLS (LCD_WIDTH / FONT_WIDTH)
@@ -50,7 +49,6 @@ int lcdconsole_get_current_x() ICODE_ATTR;
 int lcdconsole_get_current_y() ICODE_ATTR;
 int lcdconsole_get_lineend_x() ICODE_ATTR;
 int lcdconsole_get_lineend_y() ICODE_ATTR;
-void lcdconsole_progressbar(struct progressbar_state* progressbar, int min, int max);
 
 
 #endif

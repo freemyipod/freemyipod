@@ -25,7 +25,6 @@
 #include "mmu.h"
 #include "panic.h"
 #include "usbdrv.h"
-#include "thread.h"
 #include "timer.h"
 #include "usb.h"
 #include "usb_ch9.h"
@@ -43,12 +42,10 @@ struct ep_type
     bool done;
     int rc;
     int size;
-    struct wakeup complete;
 } ;
 
 static struct ep_type endpoints[5];
 static struct usb_ctrlrequest ctrlreq CACHEALIGN_ATTR;
-static uint32_t synopsysotg_stack[0x40] STACK_ATTR;
 
 int usb_drv_port_speed(void)
 {
@@ -64,7 +61,6 @@ static void reset_endpoints(int reinit)
         endpoints[i].busy = false;
         endpoints[i].rc = -1;
         endpoints[i].done = true;
-        wakeup_signal(&endpoints[i].complete);
     }
     DIEPCTL0 = 0x8800;  /* EP0 IN ACTIVE NEXT=1 */
     DOEPCTL0 = 0x8000;  /* EP0 OUT ACTIVE */
@@ -199,8 +195,7 @@ void INT_USB_FUNC(void)
                         endpoints[i].busy = false;
                         endpoints[i].rc = 0;
                         endpoints[i].done = true;
-                        usb_handle_transfer_complete(i, USB_DIR_IN, 0, bytes);
-                        wakeup_signal(&endpoints[i].complete);
+                        usb_handle_transfer_complete(USB_DIR_IN | i, USB_DIR_IN, 0, bytes);
                     }
                 }
                 if (epints & 4)  /* AHB error */
@@ -212,7 +207,6 @@ void INT_USB_FUNC(void)
                         endpoints[i].busy = false;
                         endpoints[i].rc = 1;
                         endpoints[i].done = true;
-                        wakeup_signal(&endpoints[i].complete);
                     }
                 }
                 DIEPINT(i) = epints;
@@ -231,8 +225,7 @@ void INT_USB_FUNC(void)
                         endpoints[i].busy = false;
                         endpoints[i].rc = 0;
                         endpoints[i].done = true;
-                        usb_handle_transfer_complete(i, USB_DIR_OUT, 0, bytes);
-                        wakeup_signal(&endpoints[i].complete);
+                        usb_handle_transfer_complete(USB_DIR_OUT | i, USB_DIR_OUT, 0, bytes);
                     }
                 }
                 if (epints & 4)  /* AHB error */
@@ -309,8 +302,7 @@ int usb_drv_send(int endpoint, const void *ptr, int length)
     endpoint &= 0x7f;
     endpoints[endpoint].done = false;
     ep_send(endpoint, ptr, length);
-    while (!endpoints[endpoint].done && endpoints[endpoint].busy)
-        wakeup_wait(&endpoints[endpoint].complete, TIMEOUT_BLOCK);
+    while (!endpoints[endpoint].done && endpoints[endpoint].busy);
     return endpoints[endpoint].rc;
 }
 
@@ -376,27 +368,9 @@ void usb_drv_power_down(void)
     clockgate_enable(CLOCKGATE_USB_2, false);
 }
 
-void usb_check_vbus()
-{
-    bool oldstate = false;
-    while (true)
-    {
-        sleep(200000);
-        bool newstate = vbus_state();
-        if (oldstate != newstate)
-        {
-            if (newstate) usb_drv_power_up();
-            else usb_drv_power_down();
-            oldstate = newstate;
-        }
-    }
-}
-
 void usb_drv_init(void)
 {
     unsigned int i;
-    for (i = 0; i < sizeof(endpoints)/sizeof(struct ep_type); i++)
-        wakeup_init(&endpoints[i].complete);
 
     /* Enable USB clock */
     clockgate_enable(CLOCKGATE_USB_1, true);
@@ -406,10 +380,9 @@ void usb_drv_init(void)
     /* unmask irq */
     interrupt_enable(IRQ_USB_FUNC, true);
 
-    thread_create("synopsysotg", usb_check_vbus, synopsysotg_stack,
-                  sizeof(synopsysotg_stack), OS_THREAD, 63, true);
-
     usb_drv_power_down();
+    udelay(200000);
+    usb_drv_power_up();
 }
 
 void usb_drv_exit(void)

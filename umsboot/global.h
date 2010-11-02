@@ -39,11 +39,7 @@
 
 #ifndef ASM_FILE
 #include <stdarg.h>
-#include "libc/include/errno.h"
 #include "libc/include/inttypes.h"
-#include "libc/include/math.h"
-#include "libc/include/stdint.h"
-#include "libc/include/stdlib.h"
 #include "libc/include/string.h"
 #include "libc/include/sys/types.h"
 typedef int bool;

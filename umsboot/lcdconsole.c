@@ -26,8 +26,6 @@
 #include "drawing.h"
 #include "util.h"
 #include "contextswitch.h"
-#include "progressbar.h"
-
 
 #define OFFSETX LCDCONSOLE_OFFSETX
 #define OFFSETY LCDCONSOLE_OFFSETY
@@ -153,12 +151,4 @@ int lcdconsole_get_lineend_x()
 int lcdconsole_get_lineend_y()
 {
     return (current_row + 1) * FONT_HEIGHT + OFFSETY - 1;
-}
-
-void lcdconsole_progressbar(struct progressbar_state* progressbar, int min, int max)
-{
-    progressbar_init(progressbar, lcdconsole_get_current_x(), lcdconsole_get_lineend_x(),
-                     lcdconsole_get_current_y(), lcdconsole_get_lineend_y(),
-                     lcd_translate_color(0, 0, 0, 0), lcd_translate_color(0, 0xcf, 0xcf, 0xcf),
-                     lcd_translate_color(0, 0, 0, 0xef), min, max);
 }

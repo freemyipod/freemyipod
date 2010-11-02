@@ -21,38 +21,14 @@
 //
 
 
-#ifndef __BUTTON_H__
-#define __BUTTON_H__
+#ifndef __RAMDISK_H__
+#define __RAMDISK_H__
 
 
 #include "global.h"
-#include "thread.h"
 
 
-enum button_event
-{
-    BUTTON_PRESS,
-    BUTTON_RELEASE,
-    WHEEL_TOUCH,
-    WHEEL_UNTOUCH,
-    WHEEL_POSITION,
-    WHEEL_MOVED,
-    WHEEL_FORWARD,
-    WHEEL_BACKWARD
-};
-
-struct button_hook_entry
-{
-    struct scheduler_thread* owner;
-    void (*handler)(enum button_event, int which, int value);
-};
-
-
-void button_init() INITCODE_ATTR;
-int button_register_handler(void (*handler)(enum button_event, int which, int value));
-int button_unregister_handler(void (*handler)(enum button_event, int which, int value));
-void button_send_event(enum button_event eventtype, int which, int value) ICODE_ATTR;
-void button_unregister_all_of_thread(struct scheduler_thread* process);
+extern uint8_t ramdisk[RAMDISK_SECTORS][RAMDISK_SECTORSIZE] __attribute__((section(".ramdisk")));
 
 
 #endif

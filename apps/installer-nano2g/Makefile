@@ -3,13 +3,14 @@ NAME := installer-nano2g
 EMBIOSDIR ?= ../../embios/trunk/
 ILOADERDIR ?= ../iloader/
 UNINSTDIR ?= ../uninstaller-nano2g/
+UMSBOOTDIR ?= ../../umsboot/
 TOOLSDIR ?= ../../tools/
 
 BITMAPS = build/backdrop.ucl build/welcome.ucl build/repartition.ucl build/installing.ucl build/badpartition.ucl \
           build/cancelled.ucl build/repartitioning.ucl build/preparing.ucl build/installfiles.ucl build/flashing.ucl
 
 FLASHFILES = flashfiles/uninstaller-nano2g.embiosapp.ucl flashfiles/iloader.cfg.ucl flashfiles/iloader.embiosapp.ucl \
-             flashfiles/embiosldr-ipodnano2g.dfu flashfiles/embios-ipodnano2g.ucl
+             flashfiles/embiosldr-ipodnano2g.dfu flashfiles/embios-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
 
 CROSS   ?= arm-none-eabi-
 CC      := $(CROSS)gcc
@@ -159,6 +160,12 @@ flashfiles/uninstaller-nano2g.embiosapp.ucl: $(UNINSTDIR)/build/uninstaller-nano
 	@echo [CP]     $@
 	@cp $< $@
 
+$(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl: umsboot
+
+flashfiles/umsboot-ipodnano2g.ucl: $(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl umsboot
+	@echo [CP]     $@
+	@cp $< $@
+
 flashfiles/iloader.cfg: flashfiles/iloader.conf
 	@echo [COMCFG] $@
 	@$(COMPILECONFIG) $< $@
@@ -202,7 +209,10 @@ iloader:
 uninstaller-nano2g:
 	@make -C $(UNINSTDIR)
 
+umsboot:
+	@make -C $(UMSBOOTDIR) ipodnano2g
+
 clean:
 	@rm -rf build
 
-.PHONY: all clean uninstaller-nano2g iloader embios embiosldr-ipodnano2g libucl flashfiles $(NAME)
+.PHONY: all clean uninstaller-nano2g iloader embios embiosldr-ipodnano2g umsboot libucl flashfiles $(NAME)

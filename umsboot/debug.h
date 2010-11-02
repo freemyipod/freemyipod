@@ -28,14 +28,6 @@
 #include "global.h"
 
 
-#ifdef DEBUG_CONSOLES
-#ifdef DEBUG_PRINT_SOURCE_LINE
-#define DEBUGF(fmt, args...) cprintf(DEBUG_CONSOLES, "%s:%d: " fmt "\n", __FILE__, __LINE__, ##args)
-#else
-#define DEBUGF(fmt, args...) cprintf(DEBUG_CONSOLES, fmt "\n", ##args)
-#endif
-#else
 #define DEBUGF(...)
-#endif
 
 #endif

@@ -21,16 +21,7 @@
 //
 
 
-#ifndef __VERSION_H__
-#define __VERSION_H__
+#include "global.h"
+#include "ramdisk.h"
 
-
-#define VERSION "0.1.1"
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 1
-#define VERSION_PATCH 1
-#define VERSION_SVN "$REVISION$"
-#define VERSION_SVN_INT $REVISIONINT$
-
-
-#endif
+uint8_t ramdisk[RAMDISK_SECTORS][RAMDISK_SECTORSIZE] __attribute__((section(".ramdisk")));

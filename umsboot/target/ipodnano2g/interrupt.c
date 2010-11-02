@@ -150,7 +150,7 @@ void int_timer_set_handler(int timer, void* handler)
 
 void interrupt_init(void)
 {
-    INTMSK = (1 << IRQ_TIMER) | (1 << IRQ_DMA);
+    INTMSK = 1 << IRQ_DMA;
 }
 
 void interrupt_shutdown(void)

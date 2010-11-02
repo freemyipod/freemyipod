@@ -3,35 +3,12 @@
 #ifdef TARGET_ipodnano2g
 target/ipodnano2g/mmu.c
 target/ipodnano2g/lcd.c
-target/ipodnano2g/timer.c
 target/ipodnano2g/i2c.c
 target/ipodnano2g/interrupt.c
 target/ipodnano2g/power.c
 target/ipodnano2g/pmu.c
-target/ipodnano2g/nand.c
-target/ipodnano2g/ftl.c
-target/ipodnano2g/storage_nand.c
 target/ipodnano2g/clockgates.c
-target/ipodnano2g/bootflash.c
 target/ipodnano2g/backlight.c
-target/ipodnano2g/targetinit.c
-target/ipodnano2g/clickwheel.c
-target/ipodnano2g/hwkeyaes.c
-target/ipodnano2g/hmacsha1.c
-target/ipodnano2g/usbtarget.c
-usb/synopsysotg.c
-#endif
-
-#ifdef TARGET_ipodnano4g
-target/ipodnano4g/mmu.c
-target/ipodnano4g/lcd.c
-target/ipodnano4g/timer.c
-target/ipodnano4g/i2c.S
-target/ipodnano4g/interrupt.c
-target/ipodnano4g/power.c
-target/ipodnano4g/accel.c
-target/ipodnano4g/backlight.c
-target/ipodnano4g/clockgates.c
 usb/synopsysotg.c
 #endif
 
@@ -40,59 +17,18 @@ arm/arm-support.S
 arm/contextswitch.S
 #endif
 
-init.c
+main.c
 util.c
 #ifdef HAVE_LCD
 drawing.S
 lcdconsole.c
-progressbar.c
 #endif
 format.c
 panic.c
-console.c
-ucl.S
-thread.c
-#ifdef HAVE_USB
+ramdisk.c
 usb/usb.c
-#endif
-shutdown.c
-syscall.c
-#ifdef HAVE_STORAGE
-disk.c
-fat.c
-file.c
-dir.c
-storage.c
-#endif
-#ifdef HAVE_BUTTON
-button.c
-#endif
-strcasestr.c
-strcasecmp.c
-strlcpy.c
-strlcat.c
-execimage.c
-syscallapi.c
 
-libc/strstr.c
-libc/strtok.c
-libc/atoi.c
-libc/ctype.c
-libc/memchr.c
-libc/memcmp.c
 libc/memcpy.c
-libc/memmove.c
 libc/memset.c
-libc/mktime.c
-libc/qsort.c
-libc/random.c
 libc/sprintf.c
-libc/sscanf.c
-libc/strcat.c
-libc/strchr.c
-libc/strcmp.c
-libc/strcpy.c
 libc/strlen.c
-libc/strncmp.c
-libc/strrchr.c
-libc/tlsf/tlsf.c

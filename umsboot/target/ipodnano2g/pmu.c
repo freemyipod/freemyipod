@@ -24,10 +24,7 @@
 #include "global.h"
 #include "i2c.h"
 #include "pmu.h"
-#include "thread.h"
 
-
-static struct mutex pmumutex;
 
 void pmu_read_multiple(int address, int count, unsigned char* buffer)
 {
@@ -49,23 +46,12 @@ void pmu_write(int address, unsigned char val)
     i2c_sendbyte(0, 0xe6, address, val);
 }
 
-void pmu_init()
-{
-    mutex_init(&pmumutex);
-}
-
 int pmu_read_adc(unsigned int adc)
 {
     int data = 0;
-    mutex_lock(&pmumutex, TIMEOUT_BLOCK);
     pmu_write(0x54, 5 | (adc << 4));
-    while ((data & 0x80) == 0)
-    {
-        yield();
-        data = pmu_read(0x57);
-    }
+    while ((data & 0x80) == 0) data = pmu_read(0x57);
     int value = (pmu_read(0x55) << 2) | (data & 3);
-    mutex_unlock(&pmumutex);
     return value;
 }
 

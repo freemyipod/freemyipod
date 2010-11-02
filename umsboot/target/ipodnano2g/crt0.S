@@ -22,25 +22,20 @@
 
 
 .section .intvect,"ax",%progbits
-	ldr pc, =reset_handler
-	ldr pc, =undef_instr_handler
-	ldr pc, =syscall_handler
-	ldr pc, =prefetch_abort_handler
-	ldr pc, =data_abort_handler
-	ldr pc, =reserved_handler
-	ldr pc, =irq_handler
-	ldr pc, =fiq_handler
+	b reset_handler
+	b undef_instr_handler
+	b swi_handler
+	b prefetch_abort_handler
+	b data_abort_handler
+	b reserved_handler
+	b irq_handler
+	b fiq_handler
 .ltorg
 
 
 .section .inithead,"ax",%progbits
 .global __start
 __start:
-	b	_start
-
-.section .initcode,"ax",%progbits
-.global _start
-_start:
 	mrc	p15, 0, r0,c1,c0
 	orr	r0, r0, #1
 	mcr	p15, 0, r0,c1,c0
@@ -52,14 +47,6 @@ _start:
 	ldrhi	r3, [r0], #4
 	strhi	r3, [r1], #4
 	bhi	.copysram
-	ldr	r0, =_sdramsource
-	ldr	r1, =_sdramstart
-	ldr	r2, =_sdramend
-.copysdram:
-	cmp	r2, r1
-	ldrhi	r3, [r0], #4
-	strhi	r3, [r1], #4
-	bhi	.copysdram
 	ldr	r0, =_initbssstart
 	ldr	r1, =_initbssend
 	mov	r2, #0
@@ -67,12 +54,6 @@ _start:
 	cmp	r1, r0
 	strhi	r2, [r0], #4
 	bhi	.clearinitbss
-	ldr	r0, =_ibssstart
-	ldr	r1, =_ibssend
-.clearibss:
-	cmp	r1, r0
-	strhi	r2, [r0], #4
-	bhi	.clearibss
 	ldr	r0, =_bssstart
 	ldr	r1, =_bssend
 .clearbss:
@@ -113,19 +94,27 @@ _start:
 	msr	cpsr_c, #0xdb
 	ldr	sp, =_abortstackend
 	msr	cpsr_c, #0x1f
-	ldr	sp, =_initstackend
+	ldr	sp, =_mainstackend
 	bl	init
-	bl	context_switch
-	mov	r0, #0
-	ldr	pc, =idleloop
+	ldr	lr, =idleloop
+	b	main
 .ltorg
 
 
 .section .icode, "ax", %progbits
 .align 2
+.global idleloop
+.global waitforint
+.type idleloop, %function
+.type waitforint, %function
 idleloop:
+	adr	lr, waitforint
+waitforint:
+	mov	r0, #0
 	mcr	p15, 0, r0,c7,c0,4
-	b	idleloop
+	mov	pc, lr
+.size idleloop, .-idleloop
+.size waitforint, .-waitforint
 
 .global reset
 .global hang
@@ -153,9 +142,15 @@ reset_handler:
 	mov	r0, #0
 	adr	r1, reset_text
 	b	panic
-reset_text:
-	.ascii	"Hit reset vector!\0"
 .size reset_handler, .-reset_handler
+
+.type swi, %function
+swi_handler:
+	mov	r0, #0
+	adr	r1, swi_text
+	sub	r2, lr, #4
+	b	panicf
+.size swi, .-swi
 
 .type undef_instr_handler, %function
 undef_instr_handler:
@@ -195,6 +190,9 @@ fiq_handler:
 	b	panic
 .size fiq_handler, .-fiq_handler
 
+reset_text:
+	.ascii	"Hit reset vector!\0"
+
 undef_instr_text:
 	.ascii	"Undefined instruction at %08X!\0"
 
@@ -210,8 +208,9 @@ reserved_text:
 fiq_text:
 	.ascii	"Unhandled FIQ!\0"
 
-syscall_text:
-	.ascii	"Unhandled syscall!\0"
+swi_text:
+	.ascii	"Unhandled SWI!\0"
+.align 2
 
 
 .section .icode.usec_timer, "ax", %progbits
@@ -237,42 +236,3 @@ read_usec_timer:
 
 val_3c700000:
 	.word	0x3c700000
-
-
-.section .text.control_nor_cache, "ax", %progbits
-.align 2
-.global control_nor_cache
-.type control_nor_cache, %function
-control_nor_cache:
-	mrc	p15, 0, r3,c1,c0
-	bic	r1, r3, #1
-	mcr	p15, 0, r1,c1,c0
-	mov	r1, #0
-	mcr	p15, 0, r1,c7,c5
-cnc_flushcache_loop:
-	mcr	p15, 0, r1,c7,c14,2
-	add	r2, r1, #0x10
-	mcr	p15, 0, r2,c7,c14,2
-	add	r2, r2, #0x10
-	mcr	p15, 0, r2,c7,c14,2
-	add	r2, r2, #0x10
-	mcr	p15, 0, r2,c7,c14,2
-	adds	r1, r1, #0x04000000
-	bne	cnc_flushcache_loop
-	mcr	p15, 0, r1,c7,c10,4
-	ands	r0, r0, r0
-	mrc	p15, 0, r1,c2,c0, 1
-	biceq	r1, r1, #0x10
-	orrne	r1, r1, #0x10
-	mcr	p15, 0, r1,c2,c0, 1
-	mrc	p15, 0, r1,c2,c0, 0
-	biceq	r1, r1, #0x10
-	orrne	r1, r1, #0x10
-	mcr	p15, 0, r1,c2,c0, 0
-	mrc	p15, 0, r1,c3,c0, 0
-	biceq	r1, r1, #0x10
-	orrne	r1, r1, #0x10
-	mcr	p15, 0, r1,c3,c0, 0
-	mcr	p15, 0, r3,c1,c0
-	mov	pc, lr
-.size control_nor_cache, .-control_nor_cache

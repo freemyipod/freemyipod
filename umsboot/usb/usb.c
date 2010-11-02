@@ -26,81 +26,169 @@
 #include "usb.h"
 #include "usb_ch9.h"
 #include "usbdrv.h"
-#include "thread.h"
-#include "console.h"
 #include "util.h"
 #include "contextswitch.h"
 #include "power.h"
 #include "mmu.h"
-#include "shutdown.h"
-#include "execimage.h"
-#ifdef HAVE_I2C
-#include "i2c.h"
-#endif
-#ifdef HAVE_BOOTFLASH
-#include "bootflash.h"
-#endif
-#ifdef HAVE_HWKEYAES
-#include "hwkeyaes.h"
-#endif
-#ifdef HAVE_HMACSHA1
-#include "hmacsha1.h"
-#endif
-#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
-#include "usbtarget.h"
-#endif
+#include "ramdisk.h"
 
 
-static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
-static uint32_t dbgrecvbuf[0x80] CACHEALIGN_ATTR;
-static uint32_t dbgsendbuf[0x80] CACHEALIGN_ATTR;
-static uint32_t dbgasyncsendbuf[0x80] CACHEALIGN_ATTR;
-static char dbgendpoints[4] IBSS_ATTR;
+#define SCSI_TEST_UNIT_READY        0x00
+#define SCSI_INQUIRY                0x12
+#define SCSI_MODE_SENSE_6           0x1a
+#define SCSI_MODE_SENSE_10          0x5a
+#define SCSI_REQUEST_SENSE          0x03
+#define SCSI_ALLOW_MEDIUM_REMOVAL   0x1e
+#define SCSI_READ_CAPACITY          0x25
+#define SCSI_READ_FORMAT_CAPACITY   0x23
+#define SCSI_READ_10                0x28
+#define SCSI_WRITE_10               0x2a
+#define SCSI_START_STOP_UNIT        0x1b
+#define SCSI_REPORT_LUNS            0xa0
+#define SCSI_WRITE_BUFFER           0x3b
 
-enum dbgaction_t
+#define SENSE_NOT_READY             0x02
+#define SENSE_MEDIUM_ERROR          0x03
+#define SENSE_ILLEGAL_REQUEST       0x05
+#define SENSE_UNIT_ATTENTION        0x06
+
+#define ASC_MEDIUM_NOT_PRESENT      0x3a
+#define ASC_INVALID_FIELD_IN_CBD    0x24
+#define ASC_LBA_OUT_OF_RANGE        0x21
+#define ASC_WRITE_ERROR             0x0C
+#define ASC_READ_ERROR              0x11
+#define ASC_NOT_READY               0x04
+#define ASC_INVALID_COMMAND         0x20
+
+#define ASCQ_BECOMING_READY         0x01
+
+#define DIRECT_ACCESS_DEVICE        0x00
+#define DEVICE_REMOVABLE            0x80
+
+#define SCSI_FORMAT_CAPACITY_FORMATTED_MEDIA 0x02000000
+
+
+struct command_block_wrapper
 {
-    DBGACTION_IDLE = 0,
-    DBGACTION_I2CSEND,
-    DBGACTION_I2CRECV,
-    DBGACTION_RESET,
-    DBGACTION_POWEROFF,
-    DBGACTION_CWRITE,
-    DBGACTION_CREAD,
-    DBGACTION_CFLUSH,
-    DBGACTION_EXECIMAGE,
-    DBGACTION_EXECFIRMWARE,
-    DBGACTION_READBOOTFLASH,
-    DBGACTION_WRITEBOOTFLASH,
-    DBGACTION_HWKEYAES,
-    DBGACTION_HMACSHA1,
-    DBGACTION_TARGETSPECIFIC
-};
+    unsigned int signature;
+    unsigned int tag;
+    unsigned int data_transfer_length;
+    unsigned char flags;
+    unsigned char lun;
+    unsigned char command_length;
+    unsigned char command_block[16];
+} __attribute__((packed));
 
-static uint32_t dbgstack[0x100] STACK_ATTR;
-struct wakeup dbgwakeup IBSS_ATTR;
-extern struct scheduler_thread* scheduler_threads;
-static enum dbgaction_t dbgaction IBSS_ATTR;
-static int dbgi2cbus;
-static int dbgi2cslave;
-static int dbgactionaddr;
-static int dbgactionoffset;
-static int dbgactionlength;
-static int dbgactionconsoles;
-static int dbgactiontype;
-static char dbgconsendbuf[4096];
-static char dbgconrecvbuf[1024];
-static int dbgconsendreadidx IBSS_ATTR;
-static int dbgconsendwriteidx IBSS_ATTR;
-static int dbgconrecvreadidx IBSS_ATTR;
-static int dbgconrecvwriteidx IBSS_ATTR;
-static struct wakeup dbgconsendwakeup IBSS_ATTR;
-static struct wakeup dbgconrecvwakeup IBSS_ATTR;
-static bool dbgconsoleattached IBSS_ATTR;
+struct command_status_wrapper
+{
+    unsigned int signature;
+    unsigned int tag;
+    unsigned int data_residue;
+    unsigned char status;
+} __attribute__((packed));
 
-static const char dbgconoverflowstr[] = "\n\n[overflowed]\n\n";
+struct inquiry_data
+{
+    unsigned char DeviceType;
+    unsigned char DeviceTypeModifier;
+    unsigned char Versions;
+    unsigned char Format;
+    unsigned char AdditionalLength;
+    unsigned char Reserved[2];
+    unsigned char Capability;
+    unsigned char VendorId[8];
+    unsigned char ProductId[16];
+    unsigned char ProductRevisionLevel[4];
+} __attribute__((packed));
 
-extern int _initstart;   // These aren't ints at all, but gcc complains about void types being
-extern int _sdramstart;  // used here, and we only need the address, so forget about it...
+struct report_lun_data
+{
+    unsigned int lun_list_length;
+    unsigned int reserved1;
+    unsigned char luns[1][8];
+} __attribute__((packed));
+
+struct sense_data
+{
+    unsigned char ResponseCode;
+    unsigned char Obsolete;
+    unsigned char fei_sensekey;
+    unsigned int Information;
+    unsigned char AdditionalSenseLength;
+    unsigned int  CommandSpecificInformation;
+    unsigned char AdditionalSenseCode;
+    unsigned char AdditionalSenseCodeQualifier;
+    unsigned char FieldReplaceableUnitCode;
+    unsigned char SKSV;
+    unsigned short SenseKeySpecific;
+} __attribute__((packed));
+
+struct mode_sense_bdesc_longlba
+{
+    unsigned char num_blocks[8];
+    unsigned char reserved[4];
+    unsigned char block_size[4];
+} __attribute__((packed));
+
+struct mode_sense_bdesc_shortlba
+{
+    unsigned char density_code;
+    unsigned char num_blocks[3];
+    unsigned char reserved;
+    unsigned char block_size[3];
+} __attribute__((packed));
+
+struct mode_sense_data_10
+{
+    unsigned short mode_data_length;
+    unsigned char medium_type;
+    unsigned char device_specific;
+    unsigned char longlba;
+    unsigned char reserved;
+    unsigned short block_descriptor_length;
+    struct mode_sense_bdesc_longlba block_descriptor;
+} __attribute__((packed));
+
+struct mode_sense_data_6
+{
+    unsigned char mode_data_length;
+    unsigned char medium_type;
+    unsigned char device_specific;
+    unsigned char block_descriptor_length;
+    struct mode_sense_bdesc_shortlba block_descriptor;
+} __attribute__((packed));
+
+struct capacity
+{
+    unsigned int block_count;
+    unsigned int block_size;
+} __attribute__((packed));
+
+struct format_capacity
+{
+    unsigned int following_length;
+    unsigned int block_count;
+    unsigned int block_size;
+} __attribute__((packed));
+
+
+static union {
+    struct inquiry_data inquiry;
+    struct capacity capacity_data;
+    struct format_capacity format_capacity_data;
+    struct sense_data sense_data;
+    struct mode_sense_data_6 ms_data_6;
+    struct mode_sense_data_10 ms_data_10;
+    struct report_lun_data lun_data;
+    struct command_status_wrapper csw;
+} tb CACHEALIGN_ATTR;
+
+static struct command_block_wrapper cbw CACHEALIGN_ATTR;
+static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
+static uint8_t endpoints[2];
+static int maxlen;
+bool usb_ejected;
+static bool locked;
 
 
 static struct usb_device_descriptor CACHEALIGN_ATTR device_descriptor =
@@ -108,12 +196,12 @@ static struct usb_device_descriptor CACHEALIGN_ATTR device_descriptor =
     .bLength            = sizeof(struct usb_device_descriptor),
     .bDescriptorType    = USB_DT_DEVICE,
     .bcdUSB             = 0x0200,
-    .bDeviceClass       = USB_CLASS_VENDOR_SPEC,
-    .bDeviceSubClass    = 0xff,
-    .bDeviceProtocol    = 0xff,
+    .bDeviceClass       = 0,
+    .bDeviceSubClass    = 0,
+    .bDeviceProtocol    = 0,
     .bMaxPacketSize0    = 64,
     .idVendor           = 0xffff,
-    .idProduct          = 0xe000,
+    .idProduct          = 0x5562,
     .bcdDevice          = 0x0001,
     .iManufacturer      = 1,
     .iProduct           = 2,
@@ -127,8 +215,6 @@ static struct usb_config_bundle
     struct usb_interface_descriptor interface_descriptor;
     struct usb_endpoint_descriptor endpoint1_descriptor;
     struct usb_endpoint_descriptor endpoint2_descriptor;
-    struct usb_endpoint_descriptor endpoint3_descriptor;
-    struct usb_endpoint_descriptor endpoint4_descriptor;
 } __attribute__((packed)) CACHEALIGN_ATTR config_bundle = 
 {
     .config_descriptor =
@@ -137,7 +223,7 @@ static struct usb_config_bundle
         .bDescriptorType     = USB_DT_CONFIG,
         .wTotalLength        = sizeof(struct usb_config_descriptor)
                              + sizeof(struct usb_interface_descriptor)
-                             + sizeof(struct usb_endpoint_descriptor) * 4,
+                             + sizeof(struct usb_endpoint_descriptor) * 2,
         .bNumInterfaces      = 1,
         .bConfigurationValue = 1,
         .iConfiguration      = 0,
@@ -150,10 +236,10 @@ static struct usb_config_bundle
         .bDescriptorType     = USB_DT_INTERFACE,
         .bInterfaceNumber    = 0,
         .bAlternateSetting   = 0,
-        .bNumEndpoints       = 4,
-        .bInterfaceClass     = USB_CLASS_VENDOR_SPEC,
-        .bInterfaceSubClass  = 0xff,
-        .bInterfaceProtocol  = 0xff,
+        .bNumEndpoints       = 2,
+        .bInterfaceClass     = USB_CLASS_MASS_STORAGE,
+        .bInterfaceSubClass  = 0x06,
+        .bInterfaceProtocol  = 0x50,
         .iInterface          = 0
     },
     .endpoint1_descriptor =
@@ -163,7 +249,7 @@ static struct usb_config_bundle
         .bEndpointAddress    = 0,
         .bmAttributes        = USB_ENDPOINT_XFER_BULK,
         .wMaxPacketSize      = 0,
-        .bInterval           = 1
+        .bInterval           = 0
     },
     .endpoint2_descriptor =
     {
@@ -172,33 +258,22 @@ static struct usb_config_bundle
         .bEndpointAddress    = 0,
         .bmAttributes        = USB_ENDPOINT_XFER_BULK,
         .wMaxPacketSize      = 0,
-        .bInterval           = 1
-    },
-    .endpoint3_descriptor =
-    {
-        .bLength             = sizeof(struct usb_endpoint_descriptor),
-        .bDescriptorType     = USB_DT_ENDPOINT,
-        .bEndpointAddress    = 0,
-        .bmAttributes        = USB_ENDPOINT_XFER_BULK,
-        .wMaxPacketSize      = 0,
-        .bInterval           = 1
-    },
-    .endpoint4_descriptor =
-    {
-        .bLength             = sizeof(struct usb_endpoint_descriptor),
-        .bDescriptorType     = USB_DT_ENDPOINT,
-        .bEndpointAddress    = 0,
-        .bmAttributes        = USB_ENDPOINT_XFER_BULK,
-        .wMaxPacketSize      = 0,
-        .bInterval           = 1
+        .bInterval           = 0
     }
+};
+
+static struct usb_string_descriptor CACHEALIGN_ATTR string_vendorname =
+{
+    30,
+    USB_DT_STRING,
+    {'f', 'r', 'e', 'e', 'm', 'y', 'i', 'p', 'o', 'd', '.', 'o', 'r', 'g'}
 };
 
 static struct usb_string_descriptor CACHEALIGN_ATTR string_devicename =
 {
-    32,
+    16,
     USB_DT_STRING,
-    {'e', 'm', 'B', 'I', 'O', 'S', ' ', 'D', 'e', 'b', 'u', 'g', 'g', 'e', 'r'}
+    {'U', 'M', 'S', 'b', 'o', 'o', 't'}
 };
 
 static const struct usb_string_descriptor CACHEALIGN_ATTR lang_descriptor =
@@ -208,10 +283,41 @@ static const struct usb_string_descriptor CACHEALIGN_ATTR lang_descriptor =
     {0x0409}
 };
 
-
-void usb_setup_dbg_listener()
+static enum
 {
-    usb_drv_recv(dbgendpoints[0], dbgrecvbuf, usb_drv_port_speed() ? 512 : 64);
+    WAITING_FOR_COMMAND,
+    SENDING_BLOCKS,
+    SENDING_RESULT,
+    SENDING_FAILED_RESULT,
+    RECEIVING_BLOCKS,
+    WAITING_FOR_CSW_COMPLETION_OR_COMMAND,
+    WAITING_FOR_CSW_COMPLETION
+} state = WAITING_FOR_COMMAND;
+
+static struct
+{
+    unsigned int sector;
+    unsigned int count;
+    unsigned int orig_count;
+    unsigned int cur_cmd;
+    unsigned int tag;
+    unsigned int lun;
+    unsigned int last_result;
+} cur_cmd;
+
+static struct
+{
+    unsigned char sense_key;
+    unsigned char information;
+    unsigned char asc;
+    unsigned char ascq;
+} cur_sense_data;
+
+
+void usb_setup_listeners()
+{
+    usb_drv_recv(endpoints[0], &cbw, usb_drv_port_speed() ? 512 : 64);
+    maxlen = MIN(usb_drv_get_max_out_size(), usb_drv_get_max_in_size());
 }
 
 void usb_handle_control_request(struct usb_ctrlrequest* req)
@@ -239,7 +345,7 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
         size = 0;
         usb_drv_cancel_all_transfers();
         usb_drv_set_address(req->wValue);
-        usb_setup_dbg_listener();
+        usb_setup_listeners();
         break;
     case USB_REQ_GET_DESCRIPTOR:
         switch (req->wValue >> 8)
@@ -255,8 +361,6 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
                 int maxpacket = usb_drv_port_speed() ? 512 : 64;
                 config_bundle.endpoint1_descriptor.wMaxPacketSize = maxpacket;
                 config_bundle.endpoint2_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint3_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint4_descriptor.wMaxPacketSize = maxpacket;
                 config_bundle.config_descriptor.bDescriptorType = USB_DT_CONFIG;
             }
             else
@@ -264,8 +368,6 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
                 int maxpacket = usb_drv_port_speed() ? 64 : 512;
                 config_bundle.endpoint1_descriptor.wMaxPacketSize = maxpacket;
                 config_bundle.endpoint2_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint3_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint4_descriptor.wMaxPacketSize = maxpacket;
                 config_bundle.config_descriptor.bDescriptorType = USB_DT_OTHER_SPEED_CONFIG;
             }
             addr = &config_bundle;
@@ -279,12 +381,10 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
                 size = lang_descriptor.bLength;
                 break;
             case 1:
-                string_devicename.bLength = 14;
-                addr = &string_devicename;
-                size = string_devicename.bLength;
+                addr = &string_vendorname;
+                size = string_vendorname.bLength;
                 break;
             case 2:
-                string_devicename.bLength = 32;
                 addr = &string_devicename;
                 size = string_devicename.bLength;
                 break;
@@ -293,13 +393,18 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
         }
         break;
     case USB_REQ_GET_CONFIGURATION:
-        ctrlresp[0] = 1;
+    case 0xfe:  // GET_MAX_LUN
+        ctrlresp[0] = 0;
         addr = ctrlresp;
         size = 1;
         break;
     case USB_REQ_SET_CONFIGURATION:
         usb_drv_cancel_all_transfers();
-        usb_setup_dbg_listener();
+        usb_setup_listeners();
+        size = 0;
+        break;
+    case 0xff:  // STORAGE_RESET
+        state = WAITING_FOR_COMMAND;
         size = 0;
         break;
     }
@@ -316,542 +421,440 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
     }
 }
 
-bool set_dbgaction(enum dbgaction_t action, int addsize)
+static void send_csw(int status)
 {
-    if (dbgaction != DBGACTION_IDLE)
+    tb.csw.signature = 0x53425355;
+    tb.csw.tag = cur_cmd.tag;
+    tb.csw.data_residue = 0;
+    tb.csw.status = status;
+
+    usb_drv_send_nonblocking(endpoints[1], &tb.csw, sizeof(tb.csw));
+    state = WAITING_FOR_CSW_COMPLETION_OR_COMMAND;
+    usb_drv_recv(endpoints[0], &cbw, sizeof(cbw));
+
+    if (!status)
     {
-        dbgsendbuf[0] = 3;
-        usb_drv_send_nonblocking(dbgendpoints[1], dbgsendbuf, 16 + addsize);
-        return true;
+        cur_sense_data.sense_key=0;
+        cur_sense_data.information=0;
+        cur_sense_data.asc=0;
+        cur_sense_data.ascq=0;
     }
-    dbgaction = action;
-    wakeup_signal(&dbgwakeup);
-    return false;
 }
 
-void reset() __attribute__((noreturn));
-
-void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
+static void receive_block_data(void* data, int size)
 {
-    void* addr = dbgsendbuf;
-    int size = 0;
-    if (endpoint == dbgendpoints[0])
+    usb_drv_recv(endpoints[0], data, size);
+    state = RECEIVING_BLOCKS;
+}
+
+static void send_block_data(void* data, int size)
+{
+    usb_drv_send_nonblocking(endpoints[1], data, size);
+    state = SENDING_BLOCKS;
+}
+
+static void send_command_result(void* data, int size)
+{
+    usb_drv_send_nonblocking(endpoints[1], data, size);
+    state = SENDING_RESULT;
+}
+
+static void send_command_failed_result(void)
+{
+    usb_drv_send_nonblocking(endpoints[1], NULL, 0);
+    state = SENDING_FAILED_RESULT;
+}
+
+static void send_and_read_next(void)
+{
+    if(cur_cmd.last_result)
     {
-#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
-        if (dbgrecvbuf[0] >= 0xffff0000)
+        send_csw(1);
+        cur_sense_data.sense_key = SENSE_MEDIUM_ERROR;
+        cur_sense_data.asc = ASC_READ_ERROR;
+        cur_sense_data.ascq = 0;
+        return;
+    }
+    send_block_data(ramdisk[cur_cmd.sector], MIN(maxlen, cur_cmd.count * RAMDISK_SECTORSIZE));
+
+    cur_cmd.sector += maxlen / RAMDISK_SECTORSIZE;
+    cur_cmd.count -= MIN(cur_cmd.count, maxlen / RAMDISK_SECTORSIZE);
+}
+
+static void copy_padded(char* dest, char* src, int len)
+{
+   int i = 0;
+   while (src[i] && i < len)
+   {
+      dest[i] = src[i];
+      i++;
+   }
+   while(i < len)
+   {
+      dest[i] = ' ';
+      i++;
+   }
+}
+
+static void fill_inquiry()
+{
+    memset(&tb.inquiry, 0, sizeof(tb.inquiry));
+    copy_padded(tb.inquiry.VendorId, "UMSboot", sizeof(tb.inquiry.VendorId));
+    copy_padded(tb.inquiry.ProductId, "RAMDISK", sizeof(tb.inquiry.ProductId));
+    copy_padded(tb.inquiry.ProductRevisionLevel, VERSION, sizeof(tb.inquiry.ProductRevisionLevel));
+
+    tb.inquiry.DeviceType = DIRECT_ACCESS_DEVICE;
+    tb.inquiry.AdditionalLength = 0x1f;
+    tb.inquiry.Versions = 4; /* SPC-2 */
+    tb.inquiry.Format = 2; /* SPC-2/3 inquiry format */
+    tb.inquiry.DeviceTypeModifier = DEVICE_REMOVABLE;
+}
+
+static void handle_scsi(struct command_block_wrapper* cbw)
+{
+    unsigned int length = cbw->data_transfer_length;
+
+    if (cbw->signature != 0x43425355)
+    {
+        usb_drv_stall(endpoints[0], true, true);
+        usb_drv_stall(endpoints[0], true, false);
+        return;
+    }
+    cur_cmd.tag = cbw->tag;
+    cur_cmd.lun = cbw->lun;
+    cur_cmd.cur_cmd = cbw->command_block[0];
+
+    switch (cbw->command_block[0])
+    {
+        case SCSI_TEST_UNIT_READY:
+            if (!usb_ejected) send_csw(0);
+            else
+            {
+                send_csw(1);
+                cur_sense_data.sense_key = SENSE_NOT_READY;
+                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
+                cur_sense_data.ascq = 0;
+            }
+            break;
+
+        case SCSI_REPORT_LUNS:
         {
-            if (!set_dbgaction(DBGACTION_TARGETSPECIFIC, 0))
-                memcpy(dbgasyncsendbuf, dbgrecvbuf, sizeof(dbgasyncsendbuf));
-            usb_setup_dbg_listener();
-            return;
+            memset(&tb.lun_data, 0, sizeof(struct report_lun_data));
+            tb.lun_data.lun_list_length = 0x08000000;
+            send_command_result(&tb.lun_data, MIN(16, length));
+            break;
         }
-#endif
-        switch (dbgrecvbuf[0])
+
+        case SCSI_INQUIRY:
+            fill_inquiry();
+            length = MIN(length, cbw->command_block[4]);
+            send_command_result(&tb.inquiry, MIN(sizeof(tb.inquiry), length));
+            break;
+
+        case SCSI_REQUEST_SENSE:
         {
-        case 1:  // GET INFO
-            dbgsendbuf[0] = 1;
-            size = 16;
-            switch (dbgrecvbuf[1])
+            tb.sense_data.ResponseCode = 0x70;
+            tb.sense_data.Obsolete = 0;
+            tb.sense_data.fei_sensekey = cur_sense_data.sense_key & 0x0f;
+            tb.sense_data.Information = cur_sense_data.information;
+            tb.sense_data.AdditionalSenseLength = 10;
+            tb.sense_data.CommandSpecificInformation = 0;
+            tb.sense_data.AdditionalSenseCode = cur_sense_data.asc;
+            tb.sense_data.AdditionalSenseCodeQualifier = cur_sense_data.ascq;
+            tb.sense_data.FieldReplaceableUnitCode = 0;
+            tb.sense_data.SKSV = 0;
+            tb.sense_data.SenseKeySpecific = 0;
+            send_command_result(&tb.sense_data, MIN(sizeof(tb.sense_data), length));
+            break;
+        }
+
+        case SCSI_MODE_SENSE_10:
+        {
+            if (usb_ejected)
             {
-            case 0:  // GET VERSION INFO
-                dbgsendbuf[1] = VERSION_SVN_INT;
-                dbgsendbuf[2] = VERSION_MAJOR | (VERSION_MINOR << 8)
-                              | (VERSION_PATCH << 16) | (1 << 24);
-                dbgsendbuf[3] = PLATFORM_ID;
+                send_command_failed_result();
+                cur_sense_data.sense_key = SENSE_NOT_READY;
+                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
+                cur_sense_data.ascq = 0;
                 break;
-            case 1:  // GET PACKET SIZE INFO
-                dbgsendbuf[1] = 0x02000200;
-                dbgsendbuf[2] = usb_drv_get_max_out_size();
-                dbgsendbuf[3] = usb_drv_get_max_in_size();
+            }
+            unsigned char page_code = cbw->command_block[2] & 0x3f;
+            switch (page_code)
+            {
+                case 0x3f:
+                    tb.ms_data_10.mode_data_length = htobe16(sizeof(tb.ms_data_10) - 2);
+                    tb.ms_data_10.medium_type = 0;
+                    tb.ms_data_10.device_specific = 0;
+                    tb.ms_data_10.reserved = 0;
+                    tb.ms_data_10.longlba = 1;
+                    tb.ms_data_10.block_descriptor_length = htobe16(sizeof(tb.ms_data_10.block_descriptor));
+
+                    memset(tb.ms_data_10.block_descriptor.reserved, 0, 4);
+                    memset(tb.ms_data_10.block_descriptor.num_blocks, 0, 8);
+
+                    tb.ms_data_10.block_descriptor.num_blocks[4] = (RAMDISK_SECTORS & 0xff000000) >> 24;
+                    tb.ms_data_10.block_descriptor.num_blocks[5] = (RAMDISK_SECTORS & 0x00ff0000) >> 16;
+                    tb.ms_data_10.block_descriptor.num_blocks[6] = (RAMDISK_SECTORS & 0x0000ff00) >> 8;
+                    tb.ms_data_10.block_descriptor.num_blocks[7] = (RAMDISK_SECTORS & 0x000000ff);
+
+                    tb.ms_data_10.block_descriptor.block_size[0] = (RAMDISK_SECTORSIZE & 0xff000000) >> 24;
+                    tb.ms_data_10.block_descriptor.block_size[1] = (RAMDISK_SECTORSIZE & 0x00ff0000) >> 16;
+                    tb.ms_data_10.block_descriptor.block_size[2] = (RAMDISK_SECTORSIZE & 0x0000ff00) >> 8;
+                    tb.ms_data_10.block_descriptor.block_size[3] = (RAMDISK_SECTORSIZE & 0x000000ff);
+                    send_command_result(&tb.ms_data_10, MIN(sizeof(tb.ms_data_10), length));
+                    break;
+                default:
+                    send_command_failed_result();
+                    cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
+                    cur_sense_data.asc = ASC_INVALID_FIELD_IN_CBD;
+                    cur_sense_data.ascq = 0;
+                    break;
+            }
+            break;
+        }
+
+        case SCSI_MODE_SENSE_6:
+        {
+            if (usb_ejected)
+            {
+                send_command_failed_result();
+                cur_sense_data.sense_key = SENSE_NOT_READY;
+                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
+                cur_sense_data.ascq = 0;
                 break;
-            case 2:  // GET USER MEMORY INFO
-                dbgsendbuf[1] = (uint32_t)&_initstart;
-                dbgsendbuf[2] = (uint32_t)&_sdramstart;
-                break;
-            default:
-                dbgsendbuf[0] = 2;
+            }
+            unsigned char page_code = cbw->command_block[2] & 0x3f;
+            switch (page_code)
+            {
+                case 0x3f:
+                    tb.ms_data_6.mode_data_length = sizeof(tb.ms_data_6) - 1;
+                    tb.ms_data_6.medium_type = 0;
+                    tb.ms_data_6.device_specific = 0;
+                    tb.ms_data_6.block_descriptor_length = sizeof(tb.ms_data_6.block_descriptor);
+                    tb.ms_data_6.block_descriptor.density_code = 0;
+                    tb.ms_data_6.block_descriptor.reserved = 0;
+                    if (RAMDISK_SECTORS > 0xffffff)
+                    {
+                        tb.ms_data_6.block_descriptor.num_blocks[0] = 0xff;
+                        tb.ms_data_6.block_descriptor.num_blocks[1] = 0xff;
+                        tb.ms_data_6.block_descriptor.num_blocks[2] = 0xff;
+                    }
+                    else
+                    {
+                        tb.ms_data_6.block_descriptor.num_blocks[0] = (RAMDISK_SECTORS & 0xff0000) >> 16;
+                        tb.ms_data_6.block_descriptor.num_blocks[1] = (RAMDISK_SECTORS & 0x00ff00) >> 8;
+                        tb.ms_data_6.block_descriptor.num_blocks[2] = (RAMDISK_SECTORS & 0x0000ff);
+                    }
+                    tb.ms_data_6.block_descriptor.block_size[0] = (RAMDISK_SECTORSIZE & 0xff0000) >> 16;
+                    tb.ms_data_6.block_descriptor.block_size[1] = (RAMDISK_SECTORSIZE & 0x00ff00) >> 8;
+                    tb.ms_data_6.block_descriptor.block_size[2] = (RAMDISK_SECTORSIZE & 0x0000ff);
+                    send_command_result(&tb.ms_data_6, MIN(sizeof(tb.ms_data_6), length));
+                    break;
+                default:
+                    send_command_failed_result();
+                    cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
+                    cur_sense_data.asc = ASC_INVALID_FIELD_IN_CBD;
+                    cur_sense_data.ascq = 0;
+                    break;
             }
             break;
-        case 2:  // RESET
-            if (dbgrecvbuf[1])
+        }
+
+        case SCSI_START_STOP_UNIT:
+            if ((cbw->command_block[4] & 0xf3) == 2) usb_ejected = true;
+            send_csw(0);
+            break;
+
+        case SCSI_ALLOW_MEDIUM_REMOVAL:
+            if ((cbw->command_block[4] & 0x03) == 0) locked = false;
+            else locked = true;
+            send_csw(0);
+            break;
+
+        case SCSI_READ_FORMAT_CAPACITY:
+        {
+            if (!usb_ejected)
             {
-                if (set_dbgaction(DBGACTION_RESET, 0)) break;
-                dbgsendbuf[0] = 1;
-                size = 16;
-            }
-            else reset();
-            break;
-        case 3:  // POWER OFF
-            if (set_dbgaction(DBGACTION_POWEROFF, 0)) break;
-            dbgactiontype = dbgrecvbuf[1];
-            dbgsendbuf[0] = 1;
-            size = 16;
-            break;
-        case 4:  // READ MEMORY
-            dbgsendbuf[0] = 1;
-            memcpy(&dbgsendbuf[4], (const void*)dbgrecvbuf[1], dbgrecvbuf[2]);
-            size = dbgrecvbuf[2] + 16;
-            break;
-        case 5:  // WRITE MEMORY
-            dbgsendbuf[0] = 1;
-            memcpy((void*)dbgrecvbuf[1], &dbgrecvbuf[4], dbgrecvbuf[2]);
-            size = 16;
-            break;
-        case 6:  // READ DMA
-            dbgsendbuf[0] = 1;
-            usb_drv_send_nonblocking(dbgendpoints[1], dbgsendbuf, 16);
-            usb_drv_send_nonblocking(dbgendpoints[3], (const void*)dbgrecvbuf[1], dbgrecvbuf[2]);
-            break;
-        case 7:  // WRITE DMA
-            dbgsendbuf[0] = 1;
-            size = 16;
-            usb_drv_recv(dbgendpoints[2], (void*)dbgrecvbuf[1], dbgrecvbuf[2]);
-            break;
-#ifdef HAVE_I2C
-        case 8:  // READ I2C
-            if (set_dbgaction(DBGACTION_I2CRECV, dbgrecvbuf[1] >> 24)) break;
-            dbgi2cbus = dbgrecvbuf[1] & 0xff;
-            dbgi2cslave = (dbgrecvbuf[1] >> 8) & 0xff;
-            dbgactionaddr = (dbgrecvbuf[1] >> 16) & 0xff;
-            dbgactionlength = dbgrecvbuf[1] >> 24;
-            if (!dbgactionlength) dbgactionlength = 256;
-            break;
-        case 9:  // WRITE I2C
-            if (set_dbgaction(DBGACTION_I2CSEND, 0)) break;
-            dbgi2cbus = dbgrecvbuf[1] & 0xff;
-            dbgi2cslave = (dbgrecvbuf[1] >> 8) & 0xff;
-            dbgactionaddr = (dbgrecvbuf[1] >> 16) & 0xff;
-            dbgactionlength = dbgrecvbuf[1] >> 24;
-            if (!dbgactionlength) dbgactionlength = 256;
-            memcpy(dbgasyncsendbuf, &dbgrecvbuf[4], dbgactionlength);
-            break;
-#endif
-        case 10:  // READ CONSOLE
-            dbgconsoleattached = true;
-            int bytes = dbgconsendwriteidx - dbgconsendreadidx;
-            if (bytes >= sizeof(dbgconsendbuf)) bytes -= sizeof(dbgconsendbuf);
-            if (bytes)
+                tb.format_capacity_data.following_length = 0x08000000;
+                tb.format_capacity_data.block_count = htobe32(RAMDISK_SECTORS - 1);
+                tb.format_capacity_data.block_size = htobe32(RAMDISK_SECTORSIZE);
+                tb.format_capacity_data.block_size |= htobe32(SCSI_FORMAT_CAPACITY_FORMATTED_MEDIA);
+                send_command_result(&tb.format_capacity_data, MIN(sizeof(tb.format_capacity_data), length));
+           }
+           else
+           {
+               send_command_failed_result();
+               cur_sense_data.sense_key = SENSE_NOT_READY;
+               cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
+               cur_sense_data.ascq = 0;
+           }
+           break;
+        }
+
+        case SCSI_READ_CAPACITY:
+        {
+            if (!usb_ejected)
             {
-                if (bytes < 0) bytes += sizeof(dbgconsendbuf);
-                if (bytes > dbgrecvbuf[1]) bytes = dbgrecvbuf[1];
-                int readbytes = bytes;
-                char* outptr = (char*)&dbgsendbuf[4];
-                if (dbgconsendreadidx + bytes >= sizeof(dbgconsendbuf))
-                {
-                    readbytes = sizeof(dbgconsendbuf) - dbgconsendreadidx;
-                    memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
-                    dbgconsendreadidx = 0;
-                    outptr = &outptr[readbytes];
-                    readbytes = bytes - readbytes;
-                }
-                if (readbytes) memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
-                dbgconsendreadidx += readbytes;
-                wakeup_signal(&dbgconsendwakeup);
-            }
-            dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = bytes;
-            dbgsendbuf[2] = sizeof(dbgconsendbuf);
-            dbgsendbuf[3] = dbgconsendwriteidx - dbgconsendreadidx;
-            size = 16 + dbgrecvbuf[1];
-            break;
-        case 11:  // WRITE CONSOLE
-            bytes = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
-            if (bytes < 0) bytes += sizeof(dbgconrecvbuf);
-            if (bytes)
-            {
-                if (bytes > dbgrecvbuf[1]) bytes = dbgrecvbuf[1];
-                int writebytes = bytes;
-                char* readptr = (char*)&dbgrecvbuf[4];
-                if (dbgconrecvwriteidx + bytes >= sizeof(dbgconrecvbuf))
-                {
-                    writebytes = sizeof(dbgconrecvbuf) - dbgconrecvwriteidx;
-                    memcpy(&dbgconrecvbuf[dbgconrecvwriteidx], readptr, writebytes);
-                    dbgconrecvwriteidx = 0;
-                    readptr = &readptr[writebytes];
-                    writebytes = bytes - writebytes;
-                }
-                if (writebytes) memcpy(&dbgconrecvbuf[dbgconrecvwriteidx], readptr, writebytes);
-                dbgconrecvwriteidx += writebytes;
-                wakeup_signal(&dbgconrecvwakeup);
-            }
-            dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = bytes;
-            dbgsendbuf[2] = sizeof(dbgconrecvbuf);
-            dbgsendbuf[3] = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
-            size = 16;
-            break;
-        case 12:  // CWRITE
-            if (set_dbgaction(DBGACTION_CWRITE, 0)) break;
-            dbgactionconsoles = dbgrecvbuf[1];
-            dbgactionlength = dbgrecvbuf[2];
-            memcpy(dbgasyncsendbuf, &dbgrecvbuf[4], dbgactionlength);
-            break;
-        case 13:  // CREAD
-            if (set_dbgaction(DBGACTION_CREAD, dbgrecvbuf[2])) break;
-            dbgactionconsoles = dbgrecvbuf[1];
-            dbgactionlength = dbgrecvbuf[2];
-            break;
-        case 14:  // CFLUSH
-            if (set_dbgaction(DBGACTION_CFLUSH, 0)) break;
-            dbgactionconsoles = dbgrecvbuf[1];
-            break;
-        case 15:  // GET PROCESS INFO
-            dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = SCHEDULER_THREAD_INFO_VERSION;
-            dbgsendbuf[2] = MAX_THREADS * sizeof(struct scheduler_thread);
-            memcpy(&dbgsendbuf[4], (void*)(((uint32_t)&scheduler_threads) + dbgrecvbuf[1]),
-                   dbgrecvbuf[2]);
-            size = dbgrecvbuf[2] + 16;
-            break;
-        case 16:  // FREEZE SCHEDULER
-            dbgsendbuf[1] = scheduler_freeze(dbgrecvbuf[1]);
-            dbgsendbuf[0] = 1;
-            size = 16;
-            break;
-        case 17:  // SUSPEND THREAD
-            if (dbgrecvbuf[1])
-            {
-                if (thread_suspend(dbgrecvbuf[2]) == -4) dbgsendbuf[1] = 1;
-                else dbgsendbuf[1] = 0;
+                tb.capacity_data.block_count = htobe32(RAMDISK_SECTORS - 1);
+                tb.capacity_data.block_size = htobe32(RAMDISK_SECTORSIZE);
+                send_command_result(&tb.capacity_data, MIN(sizeof(tb.capacity_data), length));
             }
             else
             {
-                if (thread_resume(dbgrecvbuf[2]) == -5) dbgsendbuf[1] = 0;
-                else dbgsendbuf[1] = 1;
+                send_command_failed_result();
+                cur_sense_data.sense_key = SENSE_NOT_READY;
+                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
+                cur_sense_data.ascq = 0;
             }
-            dbgsendbuf[0] = 1;
-            size = 16;
             break;
-        case 18:  // KILL THREAD
-            thread_terminate(dbgrecvbuf[1]);
-            dbgsendbuf[0] = 1;
-            size = 16;
-            break;
-        case 19:  // KILL THREAD
-            dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = thread_create((const char*)dbgsendbuf[1], (const void*)dbgsendbuf[2],
-                                          (char*)dbgsendbuf[3], dbgsendbuf[4], dbgsendbuf[5],
-                                          dbgsendbuf[6], dbgsendbuf[7]);
-            size = 16;
-            break;
-        case 20:  // FLUSH CACHE
-            clean_dcache();
-            invalidate_icache();
-            dbgsendbuf[0] = 1;
-            size = 16;
-            break;
-        case 21:  // EXECIMAGE
-            if (set_dbgaction(DBGACTION_EXECIMAGE, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            break;
-#ifdef HAVE_BOOTFLASH
-        case 22:  // READ BOOT FLASH
-            if (set_dbgaction(DBGACTION_READBOOTFLASH, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactionoffset = dbgrecvbuf[2];
-            dbgactionlength = dbgrecvbuf[3];
-            break;
-        case 23:  // WRITE BOOT FLASH
-            if (set_dbgaction(DBGACTION_WRITEBOOTFLASH, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactionoffset = dbgrecvbuf[2];
-            dbgactionlength = dbgrecvbuf[3];
-            break;
-#endif
-        case 24:  // EXECFIRMWARE
-            if (set_dbgaction(DBGACTION_EXECFIRMWARE, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            break;
-#ifdef HAVE_HWKEYAES
-        case 25:  // HWKEYAES
-            if (set_dbgaction(DBGACTION_HWKEYAES, 0)) break;
-            dbgactiontype = ((uint8_t*)dbgrecvbuf)[4];
-            dbgactionoffset = ((uint16_t*)dbgrecvbuf)[3];
-            dbgactionaddr = dbgrecvbuf[2];
-            dbgactionlength = dbgrecvbuf[3];
-            break;
-#endif
-#ifdef HAVE_HMACSHA1
-        case 26:  // HMACSHA1
-            if (set_dbgaction(DBGACTION_HMACSHA1, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactionlength = dbgrecvbuf[2];
-            dbgactionoffset = dbgrecvbuf[3];
-            break;
-#endif
-        default:
-            dbgsendbuf[0] = 2;
-            size = 16;
         }
-        usb_setup_dbg_listener();
-        if (size) usb_drv_send_nonblocking(dbgendpoints[1], addr, size);
+
+        case SCSI_READ_10:
+            if (usb_ejected)
+            {
+                send_command_failed_result();
+                cur_sense_data.sense_key = SENSE_NOT_READY;
+                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
+                cur_sense_data.ascq = 0;
+                break;
+            }
+            cur_cmd.sector = (cbw->command_block[2] << 24 | cbw->command_block[3] << 16
+                            | cbw->command_block[4] << 8 | cbw->command_block[5]);
+            cur_cmd.count = (cbw->command_block[7] << 8 | cbw->command_block[8]);
+            cur_cmd.orig_count = cur_cmd.count;
+
+            if ((cur_cmd.sector + cur_cmd.count) > RAMDISK_SECTORS)
+            {
+                send_csw(1);
+                cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
+                cur_sense_data.asc = ASC_LBA_OUT_OF_RANGE;
+                cur_sense_data.ascq = 0;
+            }
+            else send_and_read_next();
+            break;
+
+        case SCSI_WRITE_10:
+            if (usb_ejected)
+            {
+                send_command_failed_result();
+                cur_sense_data.sense_key = SENSE_NOT_READY;
+                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
+                cur_sense_data.ascq = 0;
+                break;
+            }
+            cur_cmd.sector = (cbw->command_block[2] << 24 | cbw->command_block[3] << 16
+                            | cbw->command_block[4] << 8 | cbw->command_block[5]);
+            cur_cmd.count = (cbw->command_block[7] << 8 | cbw->command_block[8]);
+            cur_cmd.orig_count = cur_cmd.count;
+
+            if ((cur_cmd.sector + cur_cmd.count) > RAMDISK_SECTORS)
+            {
+                send_csw(1);
+                cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
+                cur_sense_data.asc = ASC_LBA_OUT_OF_RANGE;
+                cur_sense_data.ascq = 0;
+            }
+            else
+                receive_block_data(ramdisk[cur_cmd.sector],
+                                   MIN(maxlen, cur_cmd.count * RAMDISK_SECTORSIZE));
+            break;
+
+        case SCSI_WRITE_BUFFER:
+            break;
+
+        default:
+            send_csw(1);
+            cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
+            cur_sense_data.asc = ASC_INVALID_COMMAND;
+            cur_sense_data.ascq = 0;
+            break;
+    }
+}
+
+void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
+{
+    if (endpoint != endpoints[0] && endpoint != endpoints[1]) return;
+    switch (state)
+    {
+        case RECEIVING_BLOCKS:
+            if (!status)
+            {
+                if (length != RAMDISK_SECTORSIZE * cur_cmd.count && length != maxlen) break;
+
+                cur_cmd.sector += (maxlen / RAMDISK_SECTORSIZE);
+                cur_cmd.count -= MIN(cur_cmd.count, maxlen / RAMDISK_SECTORSIZE);
+
+                if (cur_cmd.count)
+                    receive_block_data(ramdisk[cur_cmd.sector],
+                                       MIN(maxlen, cur_cmd.count * RAMDISK_SECTORSIZE));
+                else send_csw(0);
+            }
+            else
+            {
+                send_csw(1);
+                cur_sense_data.sense_key=0;
+                cur_sense_data.information=0;
+                cur_sense_data.asc=0;
+                cur_sense_data.ascq=0;
+            }
+            break;
+        case WAITING_FOR_CSW_COMPLETION_OR_COMMAND:
+            if (dir == USB_DIR_IN) state = WAITING_FOR_COMMAND;
+            else state = WAITING_FOR_CSW_COMPLETION;
+            break;
+        case WAITING_FOR_COMMAND:
+            handle_scsi(&cbw);
+            break;
+        case WAITING_FOR_CSW_COMPLETION:
+            handle_scsi(&cbw);
+            break;
+        case SENDING_RESULT:
+            if (!status) send_csw(0);
+            else
+            {
+                send_csw(1);
+                cur_sense_data.sense_key=0;
+                cur_sense_data.information=0;
+                cur_sense_data.asc=0;
+                cur_sense_data.ascq=0;
+            }
+            break;
+        case SENDING_FAILED_RESULT:
+            send_csw(1);
+            break;
+        case SENDING_BLOCKS:
+            if (!status)
+            {
+                if (!cur_cmd.count) send_csw(0);
+                else send_and_read_next();
+            }
+            else
+            {
+                send_csw(1);
+                cur_sense_data.sense_key=0;
+                cur_sense_data.information=0;
+                cur_sense_data.asc=0;
+                cur_sense_data.ascq=0;
+            }
+            break;
     }
 }
 
 void usb_handle_bus_reset(void)
 {
-    dbgendpoints[0] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_OUT);
-    dbgendpoints[1] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_IN);
-    dbgendpoints[2] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_OUT);
-    dbgendpoints[3] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_IN);
-    config_bundle.endpoint1_descriptor.bEndpointAddress = dbgendpoints[0];
-    config_bundle.endpoint2_descriptor.bEndpointAddress = dbgendpoints[1];
-    config_bundle.endpoint3_descriptor.bEndpointAddress = dbgendpoints[2];
-    config_bundle.endpoint4_descriptor.bEndpointAddress = dbgendpoints[3];
-    usb_setup_dbg_listener();
-}
-
-void dbgthread(void)
-{
-    int i;
-    int t;
-    while (1)
-    {
-        wakeup_wait(&dbgwakeup, TIMEOUT_BLOCK);
-        for (i = 0; i < MAX_THREADS; i++)
-            if (scheduler_threads[i].state == THREAD_DEFUNCT)
-            {
-                if (scheduler_threads[i].block_type == THREAD_DEFUNCT_STKOV)
-                {
-                    if (scheduler_threads[i].name)
-                        cprintf(1, "\n*PANIC*\nStack overflow! (%s)\n",
-                                scheduler_threads[i].name);
-                    else cprintf(1, "\n*PANIC*\nStack overflow! (ID %d)\n", i);
-                }
-                scheduler_threads[i].state = THREAD_DEFUNCT_ACK;
-            }
-        if (dbgaction != DBGACTION_IDLE)
-        {
-            switch (dbgaction)
-            {
-#ifdef HAVE_I2C
-            case DBGACTION_I2CSEND:
-                i2c_send(dbgi2cbus, dbgi2cslave, dbgactionaddr,
-                         (uint8_t*)dbgasyncsendbuf, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_I2CRECV:
-                i2c_recv(dbgi2cbus, dbgi2cslave, dbgactionaddr,
-                         (uint8_t*)(&dbgasyncsendbuf[4]), dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16 + dbgactionlength);
-                break;
-#endif
-            case DBGACTION_POWEROFF:
-                if (dbgactiontype) shutdown(true);
-                power_off();
-                break;
-            case DBGACTION_RESET:
-                shutdown(false);
-                reset();
-                break;
-            case DBGACTION_CWRITE:
-                cwrite(dbgactionconsoles, (const char*)dbgasyncsendbuf, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_CREAD:
-                dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = cread(dbgactionconsoles, (char*)&dbgasyncsendbuf[4],
-                                           dbgactionlength, 0);
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16 + dbgactionlength);
-                break;
-            case DBGACTION_CFLUSH:
-                cflush(dbgactionconsoles);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_EXECIMAGE:
-                dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = execimage((void*)dbgactionaddr);
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_EXECFIRMWARE:
-                shutdown(false);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                execfirmware((void*)dbgactionaddr);
-#ifdef HAVE_BOOTFLASH
-            case DBGACTION_READBOOTFLASH:
-                bootflash_readraw((void*)dbgactionaddr, dbgactionoffset, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_WRITEBOOTFLASH:
-                bootflash_writeraw((void*)dbgactionaddr, dbgactionoffset, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-#endif
-#ifdef HAVE_HWKEYAES
-            case DBGACTION_HWKEYAES:
-                hwkeyaes((enum hwkeyaes_direction) dbgactiontype, dbgactionoffset,
-                         (void*)dbgactionaddr, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-#endif
-#ifdef HAVE_HMACSHA1
-            case DBGACTION_HMACSHA1:
-                hmacsha1((void*)dbgactionaddr, dbgactionlength, (void*)dbgactionoffset);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-#endif
-#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
-            case DBGACTION_TARGETSPECIFIC:
-            {
-                int size = usb_target_handle_request(dbgasyncsendbuf, sizeof(dbgasyncsendbuf));
-                if (size) usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, size);
-                break;
-            }
-#endif
-            }
-            dbgaction = DBGACTION_IDLE;
-        }
-    }
+    endpoints[0] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_OUT);
+    endpoints[1] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_IN);
+    config_bundle.endpoint1_descriptor.bEndpointAddress = endpoints[0];
+    config_bundle.endpoint2_descriptor.bEndpointAddress = endpoints[1];
+    state = WAITING_FOR_COMMAND;
+    usb_setup_listeners();
 }
 
 void usb_init(void)
 {
-    dbgaction = DBGACTION_IDLE;
-    wakeup_init(&dbgwakeup);
-    dbgconsendreadidx = 0;
-    dbgconsendwriteidx = 0;
-    dbgconrecvreadidx = 0;
-    dbgconrecvwriteidx = 0;
-    wakeup_init(&dbgconsendwakeup);
-    wakeup_init(&dbgconrecvwakeup);
-    dbgconsoleattached = false;
-    thread_create("monitor worker", dbgthread, dbgstack, sizeof(dbgstack), CORE_THREAD, 255, true);
+    usb_ejected = false;
+    locked = false;
     usb_drv_init();
-}
-
-int dbgconsole_getfree() ICODE_ATTR;
-int dbgconsole_getfree()
-{
-    int free = dbgconsendreadidx - dbgconsendwriteidx - 1;
-    if (free < 0) free += sizeof(dbgconsendbuf);
-    return free;
-}
-
-int dbgconsole_makespace(int length) ICODE_ATTR;
-int dbgconsole_makespace(int length)
-{
-    int free = dbgconsole_getfree();
-    while (!free && dbgconsoleattached)
-    {
-        if (wakeup_wait(&dbgconsendwakeup, 2000000) == THREAD_TIMEOUT)
-            dbgconsoleattached = false;
-        free = dbgconsole_getfree();
-    }
-    if (free) return free > length ? length : free;
-    if (length > sizeof(dbgconsendbuf) - 17) length = sizeof(dbgconsendbuf) - 17;
-    uint32_t mode = enter_critical_section();
-    dbgconsendreadidx += length;
-    if (dbgconsendreadidx >= sizeof(dbgconsendbuf))
-        dbgconsendreadidx -= sizeof(dbgconsendbuf);
-    int offset = 0;
-    int idx = dbgconsendreadidx;
-    if (idx + 16 >= sizeof(dbgconsendbuf))
-    {
-        offset = sizeof(dbgconsendbuf) - dbgconsendreadidx;
-        memcpy(&dbgconsendbuf[dbgconsendreadidx], dbgconoverflowstr, offset);
-        idx = 0;
-    }
-    if (offset != 16) memcpy(&dbgconsendbuf[idx], &dbgconoverflowstr[offset], 16 - offset);
-    leave_critical_section(mode);
-    return length;
-}
-
-void dbgconsole_putc(char string)
-{
-    dbgconsole_makespace(1);
-    dbgconsendbuf[dbgconsendwriteidx++] = string;
-    if (dbgconsendwriteidx >= sizeof(dbgconsendbuf))
-        dbgconsendwriteidx -= sizeof(dbgconsendbuf);
-}
-
-void dbgconsole_write(const char* string, size_t length)
-{
-    while (length)
-    {
-        int space = dbgconsole_makespace(length);
-        if (dbgconsendwriteidx + space >= sizeof(dbgconsendbuf))
-        {
-            int bytes = sizeof(dbgconsendbuf) - dbgconsendwriteidx;
-            memcpy(&dbgconsendbuf[dbgconsendwriteidx], string, bytes);
-            dbgconsendwriteidx = 0;
-            string = &string[bytes];
-            space -= bytes;
-            length -= bytes;
-        }
-        if (space) memcpy(&dbgconsendbuf[dbgconsendwriteidx], string, space);
-        dbgconsendwriteidx += space;
-        string = &string[space];
-        length -= space;
-    }
-}
-
-void dbgconsole_puts(const char* string)
-{
-    dbgconsole_write(string, strlen(string));
-}
-
-int dbgconsole_getavailable() ICODE_ATTR;
-int dbgconsole_getavailable()
-{
-    int available = dbgconrecvwriteidx - dbgconrecvreadidx;
-    if (available < 0) available += sizeof(dbgconrecvbuf);
-    return available;
-}
-
-int dbgconsole_getc(int timeout)
-{
-    if (!dbgconsole_getavailable())
-    {
-        wakeup_wait(&dbgconrecvwakeup, TIMEOUT_NONE);
-        if (!dbgconsole_getavailable())
-        {
-            wakeup_wait(&dbgconrecvwakeup, timeout);
-            if (!dbgconsole_getavailable()) return -1;
-        }
-    }
-    int byte = dbgconrecvbuf[dbgconrecvreadidx++];
-    if (dbgconrecvreadidx >= sizeof(dbgconrecvbuf))
-        dbgconrecvreadidx -= sizeof(dbgconrecvbuf);
-    return byte;
-}
-
-int dbgconsole_read(char* buffer, size_t length, int timeout)
-{
-    if (!length) return 0;
-    int available = dbgconsole_getavailable();
-    if (!available)
-    {
-        wakeup_wait(&dbgconrecvwakeup, TIMEOUT_NONE);
-        int available = dbgconsole_getavailable();
-        if (!available)
-        {
-            wakeup_wait(&dbgconrecvwakeup, timeout);
-            int available = dbgconsole_getavailable();
-            if (!available) return 0;
-        }
-    }
-    if (available > length) available = length;
-    int left = available;
-    if (dbgconrecvreadidx + available >= sizeof(dbgconrecvbuf))
-    {
-        int bytes = sizeof(dbgconrecvbuf) - dbgconrecvreadidx;
-        memcpy(buffer, &dbgconrecvbuf[dbgconrecvreadidx], bytes);
-        dbgconrecvreadidx = 0;
-        buffer = &buffer[bytes];
-        left -= bytes;
-    }
-    if (left) memcpy(buffer, &dbgconrecvbuf[dbgconrecvreadidx], left);
-    dbgconrecvreadidx += left;
-    return available;
 }
 
 void usb_exit(void)

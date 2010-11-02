@@ -1,4 +1,4 @@
-NAME := embios
+NAME := umsboot
 
 CROSS   ?= arm-none-eabi-
 CC      := $(CROSS)gcc

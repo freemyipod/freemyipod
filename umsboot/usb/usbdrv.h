@@ -38,7 +38,7 @@ int usb_drv_recv(int endpoint, void* ptr, int length);
 void usb_drv_cancel_all_transfers(void);
 bool usb_drv_stalled(int endpoint, bool in);
 void usb_drv_stall(int endpoint, bool stall, bool in);
-void usb_drv_init(void) INITCODE_ATTR;
+void usb_drv_init(void);
 void usb_drv_exit(void);
 int usb_drv_get_max_out_size();
 int usb_drv_get_max_in_size();
