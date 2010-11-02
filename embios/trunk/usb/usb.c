@@ -853,3 +853,8 @@ int dbgconsole_read(char* buffer, size_t length, int timeout)
     dbgconrecvreadidx += left;
     return available;
 }
+
+void usb_exit(void)
+{
+    usb_drv_exit();
+}

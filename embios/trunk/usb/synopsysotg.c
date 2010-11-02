@@ -412,6 +412,11 @@ void usb_drv_init(void)
     usb_drv_power_down();
 }
 
+void usb_drv_exit(void)
+{
+    usb_drv_power_down();
+}
+
 int usb_drv_get_max_out_size()
 {
     return usb_drv_port_speed() ? 262144 : 32768;

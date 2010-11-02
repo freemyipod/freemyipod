@@ -28,6 +28,9 @@
 void shutdown(bool shutdownhw)
 {
     DEBUGF("Shutting down...");
+#ifdef HAVE_USB
+    usb_exit();
+#endif
 #ifdef HAVE_STORAGE_FLUSH
     storage_flush();
 #endif

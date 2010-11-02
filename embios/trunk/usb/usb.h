@@ -33,6 +33,7 @@ void usb_handle_control_request(struct usb_ctrlrequest* req);
 void usb_handle_transfer_complete(int endpoint, int dir, int status, int length);
 void usb_handle_bus_reset(void);
 void usb_init(void) INITCODE_ATTR;
+void usb_exit(void);
 
 
 #endif
