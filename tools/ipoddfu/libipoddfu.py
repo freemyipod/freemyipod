@@ -29,48 +29,60 @@ import usb.core
 
 class ipoddfu:
   def __init__(self, generation = 0, type = 0):
-    self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1220)
-    if self.dev and generation in [0, 2] and type in [0, 1]:
-      self.dev.set_configuration(1)
-      self.generation = 2;
-      self.type = 1;
-      print("Connected to S5L8701 Bootrom DFU mode, USB version %s"  % self.dev.bcdDevice)
-      return
-    self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1240)
-    if self.dev and generation in [0, 2] and type in [0, 2]:
-      self.dev.set_configuration(1)
-      self.generation = 2;
-      self.type = 2;
-      print("Connected to iPod Nano 2G NOR DFU mode, USB version %s"  % self.dev.bcdDevice)
-      return
-    self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1223)
-    if self.dev and generation in [0, 3] and type in [0, 1]:
-      self.dev.set_configuration(1)
-      self.generation = 3;
-      self.type = 1;
-      print("Connected to S5L8702 Bootrom DFU mode, USB version %s"  % self.dev.bcdDevice)
-      return
-    self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1242)
-    if self.dev and generation in [0, 3] and type in [0, 1]:
-      self.dev.set_configuration(1)
-      self.generation = 3;
-      self.type = 2;
-      print("Connected to iPod Nano 3G WTF mode, USB version %s"  % self.dev.bcdDevice)
-      return
-    self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1225)
-    if self.dev and generation in [0, 4] and type in [0, 1]:
-      self.dev.set_configuration(1)
-      self.generation = 4;
-      self.type = 1;
-      print("Connected to S5L8720 Bootrom DFU mode, USB version %s"  % self.dev.bcdDevice)
-      return
-    self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1243)
-    if self.dev and generation in [0, 4] and type in [0, 1]:
-      self.dev.set_configuration(1)
-      self.generation = 4;
-      self.type = 2;
-      print("Connected to iPod Nano 4G WTF mode, USB version %s"  % self.dev.bcdDevice)
-      return
+    try:
+      self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1220)
+      if self.dev and generation in [0, 2] and type in [0, 1]:
+        self.dev.set_configuration(1)
+        self.generation = 2;
+        self.type = 1;
+        print("Connected to S5L8701 Bootrom DFU mode, USB version %s"  % self.dev.bcdDevice)
+        return
+    except usb.core.USBError: pass
+    try:
+      self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1240)
+      if self.dev and generation in [0, 2] and type in [0, 2]:
+        self.dev.set_configuration(1)
+        self.generation = 2;
+        self.type = 2;
+        print("Connected to iPod Nano 2G NOR DFU mode, USB version %s"  % self.dev.bcdDevice)
+        return
+    except usb.core.USBError: pass
+    try:
+      self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1223)
+      if self.dev and generation in [0, 3] and type in [0, 1]:
+        self.dev.set_configuration(1)
+        self.generation = 3;
+        self.type = 1;
+        print("Connected to S5L8702 Bootrom DFU mode, USB version %s"  % self.dev.bcdDevice)
+        return
+    except usb.core.USBError: pass
+    try:
+      self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1242)
+      if self.dev and generation in [0, 3] and type in [0, 2]:
+        self.dev.set_configuration(1)
+        self.generation = 3;
+        self.type = 2;
+        print("Connected to iPod Nano 3G WTF mode, USB version %s"  % self.dev.bcdDevice)
+        return
+    except usb.core.USBError: pass
+    try:
+      self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1225)
+      if self.dev and generation in [0, 4] and type in [0, 1]:
+        self.dev.set_configuration(1)
+        self.generation = 4;
+        self.type = 1;
+        print("Connected to S5L8720 Bootrom DFU mode, USB version %s"  % self.dev.bcdDevice)
+        return
+    except usb.core.USBError: pass
+    try:
+      self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1243)
+      if self.dev and generation in [0, 4] and type in [0, 2]:
+        self.dev.set_configuration(1)
+        self.generation = 4;
+        self.type = 2;
+        print("Connected to iPod Nano 4G WTF mode, USB version %s"  % self.dev.bcdDevice)
+        return
+    except usb.core.USBError: pass
 
     raise Exception("Could not find specified DFU device (generation = %d, type = %d)" % (generation, type))
 
