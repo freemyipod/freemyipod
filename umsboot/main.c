@@ -106,15 +106,15 @@ void fat16_write_rootdir(uint8_t* buffer)
 
 void swap(src, dest)
 {
+    memcpy(swapbuf, ramdisk[dest], RAMDISK_SECTORSIZE);
     uint16_t srcmap = swapmap[src];
     uint16_t destmap = swaprev[dest];
-    memcpy(swapbuf, ramdisk[dest], RAMDISK_SECTORSIZE);
     memcpy(ramdisk[dest], ramdisk[srcmap], RAMDISK_SECTORSIZE);
-    memcpy(ramdisk[srcmap], swapbuf, RAMDISK_SECTORSIZE);
     swapmap[src] = dest;
-    swapmap[destmap] = srcmap;
-    swaprev[srcmap] = destmap;
     swaprev[dest] = src;
+    memcpy(ramdisk[srcmap], swapbuf, RAMDISK_SECTORSIZE);
+    swaprev[srcmap] = destmap;
+    swapmap[destmap] = srcmap;
 }
 
 void main()
@@ -131,7 +131,7 @@ void main()
     while (vbus_state() && !usb_ejected);
     udelay(200000);
     usb_exit();
-    lcdconsole_puts("\nLoading UBI File...\n", 0, 0xffff);
+    lcdconsole_puts("\nLoading UBI file...\n", 0, 0xffff);
     int found = 0;
     uint16_t cluster;
     uint32_t size;
@@ -146,8 +146,9 @@ void main()
             ramdisk[1 + fatsectors][i] = 0xe5;
             found++;
         }
-        else totalclusters += (*((uint32_t*)&ramdisk[1 + fatsectors][i + 28])
-                             + RAMDISK_SECTORSIZE - 1) / RAMDISK_SECTORSIZE;
+        else if (*((uint16_t*)&ramdisk[1 + fatsectors][i + 26]))
+            totalclusters += (*((uint32_t*)&ramdisk[1 + fatsectors][i + 28])
+                            + RAMDISK_SECTORSIZE - 1) / RAMDISK_SECTORSIZE;
     if (!found)
     {
         lcdconsole_puts("No UBI file found!", 0, 0xffff);
