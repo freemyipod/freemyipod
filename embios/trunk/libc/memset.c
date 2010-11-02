@@ -47,7 +47,7 @@ _DEFUN (memset, (m, c, n),
         int c _AND
         size_t n)
 {
-#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+#if defined(PREFER_SIZE_OVER_SPEED)
   char *s = (char *) m;
 
   while (n-- != 0)

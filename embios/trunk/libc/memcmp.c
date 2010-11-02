@@ -56,7 +56,7 @@ _DEFUN (memcmp, (m1, m2, n),
         _CONST _PTR m2 _AND
         size_t n)
 {
-#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+#if defined(PREFER_SIZE_OVER_SPEED)
   unsigned char *s1 = (unsigned char *) m1;
   unsigned char *s2 = (unsigned char *) m2;
 

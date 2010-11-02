@@ -64,7 +64,7 @@ _DEFUN (strchr, (s1, i),
         int i)
 {
   _CONST unsigned char *s = (_CONST unsigned char *)s1;
-#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+#if defined(PREFER_SIZE_OVER_SPEED)
   unsigned char c = (unsigned int)i;
 
   while (*s && *s != c)

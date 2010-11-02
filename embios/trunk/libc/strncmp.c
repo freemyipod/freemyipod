@@ -65,7 +65,7 @@ _DEFUN (strncmp, (s1, s2, n),
         _CONST char *s2 _AND
         size_t n)
 {
-#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+#if defined(PREFER_SIZE_OVER_SPEED)
   if (n == 0)
     return 0;
 

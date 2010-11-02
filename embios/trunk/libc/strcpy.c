@@ -63,7 +63,7 @@ _DEFUN (strcpy, (dst0, src0),
         char *dst0 _AND
         _CONST char *src0)
 {
-#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+#if defined(PREFER_SIZE_OVER_SPEED)
   char *s = dst0;
 
   while ((*dst0++ = *src0++))

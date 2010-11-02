@@ -62,7 +62,7 @@ size_t
 _DEFUN (strlen, (str),
         _CONST char *str)
 {
-#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+#if defined(PREFER_SIZE_OVER_SPEED)
   _CONST char *start = str;
 
   while (*str)

@@ -64,7 +64,7 @@ _DEFUN (memmove, (dst_void, src_void, length),
         _CONST _PTR src_void _AND
         size_t length)
 {
-#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+#if defined(PREFER_SIZE_OVER_SPEED)
   char *dst = dst_void;
   _CONST char *src = src_void;
 
