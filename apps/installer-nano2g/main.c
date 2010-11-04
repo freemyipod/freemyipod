@@ -490,6 +490,7 @@ void main(void)
     uint32_t* script;
 #define scriptb ((uint8_t*)script)
     uint32_t dummy;
+    int deleterc = 1;
     struct progressbar_state progressbar;
     bool repartition = false;
     bool appleflash;
@@ -527,7 +528,7 @@ void main(void)
     backlight_set_brightness(177);
     backlight_on(true);
 
-    if (*script) remove((char*)&script[1]);
+    if (*script) deleterc = remove((char*)&script[1]);
     script = &script[1 + *script];
 
     if (norword[0x400] == 0x53436667) appleflash = false;
@@ -555,15 +556,18 @@ void main(void)
             }
             else if (button == 4)
             {
-                ucl_decompress(bitmapdata[BMPIDX_CANCELLED], bitmapsize[BMPIDX_CANCELLED],
-                               bmpbuffer, &dummy);
-                memcpy(lcdbuffer, backdrop, 0xb580);
-                renderbmp(lcdbuffer, bmpbuffer, 176);
-                displaylcd(0, 175, 0, 131, lcdbuffer, 0);
-                sleep(500000);
-                button = 0;
-                while (!button) wakeup_wait(&eventwakeup, TIMEOUT_BLOCK);
-                memcpy((void*)0x2202bf00, "diskmodehotstuff\1\0\0", 20);
+                if (deleterc)
+                {
+                    ucl_decompress(bitmapdata[BMPIDX_CANCELLED], bitmapsize[BMPIDX_CANCELLED],
+                                   bmpbuffer, &dummy);
+                    memcpy(lcdbuffer, backdrop, 0xb580);
+                    renderbmp(lcdbuffer, bmpbuffer, 176);
+                    displaylcd(0, 175, 0, 131, lcdbuffer, 0);
+                    sleep(500000);
+                    button = 0;
+                    while (!button) wakeup_wait(&eventwakeup, TIMEOUT_BLOCK);
+                    memcpy((void*)0x2202bf00, "diskmodehotstuff\1\0\0", 20);
+                }
                 shutdown(false);
                 reset();
             }
@@ -636,7 +640,7 @@ void main(void)
             diaguclptr = newptr;
         }
         progressbar_setpos(&progressbar, 70, false);
-        if (readfw("DNANkbso", &ososptr, &osossize)) osossize = 0;
+        if (readfw(deleterc ? "DNANkbso" : "DNANsoso", &ososptr, &osossize)) osossize = 0;
         if (osossize)
         {
             if (((uint8_t*)ososptr)[0x64d48] == 0x2b && ((uint8_t*)ososptr)[0x64d54] == 0x34)
