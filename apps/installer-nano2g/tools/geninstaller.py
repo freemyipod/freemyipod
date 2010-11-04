@@ -23,6 +23,7 @@
 
 
 import sys
+import os
 import struct
 
 bitmaps = ["backdrop.ucl", "welcome.ucl", "badpartition.ucl", "cancelled.ucl", \
@@ -38,16 +39,27 @@ flashfiles = [("diskmode", 1, 0, 1), \
               ("embiosldr", 4, 8, 0, "embiosldr-ipodnano2g.dfu"), \
               ("embios", 4, 10, 0, "embios-ipodnano2g.ucl")]
 
-firstinstfiles = [(2, "/iLoader/iLoader.cfg", "iloader.cfg", 1), \
+firstinstfiles = [(2, "/iLoader/iLoader.cfg", "../iloader/themes/default/iLoader/iloader.cfg", 1), \
                   (1, "/iLoader/theme", 1), \
-                  (2, "/iLoader/theme/backdrop.ucl", "theme/backdrop.ucl", 2), \
-                  (2, "/iLoader/theme/menu.ucl", "theme/menu.ucl", 2), \
-                  (2, "/iLoader/theme/booting.ucl", "theme/booting.ucl", 2), \
-                  (2, "/iLoader/theme/rockbox.ucl", "theme/rockbox.ucl", 2), \
-                  (2, "/iLoader/theme/apple.ucl", "theme/apple.ucl", 2)]
+                  (2, "/iLoader/theme/backdrop.ucl", "../iloader/themes/default/iLoader/theme/backdrop.ucl", 2), \
+                  (2, "/iLoader/theme/menu.ucl", "../iloader/themes/default/iLoader/theme/menu.ucl", 2), \
+                  (2, "/iLoader/theme/booting.ucl", "../iloader/themes/default/iLoader/theme/booting.ucl", 2), \
+                  (2, "/iLoader/theme/rockbox.ucl", "../iloader/themes/default/iLoader/theme/rockbox.ucl", 2), \
+                  (2, "/iLoader/theme/apple.ucl", "../iloader/themes/default/iLoader/theme/apple.ucl", 2)]
 
 commonfiles = [(2, "/iLoader/NORFlash.bak", -2, 10), \
                (2, "/iLoader/AppleOS.bin", -1, 30)]
+
+if len(sys.argv) > 4 and sys.argv[4] != "-":
+    pathlen = len(sys.argv[4])
+    for d in os.walk(sys.argv[4]):
+        prefix = d[0].replace("\\", "/")[pathlen:] + "/"
+        for dir in d[1]:
+            if dir != ".svn":
+                firstinstfiles.append((1, prefix + dir, 1))
+        for f in d[2]:
+            if not prefix.find("/.svn/") > -1:
+                firstinstfiles.append((2, prefix + f, d[0] + "/" + f, os.path.getsize(d[0] + "/" + f) / 100000 + 1))
 
 file = open(sys.argv[1], "rb")
 installer = file.read()
@@ -64,6 +76,15 @@ for f in bitmaps:
 statusfirst = 0
 statuscommon = 0
 scriptsize = 20
+filename = ""
+filenamelength = 0
+
+if len(sys.argv) > 3 and sys.argv[3] != "-":
+    filename = sys.argv[3]
+    filenamelength = (len(filename) + 4) & ~3
+
+installer = installer + struct.pack("<I", filenamelength >> 2) \
+          + filename.ljust(filenamelength, "\0")
 
 for f in flashfiles:
   scriptsize = scriptsize + 4
@@ -102,7 +123,7 @@ for f in firstinstfiles:
     statusfirst = statusfirst + f[2]
   else:
     if type(f[2]) == str:
-      file = open("../iloader/themes/default/iLoader/" + f[2], "rb")
+      file = open(f[2], "rb")
       fdata = file.read()
       file.close()
       ptr = scriptsize + len(filedata)

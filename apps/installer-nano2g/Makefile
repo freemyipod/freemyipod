@@ -1,9 +1,12 @@
 NAME := installer-nano2g
+BASENAME ?= $(NAME)
+FATNAME ?= INSTAL~1BOO
 
 EMBIOSDIR ?= ../../embios/trunk/
 ILOADERDIR ?= ../iloader/
 UNINSTDIR ?= ../uninstaller-nano2g/
 UMSBOOTDIR ?= ../../umsboot/
+NOTEBOOTDIR ?= ../../noteboot/
 TOOLSDIR ?= ../../tools/
 
 BITMAPS = build/backdrop.ucl build/welcome.ucl build/repartition.ucl build/installing.ucl build/badpartition.ucl \
@@ -24,6 +27,7 @@ COMPILECONFIG := python $(ILOADERDIR)/tools/compileconfig.py
 EMBIOSBOOTCFG := python $(EMBIOSDIR)/tools/embiosbootcfg.py
 EMBIOSEMBEDAPP := python $(EMBIOSDIR)/tools/embiosembedapp.py
 CRYPTFW := python $(EMBIOSDIR)/tools/ipodcrypt.py nano2g-cryptfirmware
+GENNOTE := python $(NOTEBOOTDIR)/gennote.py
 SCRAMBLE := python $(TOOLSDIR)/scramble.py
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMBIOSDIR)/export -ffunction-sections -fdata-sections -mcpu=arm940t
@@ -46,9 +50,9 @@ all: $(NAME)
 
 -include $(OBJ:%=%.dep)
 
-$(NAME): build/$(NAME).ipodx
+$(NAME): build/$(BASENAME).bootnote build/$(BASENAME).ipodx
 
-build/$(NAME).ipodx: build/$(NAME).fw
+build/$(BASENAME).ipodx: build/$(NAME).fw
 	@echo [SCRAMB] $<
 	@$(SCRAMBLE) $< $@ --signature=nn2x --targetid=62
 
@@ -56,17 +60,25 @@ build/$(NAME).fw: build/$(NAME).bin
 	@echo [CFW]    $<
 	@$(CRYPTFW) $< $@
 
+build/$(BASENAME).bootnote: build/$(NAME).bin
+	@echo [GENNOT] $<
+	@$(GENNOTE) $< "$(FATNAME)" $@
+
 build/$(NAME).bin: build/bootstub.bin build/$(NAME).integrated.bin
 	@echo [STUBEM] $@
 	@$(STUBEMBED) $^ $@
 
-build/$(NAME).integrated.bin: $(EMBIOSDIR)/build/ipodnano2g/embios.bin build/$(NAME).embiosapp
+build/$(NAME).integrated.bin: $(EMBIOSDIR)/build/ipodnano2g/embios.bin build/$(NAME).embiosapp.ucl
 	@echo [EMBAPP] $@
-	@$(EMBIOSEMBEDAPP) $^ $@ --run-from=0x08000000
+	@$(EMBIOSEMBEDAPP) $^ $@ --run-from=0x08f00000 --compressed
+
+build/$(NAME).embiosapp.ucl: build/$(NAME).embiosapp
+	@echo [UCL]    $<
+	@$(UCLPACK) $< $@
 
 build/$(NAME).embiosapp: build/$(NAME).plain.embiosapp $(BITMAPS) flashfiles.built
 	@echo [GENINS] $<
-	@$(GENINSTALLER) $< $@ 
+	@$(GENINSTALLER) $< $@ /notes/$(BASENAME).bootnote fsfiles
 
 build/bootstub.bin: build/bootstub.elf
 	@echo [OC]     $<

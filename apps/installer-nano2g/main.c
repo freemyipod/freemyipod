@@ -526,6 +526,10 @@ void main(void)
     backlight_set_fade(32);
     backlight_set_brightness(177);
     backlight_on(true);
+
+    if (*script) remove((char*)&script[1]);
+    script = &script[1 + *script];
+
     if (norword[0x400] == 0x53436667) appleflash = false;
     else if (norword[0x1000] == 0x53436667) appleflash = true;
     else panic(PANIC_KILLTHREAD, "Boot flash contents are damaged! "

@@ -9,7 +9,13 @@ MEMORY
 
 SECTIONS
 {
-    .text :
+    .bss (NOLOAD) :
+    {
+        *(.bss*)
+        *(COMMON)
+    } > RAM
+
+    .text 0x08f00000:
     {
 	KEEP(.execheader*)
 	*(.execheader*)
@@ -21,14 +27,7 @@ SECTIONS
         . = ALIGN(0x4);
         *(.data*)
         . = ALIGN(0x10);
-    } > RAM
-
-    .bss (NOLOAD) :
-    {
 	_scriptstart = .;
-        . = . + 0x1000000;
-        *(.bss*)
-        *(COMMON)
     } > RAM
 
     /DISCARD/ :
