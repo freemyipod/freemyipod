@@ -232,7 +232,7 @@ static void nand_transfer_data_start(uint32_t bank, uint32_t direction,
 static uint32_t nand_transfer_data_collect(uint32_t direction)
 {
     uint32_t timeout = USEC_TIMER + 20000;
-    while ((DMAALLST & DMAALLST_DMABUSY3))
+    while (DMAALLST & DMAALLST_DMABUSY3)
         if (nand_timeout(timeout)) return 1;
     if (!direction) invalidate_dcache();
     if (nand_wait_addrdone()) return 1;
@@ -409,8 +409,6 @@ uint32_t nand_read_page(uint32_t bank, uint32_t page, void* databuffer,
         {
             if (nand_transfer_data(bank, 0, spare, 0x40))
                 return nand_unlock(1);
-            if (sparebuffer) 
-                memcpy(sparebuffer, spare, 0x800);
             if (checkempty)
                 rc = nand_check_empty((uint8_t*)sparebuffer) << 1;
         }
