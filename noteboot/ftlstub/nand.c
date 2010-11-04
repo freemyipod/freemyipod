@@ -93,22 +93,31 @@ static uint32_t nand_wait_rbbdone(void)
     return 0;
 }
 
-static void nand_wait_cmddone(void)
+static uint32_t nand_wait_cmddone(void)
 {
-    while ((FMCSTAT & FMCSTAT_CMDDONE) == 0);
+    uint32_t timeout = USEC_TIMER + 20000;
+    while ((FMCSTAT & FMCSTAT_CMDDONE) == 0)
+        if (TIME_AFTER(USEC_TIMER, timeout)) return 1;
     FMCSTAT = FMCSTAT_CMDDONE;
+    return 0;
 }
 
-static void nand_wait_addrdone(void)
+static uint32_t nand_wait_addrdone(void)
 {
-    while ((FMCSTAT & FMCSTAT_ADDRDONE) == 0);
+    uint32_t timeout = USEC_TIMER + 20000;
+    while ((FMCSTAT & FMCSTAT_ADDRDONE) == 0)
+        if (TIME_AFTER(USEC_TIMER, timeout)) return 1;
     FMCSTAT = FMCSTAT_ADDRDONE;
+    return 0;
 }
 
-static void nand_wait_chip_ready(uint32_t bank)
+static uint32_t nand_wait_chip_ready(uint32_t bank)
 {
-    while ((FMCSTAT & (FMCSTAT_BANK0READY << bank)) == 0);
+    uint32_t timeout = USEC_TIMER + 20000;
+    while ((FMCSTAT & (FMCSTAT_BANK0READY << bank)) == 0)
+        if (TIME_AFTER(USEC_TIMER, timeout)) return 1;
     FMCSTAT = (FMCSTAT_BANK0READY << bank);
+    return 0;
 }
 
 static void nand_set_fmctrl0(uint32_t bank, uint32_t flags)
@@ -136,7 +145,7 @@ uint32_t nand_reset(uint32_t bank)
 {
     nand_set_fmctrl0(bank, 0);
     if (nand_send_cmd(NAND_CMD_RESET)) return 1;
-    nand_wait_chip_ready(bank);
+    if (nand_wait_chip_ready(bank)) return 1;
     FMCTRL1 = FMCTRL1_CLEARRFIFO | FMCTRL1_CLEARWFIFO;
     sleep(1000);
     return 0;
@@ -212,10 +221,10 @@ uint32_t nand_get_chip_type(uint32_t bank)
     FMANUM = 0;
     FMADDR0 = 0;
     FMCTRL1 = FMCTRL1_DOTRANSADDR;
-    nand_wait_cmddone();
+    if (nand_wait_cmddone()) return 0xFFFFFFFF;
     FMDNUM = 4;
     FMCTRL1 = FMCTRL1_DOREADDATA;
-    nand_wait_addrdone();
+    if (nand_wait_addrdone()) return 0xFFFFFFFF;
     result = FMFIFO;
     FMCTRL1 = FMCTRL1_CLEARRFIFO;
     return result;
@@ -285,12 +294,12 @@ uint32_t nand_init()
             if (j == NAND_DEVICEINFOTABLE_ENTRIES) break;
             else if (nand_deviceinfotable[j].id == type)
             {
+                nand_tunk1 = nand_deviceinfotable[j].tunk1;
+                nand_twp = nand_deviceinfotable[j].twp;
                 nand_type[i] = j;
                 break;
             }
         }
     }
-    nand_tunk1 = nand_deviceinfotable[nand_type[0]].tunk1;
-    nand_twp = nand_deviceinfotable[nand_type[0]].twp;
     return 0;
 }
