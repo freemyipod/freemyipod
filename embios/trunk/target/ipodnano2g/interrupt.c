@@ -132,20 +132,20 @@ void irqhandler(void)
 
 void interrupt_enable(int irq, bool state)
 {
-	if (state) INTMSK |= 1 << irq;
-	else INTMSK &= ~(1 << irq);
+    if (state) INTMSK |= 1 << irq;
+    else INTMSK &= ~(1 << irq);
 }
 
 void interrupt_set_handler(int irq, void* handler)
 {
-	if (handler) irqvector[irq] = handler;
-	else irqvector[irq] = unhandled_irq;
+    if (handler) irqvector[irq] = handler;
+    else irqvector[irq] = unhandled_irq;
 }
 
 void int_timer_set_handler(int timer, void* handler)
 {
-	if (handler) timervector[timer] = handler;
-	else timervector[timer] = unhandled_irq;
+    if (handler) timervector[timer] = handler;
+    else timervector[timer] = unhandled_irq;
 }
 
 void interrupt_init(void)
