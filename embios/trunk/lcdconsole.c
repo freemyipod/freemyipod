@@ -46,7 +46,7 @@ static bool lcdconsole_needs_update IBSS_ATTR;
 
 void lcdconsole_init()
 {
-    memset(framebuf, -1, sizeof(framebuf));
+    memset(framebuf, LCDCONSOLE_BGCOLOR, sizeof(framebuf));
     current_row = 0;
     current_col = -1;
     lcdconsole_needs_update = false;

@@ -52,7 +52,7 @@ void cputc_internal(unsigned int consoles, char string) ICODE_ATTR;
 void cputc_internal(unsigned int consoles, char string)
 {
 #ifdef HAVE_LCD
-    if (consoles & 1) lcdconsole_putc(string, 0, -1);
+    if (consoles & 1) lcdconsole_putc(string, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
 #endif
 #ifdef HAVE_USB
     if (consoles & 2) dbgconsole_putc(string);
@@ -109,7 +109,7 @@ void cputs(unsigned int consoles, const char* string)
 {
     mutex_lock(&console_mutex, TIMEOUT_BLOCK);
 #ifdef HAVE_LCD
-    if (consoles & 1) lcdconsole_puts(string, 0, -1);
+    if (consoles & 1) lcdconsole_puts(string, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
 #endif
 #ifdef HAVE_USB
     if (consoles & 2) dbgconsole_puts(string);
@@ -121,7 +121,7 @@ void cwrite(unsigned int consoles, const char* string, size_t length)
 {
     mutex_lock(&console_mutex, TIMEOUT_BLOCK);
 #ifdef HAVE_LCD
-    if (consoles & 1) lcdconsole_write(string, length, 0, -1);
+    if (consoles & 1) lcdconsole_write(string, length, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
 #endif
 #ifdef HAVE_USB
     if (consoles & 2) dbgconsole_write(string, length);
