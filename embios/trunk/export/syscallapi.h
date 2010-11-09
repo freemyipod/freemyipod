@@ -63,7 +63,7 @@
 #include "../libc/tlsf/tlsf.h"
 
 /* increase this every time the api struct changes */
-#define EMBIOS_API_VERSION 0
+#define EMBIOS_API_VERSION 1
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
@@ -79,8 +79,8 @@ struct embios_syscall_table
 {
     uint32_t table_version;
     uint32_t table_minversion;
-	typeof(panic) *panic;
-	typeof(panicf) *panicf;
+    typeof(panic) *panic;
+    typeof(panicf) *panicf;
     typeof(cprintf) *cprintf;
     typeof(cvprintf) *cvprintf;
     typeof(cputc) *cputc;
@@ -228,6 +228,7 @@ struct embios_syscall_table
     typeof(hwkeyaes) *hwkeyaes;
     typeof(hmacsha1) *hmacsha1;
     typeof(reset) *reset;
+    typeof(int_dma_set_handler) *int_dma_set_handler;
 };
 
 

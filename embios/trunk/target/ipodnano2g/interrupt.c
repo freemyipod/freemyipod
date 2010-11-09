@@ -93,7 +93,7 @@ void INT_TIMER()
     if (TDCON & 0x00038000) timervector[3]();
 }
 
-static void (* const dmavector[])(void) IDATA_ATTR =
+static void (* dmavector[])(void) IDATA_ATTR =
 {
     INT_DMA0,INT_DMA1,INT_DMA2,INT_DMA3,INT_DMA4,INT_DMA5,INT_DMA6,INT_DMA7,INT_DMA8
 };
@@ -146,6 +146,12 @@ void int_timer_set_handler(int timer, void* handler)
 {
     if (handler) timervector[timer] = handler;
     else timervector[timer] = unhandled_irq;
+}
+
+void int_dma_set_handler(int channel, void* handler)
+{
+    if (handler) dmavector[channel] = handler;
+    else dmavector[channel] = unhandled_irq;
 }
 
 void interrupt_init(void)

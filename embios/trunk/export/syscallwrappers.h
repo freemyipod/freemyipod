@@ -184,6 +184,7 @@ extern struct embios_syscall_table* __embios_syscall;
 #define hwkeyaes(args...) __embios_syscall->hwkeyaes(args)
 #define hmacsha1(args...) __embios_syscall->hmacsha1(args)
 #define reset(args...) __embios_syscall->reset(args)
+#define int_dma_set_handler(args...) __embios_syscall->int_dma_set_handler(args)
 
 
 #endif

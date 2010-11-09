@@ -141,36 +141,42 @@ static void (* irqvector[])(void) IDATA_ATTR =
 
 void irqhandler(void)
 {
-	uint32_t dummy = VIC0ADDRESS;
+    uint32_t dummy = VIC0ADDRESS;
     dummy = VIC1ADDRESS;
     uint32_t irqs0 = VIC0IRQSTATUS;
     uint32_t irqs1 = VIC1IRQSTATUS;
-	for (current_irq = 0; irqs0; current_irq++, irqs0 >>= 1)
-		if (irqs0 & 1)
-		    irqvector[current_irq]();
-	for (current_irq = 32; irqs1; current_irq++, irqs1 >>= 1)
-		if (irqs1 & 1)
-		    irqvector[current_irq]();
+    for (current_irq = 0; irqs0; current_irq++, irqs0 >>= 1)
+        if (irqs0 & 1)
+            irqvector[current_irq]();
+    for (current_irq = 32; irqs1; current_irq++, irqs1 >>= 1)
+        if (irqs1 & 1)
+            irqvector[current_irq]();
     VIC0ADDRESS = 0;
     VIC1ADDRESS = 0;
 }
 
 void interrupt_enable(int irq, bool state)
 {
-	if (state) VICINTENABLE(irq >> 5) = 1 << (irq & 0x1f);
-	else VICINTENCLEAR(irq >> 5) = 1 << (irq & 0x1f);
+    if (state) VICINTENABLE(irq >> 5) = 1 << (irq & 0x1f);
+    else VICINTENCLEAR(irq >> 5) = 1 << (irq & 0x1f);
 }
 
 void interrupt_set_handler(int irq, void* handler)
 {
-	if (handler) irqvector[irq] = handler;
-	else irqvector[irq] = unhandled_irq;
+    if (handler) irqvector[irq] = handler;
+    else irqvector[irq] = unhandled_irq;
 }
 
 void int_timer_set_handler(int timer, void* handler)
 {
-	if (handler) timervector[timer] = handler;
-	else timervector[timer] = unhandled_irq;
+    if (handler) timervector[timer] = handler;
+    else timervector[timer] = unhandled_irq;
+}
+
+void int_dma_set_handler(int channel, void* handler)
+{
+    void(channel);
+    void(handler);
 }
 
 void interrupt_init(void)

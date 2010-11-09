@@ -194,6 +194,7 @@ struct embios_syscall_table syscall_table ICONST_ATTR =
     .hwkeyaes = hwkeyaes,
 #endif
 #ifdef HAVE_HMACSHA1
-    .hmacsha1 = hmacsha1
+    .hmacsha1 = hmacsha1,
 #endif
+    .int_dma_set_handler = int_dma_set_handler
 };
