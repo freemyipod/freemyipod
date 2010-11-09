@@ -175,8 +175,8 @@ void int_timer_set_handler(int timer, void* handler)
 
 void int_dma_set_handler(int channel, void* handler)
 {
-    void(channel);
-    void(handler);
+    (void)channel;
+    (void)handler;
 }
 
 void interrupt_init(void)
