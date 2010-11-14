@@ -76,9 +76,9 @@ void lcdconsole_putc_noblit(char string, int fgcolor, int bgcolor)
     {
         int offset = current_row - LCDCONSOLE_ROWS + 1;
         memcpy(&framebuf[LINEBYTES * OFFSETY], &framebuf[LINEBYTES * OFFSETY + ROWBYTES * offset],
-            ROWBYTES * (LCDCONSOLE_ROWS - offset));
+               ROWBYTES * (LCDCONSOLE_ROWS - offset));
         memset(&framebuf[LINEBYTES * OFFSETY + ROWBYTES * (LCDCONSOLE_ROWS - offset)],
-            -1, ROWBYTES * offset);
+               LCDCONSOLE_BGCOLOR, ROWBYTES * offset);
         current_row = LCDCONSOLE_ROWS - 1;
     }
     renderchar(&framebuf[OFFSETBYTES + ROWBYTES * current_row + COLBYTES * current_col],
