@@ -50,6 +50,7 @@ void power_init(void)
 {
     pmu_init();
     pmu_write(0x1e, 15);  /* Vcore = 1.000V */
+    pmu_ldo_set_voltage(2, 0x11); /* LCD   = 2.600V */
 }                          
 
 bool charging_state(void)
