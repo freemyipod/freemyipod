@@ -343,14 +343,14 @@ class Commandline(object):
     def uploadint(self, addr, integer):
         """
             Uploads a single integer to the device
-            <offset>: the address to upload the integer to
-            <data>: the integer to upload
+            <addr>: the address to upload the integer to
+            <integer>: the integer to upload
         """
         addr = self._hexint(addr)
         integer = self._hexint(integer)
         if integer > 0xFFFFFFFF:
             raise ArgumentError("Specified integer too long")
-        data = chr(integer)
+        data = struct.pack("I", integer)
         self.embios.write(addr, data)
         self.logger.info("Integer '"+self._hex(integer)+"' written successfully to "+self._hex(addr)+"\n")
 
@@ -361,8 +361,8 @@ class Commandline(object):
             <addr>: the address to download the integer from
         """
         addr = self._hexint(addr)
-        data = self.embios.read(addr, 1)
-        integer = ord(data)
+        data = self.embios.read(addr, 4)
+        integer = struct.unpack("I", data)[0]
         self.logger.info("Integer '"+self._hex(integer)+"' read from address "+self._hex(addr)+"\n")
 
     @command
