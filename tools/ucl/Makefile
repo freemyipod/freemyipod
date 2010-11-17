@@ -11,8 +11,9 @@ CFLAGS = -O2 -Iinclude
 TARGET = ../uclpack
 TARGET2 = ../ucl2e10singleblk
 TARGET3 = ../ucl2e10singleblkunpack
+TARGETS = $(TARGET) $(TARGET2) $(TARGET3)
 
-ALL: $(TARGET) $(TARGET2) $(TARGET3)
+ALL: $(TARGETS)
 
 $(TARGET): uclpack.o src/libucl.a
 	$(CC) uclpack.o src/libucl.a -o $(TARGET)
@@ -33,5 +34,5 @@ src/libucl.a:
 	$(MAKE) -C src
 
 clean:
-	rm -f $(ALL) uclpack.o ucl2e10singleblk.o ucl2e10singleblkunpack.o
+	rm -f $(ALL) uclpack.o ucl2e10singleblk.o ucl2e10singleblkunpack.o $(TARGETS)
 	$(MAKE) -C src clean
