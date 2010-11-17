@@ -1484,7 +1484,7 @@ static uint32_t ftl_allocate_pool_block(void)
             bestidx = idx;
         }
     }
-    if (bestidx == 0xFFFFFFFF0)
+    if (bestidx == 0xFFFFFFFF)
     {
         ftl_initialized = false;
         panicf(PANIC_KILLTHREAD, "FTL: Out of pool blocks!");
