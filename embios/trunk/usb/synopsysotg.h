@@ -43,6 +43,7 @@
 #define OPHYPWR     (*((uint32_t volatile*)(PHYBASE + 0x000)))
 #define OPHYCLK     (*((uint32_t volatile*)(PHYBASE + 0x004)))
 #define ORSTCON     (*((uint32_t volatile*)(PHYBASE + 0x008)))
+#define OPHYUNK3    (*((uint32_t volatile*)(PHYBASE + 0x018)))
 #define OPHYUNK1    (*((uint32_t volatile*)(PHYBASE + 0x01c)))
 #define OPHYUNK2    (*((uint32_t volatile*)(PHYBASE + 0x044)))
 
