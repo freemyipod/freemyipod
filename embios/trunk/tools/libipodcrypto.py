@@ -25,6 +25,7 @@
 import sys
 import struct
 import time
+import hashlib
 import libembios
 from libembios import Error
 import libembiosdata
@@ -70,8 +71,28 @@ def s5l8701decryptfirmware(data):
     return embios.read(0x08000800, len(data) - 0x800)
 
 
+def s5l8702cryptnor(data):
+    data = data.ljust((len(data) + 0xf) & ~0xf, "\0")
+    header = "87021.0\0\0\0\0\0" + struct.pack("<I", len(data)) + hashlib.sha1(data).digest()[:0x10]
+    embios = libembios.Embios()
+    embios.write(0x08000000, header.ljust(0x800, "\0") + data)
+    embios.lib.dev.timeout = 20000
+    embios.aesencrypt(0x08000800, len(data), 1)
+    embios.aesencrypt(0x08000010, 0x10, 1)
+    embios.write(0x08000040, hashlib.sha1(embios.read(0x08000000, 0x40)).digest()[:0x10])
+    embios.aesencrypt(0x08000040, 0x10, 1)
+    return embios.read(0x08000000, len(data) + 0x800)
+
+
+def s5l8702decryptnor(data):
+    embios = libembios.Embios()
+    embios.write(0x08000000, data[0x800:])
+    embios.lib.dev.timeout = 20000
+    embios.aesdecrypt(0x08000000, len(data) - 0x800, 1)
+    return embios.read(0x08000000, len(data) - 0x800)
+
+
 def s5l8701cryptdfufile(infile, outfile):
-    print(outfile)
     infile = open(infile, "rb")
     outfile = open(outfile, "wb")
     outfile.write(s5l8701cryptdfu(infile.read()))
@@ -99,5 +120,21 @@ def s5l8701decryptfirmwarefile(infile, outfile):
     infile = open(infile, "rb")
     outfile = open(outfile, "wb")
     outfile.write(s5l8701decryptfirmware(infile.read()))
+    infile.close()
+    outfile.close()
+
+
+def s5l8702cryptnorfile(infile, outfile):
+    infile = open(infile, "rb")
+    outfile = open(outfile, "wb")
+    outfile.write(s5l8702cryptnor(infile.read()))
+    infile.close()
+    outfile.close()
+
+
+def s5l8702decryptnorfile(infile, outfile):
+    infile = open(infile, "rb")
+    outfile = open(outfile, "wb")
+    outfile.write(s5l8702decryptnor(infile.read()))
     infile.close()
     outfile.close()

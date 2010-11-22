@@ -35,6 +35,8 @@ def usage():
   print "  s5l8701-decryptdfu <infile> <outfile>"
   print "  s5l8701-cryptfirmware <infile> <outfile>"
   print "  s5l8701-decryptfirmware <infile> <outfile>"
+  print "  s5l8702-cryptnor <infile> <outfile>"
+  print "  s5l8702-decryptnor <infile> <outfile>"
   exit(2)
 
 
@@ -52,6 +54,12 @@ def parsecommand(argv):
 
   elif argv[1] == "s5l8701-decryptfirmware":
     libipodcrypto.s5l8701decryptfirmwarefile(argv[2], argv[3])
+
+  elif argv[1] == "s5l8702-cryptnor":
+    libipodcrypto.s5l8702cryptnorfile(argv[2], argv[3])
+
+  elif argv[1] == "s5l8702-decryptnor":
+    libipodcrypto.s5l8702decryptnorfile(argv[2], argv[3])
 
   else: usage()
 
