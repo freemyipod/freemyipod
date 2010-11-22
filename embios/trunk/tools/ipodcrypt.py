@@ -31,27 +31,27 @@ def usage():
   print "Please provide a command and (if needed) parameters as command line arguments"
   print ""
   print "Available commands:"
-  print "  nano2g-cryptdfu <infile> <outfile>"
-  print "  nano2g-decryptdfu <infile> <outfile>"
-  print "  nano2g-cryptfirmware <infile> <outfile>"
-  print "  nano2g-decryptfirmware <infile> <outfile>"
+  print "  s5l8701-cryptdfu <infile> <outfile>"
+  print "  s5l8701-decryptdfu <infile> <outfile>"
+  print "  s5l8701-cryptfirmware <infile> <outfile>"
+  print "  s5l8701-decryptfirmware <infile> <outfile>"
   exit(2)
 
 
 def parsecommand(argv):
   if len(argv) != 4: usage()
 
-  elif argv[1] == "nano2g-cryptdfu":
-    libipodcrypto.nano2gcryptdfufile(argv[2], argv[3])
+  elif argv[1] == "s5l8701-cryptdfu":
+    libipodcrypto.s5l8701cryptdfufile(argv[2], argv[3])
 
-  elif argv[1] == "nano2g-decryptdfu":
-    libipodcrypto.nano2gdecryptdfufile(argv[2], argv[3])
+  elif argv[1] == "s5l8701-decryptdfu":
+    libipodcrypto.s5l8701decryptdfufile(argv[2], argv[3])
 
-  elif argv[1] == "nano2g-cryptfirmware":
-    libipodcrypto.nano2gcryptfirmwarefile(argv[2], argv[3])
+  elif argv[1] == "s5l8701-cryptfirmware":
+    libipodcrypto.s5l8701cryptfirmwarefile(argv[2], argv[3])
 
-  elif argv[1] == "nano2g-decryptfirmware":
-    libipodcrypto.nano2gdecryptfirmwarefile(argv[2], argv[3])
+  elif argv[1] == "s5l8701-decryptfirmware":
+    libipodcrypto.s5l8701decryptfirmwarefile(argv[2], argv[3])
 
   else: usage()
 

@@ -8,7 +8,7 @@ AS      := $(CROSS)as
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
-CRYPTDFU := python $(EMBIOSDIR)/tools/ipodcrypt.py nano2g-cryptdfu
+CRYPTDFU := python $(EMBIOSDIR)/tools/ipodcrypt.py s5l8701-cryptdfu
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -mcpu=arm940t
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections

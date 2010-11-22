@@ -26,7 +26,7 @@ STUBEMBED := python tools/stubembed.py
 COMPILECONFIG := python $(ILOADERDIR)/tools/compileconfig.py
 EMBIOSBOOTCFG := python $(EMBIOSDIR)/tools/embiosbootcfg.py
 EMBIOSEMBEDAPP := python $(EMBIOSDIR)/tools/embiosembedapp.py
-CRYPTFW := python $(EMBIOSDIR)/tools/ipodcrypt.py nano2g-cryptfirmware
+CRYPTFW := python $(EMBIOSDIR)/tools/ipodcrypt.py s5l8701-cryptfirmware
 GENNOTE := python $(NOTEBOOTDIR)/gennote.py
 SCRAMBLE := python $(TOOLSDIR)/scramble.py
 

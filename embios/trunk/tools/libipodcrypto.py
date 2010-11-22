@@ -30,7 +30,7 @@ from libembios import Error
 import libembiosdata
 
 
-def nano2gcryptdfu(data):
+def s5l8701cryptdfu(data):
     data = data.ljust((len(data) + 0x3f) & ~0x3f, "\0")
     header = "87011.0\0\0\x08\0\0" + struct.pack("<I", len(data))
     embios = libembios.Embios()
@@ -42,7 +42,7 @@ def nano2gcryptdfu(data):
     return embios.read(0x08000000, len(data) + 0x800)
 
 
-def nano2gdecryptdfu(data):
+def s5l8701decryptdfu(data):
     embios = libembios.Embios()
     embios.write(0x08000000, data)
     embios.lib.dev.timeout = 20000
@@ -50,7 +50,7 @@ def nano2gdecryptdfu(data):
     return embios.read(0x08000800, len(data) - 0x800)
 
 
-def nano2gcryptfirmware(data):
+def s5l8701cryptfirmware(data):
     data = data.ljust((len(data) + 0x3f) & ~0x3f, "\0")
     header = "\0\0\0\0\x02\0\0\0\x01\0\0\0\x40\0\0\0\0\0\0\0" + struct.pack("<I", len(data))
     embios = libembios.Embios()
@@ -62,7 +62,7 @@ def nano2gcryptfirmware(data):
     return embios.read(0x08000000, len(data) + 0x800)
 
 
-def nano2gdecryptfirmware(data):
+def s5l8701decryptfirmware(data):
     embios = libembios.Embios()
     embios.write(0x08000000, data)
     embios.lib.dev.timeout = 20000
@@ -70,34 +70,34 @@ def nano2gdecryptfirmware(data):
     return embios.read(0x08000800, len(data) - 0x800)
 
 
-def nano2gcryptdfufile(infile, outfile):
+def s5l8701cryptdfufile(infile, outfile):
     print(outfile)
     infile = open(infile, "rb")
     outfile = open(outfile, "wb")
-    outfile.write(nano2gcryptdfu(infile.read()))
+    outfile.write(s5l8701cryptdfu(infile.read()))
     infile.close()
     outfile.close()
 
 
-def nano2gdecryptdfufile(infile, outfile):
+def s5l8701decryptdfufile(infile, outfile):
     infile = open(infile, "rb")
     outfile = open(outfile, "wb")
-    outfile.write(nano2gdecryptdfu(infile.read()))
+    outfile.write(s5l8701decryptdfu(infile.read()))
     infile.close()
     outfile.close()
 
 
-def nano2gcryptfirmwarefile(infile, outfile):
+def s5l8701cryptfirmwarefile(infile, outfile):
     infile = open(infile, "rb")
     outfile = open(outfile, "wb")
-    outfile.write(nano2gcryptfirmware(infile.read()))
+    outfile.write(s5l8701cryptfirmware(infile.read()))
     infile.close()
     outfile.close()
 
 
-def nano2gdecryptfirmwarefile(infile, outfile):
+def s5l8701decryptfirmwarefile(infile, outfile):
     infile = open(infile, "rb")
     outfile = open(outfile, "wb")
-    outfile.write(nano2gdecryptfirmware(infile.read()))
+    outfile.write(s5l8701decryptfirmware(infile.read()))
     infile.close()
     outfile.close()
