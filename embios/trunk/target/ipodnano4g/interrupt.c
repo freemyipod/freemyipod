@@ -229,7 +229,16 @@ void int_dma_set_handler(int channel, void* handler)
 
 void interrupt_init(void)
 {
-    VIC0INTENABLE = (1 << IRQ_TIMER) || (1 << IRQ_DMAC0) || (1 << IRQ_DMAC1);
+    int i;
+    for (i = 0; i < 8; i++) DMAC0CCONTROL(i) = 0;
+    for (i = 0; i < 8; i++) DMAC1CCONTROL(i) = 0;
+    DMAC0INTTCCLR = 0xff;
+    DMAC0INTERRCLR = 0xff;
+    DMAC1INTTCCLR = 0xff;
+    DMAC1INTERRCLR = 0xff;
+    VIC0INTENABLE = 1 << IRQ_TIMER;
+    VIC0INTENABLE = 1 << IRQ_DMAC0;
+    VIC0INTENABLE = 1 << IRQ_DMAC1;
 }
 
 void interrupt_shutdown(void)

@@ -84,7 +84,6 @@ void panicf(enum panic_severity severity, const char* string, ...)
     if (severity == PANIC_FATAL)
     {
         enter_critical_section();
-        while(1);
         while (!displaylcd_safe());
         lcdconsole_puts_noblit("\n*PANIC*\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
         va_start(ap, string);
