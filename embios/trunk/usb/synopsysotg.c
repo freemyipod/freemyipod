@@ -70,7 +70,7 @@ static void reset_endpoints(int reinit)
     DOEPCTL0 = 0x8000;  /* EP0 OUT ACTIVE */
     DOEPTSIZ0 = 0x20080040;  /* EP0 OUT Transfer Size:
                                 64 Bytes, 1 Packet, 1 Setup Packet */
-    DOEPDMA0 = (uint32_t)&ctrlreq;
+    DOEPDMA0 = &ctrlreq;
     DOEPCTL0 |= 0x84000000;  /* EP0 OUT ENABLE CLEARNAK */
     if (reinit)
     {
@@ -247,7 +247,7 @@ void INT_USB_FUNC(void)
                 if (!i)
                 {
                     DOEPTSIZ0 = 0x20080040;
-                    DOEPDMA0 = (uint32_t)&ctrlreq;
+                    DOEPDMA0 = &ctrlreq;
                     DOEPCTL0 |= 0x84000000;
                 }
                 DOEPINT(i) = epints;
@@ -271,12 +271,12 @@ static void ep_send(int ep, const void *ptr, int length)
     if (!length)
     {
         DIEPTSIZ(ep) = 1 << 19;  /* one empty packet */
-        DIEPDMA(ep) = 0x10000000;  /* dummy address */
+        DIEPDMA(ep) = NULL;  /* dummy address */
     }
     else
     {
         DIEPTSIZ(ep) = length | (packets << 19);
-        DIEPDMA(ep) = (uint32_t)ptr;
+        DIEPDMA(ep) = ptr;
     }
     clean_dcache();
     DIEPCTL(ep) |= 0x84000000;  /* EPx OUT ENABLE CLEARNAK */
@@ -293,12 +293,12 @@ static void ep_recv(int ep, void *ptr, int length)
     if (!length)
     {
         DOEPTSIZ(ep) = 1 << 19;  /* one empty packet */
-        DOEPDMA(ep) = 0x10000000;  /* dummy address */
+        DOEPDMA(ep) = NULL;  /* dummy address */
     }
     else
     {
         DOEPTSIZ(ep) = length | (packets << 19);
-        DOEPDMA(ep) = (uint32_t)ptr;
+        DOEPDMA(ep) = ptr;
     }
     clean_dcache();
     DOEPCTL(ep) |= 0x84000000;  /* EPx OUT ENABLE CLEARNAK */

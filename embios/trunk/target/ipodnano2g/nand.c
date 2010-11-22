@@ -223,7 +223,7 @@ static void nand_transfer_data_start(uint32_t bank, uint32_t direction,
             | (3 << DMACON_BURST_LEN_SHIFT);
     while ((DMAALLST & DMAALLST_CHAN3_MASK))
         DMACOM3 = DMACOM_CLEARBOTHDONE;
-    DMABASE3 = (uint32_t)buffer;
+    DMABASE3 = buffer;
     DMATCNT3 = (size >> 4) - 1;
     clean_dcache();
     DMACOM3 = 4;
@@ -256,8 +256,8 @@ static void ecc_start(uint32_t size, void* databuffer, void* sparebuffer,
     ECC_INT_CLR = 1;
     SRCPND = (1 << IRQ_ECC);
     ECC_UNK1 = size;
-    ECC_DATA_PTR = (uint32_t)databuffer;
-    ECC_SPARE_PTR = (uint32_t)sparebuffer;
+    ECC_DATA_PTR = databuffer;
+    ECC_SPARE_PTR = sparebuffer;
     clean_dcache();
     ECC_CTRL = type;
 }

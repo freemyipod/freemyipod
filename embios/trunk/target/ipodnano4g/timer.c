@@ -35,7 +35,6 @@ void setup_tick()
     TBCMD = (1 << 1);   /* TB_CLR */
     TCCMD = (1 << 1);   /* TC_CLR */
     TDCMD = (1 << 1);   /* TD_CLR */
-    TECMD = (1 << 1);   /* TE_CLR */
     TFCMD = (1 << 1);   /* TF_CLR */
     TGCMD = (1 << 1);   /* TG_CLR */
     THCMD = (1 << 1);   /* TH_CLR */

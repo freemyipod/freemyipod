@@ -1,5 +1,4 @@
 NAME := embiosldr-ipodnano2g
-BOOTADDR = 24008000
 
 EMBIOSDIR ?= ../../
 

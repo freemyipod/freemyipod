@@ -141,7 +141,7 @@ static void (* irqvector[])(void) IDATA_ATTR =
 
 void irqhandler(void)
 {
-    uint32_t dummy = VIC0ADDRESS;
+    void* dummy = VIC0ADDRESS;
     dummy = VIC1ADDRESS;
     uint32_t irqs0 = VIC0IRQSTATUS;
     uint32_t irqs1 = VIC1IRQSTATUS;
@@ -151,8 +151,8 @@ void irqhandler(void)
     for (current_irq = 32; irqs1; current_irq++, irqs1 >>= 1)
         if (irqs1 & 1)
             irqvector[current_irq]();
-    VIC0ADDRESS = 0;
-    VIC1ADDRESS = 0;
+    VIC0ADDRESS = NULL;
+    VIC1ADDRESS = NULL;
 }
 
 void interrupt_enable(int irq, bool state)
