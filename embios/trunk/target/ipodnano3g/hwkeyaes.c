@@ -30,7 +30,7 @@
 void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, uint32_t size)
 {
     int i;
-    clockgate_enable(7, true);
+    clockgate_enable(10, true);
     for (i = 0; i < 4; i++) AESIV[i] = 0;
     AESUNKREG0 = 1;
     AESUNKREG0 = 0;
@@ -51,5 +51,5 @@ void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, ui
     AESGO = 1;
 	invalidate_dcache();
     while (!(AESSTATUS & 0xf)) sleep(100);
-    clockgate_enable(7, false);
+    clockgate_enable(10, false);
 }
