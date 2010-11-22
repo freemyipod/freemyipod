@@ -35,6 +35,22 @@ target/ipodnano4g/clockgates.c
 usb/synopsysotg.c
 #endif
 
+#if defined(TARGET_ipodnano3g) || defined(TARGET_ipodclassic)
+target/ipodnano3g/mmu.c
+target/ipodnano3g/lcd.c
+target/ipodnano3g/timer.c
+target/ipodnano3g/i2c.c
+target/ipodnano3g/interrupt.c
+target/ipodnano3g/power.c
+target/ipodnano3g/pmu.c
+target/ipodnano3g/clockgates.c
+target/ipodnano3g/bootflash.c
+target/ipodnano3g/backlight.c
+target/ipodnano3g/hwkeyaes.c
+target/ipodnano3g/spi.c
+usb/synopsysotg.c
+#endif
+
 #ifdef ARM_ARCH
 arm/arm-support.S
 arm/contextswitch.S
