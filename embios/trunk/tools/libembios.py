@@ -422,7 +422,6 @@ class Embios(object):
         self.execimage(baseaddr)
         return Bunch(baseaddr=baseaddr, name=name)
     
-    
     def bootflashread(self, memaddr, flashaddr, size):
         """ Copies the data in the bootflash at 'flashaddr' of the specified size
             to the memory at addr 'memaddr'
@@ -437,7 +436,7 @@ class Embios(object):
     
     def execfirmware(self, addr):
         """ Executes the firmware at 'addr' and passes all control to it. """
-        return self.lib.monitorcommand(struct.pack("IIII", 24, addr, 0, 0), "III", (None, None, None))
+        return self.lib.monitorcommand(struct.pack("IIII", 24, addr, 0, 0))
     
     def aesencrypt(self, addr, size, keyindex):
         """ Encrypts the buffer at 'addr' with the specified size
@@ -494,7 +493,7 @@ class Lib(object):
         self.connected = True
     
     def monitorcommand(self, cmd, rcvdatatypes=None, rcvstruct=None):
-        self.dev.cout(cmd)
+        writelen = self.dev.cout(cmd)
         if rcvdatatypes:
             rcvdatatypes = "I" + rcvdatatypes # add the response
             data = self.dev.cin(struct.calcsize(rcvdatatypes))
@@ -517,6 +516,8 @@ class Lib(object):
                 raise DeviceError("Invalid command! This should NOT happen!")
             elif libembiosdata.responsecodes[response] == "busy":
                 raise DeviceError("Device busy")
+        else:
+            return writelen
 
 
 class Dev(object):
