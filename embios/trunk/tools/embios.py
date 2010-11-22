@@ -266,8 +266,12 @@ class Commandline(object):
         """
         if infotype == "version":
             resp = self.embios.getversioninfo()
+            try:
+                hwtype = libembiosdata.hwtypes[resp.hwtypeid]
+            except KeyError:
+                hwtype = "UNKNOWN (ID = " + self._hex(resp.hwtypeid) + ")"
             self.logger.info("Connected to "+libembiosdata.swtypes[resp.swtypeid] + " v" + str(resp.majorv) + "." + str(resp.minorv) +
-                             "." + str(resp.patchv) + " r" + str(resp.revision) + " running on " + libembiosdata.hwtypes[resp.hwtypeid] + "\n")
+                             "." + str(resp.patchv) + " r" + str(resp.revision) + " running on " + hwtype + "\n")
         elif infotype == "packetsize":
             resp = self.embios.getpacketsizeinfo()
             self.logger.info("Maximum packet sizes: "+str(resp))
