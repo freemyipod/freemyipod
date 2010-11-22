@@ -600,7 +600,8 @@ class Commandline(object):
         size = self._hexint(size)
         self.logger.info("Dumping boot flash addresses "+self._hex(addr_flash)+" - "+
                          hex(addr_flash+size)+" to "+self._hex(addr_mem)+" - "+self._hex(addr_mem+size)+"\n")
-        self.embios.bootflashread(addr_flash, addr_mem, size)
+        self.embios.lib.dev.timeout = 5000
+        self.embios.bootflashread(addr_mem, addr_flash, size)
     
     @command
     def writebootflash(self, addr_flash, addr_mem, size, force=False):
@@ -624,7 +625,8 @@ class Commandline(object):
                 self.logger.info(".")
                 time.sleep(1)
             self.logger.info("\n")
-        self.embios.bootflashwrite(addr_flash, addr_mem, size)
+        self.embios.lib.dev.timeout = 30000
+        self.embios.bootflashwrite(addr_mem, addr_flash, size)
     
     @command
     def runfirmware(self, addr, filename):
