@@ -51,8 +51,22 @@ default_interrupt(INT_IRQ12);
 default_interrupt(INT_IRQ13);
 default_interrupt(INT_IRQ14);
 default_interrupt(INT_IRQ15);
-default_interrupt(INT_IRQ16);
-default_interrupt(INT_IRQ17);
+default_interrupt(INT_DMAC0C0);
+default_interrupt(INT_DMAC0C1);
+default_interrupt(INT_DMAC0C2);
+default_interrupt(INT_DMAC0C3);
+default_interrupt(INT_DMAC0C4);
+default_interrupt(INT_DMAC0C5);
+default_interrupt(INT_DMAC0C6);
+default_interrupt(INT_DMAC0C7);
+default_interrupt(INT_DMAC1C0);
+default_interrupt(INT_DMAC1C1);
+default_interrupt(INT_DMAC1C2);
+default_interrupt(INT_DMAC1C3);
+default_interrupt(INT_DMAC1C4);
+default_interrupt(INT_DMAC1C5);
+default_interrupt(INT_DMAC1C6);
+default_interrupt(INT_DMAC1C7);
 default_interrupt(INT_IRQ18);
 default_interrupt(INT_USB_FUNC);
 default_interrupt(INT_IRQ20);
@@ -127,11 +141,45 @@ void INT_TIMER()
     if (THCON & 0x00038000) timervector[7]();
 }
 
+static void (* dmavector[])(void) IDATA_ATTR =
+{
+    INT_DMAC0C0,INT_DMAC0C1,INT_DMAC0C2,INT_DMAC0C3,INT_DMAC0C4,INT_DMAC0C5,INT_DMAC0C6,INT_DMAC0C7,
+    INT_DMAC1C0,INT_DMAC1C1,INT_DMAC1C2,INT_DMAC1C3,INT_DMAC1C4,INT_DMAC1C5,INT_DMAC1C6,INT_DMAC1C7
+};
+
+void INT_DMAC0(void) ICODE_ATTR;
+void INT_DMAC0()
+{
+    uint32_t intsts = DMAC0INTSTS;
+    if (intsts & 1) dmavector[0]();
+    if (intsts & 2) dmavector[1]();
+    if (intsts & 4) dmavector[2]();
+    if (intsts & 8) dmavector[3]();
+    if (intsts & 0x10) dmavector[4]();
+    if (intsts & 0x20) dmavector[5]();
+    if (intsts & 0x40) dmavector[6]();
+    if (intsts & 0x80) dmavector[7]();
+}
+
+void INT_DMAC1(void) ICODE_ATTR;
+void INT_DMAC1()
+{
+    uint32_t intsts = DMAC1INTSTS;
+    if (intsts & 1) dmavector[8]();
+    if (intsts & 2) dmavector[9]();
+    if (intsts & 4) dmavector[10]();
+    if (intsts & 8) dmavector[11]();
+    if (intsts & 0x10) dmavector[12]();
+    if (intsts & 0x20) dmavector[13]();
+    if (intsts & 0x40) dmavector[14]();
+    if (intsts & 0x80) dmavector[15]();
+}
+
 static void (* irqvector[])(void) IDATA_ATTR =
 {
     INT_IRQ0,INT_IRQ1,INT_IRQ2,INT_IRQ3,INT_IRQ4,INT_IRQ5,INT_IRQ6,INT_IRQ7,
     INT_TIMER,INT_IRQ9,INT_IRQ10,INT_IRQ11,INT_IRQ12,INT_IRQ13,INT_IRQ14,INT_IRQ15,
-    INT_IRQ16,INT_IRQ17,INT_IRQ18,INT_USB_FUNC,INT_IRQ20,INT_IRQ21,INT_IRQ22,INT_IRQ23,
+    INT_DMAC0,INT_DMAC1,INT_IRQ18,INT_USB_FUNC,INT_IRQ20,INT_IRQ21,INT_IRQ22,INT_IRQ23,
     INT_IRQ24,INT_IRQ25,INT_IRQ26,INT_IRQ27,INT_IRQ28,INT_IRQ29,INT_IRQ30,INT_IRQ31,
     INT_IRQ32,INT_IRQ33,INT_IRQ34,INT_IRQ35,INT_IRQ36,INT_IRQ37,INT_IRQ38,INT_IRQ39,
     INT_IRQ40,INT_IRQ41,INT_IRQ42,INT_IRQ43,INT_IRQ55,INT_IRQ56,INT_IRQ57,INT_IRQ58,
@@ -175,13 +223,13 @@ void int_timer_set_handler(int timer, void* handler)
 
 void int_dma_set_handler(int channel, void* handler)
 {
-    (void)channel;
-    (void)handler;
+    if (handler) dmavector[channel] = handler;
+    else dmavector[channel] = unhandled_irq;
 }
 
 void interrupt_init(void)
 {
-    VIC0INTENABLE = 1 << IRQ_TIMER;
+    VIC0INTENABLE = (1 << IRQ_TIMER) || (1 << IRQ_DMAC0) || (1 << IRQ_DMAC1);
 }
 
 void interrupt_shutdown(void)
