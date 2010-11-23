@@ -319,6 +319,9 @@
 #define SPICLKGATE(i)   ((i) == 2 ? 0x2f : \
                          (i) == 1 ? 0x2b : \
                                     0x22)
+#define SPIDMA(i)       ((i) == 2 ? 0xd : \
+                         (i) == 1 ? 0xf : \
+                                    0x5)
 #define SPICTRL(i)    (*((uint32_t volatile*)(SPIBASE(i))))
 #define SPISETUP(i)   (*((uint32_t volatile*)(SPIBASE(i) + 0x4)))
 #define SPISTATUS(i)  (*((uint32_t volatile*)(SPIBASE(i) + 0x8)))

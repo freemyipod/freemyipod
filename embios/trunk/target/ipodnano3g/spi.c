@@ -29,6 +29,7 @@
 
 
 static struct mutex spimutex[3];
+static struct wakeup spiwakeup[3];
 
 
 void spi_prepare(int port)
@@ -63,12 +64,54 @@ void spi_read(int port, uint32_t size, void* buf)
 {
     uint8_t* buffer = (uint8_t*)buf;
     SPIRXLIMIT(port) = size;
-    SPISETUP(port) |= 1;
-    while (size--)
+    if (size < 0x100)
     {
-        while (!(SPISTATUS(port) & 0x3e00)) yield();
-        *buffer++ = SPIRXDATA(port);
+        SPISETUP(port) |= 1;
+        while (size--)
+        {
+            while (!(SPISTATUS(port) & 0x3e00)) yield();
+            *buffer++ = SPIRXDATA(port);
+        }
+        SPISETUP(port) &= ~1;
+        return;
     }
-    SPISETUP(port) &= ~1;
+    SPISETUP(port) |= 0x41;
+    void* addr = (void*)((uint32_t)buf + size);
+    struct dma_lli* lli = (struct dma_lli*)(((uint32_t)addr - 0x10) & ~0xf);
+    struct dma_lli* nextlli = NULL;
+    while (addr > buf)
+    {
+        size = (uint32_t)addr - (uint32_t)buf;
+        if (size > 0xfff) size = 0xfff;
+        else lli = (struct dma_lli*)((int)&DMAC0CLLI(port + 5));
+        addr = (void*)((uint32_t)addr - size);
+        lli->srcaddr = (void*)((int)&SPIRXDATA(port));
+        lli->dstaddr = addr;
+        lli->nextlli = nextlli;
+        lli->control = 0x78000000 | size | (nextlli == NULL ? 0x80000000 : 0);
+        nextlli = lli;
+        lli = &lli[-1];
+    }
+    clean_dcache();
+    DMAC0CCONFIG(port + 5) = 0x9001 | (SPIDMA(port) << 1);
+    wakeup_wait(&spiwakeup[port], TIMEOUT_BLOCK);
+    SPISETUP(port) &= ~0x41;
 }
 
+void INT_DMAC0C5()
+{
+    DMAC0INTTCCLR = 1 << 5;
+    wakeup_signal(&spiwakeup[0]);
+}
+
+void INT_DMAC0C6()
+{
+    DMAC0INTTCCLR = 1 << 6;
+    wakeup_signal(&spiwakeup[1]);
+}
+
+void INT_DMAC0C7()
+{
+    DMAC0INTTCCLR = 1 << 7;
+    wakeup_signal(&spiwakeup[2]);
+}
