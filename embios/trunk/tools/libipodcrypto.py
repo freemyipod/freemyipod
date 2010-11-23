@@ -73,14 +73,14 @@ def s5l8701decryptfirmware(data):
 
 def s5l8702cryptnor(data):
     data = data.ljust((len(data) + 0xf) & ~0xf, "\0")
-    header = "87021.0\0\0\0\0\0" + struct.pack("<I", len(data)) + hashlib.sha1(data).digest()[:0x10]
+    header = "87021.0\x01\0\0\0\0" + struct.pack("<I", len(data)) + hashlib.sha1(data).digest()[:0x10]
     embios = libembios.Embios()
     embios.write(0x08000000, header.ljust(0x800, "\0") + data)
     embios.lib.dev.timeout = 20000
-    embios.aesencrypt(0x08000800, len(data), 1)
-    embios.aesencrypt(0x08000010, 0x10, 1)
+    embios.aesencrypt(0x08000800, len(data), 2)
+    embios.aesencrypt(0x08000010, 0x10, 2)
     embios.write(0x08000040, hashlib.sha1(embios.read(0x08000000, 0x40)).digest()[:0x10])
-    embios.aesencrypt(0x08000040, 0x10, 1)
+    embios.aesencrypt(0x08000040, 0x10, 2)
     return embios.read(0x08000000, len(data) + 0x800)
 
 
