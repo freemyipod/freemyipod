@@ -27,13 +27,8 @@
 #include "util.h"
 
 
-static struct dma_lli
-{
-    void* srcaddr;
-    void* dstaddr;
-    struct dma_lli* nextlli;
-    uint32_t control;
-} lcd_lli[(LCD_WIDTH * LCD_HEIGHT - 1) / 0xfff] IDATA_ATTR __attribute__((aligned(16)));
+static struct dma_lli lcd_lli[(LCD_WIDTH * LCD_HEIGHT - 1) / 0xfff]
+    IDATA_ATTR __attribute__((aligned(16)));
 
 static uint16_t lcd_color IDATA_ATTR;
 
@@ -102,23 +97,16 @@ void displaylcd(unsigned int startx, unsigned int endx,
     int pixels = (endx - startx + 1) * (endy - starty + 1);
     int i;
     bool solid = (int)data == -1;
-    bool last = !ARRAYLEN(lcd_lli) || pixels <= 0xfff;
     if (solid) lcd_color = color;
-    DMAC0C0SRCADDR = solid ? &lcd_color : data;
-    DMAC0C0DESTADDR = (void*)((int)&LCDWDATA);
-    DMAC0C0LLI = last ? (void*)0 : lcd_lli;
-    DMAC0C0CONTROL = 0x70240000 | (last ? pixels : 0xfff)
-                   | (last ? 0x80000000 : 0) | (solid ? 0 : 0x4000000);
-    void* origdata=data;
-    data = (void*)(((uint32_t)data) + 0x1ffe);
-    for (i = 0, pixels -= 0xfff; i < ARRAYLEN(lcd_lli) && pixels > 0; i++, pixels -= 0xfff)
+    for (i = -1; i < (int)ARRAYLEN(lcd_lli) && pixels > 0; i++, pixels -= 0xfff)
     {
-        last = i + 1 >= ARRAYLEN(lcd_lli) || pixels <= 0xfff;
-        lcd_lli[i].srcaddr = solid ? &lcd_color : data;
-        lcd_lli[i].dstaddr = (void*)((int)&LCDWDATA);
-        lcd_lli[i].nextlli = last ? (void*)0 : &lcd_lli[i + 1];
-        lcd_lli[i].control = 0x70240000 | (last ? pixels : 0xfff)
-                           | (last ? 0x80000000 : 0) | (solid ? 0 : 0x4000000);
+        bool last = i + 1 >= ARRAYLEN(lcd_lli) || pixels <= 0xfff;
+        struct dma_lli* lli = i < 0 ? (struct dma_lli*)((int)&DMAC0C0LLI) : &lcd_lli[i];
+        lli->srcaddr = solid ? &lcd_color : data;
+        lli->dstaddr = (void*)((int)&LCDWDATA);
+        lli->nextlli = last ? NULL : &lcd_lli[i + 1];
+        lli->control = 0x70240000 | (last ? pixels : 0xfff)
+                     | (last ? 0x80000000 : 0) | (solid ? 0 : 0x4000000);
         data = (void*)(((uint32_t)data) + 0x1ffe);
     }
     clean_dcache();
