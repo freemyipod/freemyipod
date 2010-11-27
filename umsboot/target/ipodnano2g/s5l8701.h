@@ -275,6 +275,8 @@
 /////USB/////
 #define OTGBASE 0x38800000
 #define PHYBASE 0x3C400000
+#define SYNOPSYSOTG_CLOCK 0
+#define SYNOPSYSOTG_AHBCFG 0x27
 
 
 /////I2C/////
