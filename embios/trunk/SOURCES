@@ -54,6 +54,9 @@ usb/synopsysotg.c
 #ifdef ARM_ARCH
 arm/arm-support.S
 arm/contextswitch.S
+arm/memcpy-arm.S
+arm/memmove-arm.S
+arm/memset-arm.S
 #endif
 
 init.c
@@ -96,9 +99,6 @@ libc/atoi.c
 libc/ctype.c
 libc/memchr.c
 libc/memcmp.c
-libc/memcpy.c
-libc/memmove.c
-libc/memset.c
 libc/mktime.c
 libc/qsort.c
 libc/random.c
