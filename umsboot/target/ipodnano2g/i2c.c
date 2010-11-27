@@ -52,6 +52,7 @@ void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* da
     IICDS = device & ~1;
     IICSTAT = 0xF0;
     IICCON = 0xB7;
+        while ((IICCON & 0x10) == 0);
     if (address >= 0)
     {
         /* write address */
