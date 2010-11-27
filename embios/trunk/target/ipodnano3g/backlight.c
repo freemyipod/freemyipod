@@ -28,7 +28,6 @@
 
 void backlight_init()
 {
-    i2c_sendbyte(0, 0xe6, 0x2a, 6);
 }
 
 void backlight_on(bool on)
