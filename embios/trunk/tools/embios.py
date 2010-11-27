@@ -301,9 +301,9 @@ class Commandline(object):
             which may take some time.
         """
         force = self._bool(force)
-        if force: self.logger.info("Resetting forcefully...\n")
-        else: self.logger.info("Resetting...\n")
-        self.embios.reset(force)
+        if force: self.logger.info("Powering off forcefully...\n")
+        else: self.logger.info("Powering off...\n")
+        self.embios.poweroff(force)
     
     @command
     def uploadfile(self, addr, filename):
