@@ -87,10 +87,10 @@ static void (* timervector[])(void) IDATA_ATTR =
 void INT_TIMER(void) ICODE_ATTR;
 void INT_TIMER()
 {
-    if (TACON & 0x00038000) timervector[0]();
-    if (TBCON & 0x00038000) timervector[1]();
-    if (TCCON & 0x00038000) timervector[2]();
-    if (TDCON & 0x00038000) timervector[3]();
+    if (TACON & (TACON >> 4) & 0x7000) timervector[0]();
+    if (TBCON & (TBCON >> 4) & 0x7000) timervector[1]();
+    if (TCCON & (TCCON >> 4) & 0x7000) timervector[2]();
+    if (TDCON & (TDCON >> 4) & 0x7000) timervector[3]();
 }
 
 static void (* dmavector[])(void) IDATA_ATTR =
