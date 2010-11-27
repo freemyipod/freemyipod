@@ -31,6 +31,9 @@
 #ifdef TARGET_ipodnano2g
 #include "target/ipodnano2g/s5l8701.h"
 #endif
+#ifdef TARGET_ipodclassic
+#include "target/ipodclassic/s5l8702.h"
+#endif
 #ifdef TARGET_ipodnano4g
 #include "target/ipodnano4g/s5l8720.h"
 #endif
@@ -40,6 +43,7 @@
 #define OPHYPWR     (*((volatile uint32_t*)(PHYBASE + 0x000)))
 #define OPHYCLK     (*((volatile uint32_t*)(PHYBASE + 0x004)))
 #define ORSTCON     (*((volatile uint32_t*)(PHYBASE + 0x008)))
+#define OPHYUNK3    (*((volatile uint32_t*)(PHYBASE + 0x018)))
 #define OPHYUNK1    (*((volatile uint32_t*)(PHYBASE + 0x01c)))
 #define OPHYUNK2    (*((volatile uint32_t*)(PHYBASE + 0x044)))
 

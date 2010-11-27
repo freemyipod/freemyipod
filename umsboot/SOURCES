@@ -12,6 +12,18 @@ target/ipodnano2g/backlight.c
 usb/synopsysotg.c
 #endif
 
+#ifdef TARGET_ipodclassic
+target/ipodclassic/mmu.c
+target/ipodclassic/lcd.c
+target/ipodclassic/i2c.c
+target/ipodclassic/interrupt.c
+target/ipodclassic/power.c
+target/ipodclassic/pmu.c
+target/ipodclassic/clockgates.c
+target/ipodclassic/backlight.c
+usb/synopsysotg.c
+#endif
+
 #ifdef ARM_ARCH
 arm/arm-support.S
 arm/contextswitch.S

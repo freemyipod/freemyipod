@@ -139,6 +139,7 @@ static void usb_reset(void)
     ORSTCON = 1;  /* PHY: Assert Software Reset */
     udelay(10);
     ORSTCON = 0;  /* PHY: Deassert Software Reset */
+    OPHYUNK3 = 0x600;
 
     GRSTCTL = 1;  /* OTG: Assert Software Reset */
     while (GRSTCTL & 1);  /* Wait for OTG to ack reset */
