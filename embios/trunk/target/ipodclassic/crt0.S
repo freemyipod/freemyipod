@@ -141,6 +141,7 @@ reset:
 	str	r0, [r1]
 hang:
 	msr	cpsr_c, #0xd3
+	mov	r0, #0
 	mcr	p15, 0, r0,c7,c0,4
 	b	hang
 .size reset, .-reset
