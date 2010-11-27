@@ -15,6 +15,8 @@ usb/synopsysotg.c
 #ifdef ARM_ARCH
 arm/arm-support.S
 arm/contextswitch.S
+arm/memcpy-arm.S
+arm/memset-arm.S
 #endif
 
 main.c
@@ -28,7 +30,5 @@ panic.c
 ramdisk.c
 usb/usb.c
 
-libc/memcpy.c
-libc/memset.c
 libc/sprintf.c
 libc/strlen.c
