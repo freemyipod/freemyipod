@@ -30,20 +30,20 @@
 #define OFFSETX LCDCONSOLE_OFFSETX
 #define OFFSETY LCDCONSOLE_OFFSETY
 #define PIXELBYTES (LCD_BYTESPERPIXEL)
-#define LINEBYTES (LCD_WIDTH * PIXELBYTES)
+#define LINEBYTES (FRAMEBUF_WIDTH * PIXELBYTES)
 #define COLBYTES (FONT_WIDTH * PIXELBYTES)
 #define ROWBYTES (FONT_HEIGHT * LINEBYTES)
 #define OFFSETBYTES (LINEBYTES * OFFSETY + PIXELBYTES * OFFSETX)
 
 
-static unsigned char framebuf[LCD_FRAMEBUFSIZE];
-static unsigned int current_row IBSS_ATTR;
-static unsigned int current_col IBSS_ATTR;
-static bool lcdconsole_needs_update IBSS_ATTR;
-
+static unsigned char framebuf[LCD_FRAMEBUFSIZE] IBSS_ATTR;
+static unsigned int current_row;
+static unsigned int current_col;
+static bool lcdconsole_needs_update;
 
 void lcdconsole_init()
 {
+    displaylcd(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, (void*)0xffffffff, 0);
     memset(framebuf, -1, sizeof(framebuf));
     current_row = 0;
     current_col = -1;
@@ -80,7 +80,7 @@ void lcdconsole_putc_noblit(char string, int fgcolor, int bgcolor)
         current_row = LCDCONSOLE_ROWS - 1;
     }
     renderchar(&framebuf[OFFSETBYTES + ROWBYTES * current_row + COLBYTES * current_col],
-               fgcolor, bgcolor, string, LCD_WIDTH);
+               fgcolor, bgcolor, string, FRAMEBUF_WIDTH);
 }
 
 void lcdconsole_puts_noblit(const char* string, int fgcolor, int bgcolor)
@@ -103,7 +103,11 @@ void lcdconsole_update()
         return;
     }
     leave_critical_section(mode);
-    displaylcd(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf, 0);
+    displaylcd((LCD_WIDTH - FRAMEBUF_WIDTH) / 2,
+               (LCD_WIDTH - FRAMEBUF_WIDTH) / 2 + FRAMEBUF_WIDTH - 1,
+               (LCD_HEIGHT - FRAMEBUF_HEIGHT) / 2,
+               (LCD_HEIGHT - FRAMEBUF_HEIGHT) / 2 + FRAMEBUF_HEIGHT - 1,
+               framebuf, 0);
 }
 
 void lcdconsole_putc(char string, int fgcolor, int bgcolor)
@@ -128,7 +132,11 @@ void lcdconsole_callback()
 {
     if (lcdconsole_needs_update)
     {
-        displaylcd(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf, 0);
+        displaylcd((LCD_WIDTH - FRAMEBUF_WIDTH) / 2,
+                   (LCD_WIDTH - FRAMEBUF_WIDTH) / 2 + FRAMEBUF_WIDTH - 1,
+                   (LCD_HEIGHT - FRAMEBUF_HEIGHT) / 2,
+                   (LCD_HEIGHT - FRAMEBUF_HEIGHT) / 2 + FRAMEBUF_HEIGHT - 1,
+                   framebuf, 0);
         lcdconsole_needs_update = false;
     }
 }
