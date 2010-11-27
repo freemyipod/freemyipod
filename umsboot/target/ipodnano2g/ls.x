@@ -16,7 +16,7 @@ SECTIONS
     {
         _ramdiskstart = .;
         . = ALIGN(4);
-	*(.inithead*)
+        *(.inithead*)
         . = ALIGN(4);
         *(.initcode*)
         . = ALIGN(4);
@@ -31,6 +31,7 @@ SECTIONS
     {
         _sramstart = .;
         KEEP(*(.intvect))
+
         . = ALIGN(4);
         *(.intvect)
         . = ALIGN(4);
@@ -41,15 +42,15 @@ SECTIONS
         *(.glue_7)
         . = ALIGN(4);
         *(.glue_7t)
-        . = ALIGN(0x4);
+        . = ALIGN(4);
         *(.irodata*)
         . = ALIGN(4);
         *(.rodata*)
-        . = ALIGN(0x4);
+        . = ALIGN(4);
         *(.idata*)
         . = ALIGN(4);
         *(.data*)
-        . = ALIGN(0x4);
+        . = ALIGN(4);
         _sramend = .;
     } > SRAM AT> SDRAM
     _sramsource = LOADADDR(.sram);
@@ -59,7 +60,7 @@ SECTIONS
         _initbssstart = .;
         . = ALIGN(4);
         *(.initbss*)
-        . = ALIGN(0x4);
+        . = ALIGN(4);
         _initbssend = .;
     } > SDRAM
 
@@ -67,22 +68,22 @@ SECTIONS
     {
         _bssstart = .;
         . = ALIGN(4);
-        . = ALIGN(4);
         *(.ibss*)
         . = ALIGN(4);
-	*(.bss*)
+        *(.bss*)
         . = ALIGN(4);
-	*(COMMON)
-        . = ALIGN(0x4);
+        *(COMMON)
+        . = ALIGN(4);
         _irqstackstart = .;
         . += 0x400;
         _irqstackend = .;
         _abortstackstart = .;
         . += 0x400;
         _abortstackend = .;
-	_mainstackstart = .;
-	. += 0x1000;
-	_mainstackend = .;
+        _mainstackstart = .;
+        . += 0x1000;
+        _mainstackend = .;
+        . = ALIGN(4);
         _bssend = .;
     } > SRAM
 
