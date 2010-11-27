@@ -58,10 +58,10 @@ bool charging_state(void)
 
 bool external_power_state(void)
 {
-    return false;
+    return (PDAT(12) & 8) ? false : true;
 }
 
 bool vbus_state(void)
 {
-    return true;
+    return (PDAT(12) & 8) ? false : true;
 }
