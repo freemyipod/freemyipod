@@ -50,10 +50,10 @@ static const char welcomestring[] INITCONST_ATTR = "UMSboot v" VERSION " r" VERS
                                                    "accidentally, just press and\n"
                                                    "hold MENU+SELECT to reboot.\n";
 
-static uint16_t swapmap[RAMDISK_SECTORS];
-static uint16_t swaprev[RAMDISK_SECTORS];
+static uint16_t swapmap[RAMDISK_SECTORS] IBSS_ATTR;
+static uint16_t swaprev[RAMDISK_SECTORS] IBSS_ATTR;
 static char swapbuf[RAMDISK_SECTORSIZE];
-static uint16_t newfat[RAMDISK_SECTORS];
+static uint16_t newfat[RAMDISK_SECTORS] IBSS_ATTR;
 static char newdir[RAMDISK_SECTORSIZE];
 
 
@@ -206,6 +206,7 @@ void main()
     memcpy(ramdisk[offset - fatsectors + 1], newfat, fatsectors * RAMDISK_SECTORSIZE);
     fat16_write_mbr(_ramdiskptr, totalclusters + fatsectors + 2);
     lcdconsole_puts("Booting...", 0, 0xffff);
+    displaylcd_sync();
     execfirmware(ramdisk[0]);
 }
 
