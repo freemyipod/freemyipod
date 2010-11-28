@@ -38,10 +38,10 @@ uint32_t read_usec_timer();
 #define USEC_TIMER (read_usec_timer())
 
 
-static inline void udelay(long duration)  /* in usec steps */
-{
-    long timestamp = USEC_TIMER;
-    while (!TIMEOUT_EXPIRED(timestamp, duration));
+#define udelay(duration)                                   \
+{                                                          \
+    long timestamp = USEC_TIMER;                           \
+    while (!TIMEOUT_EXPIRED(timestamp, (long)(duration))); \
 }
 
 
