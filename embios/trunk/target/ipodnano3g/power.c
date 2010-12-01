@@ -32,14 +32,6 @@ void reset();
 
 void power_off(void)
 {
-    pmu_ldo_on_in_standby(0, 0);
-    pmu_ldo_on_in_standby(1, 0);
-    pmu_ldo_on_in_standby(2, 0);
-    pmu_ldo_on_in_standby(3, 0);
-    pmu_ldo_on_in_standby(4, 0);
-    pmu_ldo_on_in_standby(5, 0);
-    pmu_ldo_on_in_standby(6, 0);
-    pmu_ldo_on_in_standby(7, 0);
     pmu_set_wake_condition(0x42); /* USB inserted or EXTON1 */
     pmu_enter_standby();
 
