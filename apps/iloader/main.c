@@ -91,8 +91,19 @@ void fallbackcfg()
     int fh = get_font_height();
     config[0x25] = dw;  // width and height for 0x0088
     config[0x26] = dh;
+    config[0x27] = lcd_translate_color(0, 0, 0, 0);
+    config[0x2b] = lcd_translate_color(0, 255, 255, 255);
+    config[0x2c] = lcd_translate_color(0, 0, 0, 0);
     config[0x4a] = fh;  // font height for 0x0120
+    config[0x4b] = lcd_translate_color(0, 255, 255, 255);
+    config[0x4c] = lcd_translate_color(0, 0, 0, 0);
+    config[0x4d] = lcd_translate_color(0, 255, 255, 0);
+    config[0x4e] = lcd_translate_color(0, 0, 0, 255);
     config[0x52] = fh * 2;  // font height for 0x0140
+    config[0x53] = lcd_translate_color(0, 255, 255, 255);
+    config[0x54] = lcd_translate_color(0, 0, 0, 0);
+    config[0x55] = lcd_translate_color(0, 255, 255, 0);
+    config[0x56] = lcd_translate_color(0, 0, 0, 255);
     uint32_t found = 0;
     uint32_t x = 0;
     uint32_t y = fh * 2;
@@ -111,10 +122,10 @@ void fallbackcfg()
             config[0x58 + found * 8] = 0x3564 + 9 * found;
             config[0x59 + found * 8] = x;
             config[0x5a + found * 8] = y;
-            config[0x5b + found * 8] = 0xffff;
-            config[0x5c + found * 8] = 0x0000;
-            config[0x5d + found * 8] = 0xe0ff;
-            config[0x5e + found * 8] = 0x1f00;
+            config[0x5b + found * 8] = lcd_translate_color(0, 255, 255, 255);
+            config[0x5c + found * 8] = lcd_translate_color(0, 0, 0, 0);
+            config[0x5d + found * 8] = lcd_translate_color(0, 255, 255, 0);
+            config[0x5e + found * 8] = lcd_translate_color(0, 0, 0, 255);
             config[0x5f + found * 8] = 0x2164 + found * 20;
             config[0x859 + found * 5] = 0x03;
             config[0x85a + found * 5] = 0x08000000;
@@ -129,7 +140,7 @@ void fallbackcfg()
 void main(void)
 {
     uint32_t i;
-    uint32_t size;
+    int size;
     uint32_t errhandler;
     uint32_t pc = clickwheel_get_state() & 0x1f;
     char* filename;
