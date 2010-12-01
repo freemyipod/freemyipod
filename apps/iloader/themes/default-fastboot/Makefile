@@ -18,7 +18,7 @@ all: $(ZIPFILE)
 $(ZIPFILE): $(ASSETS) $(CONFIG)
 	@echo [ZIP]    $@
 	@rm -f $(ZIPFILE)
-	@$(ZIP) $@ iLoader
+	@$(ZIP) --exclude='*/.svn/*' $@ iLoader
 
 $(CONFIG): $(CONFIGSRC)
 	@echo [CCONF]  $<
