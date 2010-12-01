@@ -28,6 +28,8 @@
 #define sysi ((uint8_t*)0x2203fdf0)
 #define sysiword ((uint32_t*)0x2203fdf0)
 
+uint8_t nor[0x1000] INITBSS_ATTR __attribute__((aligned(16)));
+uint32_t* norword INITBSS_ATTR = (uint32_t*)nor;
 
 void targetinit_late()
 {
@@ -35,7 +37,8 @@ void targetinit_late()
 
     clickwheel_init();
 
-/*    uint32_t scfg_size = norword[0x401];
+    bootflash_readraw(nor, 0x1000, sizeof(nor));
+    uint32_t scfg_size = norword[0x401];
     uint32_t scfg_entrycount = norword[0x405];
     if (norword[0x400] == 0x53436667 && scfg_size <= 0x1000
      && scfg_entrycount * 0x14 + 0x18 == scfg_size)
@@ -123,5 +126,4 @@ void targetinit_late()
         sysiword[0x4a] = 0x53797349;
         sysiword[0x4b] = 0x2203fdf0;
     }
-*/
 }
