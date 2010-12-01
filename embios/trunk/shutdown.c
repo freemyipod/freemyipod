@@ -44,4 +44,7 @@ void shutdown(bool shutdownhw)
         lcd_shutdown();
 #endif
     }
+#ifdef HAVE_LCD
+    else displaylcd_sync();
+#endif
 }
