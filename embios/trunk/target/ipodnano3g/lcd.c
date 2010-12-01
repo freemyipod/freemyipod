@@ -69,10 +69,6 @@ static uint32_t lcd_detect()
     return (PDAT6 & 0x30) >> 4;
 }
 
-void lcd_shutdown()
-{
-}
-
 bool displaylcd_busy()
 {
     return DMAC0C0CONFIG & 1;
@@ -140,6 +136,12 @@ void displaylcd(unsigned int startx, unsigned int endx,
     }
     clean_dcache();
     DMAC0C0CONFIG = 0x88c1;
+}
+
+void lcd_shutdown()
+{
+    displaylcd_sync();
+    // TODO: Shut down properly
 }
 
 void INT_DMAC0C0()
