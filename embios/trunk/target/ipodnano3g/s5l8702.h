@@ -533,6 +533,41 @@ struct dma_lli
 #define LCDWDATA  (*((uint32_t volatile*)(0x38300040)))
 
 
+/////ATA/////
+#define ATA_CONTROL         (*((uint32_t volatile*)(0x38700000)))
+#define ATA_STATUS          (*((uint32_t volatile*)(0x38700004)))
+#define ATA_COMMAND         (*((uint32_t volatile*)(0x38700008)))
+#define ATA_SWRST           (*((uint32_t volatile*)(0x3870000c)))
+#define ATA_IRQ             (*((uint32_t volatile*)(0x38700010)))
+#define ATA_IRQ_MASK        (*((uint32_t volatile*)(0x38700014)))
+#define ATA_CFG             (*((uint32_t volatile*)(0x38700018)))
+#define ATA_MDMA_TIME       (*((uint32_t volatile*)(0x38700028)))
+#define ATA_PIO_TIME        (*((uint32_t volatile*)(0x3870002c)))
+#define ATA_UDMA_TIME       (*((uint32_t volatile*)(0x38700030)))
+#define ATA_XFR_NUM         (*((uint32_t volatile*)(0x38700034)))
+#define ATA_XFR_CNT         (*((uint32_t volatile*)(0x38700038)))
+#define ATA_TBUF_START      (*((void* volatile*)(0x3870003c)))
+#define ATA_TBUF_SIZE       (*((uint32_t volatile*)(0x38700040)))
+#define ATA_SBUF_START      (*((void* volatile*)(0x38700044)))
+#define ATA_SBUF_SIZE       (*((uint32_t volatile*)(0x38700048)))
+#define ATA_CADR_TBUF       (*((void* volatile*)(0x3870004c)))
+#define ATA_CADR_SBUF       (*((void* volatile*)(0x38700050)))
+#define ATA_PIO_DTR         (*((uint32_t volatile*)(0x38700054)))
+#define ATA_PIO_FED         (*((uint32_t volatile*)(0x38700058)))
+#define ATA_PIO_SCR         (*((uint32_t volatile*)(0x3870005c)))
+#define ATA_PIO_LLR         (*((uint32_t volatile*)(0x38700060)))
+#define ATA_PIO_LMR         (*((uint32_t volatile*)(0x38700064)))
+#define ATA_PIO_LHR         (*((uint32_t volatile*)(0x38700068)))
+#define ATA_PIO_DVR         (*((uint32_t volatile*)(0x3870006c)))
+#define ATA_PIO_CSD         (*((uint32_t volatile*)(0x38700070)))
+#define ATA_PIO_DAD         (*((uint32_t volatile*)(0x38700074)))
+#define ATA_PIO_READY       (*((uint32_t volatile*)(0x38700078)))
+#define ATA_PIO_RDATA       (*((uint32_t volatile*)(0x3870007c)))
+#define ATA_BUS_FIFO_STATUS (*((uint32_t volatile*)(0x38700080)))
+#define ATA_FIFO_STATUS     (*((uint32_t volatile*)(0x38700084)))
+#define ATA_DMA_ADDR        (*((void* volatile*)(0x38700088)))
+
+
 /////CLOCK GATES/////
 #define CLOCKGATE_USB_1 2
 #define CLOCKGATE_USB_2 35
@@ -544,6 +579,7 @@ struct dma_lli
 #define IRQ_DMAC(d) 16 + d
 #define IRQ_DMAC0 16
 #define IRQ_DMAC1 17
+#define IRQ_ATA 29
 
 
 #endif

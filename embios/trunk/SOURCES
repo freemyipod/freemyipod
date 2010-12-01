@@ -51,6 +51,10 @@ target/ipodnano3g/spi.c
 usb/synopsysotg.c
 #endif
 
+#ifdef TARGET_ipodclassic
+target/ipodclassic/storage_ata.c
+#endif
+
 #ifdef ARM_ARCH
 arm/arm-support.S
 arm/contextswitch.S
