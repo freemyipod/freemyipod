@@ -134,8 +134,6 @@ void clickwheel_init()
     lastpacket = 0;
     collect = 0;
     lastdiff = 0;
-    PWRCON(0) = 0;
-    PWRCON(1) = 0;
     interrupt_enable(IRQ_WHEEL, true);
     PUNA(2) &= ~2;
     PCON(14) = (PCON(14) & ~0xffff0000) | 0x22220000;
