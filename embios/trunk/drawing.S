@@ -136,10 +136,15 @@ renderbmp_row:
 	mov	r12, r4
 	sub	r0, r0, r2
 renderbmp_pixel:
+#ifdef LCD_BIGENDIAN
 	ldrb	lr, [r1,#1]
 	strb	lr, [r0], #1
 	ldrb	lr, [r1], #2
 	strb	lr, [r0], #1
+#else
+	ldrh	lr, [r1], #2
+	strh	lr, [r0], #2
+#endif
 	subs	r12, r12, #1
 	bne	renderbmp_pixel
 	tst	r4, #1
