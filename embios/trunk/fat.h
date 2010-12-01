@@ -19,6 +19,7 @@
  *
  ****************************************************************************/
 
+#ifndef IN_APPLICATION_CODE
 #ifndef FAT_H
 #define FAT_H
 
@@ -132,4 +133,5 @@ extern bool fat_ismounted(int volume);
 extern void* fat_get_sector_buffer(void);
 extern void fat_release_sector_buffer(void);
 
+#endif
 #endif

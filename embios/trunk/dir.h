@@ -42,6 +42,9 @@ struct dirent {
     unsigned short wrttime; /*  Last write time */
 };
 
+#ifdef IN_APPLICATION_CODE
+#define DIR void
+#else
 #include "fat.h"
 
 typedef struct {
@@ -54,6 +57,7 @@ typedef struct {
     int volumecounter; /* running counter for faked volume entries */
 #endif
 } DIR;
+#endif
 
 #ifdef HAVE_HOTSWAP
 char *get_volume_name(int volume);
