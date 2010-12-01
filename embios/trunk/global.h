@@ -56,7 +56,10 @@ typedef int bool;
 #include "build/version.h"
 #include "configmagic.h"
 #endif
+#ifndef ASM_FILE
+#include "util.h"
 #include "debug.h"
+#endif
 
 
 #endif

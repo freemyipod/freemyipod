@@ -46,6 +46,34 @@
 /* return p incremented by specified number of bytes */
 #define SKIPBYTES(p, count) ((typeof (p))((char *)(p) + (count)))
 
+#define BIT(x) (1 << (x))
+#define BITRANGE(x, y) ((0xfffffffful >> (31 + (x) - (y))) << (x))
+
+#define ERR_RC(val) (BIT(31) | (val))
+#define RET_ERR(val)                                           \
+{                                                              \
+    return ERR_RC(val);                                        \
+}
+#define RET_ERR_MTX(val, mutex)                                \
+{                                                              \
+    mutex_unlock(mutex);                                       \
+    return ERR_RC(val);                                        \
+}
+#define PASS_RC(expr, bits, val)                               \
+{                                                              \
+    int rc = (expr);                                           \
+    if (rc & BIT(31)) return ERR_RC((rc << (bits)) | (val));   \
+}
+#define PASS_RC_MTX(expr, bits, val, mutex)                    \
+{                                                              \
+    int rc = (expr);                                           \
+    if (rc & BIT(31))                                          \
+    {                                                          \
+        mutex_unlock(mutex);                                   \
+        return ERR_RC((rc << (bits)) | (val));                 \
+    }                                                          \
+}
+
 #define P2_M1(p2)  ((1 << (p2))-1)
 
 /* align up or down to nearest 2^p2 */
