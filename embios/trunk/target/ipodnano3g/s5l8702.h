@@ -277,6 +277,8 @@
 /////GPIO/////
 #define PCON(i)       (*((uint32_t volatile*)(0x3cf00000 + ((i) << 5))))
 #define PDAT(i)       (*((uint32_t volatile*)(0x3cf00004 + ((i) << 5))))
+#define PUNA(i)       (*((uint32_t volatile*)(0x3cf00008 + ((i) << 5))))
+#define PUNB(i)       (*((uint32_t volatile*)(0x3cf0000c + ((i) << 5))))
 #define PCON0         (*((uint32_t volatile*)(0x3cf00000)))
 #define PDAT0         (*((uint32_t volatile*)(0x3cf00004)))
 #define PCON1         (*((uint32_t volatile*)(0x3cf00020)))
@@ -568,6 +570,17 @@ struct dma_lli
 #define ATA_DMA_ADDR        (*((void* volatile*)(0x38700088)))
 
 
+/////CLICKWHEEL/////
+#define WHEEL00      (*((uint32_t volatile*)(0x3C200000)))
+#define WHEEL04      (*((uint32_t volatile*)(0x3C200004)))
+#define WHEEL08      (*((uint32_t volatile*)(0x3C200008)))
+#define WHEEL0C      (*((uint32_t volatile*)(0x3C20000C)))
+#define WHEEL10      (*((uint32_t volatile*)(0x3C200010)))
+#define WHEELINT     (*((uint32_t volatile*)(0x3C200014)))
+#define WHEELRX      (*((uint32_t volatile*)(0x3C200018)))
+#define WHEELTX      (*((uint32_t volatile*)(0x3C20001C)))
+
+
 /////CLOCK GATES/////
 #define CLOCKGATE_USB_1 2
 #define CLOCKGATE_USB_2 35
@@ -579,6 +592,7 @@ struct dma_lli
 #define IRQ_DMAC(d) 16 + d
 #define IRQ_DMAC0 16
 #define IRQ_DMAC1 17
+#define IRQ_WHEEL 23
 #define IRQ_ATA 29
 
 

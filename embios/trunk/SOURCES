@@ -47,7 +47,9 @@ target/ipodnano3g/clockgates.c
 target/ipodnano3g/bootflash.c
 target/ipodnano3g/backlight.c
 target/ipodnano3g/hwkeyaes.c
+target/ipodnano3g/clickwheel.c
 target/ipodnano3g/spi.c
+target/ipodnano3g/targetinit.c
 usb/synopsysotg.c
 #endif
 

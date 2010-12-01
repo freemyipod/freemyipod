@@ -55,8 +55,8 @@
 
 #define HAVE_HWKEYAES
 
-//#define HAVE_BUTTON
-//#define HAVE_CLICKWHEEL
+#define HAVE_BUTTON
+#define HAVE_CLICKWHEEL
 
 #define HAVE_BOOTFLASH
 
@@ -67,7 +67,7 @@
 #define CONFIG_STORAGE STORAGE_ATA
 #define SECTOR_SIZE 4096
 
-//#define HAVE_TARGETINIT_LATE
+#define HAVE_TARGETINIT_LATE
 
 
 #endif
