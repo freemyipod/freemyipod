@@ -739,8 +739,10 @@ static void nand_thread(void)
 {
     while (1)
     {
+        mutex_lock(&nand_mtx, TIMEOUT_BLOCK);
         if (TIME_AFTER(USEC_TIMER, nand_last_activity_value + 200000) && nand_powered)
             nand_power_down();
+        mutex_unlock(&nand_mtx);
         sleep(100000);
     }
 }
