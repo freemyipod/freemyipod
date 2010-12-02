@@ -167,11 +167,11 @@ void main(void)
         {
             if (bootflash_is_memmapped)
             {
-                if (!ucl_decompress(bootflash_getaddr("ildrcfg "), size, config, &size))
+                if (!ucl_decompress(bootflash_getaddr("ildrcfg "), size, config, (uint32_t*)&size))
                     goto configfound;
             }
             else if (bootflash_read("ildrcfg ", backdrop, 0, size) == size)
-                if (!ucl_decompress(backdrop, size, config, &size))
+                if (!ucl_decompress(backdrop, size, config, (uint32_t*)&size))
                     goto configfound;
         }
         else if (bootflash_read("ildrcfg ", config, 0, size) == size)
@@ -216,14 +216,14 @@ configfound:
                     if (bootflash_is_memmapped)
                     {
                         if (ucl_decompress(bootflash_getaddr(filename), size,
-                                           (void*)config[pc + 1], &size))
+                                           (void*)config[pc + 1], (uint32_t*)&size))
                             pc = errhandler;
                         else pc += 3;
                     }
                     else if (bootflash_read(filename, (void*)(0x09e00000 - size), 0, size) == size)
                     {
                         if (ucl_decompress((void*)(0x09e00000 - size), size,
-                                           (void*)config[pc + 1], &size))
+                                           (void*)config[pc + 1], (uint32_t*)&size))
                             pc = errhandler;
                         else pc += 3;
                     }
@@ -452,7 +452,8 @@ configfound:
                 execfirmware((void*)config[pc + 1]);
 
             case 0x14:
-                if (ucl_decompress((void*)config[pc + 1], size, (void*)config[pc + 2], &size))
+                if (ucl_decompress((void*)config[pc + 1], size,
+                                   (void*)config[pc + 2], (uint32_t*)&size))
                     pc = errhandler;
                 else pc += 3;
                 break;
