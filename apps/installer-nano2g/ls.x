@@ -11,8 +11,11 @@ SECTIONS
 {
     .bss (NOLOAD) :
     {
+        __bss_start = .;
         *(.bss*)
         *(COMMON)
+        __bss_end = .;
+        *(.stack*)
     } > RAM
 
     .text 0x08f00000:
