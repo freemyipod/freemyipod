@@ -238,7 +238,7 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
     ATA_COMMAND = BIT(1);
     while (count)
     {
-        uint32_t cnt = MIN(64, count);
+        uint32_t cnt = MIN(32, count);
         PASS_RC(ata_wait_for_rdy(100000), 2, 0);
         ata_write_cbr(&ATA_PIO_DVR, 0);
         if (ata_lba48)
@@ -269,6 +269,7 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
         count -= cnt;
         if (ata_dma)
         {
+            PASS_RC(ata_wait_for_start_of_transfer(10000000), 2, 1);
             if (write)
             {
                 ATA_SBUF_START = buffer;
@@ -288,7 +289,7 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
             ATA_IRQ = BITRANGE(0, 4);
             ATA_IRQ_MASK = BIT(0);
             ATA_COMMAND = BIT(0);
-            if (wakeup_wait(&ata_wakeup, 3000000) == THREAD_TIMEOUT)
+            if (wakeup_wait(&ata_wakeup, 10000000) == THREAD_TIMEOUT)
             {
                 ATA_COMMAND = BIT(1);
                 ATA_CFG &= ~(BITRANGE(2, 3) | BIT(12));
@@ -304,7 +305,7 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
             while (cnt--)
             {
                 int i;
-                PASS_RC(ata_wait_for_start_of_transfer(3000000), 2, 1);
+                PASS_RC(ata_wait_for_start_of_transfer(10000000), 2, 1);
                 if (write)
                     for (i = 0; i < 256; i++)
                         ata_write_cbr(&ATA_PIO_DTR, ((uint16_t*)buffer)[i]);
@@ -350,7 +351,7 @@ int ata_read_sectors(IF_MD2(int drive,) unsigned long start, int incount,
                      void* inbuf)
 {
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
-    int tries = 5;
+    int tries = 3;
     int rc = -1;
     while (--tries && rc)
     {
@@ -365,7 +366,7 @@ int ata_write_sectors(IF_MD2(int drive,) unsigned long start, int count,
                       const void* outbuf)
 {
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
-    int tries = 5;
+    int tries = 3;
     int rc = -1;
     while (--tries && rc)
     {
