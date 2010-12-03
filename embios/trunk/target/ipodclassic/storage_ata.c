@@ -41,15 +41,15 @@ static bool ata_powered;
 
 static uint16_t ata_read_cbr(uint32_t volatile* reg)
 {
-    while (!(ATA_PIO_READY & 2)) sleep(0);
+    while (!(ATA_PIO_READY & 2)) yield();
     volatile uint32_t dummy = *reg;
-    while (!(ATA_PIO_READY & 1)) sleep(0);
+    while (!(ATA_PIO_READY & 1)) yield();
     return ATA_PIO_RDATA;
 }
 
 static void ata_write_cbr(uint32_t volatile* reg, uint16_t data)
 {
-    while (!(ATA_PIO_READY & 2)) sleep(0);
+    while (!(ATA_PIO_READY & 2)) yield();
     *reg = data;
 }
 
@@ -61,7 +61,6 @@ static int ata_wait_for_not_bsy(long timeout)
         uint8_t csd = ata_read_cbr(&ATA_PIO_CSD);
         if (!(csd & BIT(7))) return 0;
         if (TIMEOUT_EXPIRED(startusec, timeout)) RET_ERR(0);
-        sleep(100);
     }
 }
 
@@ -74,7 +73,6 @@ static int ata_wait_for_rdy(long timeout)
         uint8_t dad = ata_read_cbr(&ATA_PIO_DAD);
         if (dad & BIT(6)) return 0;
         if (TIMEOUT_EXPIRED(startusec, timeout)) RET_ERR(1);
-        sleep(100);
     }
 }
 
@@ -88,7 +86,6 @@ static int ata_wait_for_start_of_transfer(long timeout)
         if (dad & BIT(0)) RET_ERR(1);
         if ((dad & (BIT(7) | BIT(3))) == BIT(3)) return 0;
         if (TIMEOUT_EXPIRED(startusec, timeout)) RET_ERR(2);
-        sleep(100);
     }
 }
 
@@ -118,6 +115,17 @@ int ata_identify(uint16_t* buf)
 void ata_set_active(void)
 {
     ata_last_activity_value = USEC_TIMER;
+}
+
+int ata_set_feature(uint32_t feature, uint32_t param)
+{
+    PASS_RC(ata_wait_for_rdy(500000), 1, 0);
+    ata_write_cbr(&ATA_PIO_DVR, 0);
+    ata_write_cbr(&ATA_PIO_FED, 3);
+    ata_write_cbr(&ATA_PIO_SCR, param);
+    ata_write_cbr(&ATA_PIO_CSD, feature);
+    PASS_RC(ata_wait_for_rdy(500000), 1, 1);
+    return 0;
 }
 
 int ata_power_up()
@@ -200,12 +208,9 @@ int ata_power_up()
         }
     }
     ata_dma = param ? true : false;
-    PASS_RC(ata_wait_for_rdy(500000), 2, 1);
-    ata_write_cbr(&ATA_PIO_DVR, 0);
-    ata_write_cbr(&ATA_PIO_FED, 3);
-    ata_write_cbr(&ATA_PIO_SCR, param);
-    ata_write_cbr(&ATA_PIO_CSD, 0xef);
-    PASS_RC(ata_wait_for_rdy(500000), 2, 2);
+    PASS_RC(ata_set_feature(0xef, param), 2, 1);
+    if (ata_identify_data[82] & BIT(5)) PASS_RC(ata_set_feature(2, 0), 2, 2);
+    if (ata_identify_data[82] & BIT(6)) PASS_RC(ata_set_feature(0x55, 0), 2, 3);
     ATA_PIO_TIME = piotime;
     ATA_MDMA_TIME = mdmatime;
     ATA_UDMA_TIME = udmatime;
@@ -223,7 +228,7 @@ void ata_power_down()
     ata_wait_for_rdy(1000000);
     sleep(30000);
     ATA_CONTROL = 0;
-    while (!(ATA_CONTROL & BIT(1))) sleep(0);
+    while (!(ATA_CONTROL & BIT(1))) yield();
     clockgate_enable(5, false);
     i2c_sendbyte(0, 0xe6, 0x1b, 0);
 }
@@ -238,7 +243,7 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
     ATA_COMMAND = BIT(1);
     while (count)
     {
-        uint32_t cnt = MIN(32, count);
+        uint32_t cnt = MIN(ata_lba48 ? 8192 : 32, count);
         PASS_RC(ata_wait_for_rdy(100000), 2, 0);
         ata_write_cbr(&ATA_PIO_DVR, 0);
         if (ata_lba48)
