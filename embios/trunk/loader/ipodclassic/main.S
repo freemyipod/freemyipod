@@ -221,8 +221,8 @@ values1:
 	.word 0xEEEEEEEE @ PCON8
 	.word 0xEEEEEEEE @ PCON9
 	.word 0xEEEEEEEE @ PCONA
-	.word 0xEE00EE0E @ PCONB
-	.word 0xEEEE0EEE @ PCONC
+	.word 0xEF00EE0E @ PCONB
+	.word 0xEEEE0EEF @ PCONC
 	.word 0xEEEEEEEE @ PCOND
 	.word 0x202222EE @ PCONE
 	.word 0xEEEE0E22 @ PCONF
