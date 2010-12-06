@@ -487,9 +487,9 @@ class Commandline(object):
                 self.logger.info("      ")
                 for register in range(registerrange, 16, 4):
                     registerrepr = "r"+str(register)
-                    self.logger.info("{:3s}: 0x{:08X}    ".format(registerrepr, thread.regs["r"+str(register)]))
+                    self.logger.info("{0:3s}: 0x{1:08X}   ".format(registerrepr, thread.regs["r"+str(register)]))
                 self.logger.info("\n")
-            self.logger.info("      cpsr: 0x{:08X}".format(thread.regs.cpsr))
+            self.logger.info("     cpsr: 0x{0:08X}".format(thread.regs.cpsr))
             self.logger.info("\n")
     
     @command
