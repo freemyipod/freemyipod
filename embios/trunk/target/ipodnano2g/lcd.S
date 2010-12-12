@@ -327,12 +327,10 @@ lcd_translate_color:
 	cmp	r0, #0
 	movne	r0, #0xff000000
 	orrne	r0, r0, #0xff0000
-	mov	r3, r3,lsr#3
 	mov	r2, r2,lsr#2
 	mov	r1, r1,lsr#3
-	orr	r0, r0, r3,lsl#8
-	orr	r0, r0, r2,lsl#13
-	orr	r0, r0, r2,lsr#3
-	orr	r0, r0, r1,lsl#3
+	orr	r0, r0, r3,lsr#3
+	orr	r0, r0, r2,lsl#5
+	orr	r0, r0, r1,lsl#11
 	mov	pc, lr
 .size lcd_translate_color, .-lcd_translate_color
