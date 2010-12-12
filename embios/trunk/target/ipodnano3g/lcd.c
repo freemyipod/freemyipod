@@ -141,7 +141,45 @@ void displaylcd(unsigned int startx, unsigned int endx,
 void lcd_shutdown()
 {
     displaylcd_sync();
-    // TODO: Shut down properly
+    uint32_t type = lcd_detect();
+    if (type == 3)
+    {
+        lcd_send_cmd(0x7);
+        lcd_send_data(0x172);
+        lcd_send_cmd(0x30);
+        lcd_send_data(0x3ff);
+        sleep(90000);
+        lcd_send_cmd(0x7);
+        lcd_send_data(0x120);
+        lcd_send_cmd(0x30);
+        lcd_send_data(0x0);
+        lcd_send_cmd(0x100);
+        lcd_send_data(0x780);
+        lcd_send_cmd(0x7);
+        lcd_send_data(0x0);
+        lcd_send_cmd(0x101);
+        lcd_send_data(0x260);
+        lcd_send_cmd(0x102);
+        lcd_send_data(0xa9);
+        sleep(30000);
+        lcd_send_cmd(0x100);
+        lcd_send_data(0x700);
+        lcd_send_cmd(0x100);
+        lcd_send_data(0x704);
+    }
+    else if (type == 1)
+    {
+        lcd_send_cmd(0x28);
+        lcd_send_cmd(0x10);
+        sleep(100000);
+    }
+    else
+    {
+        lcd_send_cmd(0x28);
+        sleep(50000);
+        lcd_send_cmd(0x10);
+        sleep(50000);
+    }
 }
 
 void INT_DMAC0C0()
