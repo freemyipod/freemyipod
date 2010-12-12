@@ -38,6 +38,22 @@ static long ata_sleep_timeout = 20000000;
 static uint32_t ata_stack[0x80];
 static bool ata_powered;
 
+#ifdef ATA_HAVE_BBT
+#include "panic.h"
+uint16_t ata_bbt[ATA_BBT_PAGES][0x20];
+uint32_t ata_virtual_sectors;
+
+int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool write);
+
+void ata_bbt_read_sectors(uint32_t sector, uint32_t count, void* buffer)
+{
+    int rc = ata_rw_sectors_internal(sector, count, buffer, false);
+    if (IS_ERR(rc))
+        panicf(PANIC_KILLTHREAD, "ATA: Error %08X while reading BBT (sector %d, count %d)\n",
+               rc, sector, count);
+}
+#endif
+
 
 static uint16_t ata_read_cbr(uint32_t volatile* reg)
 {
@@ -159,6 +175,7 @@ int ata_power_up()
                           | (((uint64_t)ata_identify_data[102]) << 32)
                           | (((uint64_t)ata_identify_data[103]) << 48);
     else ata_total_sectors = ata_identify_data[60] | (((uint32_t)ata_identify_data[61]) << 16);
+    ata_total_sectors >>= 3;
     if (ata_identify_data[53] & BIT(1))
     {
         if (ata_identify_data[64] & BIT(1)) piotime = 0x2072;
@@ -209,8 +226,8 @@ int ata_power_up()
     }
     ata_dma = param ? true : false;
     PASS_RC(ata_set_feature(0xef, param), 2, 1);
-    if (ata_identify_data[82] & BIT(5)) PASS_RC(ata_set_feature(2, 0), 2, 2);
-    if (ata_identify_data[82] & BIT(6)) PASS_RC(ata_set_feature(0x55, 0), 2, 3);
+    if (ata_identify_data[82] & BIT(5)) PASS_RC(ata_set_feature(0x82, 0), 2, 2);
+    if (ata_identify_data[82] & BIT(6)) PASS_RC(ata_set_feature(0xaa, 0), 2, 3);
     ATA_PIO_TIME = piotime;
     ATA_MDMA_TIME = mdmatime;
     ATA_UDMA_TIME = udmatime;
@@ -235,6 +252,53 @@ void ata_power_down()
 
 int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
 {
+#ifdef ATA_HAVE_BBT
+    if (sector + count > ata_virtual_sectors) RET_ERR(0);
+    while (count)
+    {
+        uint32_t l0idx = sector >> 15;
+        uint32_t l0offs = sector & 0x7fff;
+        uint32_t cnt = MIN(count, 0x8000 - l0offs);
+        uint32_t l0data = ata_bbt[0][l0idx << 1];
+        uint32_t base = ata_bbt[0][(l0idx << 1) | 1] << 12;
+        uint32_t phys;
+        if (l0data < 0x8000) phys = sector + l0data + base;
+        else
+        {
+            uint32_t l1idx = (sector >> 10) & 0x1f;
+            uint32_t l1offs = sector & 0x3ff;
+            cnt = MIN(count, 0x400 - l1offs);
+            uint32_t l1data = ata_bbt[l0data & 0x7fff][l1idx];
+            if (l1data < 0x8000) phys = sector + l1data + base;
+            else
+            {
+                uint32_t l2idx = (sector >> 5) & 0x1f;
+                uint32_t l2offs = sector & 0x1f;
+                cnt = MIN(count, 0x20 - l2offs);
+                uint32_t l2data = ata_bbt[l1data & 0x7fff][l2idx];
+                if (l2data < 0x8000) phys = sector + l2data + base;
+                else
+                {
+                    uint32_t l3idx = sector & 0x1f;
+                    phys = ata_bbt[l2data & 0x7fff][l3idx];
+                    for (cnt = 1; cnt < count && l3idx + cnt < 0x20; cnt++)
+                        if (ata_bbt[l2data & 0x7fff][l3idx + cnt] != phys)
+                            break;
+                    phys += sector + base;
+                }
+            }
+        }
+        PASS_RC(ata_rw_sectors_internal(phys, cnt, buffer, write), 0, 0);
+        buffer += cnt * SECTOR_SIZE;
+        sector += cnt;
+        count -= cnt;
+    }
+    return 0;
+}
+
+int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool write)
+{
+#endif
     if (sector + count > ata_total_sectors) RET_ERR(0);
     if (!ata_powered) ata_power_up();
     ata_set_active();
@@ -244,7 +308,7 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
     while (count)
     {
         uint32_t cnt = MIN(ata_lba48 ? 8192 : 32, count);
-        PASS_RC(ata_wait_for_rdy(100000), 2, 0);
+        PASS_RC(ata_wait_for_rdy(100000), 2, 1);
         ata_write_cbr(&ATA_PIO_DVR, 0);
         if (ata_lba48)
         {
@@ -274,7 +338,7 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
         count -= cnt;
         if (ata_dma)
         {
-            PASS_RC(ata_wait_for_start_of_transfer(10000000), 2, 1);
+            PASS_RC(ata_wait_for_start_of_transfer(1500000), 2, 2);
             if (write)
             {
                 ATA_SBUF_START = buffer;
@@ -294,11 +358,11 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
             ATA_IRQ = BITRANGE(0, 4);
             ATA_IRQ_MASK = BIT(0);
             ATA_COMMAND = BIT(0);
-            if (wakeup_wait(&ata_wakeup, 10000000) == THREAD_TIMEOUT)
+            if (wakeup_wait(&ata_wakeup, 1500000) == THREAD_TIMEOUT)
             {
                 ATA_COMMAND = BIT(1);
                 ATA_CFG &= ~(BITRANGE(2, 3) | BIT(12));
-                RET_ERR(2);
+                RET_ERR(3);
             }
             ATA_COMMAND = BIT(1);
             ATA_CFG &= ~(BITRANGE(2, 3) | BIT(12));
@@ -310,7 +374,7 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
             while (cnt--)
             {
                 int i;
-                PASS_RC(ata_wait_for_start_of_transfer(10000000), 2, 1);
+                PASS_RC(ata_wait_for_start_of_transfer(1500000), 2, 2);
                 if (write)
                     for (i = 0; i < 256; i++)
                         ata_write_cbr(&ATA_PIO_DTR, ((uint16_t*)buffer)[i]);
@@ -356,9 +420,9 @@ int ata_read_sectors(IF_MD2(int drive,) unsigned long start, int incount,
                      void* inbuf)
 {
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
-    int tries = 3;
+    int tries = 1;
     int rc = -1;
-    while (--tries && rc)
+    while (tries-- && rc)
     {
         rc = ata_rw_sectors(start, incount, inbuf, false);
         if (rc) ata_soft_reset();
@@ -371,9 +435,9 @@ int ata_write_sectors(IF_MD2(int drive,) unsigned long start, int count,
                       const void* outbuf)
 {
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
-    int tries = 3;
+    int tries = 1;
     int rc = -1;
-    while (--tries && rc)
+    while (tries-- && rc)
     {
         rc = ata_rw_sectors(start, count, (void*)((uint32_t)outbuf), true);
         if (rc) ata_soft_reset();
@@ -389,7 +453,6 @@ void ata_spindown(int seconds)
 
 void ata_sleep(void)
 {
-    call_storage_idle_notifys(false);
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
     ata_power_down();
     mutex_unlock(&ata_mutex);
@@ -413,7 +476,11 @@ void ata_spin(void)
 void ata_get_info(IF_MD2(int drive,) struct storage_info *info)
 {
     (*info).sector_size = SECTOR_SIZE;
+#ifdef ATA_HAVE_BBT
+    (*info).num_sectors = ata_virtual_sectors;
+#else
     (*info).num_sectors = ata_total_sectors;
+#endif
     (*info).vendor = "Apple";
     (*info).product = "iPod Classic";
     (*info).revision = "1.0";
@@ -434,6 +501,32 @@ int ata_init(void)
     PCON(10) = (PCON(10) & ~0xffff) | 0x4444;
     ata_powered = false;
     ata_total_sectors = 0;
+#ifdef ATA_HAVE_BBT
+    mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
+    memset(ata_bbt, 0, sizeof(ata_bbt));
+    ata_power_up();
+    uint32_t* buf = (uint32_t*)(ata_bbt[ARRAYLEN(ata_bbt) - 64]);
+    ata_bbt_read_sectors(0, 1, buf);
+    if (!memcmp(buf, "emBIbbth", 8))
+    {
+        ata_virtual_sectors = buf[0x1fe];
+        uint32_t count = buf[0x1ff];
+        if (count > (ATA_BBT_PAGES >> 6))
+            panicf(PANIC_KILLTHREAD, "ATA: BBT too big!\n");
+        uint32_t i;
+        uint32_t cnt;
+        for (i = 0; i < count; i += cnt)
+        {
+            uint32_t phys = buf[0x200 + i];
+            for (cnt = 1; cnt < count; cnt++)
+                if (buf[0x200 + i + cnt] != phys + cnt)
+                    break;
+            ata_bbt_read_sectors(phys, cnt, ata_bbt[i << 6]);
+        }
+    }
+    else ata_virtual_sectors = ata_total_sectors;
+    mutex_unlock(&ata_mutex);
+#endif
     thread_create("ATA idle monitor", ata_thread, ata_stack,
                   sizeof(ata_stack), USER_THREAD, 1, true);
     return 0;
