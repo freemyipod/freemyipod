@@ -480,6 +480,7 @@ class Commandline(object):
             self.logger.info("    Thread type: "+thread.type+"\n")
             self.logger.info("    Thread state: "+thread.state+"\n")
             self.logger.info("    Priority: "+str(thread.priority)+"/256\n")
+            self.logger.info("    Current CPU load: "+str((thread.cpuload*100)/255)+"%\n")
             self.logger.info("    CPU time (total): "+str(datetime.timedelta(microseconds=thread.cputime_total))+"\n")
             self.logger.info("    Stack address: "+self._hex(thread.stackaddr)+"\n")
             self.logger.info("    Registers:\n")
