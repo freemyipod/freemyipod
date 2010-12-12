@@ -273,7 +273,8 @@ displaylcd_sync_wait:
 	tst	r0, #0x70000
 	ldreq	pc, [sp], #4
 	adr	lr, displaylcd_sync_wait
-	b	context_switch
+	mov	r0, #0x100
+	b	sleep
 .size displaylcd_sync, .-displaylcd_sync
 
 .section .icode.displaylcd_busy, "ax", %progbits
