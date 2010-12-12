@@ -220,7 +220,7 @@ values1:
 	.word 0xEEEEEEEE @ PCON7
 	.word 0xEEEEEEEE @ PCON8
 	.word 0xEEEEEEEE @ PCON9
-	.word 0xEEEEEEEE @ PCONA
+	.word 0xE0EEEEEE @ PCONA
 	.word 0xEF00EE0E @ PCONB
 	.word 0xEEEE0EEF @ PCONC
 	.word 0xEEEEEEEE @ PCOND
