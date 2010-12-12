@@ -31,9 +31,11 @@ lcd_init:
 	orr	r0, r0, #0x590000
 	str	r0, [r1,#0x104]
 	orr	r1, r1, #0x200000
-	ldr	r0, [r1]
-	orr	r0, r0, #0x100
+	mov	r0, #0xd00
+	orr	r0, r0, #0x1
 	str	r0, [r1]
+	mov	r0, #0
+	str	r0, [r1,#0x10]
 	mov	pc, lr
 .size lcd_init, .-lcd_init
 
