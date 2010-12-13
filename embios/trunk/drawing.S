@@ -177,11 +177,14 @@ renderchar_blendrow:
 	mov	r5, #6
 renderchar_blendcol:
 	ldrh	lr, [r6]
-	tst	lr, #1
-	orrne	lr, lr, #0x10000
-	mov	lr, lr,lsr#1
+	movs	lr, lr,lsr#1
+#ifdef LCD_BIGENDIAN
+	orrcs	lr, lr, #0x10000
 	bic	lr, lr, #0x1000
 	bic	lr, lr, #0x84
+#else
+	bic	lr, lr, #0x410
+#endif
 	add	lr, lr, r12
 	strh	lr, [r6], #2
 	subs	r5, r5, #1
