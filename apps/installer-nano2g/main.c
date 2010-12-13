@@ -602,7 +602,7 @@ void main(void)
     renderbmp(&lcdbuffer[176 * 36], bmpbuffer, 176);
     displaylcd(0, 175, 0, 131, lcdbuffer, 0);
     free(bmpbuffer);
-    progressbar_init(&progressbar, 15, 160, 50, 60, 0xce79, 0x18e3, 0x7bf9, 0, 100);
+    progressbar_init(&progressbar, 15, 160, 50, 60, 0x79ce, 0xe318, 0xf97b, 0, 100);
 
     syscfgptr = malloc(0x1000);
     if (appleflash)
@@ -775,7 +775,7 @@ void main(void)
         renderbmp(&lcdbuffer[176 * 36], bmpbuffer, 176);
         displaylcd(0, 175, 0, 131, lcdbuffer, 0);
         free(bmpbuffer);
-        progressbar_init(&progressbar, 15, 160, 50, 60, 0xce79, 0x18e3, 0x7bf9, 0, 100);
+        progressbar_init(&progressbar, 15, 160, 50, 60, 0x79ce, 0xe318, 0xf97b, 0, 100);
         if (fat32_resize_fulldisk(&progressbar))
             panic(PANIC_KILLTHREAD, "Data flash I/O error!");
     }
@@ -786,7 +786,7 @@ void main(void)
                    bmpbuffer, &dummy);
     renderbmp(&lcdbuffer[176 * 36], bmpbuffer, 176);
     displaylcd(0, 175, 0, 131, lcdbuffer, 0);
-    progressbar_init(&progressbar, 15, 160, 50, 60, 0xce79, 0x18e3, 0x7bf9, 0, 100);
+    progressbar_init(&progressbar, 15, 160, 50, 60, 0x79ce, 0xe318, 0xf97b, 0, 100);
     disk_mount(0);
     int updating = mkdir("/iLoader");
     int status;
@@ -800,7 +800,7 @@ void main(void)
         status = script[sp + 2] + script[sp + 3];
         sp += 4;
     }
-    progressbar_init(&progressbar, 15, 160, 50, 60, 0xce79, 0x18e3, 0x7bf9, 0, status);
+    progressbar_init(&progressbar, 15, 160, 50, 60, 0x79ce, 0xe318, 0xf97b, 0, status);
     status = 0;
     while (script[sp])
     {
@@ -858,7 +858,7 @@ void main(void)
     ucl_decompress(bitmapdata[BMPIDX_FLASHING], bitmapsize[BMPIDX_FLASHING], bmpbuffer, &dummy);
     renderbmp(&lcdbuffer[176 * 36], bmpbuffer, 176);
     displaylcd(0, 175, 0, 131, lcdbuffer, 0);
-    progressbar_init(&progressbar, 15, 160, 50, 60, 0xce79, 0x18e3, 0x7bf9, 0, 256);
+    progressbar_init(&progressbar, 15, 160, 50, 60, 0x79ce, 0xe318, 0xf97b, 0, 256);
     for (i = 0; i < 256; i++)
     {
         bootflash_writeraw(&norbuf[i << 12], i << 12, 1 << 12);
