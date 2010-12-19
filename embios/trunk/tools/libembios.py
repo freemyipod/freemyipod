@@ -117,7 +117,14 @@ class Embios(object):
     
     def getversioninfo(self):
         """ This returns the emBIOS version and device information. """
-        return self.lib.monitorcommand(struct.pack("IIII", 1, 0, 0, 0), "IBBBBI", ("revision", "majorv", "minorv", "patchv", "swtypeid", "hwtypeid"))
+        resp = self.lib.monitorcommand(struct.pack("IIII", 1, 0, 0, 0), "IBBBBI", ("revision", "majorv", "minorv", "patchv", "swtypeid", "hwtypeid"))
+        self.lib.dev.version.revision = resp.revision
+        self.lib.dev.version.majorv = resp.majorv
+        self.lib.dev.version.minorv = resp.minorv
+        self.lib.dev.version.patchv = resp.patchv
+        self.lib.dev.swtypeid = resp.swtypeid
+        self.lib.dev.hwtypeid = resp.hwtypeid
+        return resp
     
     def getpacketsizeinfo(self):
         """ This returns the emBIOS max packet size information.
@@ -132,7 +139,10 @@ class Embios(object):
     
     def getusermemrange(self):
         """ This returns the memory range the user has access to. """
-        return self.lib.monitorcommand(struct.pack("IIII", 1, 2, 0, 0), "III", ("lower", "upper", None))
+        resp = self.lib.monitorcommand(struct.pack("IIII", 1, 2, 0, 0), "III", ("lower", "upper", None))
+        self.lib.dev.usermem.lower = resp.lower
+        self.lib.dev.usermem.upper = resp.upper
+        return resp
     
     def reset(self, force=False):
         """ Reboot the device """
@@ -531,11 +541,23 @@ class Dev(object):
         self.connect()
         self.findEndpoints()
         
+        
+        # Device properties
         self.packetsizelimit = {}
         self.packetsizelimit['cout'] = None
         self.packetsizelimit['cin'] = None
         self.packetsizelimit['dout'] = None
         self.packetsizelimit['din'] = None
+        
+        self.version.revision = None
+        self.version.majorv = None
+        self.version.minorv = None
+        self.version.patchv = None
+        self.swtypeid = None
+        self.hwtypeid = None
+        
+        self.usermem.lower = None
+        self.usermem.upper = None
     
     def __del__(self):
         self.disconnect()
