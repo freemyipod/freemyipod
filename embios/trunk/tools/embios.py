@@ -264,19 +264,19 @@ class Commandline(object):
             <infotype> may be either of 'version', 'packetsize', 'usermemrange'.
         """
         if infotype == "version":
-            resp = self.embios.getversioninfo()
             try:
-                hwtype = libembiosdata.hwtypes[resp.hwtypeid]
+                hwtype = libembiosdata.hwtypes[self.embios.lib.dev.hwtypeid]
             except KeyError:
-                hwtype = "UNKNOWN (ID = " + self._hex(resp.hwtypeid) + ")"
-            self.logger.info("Connected to "+libembiosdata.swtypes[resp.swtypeid] + " v" + str(resp.majorv) + "." + str(resp.minorv) +
-                             "." + str(resp.patchv) + " r" + str(resp.revision) + " running on " + hwtype + "\n")
+                hwtype = "UNKNOWN (ID = " + self._hex(self.embios.lib.dev.hwtypeid) + ")"
+            self.logger.info("Connected to "+libembiosdata.swtypes[self.embios.lib.dev.swtypeid] + " v" + str(self.embios.lib.dev.version.majorv) + "." + str(self.embios.lib.dev.version.minorv) +
+                             "." + str(self.embios.lib.dev.version.patchv) + " r" + str(self.embios.lib.dev.version.revision) + " running on " + hwtype + "\n")
+        
         elif infotype == "packetsize":
-            resp = self.embios.getpacketsizeinfo()
-            self.logger.info("Maximum packet sizes: "+str(resp))
+            self.logger.info("Maximum packet sizes: \n command out: " + str(self.embios.lib.dev.packetsizelimit.cout) + "\n command in: " + str(self.embios.lib.dev.packetsizelimit.cin) + "\n data in: " + str(self.embios.lib.dev.packetsizelimit.din) + "\n data out: " + str(self.embios.lib.dev.packetsizelimit.dout))
+        
         elif infotype == "usermemrange":
             resp = self.embios.getusermemrange()
-            self.logger.info("The user memory range is "+self._hex(resp.lower)+" - "+self._hex(resp.upper-1))
+            self.logger.info("The user memory range is "+self._hex(self.embios.lib.dev.usermem.lower)+" - "+self._hex(self.embios.lib.dev.usermem.upper - 1))
         else:
             raise ArgumentTypeError("one out of 'version', 'packetsize', 'usermemrange'", infotype)
     

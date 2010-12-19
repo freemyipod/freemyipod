@@ -72,7 +72,10 @@ class Embios(object):
     """
     def __init__(self):
         self.lib = Lib()
+        
+        self.getversioninfo()
         self.getpacketsizeinfo()
+        self.getusermemrange()
     
     @staticmethod
     def _alignsplit(addr, size, blksize, align):
@@ -131,10 +134,10 @@ class Embios(object):
             It also sets the properties of the device object accordingly.
         """
         resp = self.lib.monitorcommand(struct.pack("IIII", 1, 1, 0, 0), "HHII", ("coutmax", "cinmax", "doutmax", "dinmax"))
-        self.lib.dev.packetsizelimit['cout'] = resp.coutmax
-        self.lib.dev.packetsizelimit['cin'] = resp.cinmax
-        self.lib.dev.packetsizelimit['din'] = resp.dinmax
-        self.lib.dev.packetsizelimit['dout'] = resp.doutmax
+        self.lib.dev.packetsizelimit.cout = resp.coutmax
+        self.lib.dev.packetsizelimit.cin = resp.cinmax
+        self.lib.dev.packetsizelimit.din = resp.dinmax
+        self.lib.dev.packetsizelimit.dout = resp.doutmax
         return resp
     
     def getusermemrange(self):
@@ -163,8 +166,8 @@ class Embios(object):
             from the device. This cares about too long packages
             and decides whether to use DMA or not.
         """
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
-        din_maxsize = self.lib.dev.packetsizelimit["din"]
+        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
+        din_maxsize = self.lib.dev.packetsizelimit.din
         data = ""
         (headsize, bodysize, tailsize) = self._alignsplit(addr, size, cin_maxsize, 16)
         if headsize != 0:
@@ -188,8 +191,8 @@ class Embios(object):
             in the memory of the device. This cares about too long packages
             and decides whether to use DMA or not.
         """
-        cout_maxsize = self.lib.dev.packetsizelimit["cout"] - self.lib.headersize
-        dout_maxsize = self.lib.dev.packetsizelimit["dout"]
+        cout_maxsize = self.lib.dev.packetsizelimit.cout - self.lib.headersize
+        dout_maxsize = self.lib.dev.packetsizelimit.dout
         (headsize, bodysize, tailsize) = self._alignsplit(addr, len(data), cout_maxsize, 16)
         offset = 0
         if headsize != 0:
@@ -214,7 +217,7 @@ class Embios(object):
         """ Reads a zero terminated string from memory 
             Reads only a maximum of 'maxlength' chars.
         """
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         string = ""
         while (len(string) < maxlength or maxlength < 0):
             data = self._readmem(addr, min(maxlength - len(string), cin_maxsize))
@@ -246,7 +249,7 @@ class Embios(object):
     
     def usbcread(self):
         """ Reads one packet with the maximal cin size """
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         resp = self.lib.monitorcommand(struct.pack("IIII", 10, cin_maxsize, 0, 0), "III%ds" % cin_maxsize, ("validsize", "buffersize", "queuesize", "data"))
         resp.data = resp.data[:resp.validsize]
         resp.maxsize = cin_maxsize
@@ -254,7 +257,7 @@ class Embios(object):
     
     def usbcwrite(self, data):
         """ Writes data to the USB console """
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         size = len(data)
         while len(data) > 0:
             writesize = min(cin_maxsize, len(data))
@@ -266,7 +269,7 @@ class Embios(object):
         """ Reads one packet with the maximal cin size from the device consoles
             identified with the specified bitmask
         """
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         resp = self.lib.monitorcommand(struct.pack("IIII", 13, bitmask, cin_maxsize, 0), "III%ds" % cin_maxsize, ("size", None, None))
         resp.data = resp.data[size:]
         resp.maxsize = cin_maxsize
@@ -276,7 +279,7 @@ class Embios(object):
         """ Writes data to the device consoles 
             identified with the specified bitmask.
         """
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         size = len(data)
         while len(data) > 0:
             writesize = min(cin_maxsize, len(data))
@@ -290,7 +293,7 @@ class Embios(object):
     
     def getprocinfo(self):
         """ Gets current state of the scheduler """
-        cin_maxsize = self.lib.dev.packetsizelimit["cin"] - self.lib.headersize
+        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         # Get the size
         schedulerstate = self.lockscheduler()
         resp = self.lib.monitorcommand(struct.pack("IIII", 15, 0, 0, 0), "III", ("structver", "tablesize", None))
@@ -543,12 +546,13 @@ class Dev(object):
         
         
         # Device properties
-        self.packetsizelimit = {}
-        self.packetsizelimit['cout'] = None
-        self.packetsizelimit['cin'] = None
-        self.packetsizelimit['dout'] = None
-        self.packetsizelimit['din'] = None
+        self.packetsizelimit = Bunch()
+        self.packetsizelimit.cout = None
+        self.packetsizelimit.cin = None
+        self.packetsizelimit.dout = None
+        self.packetsizelimit.din = None
         
+        self.version = Bunch()
         self.version.revision = None
         self.version.majorv = None
         self.version.minorv = None
@@ -556,6 +560,7 @@ class Dev(object):
         self.swtypeid = None
         self.hwtypeid = None
         
+        self.usermem = Bunch()
         self.usermem.lower = None
         self.usermem.upper = None
     
@@ -564,18 +569,18 @@ class Dev(object):
     
     def findEndpoints(self):
         epcounter = 0
-        self.endpoint = {}
+        self.endpoint = Bunch()
         for cfg in self.dev:
             for intf in cfg:
                 for ep in intf:
                     if epcounter == 0:
-                        self.endpoint['cout'] = ep.bEndpointAddress
+                        self.endpoint.cout = ep.bEndpointAddress
                     elif epcounter == 1:
-                        self.endpoint['cin'] = ep.bEndpointAddress
+                        self.endpoint.cin = ep.bEndpointAddress
                     elif epcounter == 2:
-                        self.endpoint['dout'] = ep.bEndpointAddress
+                        self.endpoint.dout = ep.bEndpointAddress
                     elif epcounter == 3:
-                        self.endpoint['din'] = ep.bEndpointAddress
+                        self.endpoint.din = ep.bEndpointAddress
                     epcounter += 1
         if epcounter <= 3:
             raise DeviceError("Not all endpoints found in the descriptor. Only "+str(epcounter)+" found, we need 4")
@@ -602,24 +607,24 @@ class Dev(object):
         return read
     
     def cout(self, data):
-        if self.packetsizelimit['cout'] and len(data) > self.packetsizelimit['cout']:
+        if self.packetsizelimit.cout and len(data) > self.packetsizelimit.cout:
             raise SendError("Packet too big")
-        return self.send(self.endpoint['cout'], data)
+        return self.send(self.endpoint.cout, data)
     
     def cin(self, size):
-        if self.packetsizelimit['cin'] and size > self.packetsizelimit['cin']:
+        if self.packetsizelimit.cin and size > self.packetsizelimit.cin:
             raise ReceiveError("Packet too big")
-        return self.receive(self.endpoint['cin'], size)
+        return self.receive(self.endpoint.cin, size)
     
     def dout(self, data):
-        if self.packetsizelimit['dout'] and len(data) > self.packetsizelimit['dout']:
+        if self.packetsizelimit.dout and len(data) > self.packetsizelimit.dout:
             raise SendError("Packet too big")
-        return self.send(self.endpoint['dout'], data)
+        return self.send(self.endpoint.dout, data)
     
     def din(self, size):
-        if self.packetsizelimit['din'] and size > self.packetsizelimit['din']:
+        if self.packetsizelimit.din and size > self.packetsizelimit.din:
             raise ReceiveError("Packet too big")
-        return self.receive(self.endpoint['din'], size)
+        return self.receive(self.endpoint.din, size)
 
 
 if __name__ == "__main__":
