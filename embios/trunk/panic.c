@@ -42,8 +42,9 @@ void handle_panic(enum panic_severity severity)
     {
         int i;
         for (i = 0; i < MAX_THREADS; i++)
-            if (scheduler_threads[i].type == USER_THREAD)
-                scheduler_threads[i].state = THREAD_SUSPENDED;
+            if (scheduler_threads[i].state != THREAD_FREE)
+                if (scheduler_threads[i].type == USER_THREAD)
+                    scheduler_threads[i].state = THREAD_SUSPENDED;
     }
     current_thread->state = THREAD_DEFUNCT_ACK;
     current_thread->block_type = THREAD_DEFUNCT_PANIC;
