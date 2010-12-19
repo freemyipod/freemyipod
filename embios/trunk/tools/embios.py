@@ -865,11 +865,12 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
-    def get(self, buffer, buffsize, remotename, localname):
+    def get(self, remotename, localname, buffer = False, buffsize = "10000"):
         """
             Downloads a file
         """
-        buffer = self._hexint(buffer)
+        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
         try:
             f = open(localname, 'wb')
@@ -880,7 +881,7 @@ class Commandline(object):
         fd = self.embios.file_open(remotename, 0)
         size = self.embios.file_size(fd)
         while size > 0:
-            bytes = self.embios.file_read(fd, buffer, buffsize)
+            bytes = self.embios.file_read(fd, buffer, buffsize = 0x10000)
             f.write(self.embios.read(buffer, bytes))
             size = size - bytes
         self.embios.file_close(fd)
@@ -888,11 +889,12 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
-    def put(self, buffer, buffsize, localname, remotename):
+    def put(self, localname, remotename, buffer = False, buffsize = "10000"):
         """
             Uploads a file
         """
-        buffer = self._hexint(buffer)
+        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
         try:
             f = open(localname, 'rb')
@@ -913,7 +915,7 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
-    def ls(self, path):
+    def ls(self, path = "/"):
         """
             Lists all files in the specified path
         """
