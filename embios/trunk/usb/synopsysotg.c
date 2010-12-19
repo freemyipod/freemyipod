@@ -132,8 +132,6 @@ void usb_drv_release_endpoint(int ep)
 
 static void usb_reset(void)
 {
-    volatile int i;
-
     DCTL = 0x802;  /* Soft Disconnect */
 
     OPHYPWR = 0;  /* PHY: Power up */

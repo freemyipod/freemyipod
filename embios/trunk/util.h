@@ -50,6 +50,7 @@
 #define BITRANGE(x, y) ((0xfffffffful >> (31 + (x) - (y))) << (x))
 
 #define ERR_RC(val) (BIT(31) | (val))
+#define IS_ERR(val) (val & BIT(31))
 #define RET_ERR(val)                                           \
 {                                                              \
     return ERR_RC(val);                                        \
@@ -61,16 +62,17 @@
 }
 #define PASS_RC(expr, bits, val)                               \
 {                                                              \
-    int rc = (expr);                                           \
-    if (rc & BIT(31)) return ERR_RC((rc << (bits)) | (val));   \
+    int PASS_RC_rc = (expr);                                   \
+    if (IS_ERR(PASS_RC_rc))                                    \
+        return ERR_RC((PASS_RC_rc << (bits)) | (val));         \
 }
 #define PASS_RC_MTX(expr, bits, val, mutex)                    \
 {                                                              \
-    int rc = (expr);                                           \
-    if (rc & BIT(31))                                          \
+    int PASS_RC_MTX_rc = (expr);                               \
+    if (IS_ERR(PASS_RC_MTX_rc))                                \
     {                                                          \
         mutex_unlock(mutex);                                   \
-        return ERR_RC((rc << (bits)) | (val));                 \
+        return ERR_RC((PASS_RC_MTX_rc << (bits)) | (val));     \
     }                                                          \
 }
 

@@ -100,7 +100,7 @@ static bool dbgconsoleattached IBSS_ATTR;
 static const char dbgconoverflowstr[] = "\n\n[overflowed]\n\n";
 
 extern int _initstart;   // These aren't ints at all, but gcc complains about void types being
-extern int _sdramstart;  // used here, and we only need the address, so forget about it...
+extern int _sdramstart;  // used here, and we only need the address, so just make it happy...
 
 
 static struct usb_device_descriptor CACHEALIGN_ATTR device_descriptor =
@@ -429,10 +429,11 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
         case 10:  // READ CONSOLE
             dbgconsoleattached = true;
             int bytes = dbgconsendwriteidx - dbgconsendreadidx;
-            if (bytes >= sizeof(dbgconsendbuf)) bytes -= sizeof(dbgconsendbuf);
+            int used = 0;
             if (bytes)
             {
                 if (bytes < 0) bytes += sizeof(dbgconsendbuf);
+                used = bytes;
                 if (bytes > dbgrecvbuf[1]) bytes = dbgrecvbuf[1];
                 int readbytes = bytes;
                 char* outptr = (char*)&dbgsendbuf[4];
@@ -451,7 +452,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgsendbuf[0] = 1;
             dbgsendbuf[1] = bytes;
             dbgsendbuf[2] = sizeof(dbgconsendbuf);
-            dbgsendbuf[3] = dbgconsendwriteidx - dbgconsendreadidx;
+            dbgsendbuf[3] = used - bytes;
             size = 16 + dbgrecvbuf[1];
             break;
         case 11:  // WRITE CONSOLE
@@ -742,8 +743,8 @@ int dbgconsole_makespace(int length)
     int free = dbgconsole_getfree();
     while (!free && dbgconsoleattached)
     {
-        if (wakeup_wait(&dbgconsendwakeup, 2000000) == THREAD_TIMEOUT)
-            dbgconsoleattached = false;
+        dbgconsoleattached = false;
+        wakeup_wait(&dbgconsendwakeup, 2000000);
         free = dbgconsole_getfree();
     }
     if (free) return free > length ? length : free;
