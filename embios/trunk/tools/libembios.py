@@ -229,7 +229,7 @@ class Embios(object):
         """ Writes data to an i2c slave """
         size = len(data)
         if size > 256 or size < 1:
-            raise ValueError("Size must be a number between 1 and 256")
+            raise ArgumentError("Size must be a number between 1 and 256")
         if size == 256:
             size = 0
         return self.lib.monitorcommand(struct.pack("IBBBBII%ds" % size, 9, index, slaveaddr, startaddr, size, 0, 0, data), "III", (None, None, None))
@@ -371,15 +371,15 @@ class Embios(object):
         elif threadtype == "system":
             threadtype = 1
         else:
-            raise ValueError("Threadtype must be either 'system' or 'user'")
+            raise ArgumentError("Threadtype must be either 'system' or 'user'")
         if priority > 256 or priority < 0:
-            raise ValueError("Priority must be a number between 0 and 256")
+            raise ArgumentError("Priority must be a number between 0 and 256")
         if state == "ready":
             state = 0
         elif state == "suspended":
             state = 1
         else:
-            raise ValueError("State must be either 'ready' or 'suspended'")
+            raise ArgumentError("State must be either 'ready' or 'suspended'")
         resp = self.lib.monitorcommand(struct.pack("IIIIIIII", 19, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state), "III", (id, None, None))
         if resp.id < 0:
             raise DeviceError("The device returned the error code "+str(resp.id))
@@ -398,10 +398,10 @@ class Embios(object):
         try:
             appheader = struct.unpack("<8sIIIIIIIIII", app[:48])
         except struct.error:
-            raise ArgumentError("The specified file is not an emBIOS application")
+            raise ArgumentError("The specified app is not an emBIOS application")
         header = appheader[0]
         if header != "emBIexec":
-            raise ArgumentError("The specified file is not an emBIOS application")
+            raise ArgumentError("The specified app is not an emBIOS application")
         baseaddr = appheader[2]
         threadnameptr = appheader[8]
         nameptr = threadnameptr - baseaddr
@@ -412,7 +412,7 @@ class Embios(object):
                 if ord(char) == 0:
                     break
             except TypeError:
-                raise ArgumentError("The specified file is not an emBIOS application")
+                raise ArgumentError("The specified app is not an emBIOS application")
             name += char
             nameptr += 1
         usermem = self.getusermemrange()

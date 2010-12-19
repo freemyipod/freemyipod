@@ -177,7 +177,7 @@ class Commandline(object):
         create a function with the name of it in this class and decorate
         it with the decorator @command. If you don't want to call the desired
         function (wrong arguments etc) just raise ArgumentError with or
-        without an error message or raise ArgumentCountError
+        without an error message.
     """
     def __init__(self):
         self.logger = Logger()
@@ -195,9 +195,9 @@ class Commandline(object):
         if func in self.cmddict:
             try:
                 self.cmddict[func](*args)
-            except ArgumentError, e:
+            except (ArgumentError, libembios.ArgumentError), e:
                 usage(e, specific=func)
-            except ArgumentError:
+            except (ArgumentError, libembios.ArgumentError):
                 usage("Syntax Error in function '" + func + "'", specific=func)
             except ArgumentTypeError, e:
                 usage(e, specific=func)
@@ -205,15 +205,14 @@ class Commandline(object):
                 self.logger.error("This function is not implemented yet!")
             except libembios.DeviceError, e:
                 self.logger.error(str(e))
-            except ValueError:
-                usage(specific=func)
             except TypeError, e:
+                # Only act on TypeErrors for the function we called, not on TypeErrors raised by another function.
                 if str(e).split(" ", 1)[0] == func + "()":
                     self.logger.error(usage("Argument Error in '" + func + "': Wrong argument count", specific=func))
                 else:
                     raise
             except libembios.usb.core.USBError:
-                self.logger.error("Problem with USB connection.")
+                self.logger.error("There is a problem with the USB connection.")
         else:
             usage("No such command")
     
