@@ -54,7 +54,7 @@
 #include "disk.h"
 #include "file.h"
 #include "dir.h"
-#include "errno.h"
+#include "libc/include/errno.h"
 #endif
 
 
