@@ -404,7 +404,7 @@ class Embios(object):
     
     def execimage(self, addr):
         """ Runs the emBIOS app at 'addr' """
-        return self.lib.monitorcommand(struct.pack("IIII", 21, addr, 0, 0), "III", ("excecimage", None, None))
+        return self.lib.monitorcommand(struct.pack("IIII", 21, addr, 0, 0), "III", ("rc", None, None))
     
     def run(self, app):
         """ Uploads and runs the emBIOS app in the string 'app' """
@@ -471,25 +471,249 @@ class Embios(object):
         """ Target-specific function: ipodnano2g
             Gathers some information about the NAND chip used
         """
+        if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0001, 0, 0, 0), "IHHHH", ("type", "pagesperblock", "banks", "userblocks", "blocks"))
     
     def ipodnano2g_nandread(self, addr, start, count, doecc, checkempty):
         """ Target-specific function: ipodnano2g
             Reads data from the NAND chip into memory
         """
+        if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0002, addr | (0x80000000 if doecc != 0 else 0) | (0x40000000 if checkempty != 0 else 0), start, count), "III", (None, None, None))
     
     def ipodnano2g_nandwrite(self, addr, start, count, doecc):
         """ Target-specific function: ipodnano2g
             Writes data to the NAND chip
         """
+        if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0003, addr | (0x80000000 if doecc != 0 else 0), start, count), "III", (None, None, None))
     
     def ipodnano2g_nanderase(self, addr, start, count):
         """ Target-specific function: ipodnano2g
             Erases blocks on the NAND chip and stores the results to memory
         """
+        if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0004, addr, start, count), "III", (None, None, None))
+    
+    def ipodclassic_gethddinfo(self):
+        """ Target-specific function: ipodclassic
+            Gather information about the hard disk drive
+        """
+        if self.lib.dev.hwtypeid != 0x4c435049: raise DeviceError("Wrong device for target-specific command.")
+        return self.lib.monitorcommand(struct.pack("IIII", 0xffff0001, 0, 0, 0), "IQQII", ("identifyptr", "totalsectors", "virtualsectors", "bbtptr", "bbtsize"))
+    
+    def ipodclassic_hddaccess(self, type, sector, count, addr):
+        """ Target-specific function: ipodclassic
+            Access the hard disk, type = 0 (read) / 1 (write)
+        """
+        if self.lib.dev.hwtypeid != 0x4c435049: raise DeviceError("Wrong device for target-specific command.")
+        rc = self.lib.monitorcommand(struct.pack("IIQIIII", 0xffff0002, type, sector, count, addr, 0, 0), "III", ("rc", None, None))
+        if (rc > 0x80000000):
+            raise DeviceError("HDD access (type=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (type, sector, count, addr, rc))
+    
+    def ipodclassic_writebbt(self, bbt, tempaddr):
+        """ Target-specific function: ipodclassic
+            Write hard drive bad block table
+        """
+        if self.lib.dev.hwtypeid != 0x4c435049: raise DeviceError("Wrong device for target-specific command.")
+        try:
+            bbtheader = struct.unpack("<8s2024sQII512I", bbt[:4096])
+        except struct.error:
+            raise ArgumentError("The specified file is not an emBIOS hard disk BBT")
+        if bbtheader[0] != "emBIbbth":
+            raise ArgumentError("The specified file is not an emBIOS hard disk BBT")
+        virtualsectors = bbtheader[2]
+        bbtsectors = bbtheader[3]
+        self.write(tempaddr, bbt)
+        sector = 0
+        count = 1
+        offset = 0
+        for i in range(bbtsectors):
+            if bbtheader[4][i] == sector + count:
+                count = count + 1
+            else:
+                self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
+                offset = offset + count * 4096
+                sector = bbtheader[4][i]
+                count = 1
+        self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
+    
+    def storage_get_info(self):
+        """ Get information about a storage device """
+        result = self.lib.monitorcommand(struct.pack("IIII", 27, 0, 0, 0), "IIIIIIII", ("version", None, None, "sectorsize", "numsectors", "vendorptr", "productptr", "revisionptr"))
+        if result.version != 1:
+            raise ValueError("Unknown version of storage_info struct: %d" % result.version)
+        return result
+    
+    def storage_read_sectors_md(self, volume, sector, count, addr):
+        """ Read sectors from as storage device """
+        result = self.lib.monitorcommand(struct.pack("IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
+
+    def storage_write_sectors_md(self, volume, sector, count, addr):
+        """ Read sectors from as storage device """
+        result = self.lib.monitorcommand(struct.pack("IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
+
+    def file_open(self, filename, mode):
+        """ Opens a file and returns the handle """
+        result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(filename), 30, mode, 0, 0, filename, 0), "III", ("fd", None, None))
+        if result.fd > 0x80000000:
+            raise DeviceError("file_open(filename=\"%s\", mode=0x%X) failed with RC=0x%08X, errno=%d" % (filename, mode, result.fd, self.errno()))
+        return result.fd
+    
+    def file_size(self, fd):
+        """ Gets the size of a file referenced by a handle """
+        result = self.lib.monitorcommand(struct.pack("IIII", 31, fd, 0, 0), "III", ("size", None, None))
+        if result.size > 0x80000000:
+            raise DeviceError("file_size(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.size, self.errno()))
+        return result.size
+
+    def file_read(self, fd, addr, size):
+        """ Reads data from a file referenced by a handle """
+        result = self.lib.monitorcommand(struct.pack("IIII", 32, fd, addr, size), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_read(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
+        return result.rc
+
+    def file_write(self, fd, addr, size):
+        """ Writes data from a file referenced by a handle """
+        result = self.lib.monitorcommand(struct.pack("IIII", 33, fd, addr, size), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_write(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
+        return result.rc
+    
+    def file_seek(self, fd, offset, whence):
+        """ Seeks the file handle to the specified position in the file """
+        result = self.lib.monitorcommand(struct.pack("IIII", 34, fd, offset, whence), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_seek(fd=%d, offset=0x%08X, whence=%d) failed with RC=0x%08X, errno=%d" % (fd, offset, whence, result.rc, self.errno()))
+        return result.rc
+    
+    def file_truncate(self, fd, length):
+        """ Truncates a file referenced by a handle to a specified length """
+        result = self.lib.monitorcommand(struct.pack("IIII", 35, fd, offset, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_truncate(fd=%d, length=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, length, result.rc, self.errno()))
+        return result.rc
+    
+    def file_sync(self, fd):
+        """ Flushes a file handles' buffers """
+        result = self.lib.monitorcommand(struct.pack("IIII", 36, fd, 0, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_sync(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.rc, self.errno()))
+        return result.rc
+    
+    def file_close(self, fd):
+        """ Closes a file handle """
+        result = self.lib.monitorcommand(struct.pack("IIII", 37, fd, 0, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_close(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.rc, self.errno()))
+        return result.rc
+    
+    def file_close_all(self):
+        """ Closes all file handles opened through the debugger """
+        result = self.lib.monitorcommand(struct.pack("IIII", 38, 0, 0, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_close_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
+        return result.rc
+    
+    def file_kill_all(self):
+        """ Kills all file handles (in the whole system) """
+        result = self.lib.monitorcommand(struct.pack("IIII", 39, 0, 0, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_kill_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
+        return result.rc
+    
+    def file_unlink(self, filename):
+        """ Removes a file """
+        result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(filename), 40, 0, 0, 0, filename, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_unlink(filename=\"%s\") failed with RC=0x%08X, errno=%d" % (filename, result.rc, self.errno()))
+        return result.rc
+    
+    def file_rename(self, oldname, newname):
+        """ Renames a file """
+        result = self.lib.monitorcommand(struct.pack("IIII248s%dsB" % min(247, len(newname)), 41, 0, 0, 0, oldname, newname, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("file_rename(oldname=\"%s\", newname=\"%s\") failed with RC=0x%08X, errno=%d" % (oldname, newname, result.rc, self.errno()))
+        return result.rc
+    
+    def dir_open(self, dirname):
+        """ Opens a directory and returns the handle """
+        result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 42, 0, 0, 0, dirname, 0), "III", ("handle", None, None))
+        if result.handle == 0:
+            raise DeviceError("dir_open(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.handle, self.errno()))
+        return result.handle
+    
+    def dir_read(self, handle):
+        """ Reads the next entry from a directory """
+        result = self.lib.monitorcommand(struct.pack("IIII", 43, handle, 0, 0), "III", ("version", "maxpath", "ptr"))
+        if result.ptr == 0:
+            raise DeviceError("dir_read(handle=0x%08X) failed with RC=0x%08X, errno=%d" % (handle, result.ptr, self.errno()))
+        if result.version != 1:
+            raise ValueError("Unknown version of dirent struct: %d" % result.version)
+        dirent = self.read(result.ptr, result.maxpath + 16)
+        ret = Bunch()
+        (ret.name, ret.attributes, ret.size, ret.startcluster, ret.wrtdate, ret.wrttime) = struct.unpack("%dsIIIHH" % result.maxpath, dirent)
+        ret.name = ret.name[:ret.name.index('\x00')]
+        return ret
+    
+    def dir_close(self, handle):
+        """ Closes a directory handle """
+        result = self.lib.monitorcommand(struct.pack("IIII", 44, handle, 0, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("dir_close(handle=0x%08X) failed with RC=0x%08X, errno=%d" % (handle, result.rc, self.errno()))
+        return result.rc
+    
+    def dir_close_all(self):
+        """ Closes all directory handles opened through the debugger """
+        result = self.lib.monitorcommand(struct.pack("IIII", 45, 0, 0, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("dir_close_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
+        return result.rc
+    
+    def dir_kill_all(self):
+        """ Kills all directory handles (in the whole system) """
+        result = self.lib.monitorcommand(struct.pack("IIII", 46, 0, 0, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("dir_kill_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
+        return result.rc
+    
+    def dir_create(self, dirname):
+        """ Creates a directory """
+        result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 47, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("dir_create(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
+        return result.rc
+    
+    def dir_remove(self, dirname):
+        """ Removes an (empty) directory """
+        result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 48, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("dir_remove(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
+        return result.rc
+    
+    def errno(self):
+        """ Returns the number of the last error that happened """
+        result = self.lib.monitorcommand(struct.pack("IIII", 49, 0, 0, 0), "III", ("errno", None, None))
+        return result.errno
+    
+    def disk_mount(self, volume):
+        """ Mounts a volume """
+        result = self.lib.monitorcommand(struct.pack("IIII", 50, volume, 0, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("disk_mount(volume=%d) failed with RC=0x%08X, errno=%d" % (volume, result.rc, self.errno()))
+        return result.rc
+    
+    def disk_unmount(self, volume):
+        """ Unmounts a volume """
+        result = self.lib.monitorcommand(struct.pack("IIII", 51, volume, 0, 0), "III", ("rc", None, None))
+        if result.rc > 0x80000000:
+            raise DeviceError("disk_unmount(volume=%d) failed with RC=0x%08X, errno=%d" % (volume, result.rc, self.errno()))
+        return result.rc
     
 
 class Lib(object):
@@ -655,4 +879,4 @@ if __name__ == "__main__":
     if readdata == datastr:
         sys.stdout.write("Data matches!")
     else:
-        sys.stdout.write("Data does NOT match. Something got wrong")
+        sys.stdout.write("Data does NOT match. Something went wrong")

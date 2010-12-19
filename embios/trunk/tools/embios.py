@@ -27,6 +27,7 @@ import inspect
 import re
 import time
 import struct
+import locale
 
 from functools import wraps
 
@@ -478,6 +479,8 @@ class Commandline(object):
             self.logger.info("    Thread id: "+str(thread.id)+"\n")
             self.logger.info("    Thread type: "+thread.type+"\n")
             self.logger.info("    Thread state: "+thread.state+"\n")
+            self.logger.info("    Block type: "+thread.block_type+"\n")
+            self.logger.info("    Blocked by: "+self._hex(thread.blocked_by_ptr)+"\n")
             self.logger.info("    Priority: "+str(thread.priority)+"/256\n")
             self.logger.info("    Current CPU load: "+str((thread.cpuload*100)/255)+"%\n")
             self.logger.info("    CPU time (total): "+str(datetime.timedelta(microseconds=thread.cputime_total))+"\n")
@@ -802,6 +805,119 @@ class Commandline(object):
             statusfile.write(self.embios.read(0x08000000, 0x00000100))
         statusfile.close()
         self.logger.info("done\n")
+
+    @command
+    def ipodclassic_writebbt(self, tempaddr, filename):
+        """
+            Target-specific function: ipodclassic
+            Uploads the bad block table <filename> to
+            memory at <tempaddr> and writes it to the hard disk
+        """
+        tempaddr = self._hexint(tempaddr)
+        try:
+            f = open(filename, 'rb')
+        except IOError:
+            raise ArgumentError("File not readable. Does it exist?")
+        self.embios.lib.dev.timeout = 30000
+        self.logger.info("Writing bad block table to disk...")
+        data = self.embios.ipodclassic_writebbt(f.read(), tempaddr)
+        f.close()
+        self.logger.info(" done\n")
+
+    @command
+    def mkdir(self, dirname):
+        """
+            Creates a directory
+        """
+        self.embios.lib.dev.timeout = 30000
+        self.logger.info("Creating directory " + dirname + "...")
+        self.embios.dir_create(dirname)
+        self.logger.info(" done\n")
+
+    @command
+    def rmdir(self, dirname):
+        """
+            Removes an empty directory
+        """
+        self.embios.lib.dev.timeout = 30000
+        self.logger.info("Removing directory " + dirname + "...")
+        self.embios.dir_remove(dirname)
+        self.logger.info(" done\n")
+
+    @command
+    def unlink(self, filename):
+        """
+            Removes a file
+        """
+        self.embios.lib.dev.timeout = 30000
+        self.logger.info("Removing file " + filename + "...")
+        self.embios.file_unlink(filename)
+        self.logger.info(" done\n")
+
+    @command
+    def get(self, buffer, buffsize, remotename, localname):
+        """
+            Downloads a file
+        """
+        buffer = self._hexint(buffer)
+        buffsize = self._hexint(buffsize)
+        try:
+            f = open(localname, 'wb')
+        except IOError:
+            raise ArgumentError("Could not open local file for writing.")
+        self.embios.lib.dev.timeout = 30000
+        self.logger.info("Downloading file " + remotename + " to " + localname + "...")
+        fd = self.embios.file_open(remotename, 0)
+        size = self.embios.file_size(fd)
+        while size > 0:
+            bytes = self.embios.file_read(fd, buffer, buffsize)
+            f.write(self.embios.read(buffer, bytes))
+            size = size - bytes
+        self.embios.file_close(fd)
+        f.close()
+        self.logger.info(" done\n")
+
+    @command
+    def put(self, buffer, buffsize, localname, remotename):
+        """
+            Uploads a file
+        """
+        buffer = self._hexint(buffer)
+        buffsize = self._hexint(buffsize)
+        try:
+            f = open(localname, 'rb')
+        except IOError:
+            raise ArgumentError("Could not open local file for reading.")
+        self.embios.lib.dev.timeout = 30000
+        self.logger.info("Uploading file " + localname + " to " + remotename + "...")
+        fd = self.embios.file_open(remotename, 0x15)
+        while True:
+            data = f.read(buffsize)
+            if len(data) == 0: break
+            self.embios.write(buffer, data)
+            bytes = 0
+            while bytes < len(data):
+                bytes = bytes + self.embios.file_write(fd, buffer + bytes, len(data) - bytes)
+        self.embios.file_close(fd)
+        f.close()
+        self.logger.info(" done\n")
+
+    @command
+    def ls(self, path):
+        """
+            Lists all files in the specified path
+        """
+        self.embios.lib.dev.timeout = 30000
+        handle = self.embios.dir_open(path)
+        self.logger.info("Directory listing of " + path + ":\n")
+        while True:
+            try:
+                entry = self.embios.dir_read(handle)
+                if entry.attributes & 0x10: size = "DIR"
+                else: size = locale.format("%d", entry.size, True).rjust(13)
+                self.logger.info(entry.name.ljust(50) + " - " + size + "\n")
+            except: break
+        self.embios.dir_close(handle)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

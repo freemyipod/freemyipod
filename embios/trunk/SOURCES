@@ -55,6 +55,7 @@ usb/synopsysotg.c
 
 #ifdef TARGET_ipodclassic
 target/ipodclassic/storage_ata.c
+target/ipodclassic/usbtarget.c
 #endif
 
 #ifdef ARM_ARCH

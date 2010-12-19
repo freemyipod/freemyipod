@@ -49,6 +49,13 @@
 #ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
 #include "usbtarget.h"
 #endif
+#ifdef HAVE_STORAGE
+#include "storage.h"
+#include "disk.h"
+#include "file.h"
+#include "dir.h"
+#include "errno.h"
+#endif
 
 
 static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
@@ -73,12 +80,14 @@ enum dbgaction_t
     DBGACTION_WRITEBOOTFLASH,
     DBGACTION_HWKEYAES,
     DBGACTION_HMACSHA1,
-    DBGACTION_TARGETSPECIFIC
+    DBGACTION_TARGETSPECIFIC,
+    DBGACTION_STORAGE
 };
 
-static uint32_t dbgstack[0x100] STACK_ATTR;
+static uint32_t dbgstack[0x200] STACK_ATTR;
 struct wakeup dbgwakeup IBSS_ATTR;
 extern struct scheduler_thread* scheduler_threads;
+extern struct scheduler_thread* current_thread;
 static enum dbgaction_t dbgaction IBSS_ATTR;
 static int dbgi2cbus;
 static int dbgi2cslave;
@@ -580,6 +589,38 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgactionoffset = dbgrecvbuf[3];
             break;
 #endif
+#ifdef HAVE_STORAGE
+        case 27:  // STORAGE_GET_INFO
+        case 28:  // STORAGE_READ_SECTORS_MD
+        case 29:  // STORAGE_WRITE_SECTORS_MD
+        case 30:  // FILE_OPEN
+        case 31:  // FILESIZE
+        case 32:  // READ
+        case 33:  // WRITE
+        case 34:  // LSEEK
+        case 35:  // FTRUNCATE
+        case 36:  // FSYNC
+        case 37:  // CLOSE
+        case 38:  // CLOSE_MONITOR_FILES
+        case 39:  // RELEASE_FILES
+        case 40:  // REMOVE
+        case 41:  // RENAME
+        case 42:  // OPENDIR
+        case 43:  // READDIR
+        case 44:  // CLOSEDIR
+        case 45:  // CLOSE_MONITOR_DIRS
+        case 46:  // RELEASE_DIRS
+        case 47:  // MKDIR
+        case 48:  // RMDIR
+        case 49:  // ERRNO
+#ifdef HAVE_HOTSWAP
+        case 50:  // DISK_MOUNT
+        case 51:  // DISK_UNMOUNT
+#endif
+            if (!set_dbgaction(DBGACTION_STORAGE, 0))
+                memcpy(dbgasyncsendbuf, dbgrecvbuf, sizeof(dbgasyncsendbuf));
+            break;
+#endif
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -707,6 +748,170 @@ void dbgthread(void)
                 if (size) usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, size);
                 break;
             }
+#endif
+#ifdef HAVE_STORAGE
+            case DBGACTION_STORAGE:
+                switch(dbgasyncsendbuf[0])
+                {
+                case 27:  // STORAGE_GET_INFO
+                    dbgasyncsendbuf[0] = 1;
+                    storage_get_info(dbgasyncsendbuf[1],
+                                     (struct storage_info*)&dbgasyncsendbuf[4]);
+                    dbgasyncsendbuf[1] = 1;
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf,
+                                             16 + sizeof(struct storage_info));
+                    break;
+                case 28:  // STORAGE_READ_SECTORS_MD
+                {
+                    dbgasyncsendbuf[0] = 1;
+                    int rc = storage_read_sectors_md(dbgasyncsendbuf[1],
+                                                     dbgasyncsendbuf[2]
+                                                   | (((uint64_t)(dbgasyncsendbuf[3]) << 32)),
+                                                     dbgasyncsendbuf[4],
+                                                     (void*)(dbgasyncsendbuf[5]));
+                    dbgasyncsendbuf[1] = (uint32_t)rc;
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                }
+                case 29:  // STORAGE_WRITE_SECTORS_MD
+                {
+                    dbgasyncsendbuf[0] = 1;
+                    int rc = storage_write_sectors_md(dbgasyncsendbuf[1],
+                                                      dbgasyncsendbuf[2]
+                                                    | (((uint64_t)(dbgasyncsendbuf[3]) << 32)),
+                                                      dbgasyncsendbuf[4],
+                                                      (void*)(dbgasyncsendbuf[5]));
+                    dbgasyncsendbuf[1] = (uint32_t)rc;
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                }
+                case 30:  // FILE_OPEN
+                {
+                    dbgasyncsendbuf[0] = 1;
+                    int fd = file_open((char*)(&dbgasyncsendbuf[4]), (int)(dbgasyncsendbuf[1]));
+                    dbgasyncsendbuf[1] = (uint32_t)fd;
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                }
+                case 31:  // FILESIZE
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)filesize((int)(dbgasyncsendbuf[1]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 32:  // READ
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)read((int)(dbgasyncsendbuf[1]),
+                                                        (void*)(dbgasyncsendbuf[2]),
+                                                        (size_t)(dbgasyncsendbuf[3]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 33:  // WRITE
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)write((int)(dbgasyncsendbuf[1]),
+                                                         (void*)(dbgasyncsendbuf[2]),
+                                                         (size_t)(dbgasyncsendbuf[3]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 34:  // LSEEK
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)lseek((int)(dbgasyncsendbuf[1]),
+                                                         (off_t)(dbgasyncsendbuf[2]),
+                                                         (int)(dbgasyncsendbuf[3]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 35:  // FTRUNCATE
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)ftruncate((int)(dbgasyncsendbuf[1]),
+                                                             (off_t)(dbgasyncsendbuf[2]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 36:  // FSYNC
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)fsync((int)(dbgasyncsendbuf[1]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 37:  // CLOSE
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)close((int)(dbgasyncsendbuf[1]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 38:  // CLOSE_MONITOR_FILES
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)close_all_of_process(current_thread);
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 39:  // RELEASE_FILES
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)release_files((int)(dbgasyncsendbuf[1]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 40:  // REMOVE
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)remove((char*)(&dbgasyncsendbuf[4]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 41:  // RENAME
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)rename((char*)(&dbgasyncsendbuf[4]),
+                                                          (char*)(&dbgasyncsendbuf[66]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 42:  // OPENDIR
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)opendir((char*)(&dbgasyncsendbuf[4]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 43:  // READDIR
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[3] = (uint32_t)readdir((DIR*)(dbgasyncsendbuf[1]));
+                    dbgasyncsendbuf[1] = 1;
+                    dbgasyncsendbuf[2] = MAX_PATH;
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 44:  // CLOSEDIR
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)closedir((DIR*)(dbgasyncsendbuf[1]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 45:  // CLOSE_MONITOR_DIRS
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)closedir_all_of_process(current_thread);
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 46:  // RELEASE_DIRS
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)release_dirs((int)(dbgasyncsendbuf[1]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 47:  // MKDIR
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)mkdir((char*)(&dbgasyncsendbuf[4]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 48:  // RMDIR
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)rmdir((char*)(&dbgasyncsendbuf[4]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 49:  // ERRNO
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)errno;
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+#ifdef HAVE_HOTSWAP
+                case 50:  // DISK_MOUNT
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)disk_mount((int)(dbgasyncsendbuf[1]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+                case 51:  // DISK_UNMOUNT
+                    dbgasyncsendbuf[0] = 1;
+                    dbgasyncsendbuf[1] = (uint32_t)disk_unmount((int)(dbgasyncsendbuf[1]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
+#endif
+                }
+                break;
 #endif
             }
             dbgaction = DBGACTION_IDLE;
