@@ -54,8 +54,13 @@ int usb_target_handle_request(uint32_t* buffer, int bufsize)
         }
         case 0xffff0002:  // LOWLEVEL DISK ACCESS
         {
+#ifdef ATA_HAVE_BBT
             int rc = ata_rw_sectors_internal((((uint64_t)(buffer[3])) << 32) | buffer[2],
                                              buffer[4], (void*)(buffer[5]), (bool)(buffer[1]));
+#else
+            int rc = ata_rw_sectors((((uint64_t)(buffer[3])) << 32) | buffer[2],
+                                    buffer[4], (void*)(buffer[5]), (bool)(buffer[1]));
+#endif
             buffer[0] = 1;
             buffer[1] = (uint32_t)rc;
             size = 16;
