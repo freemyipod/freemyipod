@@ -845,7 +845,7 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
-    def unlink(self, filename):
+    def rm(self, filename):
         """
             Removes a file
         """
