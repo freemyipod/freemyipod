@@ -855,6 +855,16 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
+    def rename(self, oldname, newname):
+        """
+            Removes a file
+        """
+        self.embios.lib.dev.timeout = 30000
+        self.logger.info("Renaming " + oldname + " to " + newname + "...")
+        self.embios.file_rename(oldname, newname)
+        self.logger.info(" done\n")
+
+    @command
     def get(self, buffer, buffsize, remotename, localname):
         """
             Downloads a file
