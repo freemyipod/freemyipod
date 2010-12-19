@@ -37,4 +37,8 @@
 //#define DEBUG_PRINT_SOURCE_LINE
 
 
+//#define ATA_HAVE_BBT
+//#define ATA_BBT_PAGES 2304
+
+
 #endif
