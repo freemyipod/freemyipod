@@ -22,6 +22,7 @@
 #include "thread.h"
 #include "disk.h"
 #include "storage.h"
+#include "storage_ata-target.h"
 #include "timer.h"
 #include "../ipodnano3g/s5l8702.h"
 
@@ -41,11 +42,9 @@ static bool ata_powered;
 #ifdef ATA_HAVE_BBT
 #include "panic.h"
 uint16_t ata_bbt[ATA_BBT_PAGES][0x20];
-uint32_t ata_virtual_sectors;
+uint64_t ata_virtual_sectors;
 uint32_t ata_last_offset;
 uint64_t ata_last_phys;
-
-int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool write);
 
 void ata_bbt_read_sectors(uint32_t sector, uint32_t count, void* buffer)
 {
@@ -533,7 +532,7 @@ int ata_init(void)
     ata_bbt_read_sectors(0, 1, buf);
     if (!memcmp(buf, "emBIbbth", 8))
     {
-        ata_virtual_sectors = buf[0x1fe];
+        ata_virtual_sectors = (((uint64_t)buf[0x1fd]) << 32) | buf[0x1fc];
         uint32_t count = buf[0x1ff];
         if (count > (ATA_BBT_PAGES >> 6))
             panicf(PANIC_KILLTHREAD, "ATA: BBT too big! (%d pages, limit: %d)\n", count << 6, ATA_BBT_PAGES);

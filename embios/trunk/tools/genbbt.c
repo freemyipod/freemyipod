@@ -165,7 +165,7 @@ int main(int argc, char** argv)
                    l0count, l1count, l2count, l3count);
             printf("User data sectors: %d (%d KiB)\n", logical, logical << 2);
             memcpy(bbt, "emBIbbth", 8);
-            ((uint32_t*)bbt)[0x1fe] = logical;
+            ((uint32_t*)bbt)[0x1fc] = logical;
             ((uint32_t*)bbt)[0x1ff] = (bbtpages >> 6) - 1;
             break;
         }
