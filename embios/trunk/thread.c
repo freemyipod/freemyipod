@@ -253,8 +253,9 @@ void scheduler_switch(int thread)
     if ((int)current_thread->stack != -1 && *current_thread->stack != 0xaffebeaf)
     {
         for (i = 0; i < MAX_THREADS; i++)
-            if (scheduler_threads[i].type == USER_THREAD)
-                scheduler_threads[i].state = THREAD_SUSPENDED;
+            if (scheduler_threads[i].state != THREAD_FREE)
+                if (scheduler_threads[i].type == USER_THREAD)
+                    scheduler_threads[i].state = THREAD_SUSPENDED;
         current_thread->state = THREAD_DEFUNCT;
         current_thread->block_type = THREAD_DEFUNCT_STKOV;
         wakeup_signal(&dbgwakeup);
