@@ -855,9 +855,9 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
-    def rename(self, oldname, newname):
+    def mv(self, oldname, newname):
         """
-            Removes a file
+            Renames or moves a file or directory
         """
         self.embios.lib.dev.timeout = 30000
         self.logger.info("Renaming " + oldname + " to " + newname + "...")
