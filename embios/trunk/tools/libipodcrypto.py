@@ -23,6 +23,7 @@
 
 
 import sys
+import os
 import struct
 import time
 import hashlib
@@ -92,6 +93,17 @@ def s5l8702decryptnor(data):
     return embios.read(0x08000000, len(data) - 0x800)
 
 
+def s5l8702genpwnage(data):
+    cert = open(os.path.dirname(__file__) + "/libipodcrypto/s5l8702pwnage.cer", "rb").read()
+    data = data.ljust(max(0x840, (len(data) + 0xf) & ~0xf), "\0")
+    header = ("87021.0\x03\0\0\0\0" + struct.pack("<IIII", len(data) - 0x830, len(data) - 0x4f6, len(data) - 0x7b0, 0x2ba)).ljust(0x40, "\0")
+    embios = libembios.Embios()
+    embios.write(0x08000000, header + hashlib.sha1(header).digest()[:0x10])
+    embios.lib.dev.timeout = 5000
+    embios.aesencrypt(0x08000040, 0x10, 1)
+    return embios.read(0x08000000, 0x50) + data + cert.ljust((len(cert) + 0xf) & ~0xf, "\0")
+
+
 def s5l8701cryptdfufile(infile, outfile):
     infile = open(infile, "rb")
     outfile = open(outfile, "wb")
@@ -136,5 +148,13 @@ def s5l8702decryptnorfile(infile, outfile):
     infile = open(infile, "rb")
     outfile = open(outfile, "wb")
     outfile.write(s5l8702decryptnor(infile.read()))
+    infile.close()
+    outfile.close()
+
+
+def s5l8702genpwnagefile(infile, outfile):
+    infile = open(infile, "rb")
+    outfile = open(outfile, "wb")
+    outfile.write(s5l8702genpwnage(infile.read()))
     infile.close()
     outfile.close()
