@@ -56,6 +56,7 @@ execfirmware:
 	mrc	p15, 0, r0,c1,c0
 	bic	r0, r0, #5
 	mcr	p15, 0, r0,c1,c0
+	mov	r0, #0
 	mcr	p15, 0, r0,c7,c5
 	bx	r1
 .size execfirmware, .-execfirmware
