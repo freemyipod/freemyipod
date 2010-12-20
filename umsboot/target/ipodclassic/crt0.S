@@ -37,7 +37,7 @@
 .global __start
 __start:
 	mrc	p15, 0, r0,c1,c0
-	orr	r0, r0, #1
+	orr	r0, r0, #5
 	mcr	p15, 0, r0,c1,c0
 	ldr	r0, =_sramsource
 	ldr	r1, =_sramstart
