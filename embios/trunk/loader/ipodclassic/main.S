@@ -1,6 +1,6 @@
 @
 @
-@    emBIOS Loader for iPod Nano 3G
+@    emBIOS Loader for iPod Classic
 @
 @    Copyright 2010 TheSeven
 @
@@ -38,12 +38,14 @@ _start:
 	mcr	p15, 0, r0,c8,c7
 	mcr	p15, 0, r0,c13,c0
 	adr	lr, cacheflush_done
+
 flushcache:
 	mrc	p15, 0, r15,c7,c14,3
 	bne	flushcache
 	mov	r0, #0
 	mcr	p15, 0, r0,c7,c10,4
 	bx	lr
+
 cacheflush_done:
 	adr	sp, values1
 	ldmia	sp!, {r4-r12}
