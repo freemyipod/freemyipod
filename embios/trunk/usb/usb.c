@@ -685,7 +685,7 @@ void dbgthread(void)
                 power_off();
                 break;
             case DBGACTION_RESET:
-                shutdown(false);
+                shutdown(true);
                 reset();
                 break;
             case DBGACTION_CWRITE:
