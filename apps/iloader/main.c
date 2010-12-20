@@ -301,10 +301,14 @@ configfound:
                         uint32_t di = (config[pc + 1] >> 2);
                         while (config[di])
                         {
-                            rendertext(&lcdbuffer[config[di + 1] + width * config[di + 2]],
-                                       config[di + (di == ci ? 5 : 3)],
-                                       config[di + (di == ci ? 6 : 4)],
-                                       &((uint8_t*)config)[config[di]], width);
+                            if (config[di] < 0x10000)
+                                rendertext(&lcdbuffer[config[di + 1] + width * config[di + 2]],
+                                           config[di + (di == ci ? 5 : 3)],
+                                           config[di + (di == ci ? 6 : 4)],
+                                           &((uint8_t*)config)[config[di]], width);
+                            else if (di == ci)
+                                renderbmp(&lcdbuffer[config[di + 1] + width * config[di + 2]],
+                                          (void*)(config[di]), width);
                             di += 8;
                         }
                         displaylcd(0, width - 1, 0, height - 1, lcdbuffer, 0);
