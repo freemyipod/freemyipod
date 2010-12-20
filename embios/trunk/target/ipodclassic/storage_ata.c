@@ -148,6 +148,7 @@ int ata_set_feature(uint32_t feature, uint32_t param)
 int ata_power_up()
 {
     ata_set_active();
+    if (ata_powered) return 0;
     i2c_sendbyte(0, 0xe6, 0x1b, 1);
     clockgate_enable(5, true);
     ATA_CFG = BIT(0);
@@ -239,6 +240,7 @@ int ata_power_up()
 
 void ata_power_down()
 {
+    if (!ata_powered) return;
     ata_powered = false;
     ata_wait_for_rdy(1000000);
     ata_write_cbr(&ATA_PIO_DVR, 0);
