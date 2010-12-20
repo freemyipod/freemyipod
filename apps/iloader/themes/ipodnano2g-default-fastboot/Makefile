@@ -1,4 +1,4 @@
-NAME ?= iloader-theme-default-fastboot
+NAME ?= iloader-theme-ipodnano2g-default-fastboot
 
 ILOADER = ../..
 ASSETPATH = iLoader/theme
