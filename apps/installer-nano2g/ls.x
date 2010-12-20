@@ -4,7 +4,8 @@ OUTPUT_ARCH(arm)
 
 MEMORY
 {
-    RAM : ORIGIN = 0x08000000, LENGTH = 0x01f00000
+    LOWERRAM : ORIGIN = 0x08000000, LENGTH = 0x00f00000
+    UPPERRAM : ORIGIN = 0x08f00000, LENGTH = 0x01000000
 }
 
 SECTIONS
@@ -16,9 +17,9 @@ SECTIONS
         *(COMMON)
         __bss_end = .;
         *(.stack*)
-    } > RAM
+    } > LOWERRAM
 
-    .text 0x08f00000:
+    .text :
     {
 	KEEP(.execheader*)
 	*(.execheader*)
@@ -31,7 +32,7 @@ SECTIONS
         *(.data*)
         . = ALIGN(0x10);
 	_scriptstart = .;
-    } > RAM
+    } > UPPERRAM
 
     /DISCARD/ :
     {
