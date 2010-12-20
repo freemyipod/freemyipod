@@ -335,7 +335,7 @@ pmuinitdone:
 	mov	r1, #0x29
 	mov	r2, #1
 	bl	i2csendbyte
-	ldr	r1, _stubend + 4
+	adr	r1, _stubend + 4
 	ldr	r0, _stubend
 	add	r0, r1, r0
 	mov	r2, #0x08000000
