@@ -18,7 +18,11 @@ all: $(ZIPFILE)
 $(ZIPFILE): $(ASSETS) $(CONFIG)
 	@echo [ZIP]    $@
 	@rm -f $(ZIPFILE)
+ifeq ($(shell uname),WindowsNT)
+	@$(ZIP) $@ iLoader
+else
 	@$(ZIP) --exclude='*/.svn/*' $@ iLoader
+endif
 
 $(CONFIG): $(CONFIGSRC)
 	@echo [CCONF]  $<
