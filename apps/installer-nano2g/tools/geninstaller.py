@@ -39,16 +39,15 @@ flashfiles = [("diskmode", 1, 0, 1), \
               ("embiosldr", 4, 8, 0, "embiosldr-ipodnano2g.dfu"), \
               ("embios", 4, 10, 0, "embios-ipodnano2g.ucl")]
 
-firstinstfiles = [(2, "/iLoader/iLoader.cfg", "../iloader/themes/default/iLoader/iloader.cfg", 1), \
+firstinstfiles = [(2, "/iLoader/iLoader.cfg", "../iloader/themes/ipodnano2g-default-fastboot/iLoader/iloader.cfg", 1), \
                   (1, "/iLoader/theme", 1), \
-                  (2, "/iLoader/theme/backdrop.ucl", "../iloader/themes/default/iLoader/theme/backdrop.ucl", 2), \
-                  (2, "/iLoader/theme/menu.ucl", "../iloader/themes/default/iLoader/theme/menu.ucl", 2), \
-                  (2, "/iLoader/theme/booting.ucl", "../iloader/themes/default/iLoader/theme/booting.ucl", 2), \
-                  (2, "/iLoader/theme/rockbox.ucl", "../iloader/themes/default/iLoader/theme/rockbox.ucl", 2), \
-                  (2, "/iLoader/theme/apple.ucl", "../iloader/themes/default/iLoader/theme/apple.ucl", 2)]
+                  (2, "/iLoader/theme/backdrop.ucl", "../iloader/themes/ipodnano2g-default-fastboot/iLoader/theme/backdrop.ucl", 2), \
+                  (2, "/iLoader/theme/menu.ucl", "../iloader/themes/ipodnano2g-default-fastboot/iLoader/theme/menu.ucl", 2), \
+                  (2, "/iLoader/theme/booting.ucl", "../iloader/themes/ipodnano2g-default-fastboot/iLoader/theme/booting.ucl", 2), \
+                  (2, "/iLoader/theme/rockbox.ucl", "../iloader/themes/ipodnano2g-default-fastboot/iLoader/theme/rockbox.ucl", 2), \
+                  (2, "/iLoader/theme/apple.ucl", "../iloader/themes/ipodnano2g-default-fastboot/iLoader/theme/apple.ucl", 2)]
 
-commonfiles = [(2, "/iLoader/NORFlash.bak", -2, 10), \
-               (2, "/iLoader/AppleOS.bin", -1, 30)]
+commonfiles = [(2, "/iLoader/AppleOS.bin", -1, 30)]
 
 if len(sys.argv) > 4 and sys.argv[4] != "-":
     pathlen = len(sys.argv[4])
