@@ -260,7 +260,7 @@ void main(void)
         else panic(PANIC_KILLTHREAD, "Boot flash contents are damaged! "
                                      "(No SYSCFG found)\n\nPlease ask for help.\n");
     }
-    if (appleflash) memcpy(&norbuf[0x1000], &oldnor[0x4000], 0x1000);
+    if (appleflash) memcpy(&norbuf[0x1000], &oldnor[0], 0x1000);
     else memcpy(&norbuf[0x1000], &oldnor[0x1000], 0x1000);
     uint32_t sp = 0;
     uint32_t beginptr = 0x2000;
