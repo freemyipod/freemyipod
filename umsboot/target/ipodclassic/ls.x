@@ -71,8 +71,6 @@ SECTIONS
         . = ALIGN(4);
         *(.ibss*)
         . = ALIGN(4);
-        *(COMMON)
-        . = ALIGN(4);
         _bssend = .;
     } > SRAM
 
@@ -81,6 +79,8 @@ SECTIONS
         _bss2start = .;
         . = ALIGN(4);
         *(.bss*)
+        . = ALIGN(4);
+        *(COMMON)
         . = ALIGN(4);
         _mainstackstart = .;
         . += 0x1000;

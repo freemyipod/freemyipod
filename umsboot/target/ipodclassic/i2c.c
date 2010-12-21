@@ -35,12 +35,14 @@ void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* da
     IICDS(bus) = device & ~1;
     IICSTAT(bus) = 0xF0;
     IICCON(bus) = 0xB7;
+    asm volatile("nop\n\t");
     while ((IICCON(bus) & 0x10) == 0);
     if (address >= 0)
     {
         /* write address */
         IICDS(bus) = address;
         IICCON(bus) = 0xB7;
+        asm volatile("nop\n\t");
         while ((IICCON(bus) & 0x10) == 0);
     }
     /* write data */
@@ -48,11 +50,13 @@ void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* da
     {
         IICDS(bus) = *data++;
         IICCON(bus) = 0xB7;
+        asm volatile("nop\n\t");
         while ((IICCON(bus) & 0x10) == 0);
     }
     /* STOP */
     IICSTAT(bus) = 0xD0;
     IICCON(bus) = 0xB7;
+    asm volatile("nop\n\t");
     while ((IICSTAT(bus) & (1 << 5)) != 0);
 }
 
