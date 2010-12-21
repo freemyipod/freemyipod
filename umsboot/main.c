@@ -207,6 +207,7 @@ void main()
     fat16_write_mbr(_ramdiskptr, totalclusters + fatsectors + 2);
     lcdconsole_puts("Booting...", 0, 0xffff);
     displaylcd_sync();
+    udelay(10000);
     execfirmware(ramdisk[0]);
 }
 
