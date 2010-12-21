@@ -423,6 +423,10 @@ configfound:
                             mysum = 62;
                             platform = 0x67326e6e;  // nn2g
                             break;
+                        case 0x4c435049:  // IPCL
+                            mysum = 71;
+                            platform = 0x67367069;  // ip6g
+                            break;
                         default:
                             panic(PANIC_KILLTHREAD,
                                   "No known Rockbox checksum format for this target");
