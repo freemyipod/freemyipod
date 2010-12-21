@@ -256,7 +256,7 @@ void main(void)
     if (oldnorword[0x400] == 0x53436667) appleflash = false;
     else
     {
-        if (oldnorword[0x1000] == 0x53436667) appleflash = true;
+        if (oldnorword[0] == 0x53436667) appleflash = true;
         else panic(PANIC_KILLTHREAD, "Boot flash contents are damaged! "
                                      "(No SYSCFG found)\n\nPlease ask for help.\n");
     }
