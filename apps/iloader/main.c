@@ -165,7 +165,7 @@ void main(void)
     {
         if (bootflash_attributes("ildrcfg ") & 0x800)
         {
-            if (bootflash_is_memmapped)
+            if (bootflash_is_memmapped())
             {
                 if (!ucl_decompress(bootflash_getaddr("ildrcfg "), size, config, (uint32_t*)&size))
                     goto configfound;
@@ -213,16 +213,16 @@ configfound:
                 if (size < 0) pc = errhandler;
                 else if (bootflash_attributes(filename) & 0x800)
                 {
-                    if (bootflash_is_memmapped)
+                    if (bootflash_is_memmapped())
                     {
                         if (ucl_decompress(bootflash_getaddr(filename), size,
                                            (void*)config[pc + 1], (uint32_t*)&size))
                             pc = errhandler;
                         else pc += 3;
                     }
-                    else if (bootflash_read(filename, (void*)(0x09e00000 - size), 0, size) == size)
+                    else if (bootflash_read(filename, (void*)((0x09e00000 - size) & ~0xf), 0, size) == size)
                     {
-                        if (ucl_decompress((void*)(0x09e00000 - size), size,
+                        if (ucl_decompress((void*)((0x09e00000 - size) & ~0xf), size,
                                            (void*)config[pc + 1], (uint32_t*)&size))
                             pc = errhandler;
                         else pc += 3;
