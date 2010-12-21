@@ -881,7 +881,7 @@ class Commandline(object):
         fd = self.embios.file_open(remotename, 0)
         size = self.embios.file_size(fd)
         while size > 0:
-            bytes = self.embios.file_read(fd, buffer, buffsize = 0x10000)
+            bytes = self.embios.file_read(fd, buffer, buffsize)
             f.write(self.embios.read(buffer, bytes))
             size = size - bytes
         self.embios.file_close(fd)
