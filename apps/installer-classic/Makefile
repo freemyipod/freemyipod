@@ -199,4 +199,4 @@ umsboot:
 clean:
 	@rm -rf build
 
-.PHONY: all clean iloader embios embiosldr-ipodclasic umsboot libucl flashfiles $(NAME)
+.PHONY: all clean iloader embios embiosldr-ipodclassic umsboot libucl flashfiles $(NAME)
