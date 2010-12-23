@@ -32,10 +32,12 @@ bitmaps = ["sidepane.ucl", "warning.ucl", "installing.ucl", \
 flashfiles = [("ildrcfg ", 2, 0, 0, "iloader.cfg.ucl"), \
               ("iloader ", 2, 0, 0, "iloader.embiosapp.ucl"), \
               ("umsboot ", 2, 0, 0, "umsboot-ipodclassic.ucl"), \
+              ("uninst  ", 2, 0, 0, "uninstaller-classic.embiosapp.ucl"), \
               ("embiosldr", 12, 8, 0, "embiosldr-ipodclassic.bin"), \
               ("embios  ", 2, 0, 0, "embios-ipodclassic.ucl")]
 
-firstinstfiles = [(2, "/iLoader/iLoader.cfg", "../iloader/themes/ipodclassic-default/iLoader/iloader.cfg", 1), \
+firstinstfiles = [(1, "/iLoader", 1), \
+                  (2, "/iLoader/iLoader.cfg", "../iloader/themes/ipodclassic-default/iLoader/iloader.cfg", 1), \
                   (2, "/iLoader/theme.ucl", "../iloader/themes/ipodclassic-default/iLoader/theme.ucl", 2)]
 
 commonfiles = [(2, "/iLoader/NORFlash.bak", -2, 10)]
@@ -54,13 +56,13 @@ if len(sys.argv) > 4 and sys.argv[4] != "-":
 file = open(sys.argv[1], "rb")
 installer = file.read()
 file.close()
-installer = installer.ljust((len(installer) + 3) & ~3)
+installer = installer.ljust((len(installer) + 3) & ~3, '\0')
 
 for f in bitmaps:
   file = open("build/" + f, "rb")
   fdata = file.read()
   file.close()
-  fdata = fdata.ljust((len(fdata) + 3) & ~3)
+  fdata = fdata.ljust((len(fdata) + 3) & ~3, '\0')
   installer = installer + struct.pack("<I", len(fdata)) + fdata
 
 statusfirst = 0
@@ -91,14 +93,14 @@ for f in flashfiles:
     fdata = file.read()
     file.close()
     flash = flash + struct.pack("<II", scriptsize + len(filedata), len(fdata))
-    filedata = filedata + fdata.ljust((len(fdata) + 15) & ~15)
+    filedata = filedata + fdata.ljust((len(fdata) + 15) & ~15, '\0')
   if (f[1] & 4) == 0: flash = flash + f[0]
 
 firstinstall = ""
 for f in firstinstfiles:
   size = 0
   nameptr = scriptsize + len(filedata)
-  filedata = filedata + (f[1] + "\0").ljust((len(f[1]) + 16) & ~15)
+  filedata = filedata + (f[1] + "\0").ljust((len(f[1]) + 16) & ~15, '\0')
   if f[0] == 1:
     firstinstall = firstinstall + struct.pack("<III", f[0], nameptr, f[2])
     statusfirst = statusfirst + f[2]
@@ -109,7 +111,7 @@ for f in firstinstfiles:
       file.close()
       ptr = scriptsize + len(filedata)
       size = len(fdata)
-      filedata = filedata + fdata.ljust((len(fdata) + 15) & ~15)
+      filedata = filedata + fdata.ljust((len(fdata) + 15) & ~15, '\0')
     else:
       ptr = f[2]
     firstinstall = firstinstall + struct.pack("<IIiII", f[0], nameptr, ptr, size, f[3])
@@ -119,7 +121,7 @@ common = ""
 for f in commonfiles:
   size = 0
   nameptr = scriptsize + len(filedata)
-  filedata = filedata + (f[1] + "\0").ljust((len(f[1]) + 16) & ~15)
+  filedata = filedata + (f[1] + "\0").ljust((len(f[1]) + 16) & ~15, '\0')
   if f[0] == 1:
     common = common + struct.pack("<III", f[0], nameptr, f[2])
     statuscommon = statuscommon + f[2]
@@ -130,7 +132,7 @@ for f in commonfiles:
       file.close()
       ptr = scriptsize + len(filedata)
       size = len(fdata)
-      filedata = filedata + fdata.ljust((len(fdata) + 15) & ~15)
+      filedata = filedata + fdata.ljust((len(fdata) + 15) & ~15, '\0')
     else:
       ptr = f[2]
     common = common + struct.pack("<IIiII", f[0], nameptr, ptr, size, f[3])
@@ -140,5 +142,5 @@ script = flash + struct.pack("<IIII", 0, len(flash) + 16 + len(firstinstall), \
                              statusfirst, statusfirst + statuscommon) \
        + firstinstall + common + struct.pack("<I", 0)
 file = open(sys.argv[2], "wb")
-file.write(installer + script.ljust(scriptsize) + filedata)
+file.write(installer + script.ljust(scriptsize, '\0') + filedata)
 file.close()

@@ -2,12 +2,13 @@ NAME := installer-classic
 
 EMBIOSDIR ?= ../../embios/trunk/
 ILOADERDIR ?= ../iloader/
+UNINSTDIR ?= ../uninstaller-classic/
 UMSBOOTDIR ?= ../../umsboot/
 TOOLSDIR ?= ../../tools/
 
 BITMAPS = build/sidepane.ucl build/warning.ucl build/installing.ucl build/formatting.ucl build/copying.ucl build/flashing.ucl
 
-FLASHFILES = flashfiles/iloader.cfg.ucl flashfiles/iloader.embiosapp.ucl \
+FLASHFILES = flashfiles/uninstaller-classic.embiosapp.ucl flashfiles/iloader.cfg.ucl flashfiles/iloader.embiosapp.ucl \
              flashfiles/embiosldr-ipodclassic.bin flashfiles/embios-ipodclassic.ucl flashfiles/umsboot-ipodclassic.ucl
 
 CROSS   ?= arm-none-eabi-
@@ -145,6 +146,12 @@ endif
 flashfiles: $(FLASHFILES)
 	@touch flashfiles.built
 
+$(UNINSTDIR)/build/uninstaller-classic.embiosapp.ucl: uninstaller-classic
+
+flashfiles/uninstaller-classic.embiosapp.ucl: $(UNINSTDIR)/build/uninstaller-classic.embiosapp.ucl uninstaller-classic
+	@echo [CP]     $@
+	@cp $< $@
+
 $(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl: umsboot
 
 flashfiles/umsboot-ipodclassic.ucl: $(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl umsboot
@@ -191,6 +198,9 @@ embiosldr-ipodclassic:
 iloader:
 	@make -C $(ILOADERDIR)
 
+uninstaller-classic:
+	@make -C $(UNINSTDIR)
+
 $(UMSBOOTDIR)/build/ipodclassic/umsboot.bin: umsboot
 
 umsboot:
@@ -199,4 +209,4 @@ umsboot:
 clean:
 	@rm -rf build
 
-.PHONY: all clean iloader embios embiosldr-ipodclassic umsboot libucl flashfiles $(NAME)
+.PHONY: all clean uninstaller-classic iloader embios embiosldr-ipodclassic umsboot libucl flashfiles $(NAME)
