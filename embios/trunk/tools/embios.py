@@ -658,6 +658,7 @@ class Commandline(object):
         addr = self._hexint(addr)
         size = self._hexint(size)
         keyindex = self._hexint(keyindex)
+        self.embios.lib.dev.timeout = 30000
         self.embios.aesencrypt(addr, size, keyindex)
     
     @command
@@ -668,6 +669,7 @@ class Commandline(object):
         addr = self._hexint(addr)
         size = self._hexint(size)
         keyindex = self._hexint(keyindex)
+        self.embios.lib.dev.timeout = 30000
         self.embios.aesdecrypt(addr, size, keyindex)
     
     @command
@@ -681,6 +683,7 @@ class Commandline(object):
         sha1size = 0x14
         self.logger.info("Generating hmac-sha1 hash from the buffer at "+self._hex(addr)+" with the size "+self._hex(size)+
                          " and saving it to "+self._hex(destination)+" - "+self._hex(destination+sha1size)+"...")
+        self.embios.lib.dev.timeout = 30000
         self.embios.hmac_sha1(addr, size, destination)
         self.logger.info("done\n")
         data = self.embios.read(destination, sha1size)
