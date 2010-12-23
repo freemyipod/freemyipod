@@ -231,7 +231,7 @@ void main(void)
     memset(lcdbuffer, 0xff, 0x25800);
     ucl_decompress(bitmapdata[BMPIDX_SIDEPANE], bitmapsize[BMPIDX_SIDEPANE], bmpbuffer, &dummy);
     renderbmp(&lcdbuffer[195], bmpbuffer, 320);
-    int updating = mkdir("/iLoader");
+    bool updating = mkdir("/iLoader") == -4;
     if (!updating)
     {
         ucl_decompress(bitmapdata[BMPIDX_WARNING], bitmapsize[BMPIDX_WARNING], bmpbuffer, &dummy);
@@ -249,10 +249,10 @@ void main(void)
     backlight_on(true);
 
 
-    oldnor = memalign(0x100000, 0x10);
     norbuf = memalign(0x100000, 0x10);
-    bootflash_readraw(oldnor, 0, 0x100000);
+    oldnor = memalign(0x100000, 0x10);
     memset(norbuf, 0xff, 0x100000);
+    bootflash_readraw(oldnor, 0, 0x100000);
     if (oldnorword[0x400] == 0x53436667) appleflash = false;
     else
     {
@@ -260,8 +260,7 @@ void main(void)
         else panic(PANIC_KILLTHREAD, "Boot flash contents are damaged! "
                                      "(No SYSCFG found)\n\nPlease ask for help.\n");
     }
-    if (appleflash) memcpy(&norbuf[0x1000], &oldnor[0], 0x1000);
-    else memcpy(&norbuf[0x1000], &oldnor[0x1000], 0x1000);
+    memcpy(&norbuf[0x1000], &oldnor[appleflash ? 0 : 0x1000], 0x1000);
     uint32_t sp = 0;
     uint32_t beginptr = 0x2000;
     uint32_t endptr = 0x100000;
@@ -346,7 +345,7 @@ void main(void)
             if (button == 2) break;
             else if (button == 4)
             {
-                shutdown(true);
+                shutdown(false);
                 reset();
             }
             button = 0;
@@ -397,7 +396,7 @@ void main(void)
                     data = oldnor;
                     script[sp + 3] = 0x100000;
                 }
-                else script[sp + 3] = 0;
+                else if (script[sp + 2] == 0xfffffffe) script[sp + 3] = 0;
                 if (!script[sp + 3])
                 {
                     sp += 4;
@@ -427,7 +426,6 @@ void main(void)
         status += script[sp++];
         progressbar_setpos(&progressbar, status, false);
     }
-
     ucl_decompress(bitmapdata[BMPIDX_FLASHING], bitmapsize[BMPIDX_FLASHING], bmpbuffer, &dummy);
     renderbmp(&lcdbuffer[320 * 108], bmpbuffer, 320);
     displaylcd(0, 319, 0, 239, lcdbuffer, 0);
@@ -438,6 +436,6 @@ void main(void)
         progressbar_setpos(&progressbar, i, false);
     }
 
-    shutdown(true);
+    shutdown(false);
     reset();
 }
