@@ -88,13 +88,11 @@ renderfillrect:
 	ldmfd	sp, {r1,r2}
 renderfillrect_y:
 	cmp	r1, #0
+	cmpne	r3, #0
 	moveq	pc, lr
 	sub	r1, r1, #1
 	mov	r12, r3
 renderfillrect_x:
-	cmp	r12, #0
-	beq	renderfillrect_y
-	sub	r12, r12, #1
 #if (LCD_BYTESPERPIXEL == 1)
 	strb	r2, [r0], #1
 #elif (LCD_BYTESPERPIXEL == 2)
@@ -104,7 +102,20 @@ renderfillrect_x:
 #else
 #error Unknown number of bytes per pixel!
 #endif
-	b	renderfillrect_x
+	subs	r12, r12, #1
+	bne	renderfillrect_x
+	ldr	r12, [sp,#8]
+	sub	r12, r12, r3
+#if (LCD_BYTESPERPIXEL == 1)
+	add	r0, r0, r12
+#elif (LCD_BYTESPERPIXEL == 2)
+	add	r0, r0, r12,lsl#1
+#elif (LCD_BYTESPERPIXEL == 4)
+	add	r0, r0, r12,lsl#2
+#else
+#error Unknown number of bytes per pixel!
+#endif
+	b	renderfillrect_y
 .size renderfillrect, .-renderfillrect
 
 
