@@ -91,7 +91,7 @@ void displaylcd(unsigned int startx, unsigned int endx,
                 unsigned int starty, unsigned int endy, void* data, int color)
 {
     displaylcd_sync();
-    if (lcd_detect() == 3)
+    if (lcd_detect() & 2)
     {
         lcd_send_cmd(0x210);
         lcd_send_data(startx);

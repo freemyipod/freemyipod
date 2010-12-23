@@ -443,8 +443,8 @@ lcddata_1:
 	.hword 0xce88
 	.hword 0x4013
 	.hword 0x4029
-lcddata_2:
 	.hword 0xc000
+lcddata_2:
 lcddata_3:
 	.hword 0x4008
 	.hword 0x0808
@@ -467,89 +467,89 @@ lcddata_3:
 	.hword 0x8190
 	.byte 0x21
 	.hword 0x4300
-	.hword 0x0506
+	.hword 0x0307
 	.hword 0x4301
-	.hword 0x0402
+	.hword 0x0003
 	.hword 0x4302
-	.hword 0x0706
+	.hword 0x0402
 	.hword 0x4303
 	.hword 0x0303
 	.hword 0x4304
-	.hword 0x0100
+	.hword 0x0300
 	.hword 0x4305
-	.hword 0x0207
+	.hword 0x0407
 	.hword 0x4306
-	.hword 0x170e
+	.hword 0x1c04
 	.hword 0x4307
-	.hword 0x0506
+	.hword 0x0307
 	.hword 0x4308
-	.hword 0x0402
+	.hword 0x0003
 	.hword 0x4309
-	.hword 0x0706
+	.hword 0x0402
 	.hword 0x430a
 	.hword 0x0303
 	.hword 0x430b
-	.hword 0x0100
+	.hword 0x0300
 	.hword 0x430c
-	.hword 0x0207
+	.hword 0x0407
 	.hword 0x430d
-	.hword 0x170e
+	.hword 0x1c04
 	.hword 0x4310
-	.hword 0x0606
-	.hword 0x4311
-	.hword 0x0506
-	.hword 0x4312
 	.hword 0x0707
+	.hword 0x4311
+	.hword 0x0407
+	.hword 0x4312
+	.hword 0x0306
 	.hword 0x4313
 	.hword 0x0303
 	.hword 0x4314
-	.hword 0x0200
+	.hword 0x0300
 	.hword 0x4315
-	.hword 0x0307
+	.hword 0x0407
 	.hword 0x4316
-	.hword 0x170e
+	.hword 0x1c01
 	.hword 0x4317
-	.hword 0x0606
-	.hword 0x4318
-	.hword 0x0506
-	.hword 0x4319
 	.hword 0x0707
+	.hword 0x4318
+	.hword 0x0407
+	.hword 0x4319
+	.hword 0x0306
 	.hword 0x431a
 	.hword 0x0303
 	.hword 0x431b
-	.hword 0x0200
+	.hword 0x0300
 	.hword 0x431c
-	.hword 0x0307
+	.hword 0x0407
 	.hword 0x431d
-	.hword 0x170e
+	.hword 0x1c01
 	.hword 0x4320
-	.hword 0x0707
+	.hword 0x0206
 	.hword 0x4321
-	.hword 0x0005
+	.hword 0x0102
 	.hword 0x4322
-	.hword 0x0705
+	.hword 0x0404
 	.hword 0x4323
 	.hword 0x0303
 	.hword 0x4324
 	.hword 0x0300
 	.hword 0x4325
-	.hword 0x0707
+	.hword 0x0407
 	.hword 0x4326
-	.hword 0x1f16
+	.hword 0x1c1f
 	.hword 0x4327
-	.hword 0x0707
+	.hword 0x0206
 	.hword 0x4328
-	.hword 0x0005
+	.hword 0x0102
 	.hword 0x4329
-	.hword 0x0705
+	.hword 0x0404
 	.hword 0x432a
 	.hword 0x0303
 	.hword 0x432b
 	.hword 0x0300
 	.hword 0x432c
-	.hword 0x0707
+	.hword 0x0407
 	.hword 0x432d
-	.hword 0x1f16
+	.hword 0x1c1f
 	.hword 0x4400
 	.hword 0x001d
 	.hword 0x4401
@@ -567,9 +567,9 @@ lcddata_3:
 	.hword 0x4101
 	.hword 0x0220
 	.hword 0x4102
-	.hword 0x009b
+	.hword 0x00bd
 	.hword 0x4103
-	.hword 0x1200
+	.hword 0x1500
 	.hword 0x4105
 	.hword 0x0103
 	.hword 0x4106
@@ -586,7 +586,7 @@ lcddata_3:
 	.hword 0x0500
 	.hword 0x8107
 	.byte 0x31
-	.hword 0x4130
+	.hword 0x8130
 	.byte 0x07
 	.hword 0xc744
 	.hword 0x4030
@@ -1049,12 +1049,15 @@ sdramloop:
 	sub	r4, r1, #0x04400000  @ R4 = LCDBASE
 	ldr	r0, [r3,#0xc4]
 	and	r8, r0, #0x30        @ R8 = LCD type GPIO bits << 4
+	mov	r6, #0x80000000
 	add	sp, sp, r8,lsr#3
+	tst	r8, #0x20
 	ldrh	r0, [sp]
+	orrne	r6, r6, #0x188
 	add	sp, sp, r0
-	ldr	r0, val_80100db0
-	str	r0, [r4]
+	orr	r6, r6, #0xc20
 	mov	r0, #0x33
+	str	r6, [r4]
 	str	r0, [r4,#0x20]
 lcdloop:
 	adr	lr, lcdloop
@@ -1071,8 +1074,11 @@ val_80100db0:
 	bne	lcdbyteseq
 	movne	r0, r0,lsl#4
 	bne	udelay
+	tst	r8, #0x20
 	mov	r10, #0x22000000
+	ldreq	r6, val_80100db0
 	orr	r10, r10, #0x10000
+	streq	r6, [r4]
 	add	r11, r10, #0x25800
 	mov	r0, #-1
 fillbuff:
@@ -1086,8 +1092,8 @@ fillbuff:
 printerror:
 	bl	rendertext
 	bl	flushcache
-	cmp	r8, #0x30
-	bne	leadisprotocol
+	tst	r8, #0x20
+	beq	leadisprotocol
 	mov	r9, #0x200
 	add	r0, r9, #0x10
 	bl	sendlcdc
