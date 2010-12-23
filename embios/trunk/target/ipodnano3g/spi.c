@@ -95,6 +95,7 @@ void spi_read(int port, uint32_t size, void* buf)
     clean_dcache();
     DMAC0CCONFIG(port + 5) = 0x9001 | (SPIDMA(port) << 1);
     wakeup_wait(&spiwakeup[port], TIMEOUT_BLOCK);
+    invalidate_dcache();
     SPISETUP(port) &= ~0x41;
 }
 
