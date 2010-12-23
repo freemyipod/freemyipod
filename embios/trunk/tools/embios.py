@@ -120,7 +120,8 @@ def usage(errormsg=None, specific=False):
 class Logger(object):
     """
         Simple stdout logger.
-        Loglevel 4 is most verbose, Loglevel 0 only say something if there is an error.
+        Loglevel 4 is most verbose, Loglevel 0: Only say something if there is an error.
+        The log function doesn't care about the loglevel and always logs to stdout.
     """
     def __init__(self):
         # Possible values: 0 (only errors), 1 (warnings), 2 (info, recommended for production use), 3 and more (debug)
@@ -131,13 +132,13 @@ class Logger(object):
     
     def debug(self, text):
         if self.loglevel >= 3:
-            self.log(text)
+            self.log("DEBUG: " + text)
     
     def info(self, text):
         if self.loglevel >= 2:
             self.log(text)
     
-    def warning(self, text):
+    def warn(self, text):
         if self.loglevel >= 1:
             self.log("WARNING: " + text)
     
@@ -269,15 +270,27 @@ class Commandline(object):
                 hwtype = libembiosdata.hwtypes[self.embios.lib.dev.hwtypeid]
             except KeyError:
                 hwtype = "UNKNOWN (ID = " + self._hex(self.embios.lib.dev.hwtypeid) + ")"
-            self.logger.info("Connected to "+libembiosdata.swtypes[self.embios.lib.dev.swtypeid] + " v" + str(self.embios.lib.dev.version.majorv) + "." + str(self.embios.lib.dev.version.minorv) +
-                             "." + str(self.embios.lib.dev.version.patchv) + " r" + str(self.embios.lib.dev.version.revision) + " running on " + hwtype + "\n")
+            self.logger.info("Connected to " + \
+                             libembiosdata.swtypes[self.embios.lib.dev.swtypeid] + \
+                             " v" + str(self.embios.lib.dev.version.majorv) + \
+                             "." + str(self.embios.lib.dev.version.minorv) + \
+                             "." + str(self.embios.lib.dev.version.patchv) + \
+                             " r" + str(self.embios.lib.dev.version.revision) + \
+                             " running on " + hwtype + "\n")
         
         elif infotype == "packetsize":
-            self.logger.info("Maximum packet sizes: \n command out: " + str(self.embios.lib.dev.packetsizelimit.cout) + "\n command in: " + str(self.embios.lib.dev.packetsizelimit.cin) + "\n data in: " + str(self.embios.lib.dev.packetsizelimit.din) + "\n data out: " + str(self.embios.lib.dev.packetsizelimit.dout))
+            self.logger.info("Maximum packet sizes: \n command out: " + str(self.embios.lib.dev.packetsizelimit.cout) + \
+                             "\n command in: " + str(self.embios.lib.dev.packetsizelimit.cin) + \
+                             "\n data in: " + str(self.embios.lib.dev.packetsizelimit.din) + \
+                             "\n data out: " + str(self.embios.lib.dev.packetsizelimit.dout))
         
         elif infotype == "usermemrange":
             resp = self.embios.getusermemrange()
-            self.logger.info("The user memory range is "+self._hex(self.embios.lib.dev.usermem.lower)+" - "+self._hex(self.embios.lib.dev.usermem.upper - 1))
+            self.logger.info("The user memory range is " + \
+                             self._hex(self.embios.lib.dev.usermem.lower) + \
+                             " - " + \
+                             self._hex(self.embios.lib.dev.usermem.upper - 1))
+        
         else:
             raise ArgumentTypeError("one out of 'version', 'packetsize', 'usermemrange'", infotype)
     
@@ -317,7 +330,8 @@ class Commandline(object):
             f = open(filename, 'rb')
         except IOError:
             raise ArgumentError("File not readable. Does it exist?")
-        self.logger.info("Writing file '"+filename+"' to memory at "+self._hex(addr)+"...")
+        self.logger.info("Writing file '" + filename + \
+                         "' to memory at " + self._hex(addr) + "...")
         with f:
             self.embios.write(addr, f.read())
         f.close()
@@ -337,7 +351,9 @@ class Commandline(object):
             f = open(filename, 'wb')
         except IOError:
             raise ArgumentError("Can not open file for write!")
-        self.logger.info("Reading data from address "+self._hex(addr)+" with the size "+self._hex(size)+" to '"+filename+"'...")
+        self.logger.info("Reading data from address " + self._hex(addr) + \
+                         " with the size " + self._hex(size) + \
+                         " to '"+filename+"'...")
         with f:
             f.write(self.embios.read(addr, size))
         f.close()
@@ -356,7 +372,8 @@ class Commandline(object):
             raise ArgumentError("Specified integer too long")
         data = struct.pack("I", integer)
         self.embios.write(addr, data)
-        self.logger.info("Integer '"+self._hex(integer)+"' written successfully to "+self._hex(addr)+"\n")
+        self.logger.info("Integer '" + self._hex(integer) + \
+                         "' written successfully to " + self._hex(addr) + "\n")
 
     @command
     def downloadint(self, addr):
@@ -367,7 +384,8 @@ class Commandline(object):
         addr = self._hexint(addr)
         data = self.embios.read(addr, 4)
         integer = struct.unpack("I", data)[0]
-        self.logger.info("Integer '"+self._hex(integer)+"' read from address "+self._hex(addr)+"\n")
+        self.logger.info("Integer '" + self._hex(integer) + \
+                         "' read from address " + self._hex(addr) + "\n")
 
     @command
     def i2cread(self, bus, slave, addr, size):
@@ -453,7 +471,8 @@ class Commandline(object):
         for word in args:
             text += word + " "
         text = text[:-1]
-        self.logger.info("Writing '"+text+"' to the device consoles identified with "+self._hex(bitmask)+"\n")
+        self.logger.info("Writing '" + text + \
+                         "' to the device consoles identified with " + self._hex(bitmask) + "\n")
         self.embios.cwrite(text, bitmask)
 
     @command
@@ -463,7 +482,8 @@ class Commandline(object):
             <bitmask>: the bitmask of the consoles to be flushed
         """
         bitmask = self._hexint(bitmask)
-        self.logger.info("Flushing consoles identified with the bitmask "+self._hex(bitmask)+"\n")
+        self.logger.info("Flushing consoles identified with the bitmask " + \
+                         self._hex(bitmask) + "\n")
         self.embios.cflush(bitmask)
 
     @command
@@ -473,18 +493,32 @@ class Commandline(object):
         """
         import datetime
         threads = self.embios.getprocinfo()
-        self.logger.info("The device has "+str(len(threads))+" running threads:\n\n")
+        cpuload = 1
+        threadload = 0
+        idleload = 0
+        for thread in threads:
+            if thread.priority != 0:
+                threadload += (thread.cpuload*100)/255
+            else:
+                idleload += (thread.cpuload*100)/255
+        coreload = 1 - (threadload + idleload)
+        cpuload = threadload + coreload
+        self.logger.info("The device has " + str(len(threads)) + " running threads.\n" + \
+                         "It is running at " + str(cpuload * 100) + "% cpu load with a core load of " + \
+                         str(coreload * 100) + "%, a thread load of " + str(threadload * 100) + "% " + \
+                         "and an idle load of " + str(idleload * 100) + "%\n\n")
+        self.logger.info("Thread dump:\n")
         for thread in threads:
             self.logger.info("  "+thread.name+":\n")
-            self.logger.info("    Thread id: "+str(thread.id)+"\n")
-            self.logger.info("    Thread type: "+thread.type+"\n")
-            self.logger.info("    Thread state: "+thread.state+"\n")
-            self.logger.info("    Block type: "+thread.block_type+"\n")
-            self.logger.info("    Blocked by: "+self._hex(thread.blocked_by_ptr)+"\n")
-            self.logger.info("    Priority: "+str(thread.priority)+"/255\n")
+            self.logger.info("    Thread id: "      + str(thread.id)+"\n")
+            self.logger.info("    Thread type: "    + thread.type+"\n")
+            self.logger.info("    Thread state: "   + thread.state+"\n")
+            self.logger.info("    Block type: "     + thread.block_type+"\n")
+            self.logger.info("    Blocked by: "     + self._hex(thread.blocked_by_ptr)+"\n")
+            self.logger.info("    Priority: "       + str(thread.priority)+"/255\n")
             self.logger.info("    Current CPU load: "+str((thread.cpuload*100)/255)+"%\n")
             self.logger.info("    CPU time (total): "+str(datetime.timedelta(microseconds=thread.cputime_total))+"\n")
-            self.logger.info("    Stack address: "+self._hex(thread.stackaddr)+"\n")
+            self.logger.info("    Stack address: "  + self._hex(thread.stackaddr)+"\n")
             self.logger.info("    Registers:\n")
             for registerrange in range(4):
                 self.logger.info("      ")
@@ -557,7 +591,12 @@ class Commandline(object):
         priority = self._hexint(priority)
         data = self.embios.createthread(nameptr, entrypoint, stackptr, stacksize, type, priority, state)
         name = self.embios.readstring(nameptr)
-        self.logger.info("Created a thread with the threadid " + data.id + ", the name \"" + name + "\", the entrypoint at " + self._hex(entrypoint) + ", the stack at " + self._hex(stackpointer) + " with a size of " + self._hex(stacksize) + " and a priority of " + self._hex(priority) + "\n")
+        self.logger.info("Created a thread with the threadid " + data.id + \
+                         ", the name \"" + name + "\"" + \
+                         ", the entrypoint at " + self._hex(entrypoint) + \
+                         ", the stack at " + self._hex(stackpointer) + \
+                         " with a size of " + self._hex(stacksize) + \
+                         " and a priority of " + self._hex(priority) + "\n")
     
     @command
     def run(self, filename):
@@ -620,10 +659,10 @@ class Commandline(object):
         addr_mem = self._hexint(addr_mem)
         size = self._hexint(size)
         force = self._bool(force)
-        self.logger.info("Writing boot flash from the memory in "+self._hex(addr_mem)+" - "+
+        self.logger.warn("Writing boot flash from the memory in "+self._hex(addr_mem)+" - "+
                          hex(addr_mem+size)+" to "+self._hex(addr_flash)+" - "+self._hex(addr_flash+size)+"\n")
         if force == False:
-            self.logger.info("If this was not what you intended press Ctrl-C NOW")
+            self.logger.warn("If this was not what you intended press Ctrl-C NOW")
             for i in range(10):
                 self.logger.info(".")
                 time.sleep(1)
@@ -681,8 +720,9 @@ class Commandline(object):
         size = self._hexint(size)
         destination = self._hexint(destination)
         sha1size = 0x14
-        self.logger.info("Generating hmac-sha1 hash from the buffer at "+self._hex(addr)+" with the size "+self._hex(size)+
-                         " and saving it to "+self._hex(destination)+" - "+self._hex(destination+sha1size)+"...")
+        self.logger.info("Generating hmac-sha1 hash from the buffer at " + self._hex(addr) + \
+                         " with the size " + self._hex(size) + " and saving it to " + \
+                         self._hex(destination) + " - " + self._hex(destination+sha1size) + "...")
         self.embios.lib.dev.timeout = 30000
         self.embios.hmac_sha1(addr, size, destination)
         self.logger.info("done\n")
@@ -697,11 +737,11 @@ class Commandline(object):
             Gathers some information about the NAND chip used
         """
         data = self.embios.ipodnano2g_getnandinfo()
-        self.logger.info("NAND chip type: "+self._hex(data["type"])+"\n")
-        self.logger.info("Number of banks: "+str(data["banks"])+"\n")
-        self.logger.info("Number of blocks: "+str(data["blocks"])+"\n")
-        self.logger.info("Number of user blocks: "+str(data["userblocks"])+"\n")
-        self.logger.info("Pages per block: "+str(data["pagesperblock"]))
+        self.logger.info("NAND chip type: "         + self._hex(data["type"])+"\n")
+        self.logger.info("Number of banks: "        + str(data["banks"])+"\n")
+        self.logger.info("Number of blocks: "       + str(data["blocks"])+"\n")
+        self.logger.info("Number of user blocks: "  + str(data["userblocks"])+"\n")
+        self.logger.info("Pages per block: "        + str(data["pagesperblock"]))
 
     @command
     def ipodnano2g_nandread(self, addr, start, count, doecc, checkempty):
@@ -714,7 +754,8 @@ class Commandline(object):
         count = self._hexint(count)
         doecc = int(doecc)
         checkempty = int(checkempty)
-        self.logger.info("Reading "+self._hex(count)+" NAND pages starting at "+self._hex(start)+" to "+self._hex(addr)+"...")
+        self.logger.info("Reading " + self._hex(count) + " NAND pages starting at " + \
+                         self._hex(start) + " to " + self._hex(addr) + "...")
         self.embios.lib.dev.timeout = 30000
         self.embios.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
         self.logger.info("done\n")
@@ -729,7 +770,8 @@ class Commandline(object):
         start = self._hexint(start)
         count = self._hexint(count)
         doecc = int(doecc)
-        self.logger.info("Writing "+self._hex(count)+" NAND pages starting at "+self._hex(start)+" from "+self._hex(addr)+"...")
+        self.logger.info("Writing " + self._hex(count) + " NAND pages starting at " + \
+                         self._hex(start) + " from " + self._hex(addr) + "...")
         self.embios.lib.dev.timeout = 30000
         self.embios.ipodnano2g_nandwrite(addr, start, count, doecc)
         self.logger.info("done\n")
@@ -743,7 +785,8 @@ class Commandline(object):
         addr = self._hexint(addr)
         start = self._hexint(start)
         count = self._hexint(count)
-        self.logger.info("Erasing "+self._hex(count)+" NAND blocks starting at "+self._hex(start)+" and logging to "+self._hex(addr)+"...")
+        self.logger.info("Erasing " + self._hex(count) + " NAND blocks starting at " + \
+                         self._hex(start) + " and logging to " + self._hex(addr) + "...")
         self.embios.lib.dev.timeout = 30000
         self.embios.ipodnano2g_nanderase(addr, start, count)
         self.logger.info("done\n")
@@ -763,11 +806,11 @@ class Commandline(object):
             statusfile = open(filenameprefix+"_status.bin", 'wb')
         except IOError:
             raise ArgumentError("Can not open file for writing!")
-        infofile.write("NAND chip type: "+self._hex(info["type"])+"\r\n")
-        infofile.write("Number of banks: "+str(info["banks"])+"\r\n")
-        infofile.write("Number of blocks: "+str(info["blocks"])+"\r\n")
-        infofile.write("Number of user blocks: "+str(info["userblocks"])+"\r\n")
-        infofile.write("Pages per block: "+str(info["pagesperblock"])+"\r\n")
+        infofile.write("NAND chip type: "       + self._hex(info["type"]) + "\r\n")
+        infofile.write("Number of banks: "      + str(info["banks"]) + "\r\n")
+        infofile.write("Number of blocks: "     + str(info["blocks"]) + "\r\n")
+        infofile.write("Number of user blocks: "+ str(info["userblocks"]) + "\r\n")
+        infofile.write("Pages per block: "      + str(info["pagesperblock"]) + "\r\n")
         self.embios.lib.dev.timeout = 30000
         for i in range(info["banks"] * info["blocks"] * info["pagesperblock"] / 8192):
             self.logger.info(".")
@@ -788,9 +831,9 @@ class Commandline(object):
             Wipes the whole NAND chip and logs the result to a file
             <force>: Use this flag to suppress the 5 seconds delay
         """
-        self.logger.info("Wiping the whole NAND chip!\n")
+        self.logger.warn("Wiping the whole NAND chip!\n")
         if force == False:
-            self.logger.info("If this was not what you intended press Ctrl-C NOW")
+            self.logger.warn("If this was not what you intended press Ctrl-C NOW")
             for i in range(10):
                 self.logger.info(".")
                 time.sleep(1)
@@ -1038,5 +1081,8 @@ class Commandline(object):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         usage("No command specified")
-    interface = Commandline()
-    interface._parsecommand(sys.argv[1], sys.argv[2:])
+    try:
+        interface = Commandline()
+        interface._parsecommand(sys.argv[1], sys.argv[2:])
+    except KeyboardInterrupt:
+        sys.exit()
