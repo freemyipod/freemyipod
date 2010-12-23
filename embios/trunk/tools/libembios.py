@@ -538,11 +538,14 @@ class Embios(object):
                 count = 1
         self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
     
-    def storage_get_info(self):
+    def storage_get_info(self, volume):
         """ Get information about a storage device """
-        result = self.lib.monitorcommand(struct.pack("IIII", 27, 0, 0, 0), "IIIIIIII", ("version", None, None, "sectorsize", "numsectors", "vendorptr", "productptr", "revisionptr"))
+        result = self.lib.monitorcommand(struct.pack("IIII", 27, volume, 0, 0), "IIIIIIII", ("version", None, None, "sectorsize", "numsectors", "vendorptr", "productptr", "revisionptr"))
         if result.version != 1:
             raise ValueError("Unknown version of storage_info struct: %d" % result.version)
+        result.vendor = self.readstring(result.vendorptr)
+        result.product = self.readstring(result.productptr)
+        result.revision = self.readstring(result.revisionptr)
         return result
     
     def storage_read_sectors_md(self, volume, sector, count, addr):

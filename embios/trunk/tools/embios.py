@@ -825,6 +825,107 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
+    def getvolumeinfo(self, volume):
+        """
+            Gathers some information about a storage volume used
+        """
+        volume = self._hexint(volume)
+        data = self.embios.storage_get_info(volume)
+        self.logger.info("Sector size: "+str(data["sectorsize"])+"\n")
+        self.logger.info("Number of sectors: "+str(data["numsectors"])+"\n")
+        self.logger.info("Vendor: "+data["vendor"]+"\n")
+        self.logger.info("Product: "+data["product"]+"\n")
+        self.logger.info("Revision: "+data["revision"])
+
+    @command
+    def readrawstorage(self, volume, sector, count, addr):
+        """
+            Reads <count> sectors starting at <sector> from storage <volume> to memory at <addr>.
+        """
+        volume = self._hexint(volume)
+        sector = self._hexint(sector)
+        count = self._hexint(count)
+        addr = self._hexint(addr)
+        self.logger.info("Reading volume %s sectors %X - %X to %08X..." % (volume, sector, sector + count - 1, addr))
+        self.embios.lib.dev.timeout = 50000
+        self.embios.storage_read_sectors_md(volume, sector, count, addr)
+        self.logger.info("done\n")
+
+    @command
+    def writerawstorage(self, volume, sector, count, addr):
+        """
+            Writes memory contents at <addr> to <count> sectors starting at <sector> on storage <volume>.
+        """
+        volume = self._hexint(volume)
+        sector = self._hexint(sector)
+        count = self._hexint(count)
+        addr = self._hexint(addr)
+        self.logger.info("Writing %08X to volume %s sectors %X - %X..." % (addr, volume, sector, sector + count - 1))
+        self.embios.lib.dev.timeout = 50000
+        self.embios.storage_write_sectors_md(volume, sector, count, addr)
+        self.logger.info("done\n")
+
+    @command
+    def readrawstoragefile(self, volume, sector, count, file, buffer = False, buffsize = "100000"):
+        """
+            Reads <count> sectors starting at <sector> from storage <volume> to file <file>,
+            buffering them in memory at <buffer> in chunks of <buffsize> bytes (both optional).
+        """
+        volume = self._hexint(volume)
+        sector = self._hexint(sector)
+        count = self._hexint(count)
+        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        else: buffer = self._hexint(buffer)
+        buffsize = self._hexint(buffsize)
+        try:
+            f = open(file, 'wb')
+        except IOError:
+            raise ArgumentError("Could not open local file for writing.")
+        self.logger.info("Reading volume %s sectors %X - %X to %s..." % (volume, sector, sector + count - 1, file))
+        self.embios.lib.dev.timeout = 50000
+        storageinfo = self.embios.storage_get_info(volume)
+        while count > 0:
+            sectors = min(count, int(buffsize / storageinfo.sectorsize))
+            self.embios.storage_read_sectors_md(volume, sector, sectors, buffer)
+            f.write(self.embios.read(buffer, storageinfo.sectorsize * sectors))
+            sector = sector + sectors
+            count = count - sectors
+        f.close()
+        self.logger.info("done\n")
+
+    @command
+    def writerawstoragefile(self, volume, sector, count, file, buffer = False, buffsize = "100000"):
+        """
+            Writes contents of <file> to <count> sectors starting at <sector> on storage <volume>,
+            buffering them in memory at <buffer> in chunks of <buffsize> bytes (both optional).
+        """
+        volume = self._hexint(volume)
+        sector = self._hexint(sector)
+        count = self._hexint(count)
+        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        else: buffer = self._hexint(buffer)
+        buffsize = self._hexint(buffsize)
+        try:
+            f = open(file, 'rb')
+        except IOError:
+            raise ArgumentError("Could not open local file for reading.")
+        self.logger.info("Writing %s to volume %s sectors %X - %X..." % (file, volume, sector, sector + count - 1))
+        self.embios.lib.dev.timeout = 50000
+        storageinfo = self.embios.storage_get_info(volume)
+        while count > 0:
+            sectors = min(count, int(buffsize / storageinfo.sectorsize))
+            bytes = storageinfo.sectorsize * sectors
+            data = f.read(bytes)
+            if len(data) == 0: break
+            while len(data) < bytes: data = data + f.read(bytes - len(data))
+            self.embios.write(buffer, data)
+            self.embios.storage_write_sectors_md(volume, sector, sectors, buffer)
+            sector = sector + sectors
+            count = count - sectors
+        f.close()
+        self.logger.info("done\n")
+
+    @command
     def mkdir(self, dirname):
         """
             Creates a directory
