@@ -38,26 +38,35 @@ void i2c_init()
 void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* data, uint32_t length)
 {
     mutex_lock(&i2cmutex, TIMEOUT_BLOCK);
+    while (IIC10(bus));
     IICDS(bus) = device & ~1;
+    while (IIC10(bus));
     IICSTAT(bus) = 0xF0;
+    while (IIC10(bus));
     IICCON(bus) = 0xB7;
     while ((IICCON(bus) & 0x10) == 0) yield();
     if (address >= 0)
     {
         /* write address */
+        while (IIC10(bus));
         IICDS(bus) = address;
+        while (IIC10(bus));
         IICCON(bus) = 0xB7;
         while ((IICCON(bus) & 0x10) == 0) yield();
     }
     /* write data */
     while (length--)
     {
+        while (IIC10(bus));
         IICDS(bus) = *data++;
+        while (IIC10(bus));
         IICCON(bus) = 0xB7;
         while ((IICCON(bus) & 0x10) == 0) yield();
     }
     /* STOP */
+    while (IIC10(bus));
     IICSTAT(bus) = 0xD0;
+    while (IIC10(bus));
     IICCON(bus) = 0xB7;
     while ((IICSTAT(bus) & (1 << 5)) != 0) yield();
     mutex_unlock(&i2cmutex);
@@ -69,28 +78,39 @@ void i2c_recv(uint32_t bus, uint32_t device, uint32_t address, uint8_t* data, ui
     if (address >= 0)
     {
         /* START */
+        while (IIC10(bus));
         IICDS(bus) = device & ~1;
+        while (IIC10(bus));
         IICSTAT(bus) = 0xF0;
+        while (IIC10(bus));
         IICCON(bus) = 0xB7;
         while ((IICCON(bus) & 0x10) == 0) yield();
         /* write address */
+        while (IIC10(bus));
         IICDS(bus) = address;
+        while (IIC10(bus));
         IICCON(bus) = 0xB7;
         while ((IICCON(bus) & 0x10) == 0) yield();
     }
     /* (repeated) START */
+    while (IIC10(bus));
     IICDS(bus) = device | 1;
+    while (IIC10(bus));
     IICSTAT(bus) = 0xB0;
+    while (IIC10(bus));
     IICCON(bus) = 0xB7;
     while ((IICCON(bus) & 0x10) == 0) yield();
     while (length--)
     {
+        while (IIC10(bus));
         IICCON(bus) = (length == 0) ? 0x37 : 0xB7; /* NACK or ACK */
         while ((IICCON(bus) & 0x10) == 0) yield();
         *data++ = IICDS(bus);
     }
     /* STOP */
+    while (IIC10(bus));
     IICSTAT(bus) = 0x90;
+    while (IIC10(bus));
     IICCON(bus) = 0xB7;
     while ((IICSTAT(bus) & (1 << 5)) != 0) yield();
     mutex_unlock(&i2cmutex);

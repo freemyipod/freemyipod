@@ -99,6 +99,7 @@
 #define IICSTAT(bus) (*((uint32_t volatile*)(0x3C600004 + 0x300000 * (bus))))
 #define IICADD(bus)  (*((uint32_t volatile*)(0x3C600008 + 0x300000 * (bus))))
 #define IICDS(bus)   (*((uint32_t volatile*)(0x3C60000C + 0x300000 * (bus))))
+#define IIC10(bus)   (*((uint32_t volatile*)(0x3C600010 + 0x300000 * (bus))))
 
 
 /////INTERRUPT CONTROLLERS/////
