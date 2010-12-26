@@ -27,10 +27,14 @@
 #include "thread.h"
 
 
+struct mutex hmacsha1_mutex;
+
+
 void hmacsha1(void* data, uint32_t size, void* result)
 {
     uint32_t ptr, i;
     uint32_t ctrl = 2;
+    mutex_lock(&hmacsha1_mutex, TIMEOUT_BLOCK);
     PWRCON(1) &= ~4;
     for (ptr = 0; ptr < (size >> 2); ptr += 0x10)
     {
@@ -41,4 +45,5 @@ void hmacsha1(void* data, uint32_t size, void* result)
     }
     for (i = 0; i < 5; i ++) ((uint32_t*)result)[i] = HASHRESULT[i];
     PWRCON(1) |= 4;
+    mutex_unlock(&hmacsha1_mutex);
 }

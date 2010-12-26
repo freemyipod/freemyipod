@@ -27,9 +27,13 @@
 #include "thread.h"
 
 
+struct mutex hwkeyaes_mutex;
+
+
 void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, uint32_t size)
 {
     int i;
+    mutex_lock(&hwkeyaes_mutex, TIMEOUT_BLOCK);
     clockgate_enable(10, true);
     for (i = 0; i < 4; i++) AESIV[i] = 0;
     AESUNKREG0 = 1;
@@ -52,4 +56,5 @@ void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, ui
 	invalidate_dcache();
     while (!(AESSTATUS & 0xf)) sleep(100);
     clockgate_enable(10, false);
+    mutex_unlock(&hwkeyaes_mutex);
 }

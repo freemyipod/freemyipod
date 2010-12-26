@@ -132,8 +132,10 @@ void irqhandler(void)
 
 void interrupt_enable(int irq, bool state)
 {
+    uint32_t mode = enter_critical_section();
     if (state) INTMSK |= 1 << irq;
     else INTMSK &= ~(1 << irq);
+    leave_critical_section(mode);
 }
 
 void interrupt_set_handler(int irq, void* handler)

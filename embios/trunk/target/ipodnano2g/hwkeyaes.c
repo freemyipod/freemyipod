@@ -27,10 +27,14 @@
 #include "thread.h"
 
 
+struct mutex hwkeyaes_mutex;
+
+
 void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, uint32_t size)
 {
     uint32_t ptr, i;
     uint32_t go = 1;
+    mutex_lock(&hwkeyaes_mutex, TIMEOUT_BLOCK);
     PWRCON(1) &= ~0x400;
     AESTYPE = keyidx;
     AESUNKREG0 = 1;
@@ -70,4 +74,5 @@ void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, ui
     }
     AESCONTROL = 0;
     PWRCON(1) |= 0x400;
+    mutex_unlock(&hwkeyaes_mutex);
 }

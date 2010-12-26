@@ -27,6 +27,8 @@
 
 void clockgate_enable(int gate, bool enable)
 {
+    uint32_t mode = enter_critical_section();
     if (enable) PWRCON(gate >> 5) &= ~(1 << (gate & 0x1f));
     else PWRCON(gate >> 5) |= 1 << (gate & 0x1f);
+    leave_critical_section(mode);
 }
