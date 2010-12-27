@@ -493,19 +493,17 @@ class Commandline(object):
         """
         import datetime
         threads = self.embios.getprocinfo()
-        cpuload = 1
         threadload = 0
         idleload = 0
         for thread in threads:
-            if thread.priority != 0:
-                threadload += (thread.cpuload*100)/255
+            if thread.id != 0:
+                threadload += thread.cpuload / 255.
             else:
-                idleload += (thread.cpuload*100)/255
+                idleload += thread.cpuload / 255.
         coreload = 1 - (threadload + idleload)
         cpuload = threadload + coreload
-        self.logger.info("The device has " + str(len(threads)) + " running threads.\n" + \
-                         "It is running at " + str(cpuload * 100) + "% cpu load with a kernel load of " + \
-                         str(coreload * 100) + "% and a user load of " + str(threadload * 100) + "%\n\n")
+        self.logger.info("Threads: %d, CPU load: %.1f%%, kernel load: %.1f%%, user load: %.1f%%\n\n"
+                         % (len(threads), cpuload * 100, coreload * 100, threadload * 100))
         self.logger.info("Thread dump:\n")
         for thread in threads:
             self.logger.info("  "+thread.name+":\n")
@@ -515,8 +513,8 @@ class Commandline(object):
             self.logger.info("    Block type: "     + thread.block_type+"\n")
             self.logger.info("    Blocked by: "     + self._hex(thread.blocked_by_ptr)+"\n")
             self.logger.info("    Priority: "       + str(thread.priority)+"/255\n")
-            self.logger.info("    Current CPU load: "+str((thread.cpuload*100)/255)+"%\n")
-            self.logger.info("    CPU time (total): "+str(datetime.timedelta(microseconds=thread.cputime_total))+"\n")
+            self.logger.info("    Current CPU load: %.1f%%\n" % ((thread.cpuload * 100) / 255.))
+            self.logger.info("    CPU time (total): "+str(datetime.timedelta(microseconds = thread.cputime_total))+"\n")
             self.logger.info("    Stack address: "  + self._hex(thread.stackaddr)+"\n")
             self.logger.info("    Registers:\n")
             for registerrange in range(4):

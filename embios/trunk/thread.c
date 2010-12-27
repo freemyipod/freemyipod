@@ -273,10 +273,11 @@ void scheduler_switch(int thread)
 
     if (usec - last_tick > SCHEDULER_TICK)
     {
+        uint32_t diff = usec - last_tick;
         last_tick = usec;
         for (i = 0; i < MAX_THREADS; i++)
         {
-            scheduler_threads[i].cpuload = 255 * scheduler_threads[i].cputime_current / SCHEDULER_TICK;
+            scheduler_threads[i].cpuload = 255 * scheduler_threads[i].cputime_current / diff;
             scheduler_threads[i].cputime_current = 0;
         }
     }
