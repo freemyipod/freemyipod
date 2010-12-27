@@ -242,14 +242,24 @@ bool scheduler_freeze(bool value)
     return old;
 }
 
+void scheduler_pause_accounting()
+{
+    uint32_t usec = USEC_TIMER;
+    current_thread->cputime_total += usec - current_thread->startusec;
+    current_thread->cputime_current += usec - current_thread->startusec;
+}
+
+void scheduler_resume_accounting()
+{
+    current_thread->startusec = USEC_TIMER;
+}
+
 void scheduler_switch(int thread)
 {
     int i;
     uint32_t score, best;
     uint32_t usec = USEC_TIMER;
     if (current_thread->state == THREAD_RUNNING) current_thread->state = THREAD_READY;
-    current_thread->cputime_total += usec - current_thread->startusec;
-    current_thread->cputime_current += usec - current_thread->startusec;
     if ((int)current_thread->stack != -1 && *current_thread->stack != 0xaffebeaf)
     {
         for (i = 0; i < MAX_THREADS; i++)
@@ -310,7 +320,6 @@ void scheduler_switch(int thread)
 
     current_thread = &scheduler_threads[thread];
     current_thread->state = THREAD_RUNNING;
-    current_thread->startusec = USEC_TIMER;
 }
 
 int thread_create(const char* name, const void* code, void* stack,

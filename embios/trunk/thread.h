@@ -108,6 +108,8 @@ struct wakeup
 
 
 void scheduler_init() INITCODE_ATTR;
+void scheduler_pause_accounting() ICODE_ATTR;
+void scheduler_resume_accounting() ICODE_ATTR;
 void scheduler_switch(int thread) ICODE_ATTR;
 bool scheduler_freeze(bool value);
 int thread_create(const char* name, const void* code, void* stack,

@@ -504,9 +504,8 @@ class Commandline(object):
         coreload = 1 - (threadload + idleload)
         cpuload = threadload + coreload
         self.logger.info("The device has " + str(len(threads)) + " running threads.\n" + \
-                         "It is running at " + str(cpuload * 100) + "% cpu load with a core load of " + \
-                         str(coreload * 100) + "%, a thread load of " + str(threadload * 100) + "% " + \
-                         "and an idle load of " + str(idleload * 100) + "%\n\n")
+                         "It is running at " + str(cpuload * 100) + "% cpu load with a kernel load of " + \
+                         str(coreload * 100) + "% and a user load of " + str(threadload * 100) + "%\n\n")
         self.logger.info("Thread dump:\n")
         for thread in threads:
             self.logger.info("  "+thread.name+":\n")

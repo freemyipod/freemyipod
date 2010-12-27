@@ -78,6 +78,7 @@ syscall_breakpoint:
 	mov	r1, lr
 	msr	cpsr_c, #0xd2
 	stmia	r5, {r0-r4}
+	bl	scheduler_pause_accounting
 	adr	lr, resume_thread
 	mov	r0, #-1
 	b	scheduler_switch
@@ -110,12 +111,14 @@ irq_handler:
 	sub	r3, lr, #4
 enter_irqhandler:
 	stmia	r12, {r0-r4}
+	bl	scheduler_pause_accounting
 	bl	irqhandler
 @ fallthrough
 
 .global resume_thread
 .type resume_thread, %function
 resume_thread:
+	bl	scheduler_resume_accounting
 	ldr	lr, =current_thread
 	ldr	lr, [lr]
 	mov	r0, lr
