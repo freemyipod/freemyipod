@@ -20,7 +20,7 @@
 //
 //
 
-
+#define DEBUG_CONSOLES 2
 #include "global.h"
 #include "clickwheel.h"
 #include "button.h"
@@ -73,9 +73,10 @@ void clickwheel_thread()
 
             if (newtouched)
             {
+                int distance = 0;
                 if (!oldtouched) button_send_event(WHEEL_TOUCH, 0, newpos);
+                else distance = newpos - oldpos;
                 button_send_event(WHEEL_POSITION, 0, newpos);
-                int distance = newpos - oldpos;
                 DEBUGF("Time since last packet: %d microseconds", USEC_TIMER - lastpacket);
                 if (TIMEOUT_EXPIRED(lastpacket, 200000))
                 {
