@@ -20,7 +20,7 @@
 //
 //
 
-#define DEBUG_CONSOLES 2
+
 #include "global.h"
 #include "clickwheel.h"
 #include "button.h"
