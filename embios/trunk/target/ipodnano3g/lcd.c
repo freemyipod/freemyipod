@@ -71,12 +71,12 @@ static uint32_t lcd_detect()
 
 bool displaylcd_busy()
 {
-    return DMAC0C0CONFIG & 1;
+    return DMAC0C4CONFIG & 1;
 }
 
 bool displaylcd_safe()
 {
-    return !(DMAC0C0CONFIG & 1);
+    return !(DMAC0C4CONFIG & 1);
 }
 
 void displaylcd_sync()
@@ -126,7 +126,7 @@ void displaylcd(unsigned int startx, unsigned int endx,
     for (i = -1; i < (int)ARRAYLEN(lcd_lli) && pixels > 0; i++, pixels -= 0xfff)
     {
         bool last = i + 1 >= ARRAYLEN(lcd_lli) || pixels <= 0xfff;
-        struct dma_lli* lli = i < 0 ? (struct dma_lli*)((int)&DMAC0C0LLI) : &lcd_lli[i];
+        struct dma_lli* lli = i < 0 ? (struct dma_lli*)((int)&DMAC0C4LLI) : &lcd_lli[i];
         lli->srcaddr = solid ? &lcd_color : data;
         lli->dstaddr = (void*)((int)&LCDWDATA);
         lli->nextlli = last ? NULL : &lcd_lli[i + 1];
@@ -135,7 +135,7 @@ void displaylcd(unsigned int startx, unsigned int endx,
         data = (void*)(((uint32_t)data) + 0x1ffe);
     }
     clean_dcache();
-    DMAC0C0CONFIG = 0x88c1;
+    DMAC0C4CONFIG = 0x88c1;
 }
 
 void lcd_shutdown()
@@ -182,9 +182,9 @@ void lcd_shutdown()
     }
 }
 
-void INT_DMAC0C0()
+void INT_DMAC0C4()
 {
-    DMAC0INTTCCLR = 1;
+    DMAC0INTTCCLR = 0x10;
     lcdconsole_callback();
 }
 
