@@ -26,6 +26,8 @@ import struct
 import usb.core
 import libembiosdata
 
+from functools import wraps
+
 class Error(Exception):
     def __init__(self, value=None):
         self.value = value
@@ -66,9 +68,47 @@ class Bunch(dict):
         self.__dict__ = self
 
 
+def command(timeout = None):
+    """
+        Decorator for all commands.
+        It adds the "timeout" variable to all commands.
+        It also provides the possibility to set the timeout directly in the decorator.
+        It also includes some dirty hacks to not learn from.
+    """
+    time = timeout # dirty hack because otherwise it would raise a scoping problem.
+                   # The reason is probably because I suck but I can't find any good explanation of this.
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # precommand stuff
+            self = args[0] # little cheat as it expects self being always the first argument
+            timeout = None
+            if "timeout" in kwargs.keys():
+                timeout = kwargs['timeout']
+            elif time is not None:
+                timeout = time
+            if timeout is not None:
+                oldtimeout = self.lib.dev.timeout
+                self.lib.dev.timeout = timeout
+            # function call
+            ret = func(*args)
+            # postcommand stuff
+            if timeout is not None:
+                self.lib.dev.timeout = oldtimeout
+            return ret
+        return wrapper
+    return decorator
+
+
 class Embios(object):
     """
         Class for all embios functions.
+        They all get the "@command()" decorator.
+        This decorator has a timeout variable that can be set to change the
+        device timeout for the duration of the function.
+        It also adds a "timeout" argument to every function to access this
+        feature from external. So DON'T EVER use a parameter called 'timeout'
+        in your commands. Variables are ok.
     """
     def __init__(self):
         self.lib = Lib()
@@ -91,19 +131,22 @@ class Embios(object):
         tailsize = end - tailaddr
         return (headsize, tailaddr - bodyaddr, tailsize)
     
+    @command()
     def _readmem(self, addr, size):
         """ Reads the memory from location 'addr' with size 'size'
             from the device.
         """
         resp = self.lib.monitorcommand(struct.pack("IIII", 4, addr, size, 0), "III%ds" % size, (None, None, None, "data"))
         return resp.data
-        
+    
+    @command()
     def _writemem(self, addr, data):
         """ Writes the data in 'data' to the location 'addr'
             in the memory of the device.
         """
         return self.lib.monitorcommand(struct.pack("IIII%ds" % len(data), 5, addr, len(data), 0, data), "III", (None, None, None))
     
+    @command()
     def _readdma(self, addr, size):
         """ Reads the memory from location 'addr' with size 'size'
             from the device. This uses DMA and the data in endpoint.
@@ -111,6 +154,7 @@ class Embios(object):
         self.lib.monitorcommand(struct.pack("IIII", 6, addr, size, 0), "III", (None, None, None))
         return struct.unpack("%ds" % size, self.lib.dev.din(size))[0]
     
+    @command()
     def _writedma(self, addr, data):
         """ Writes the data in 'data' to the location 'addr'
             in the memory of the device. This uses DMA and the data out endpoint.
@@ -118,6 +162,7 @@ class Embios(object):
         self.lib.monitorcommand(struct.pack("IIII", 7, addr, len(data), 0), "III", (None, None, None))
         return self.lib.dev.dout(data)
     
+    @command()
     def getversioninfo(self):
         """ This returns the emBIOS version and device information. """
         resp = self.lib.monitorcommand(struct.pack("IIII", 1, 0, 0, 0), "IBBBBI", ("revision", "majorv", "minorv", "patchv", "swtypeid", "hwtypeid"))
@@ -129,6 +174,7 @@ class Embios(object):
         self.lib.dev.hwtypeid = resp.hwtypeid
         return resp
     
+    @command()
     def getpacketsizeinfo(self):
         """ This returns the emBIOS max packet size information.
             It also sets the properties of the device object accordingly.
@@ -140,6 +186,7 @@ class Embios(object):
         self.lib.dev.packetsizelimit.dout = resp.doutmax
         return resp
     
+    @command()
     def getusermemrange(self):
         """ This returns the memory range the user has access to. """
         resp = self.lib.monitorcommand(struct.pack("IIII", 1, 2, 0, 0), "III", ("lower", "upper", None))
@@ -147,6 +194,7 @@ class Embios(object):
         self.lib.dev.usermem.upper = resp.upper
         return resp
     
+    @command()
     def reset(self, force=False):
         """ Reboot the device """
         if force:
@@ -154,6 +202,7 @@ class Embios(object):
         else:
             return self.lib.monitorcommand(struct.pack("IIII", 2, 1, 0, 0), "III", (None, None, None))
     
+    @command()
     def poweroff(self, force=False):
         """ Powers the device off. """
         if force:
@@ -161,6 +210,7 @@ class Embios(object):
         else:
             return self.lib.monitorcommand(struct.pack("IIII", 3, 1, 0, 0), "III", (None, None, None))
     
+    @command()
     def read(self, addr, size):
         """ Reads the memory from location 'addr' with size 'size'
             from the device. This cares about too long packages
@@ -186,6 +236,7 @@ class Embios(object):
             data += self._readmem(addr, tailsize)
         return data
     
+    @command()
     def write(self, addr, data):
         """ Writes the data in 'data' to the location 'addr'
             in the memory of the device. This cares about too long packages
@@ -213,6 +264,7 @@ class Embios(object):
             self._writemem(addr, data[offset:offset+tailsize])
         return data
     
+    @command()
     def readstring(self, addr, maxlength = 256):
         """ Reads a zero terminated string from memory 
             Reads only a maximum of 'maxlength' chars.
@@ -230,6 +282,7 @@ class Embios(object):
             addr += cin_maxsize
         return string
     
+    @command()
     def i2cread(self, index, slaveaddr, startaddr, size):
         """ Reads data from an i2c slave """
         data = ""
@@ -238,6 +291,7 @@ class Embios(object):
             data += resp.data
         return data
     
+    @command()
     def i2cwrite(self, index, slaveaddr, startaddr, data):
         """ Writes data to an i2c slave """
         size = len(data)
@@ -247,6 +301,7 @@ class Embios(object):
             size = 0
         return self.lib.monitorcommand(struct.pack("IBBBBII%ds" % size, 9, index, slaveaddr, startaddr, size, 0, 0, data), "III", (None, None, None))
     
+    @command()
     def usbcread(self):
         """ Reads one packet with the maximal cin size """
         cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
@@ -255,6 +310,7 @@ class Embios(object):
         resp.maxsize = cin_maxsize
         return resp
     
+    @command()
     def usbcwrite(self, data):
         """ Writes data to the USB console """
         cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
@@ -265,6 +321,7 @@ class Embios(object):
             data = data[resp.validsize:]
         return size
     
+    @command()
     def cread(self, bitmask=0x1):
         """ Reads one packet with the maximal cin size from the device consoles
             identified with the specified bitmask
@@ -274,7 +331,8 @@ class Embios(object):
         resp.data = resp.data[size:]
         resp.maxsize = cin_maxsize
         return resp
-
+    
+    @command()
     def cwrite(self, data, bitmask=0x1):
         """ Writes data to the device consoles 
             identified with the specified bitmask.
@@ -287,10 +345,12 @@ class Embios(object):
             data = data[writesize:]
         return size
     
+    @command()
     def cflush(self, bitmask):
         """ Flushes the consoles specified with 'bitmask' """
         return self.lib.monitorcommand(struct.pack("IIII", 14, bitmask, 0, 0), "III", (None, None, None))
     
+    @command()
     def getprocinfo(self):
         """ Gets current state of the scheduler """
         cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
@@ -355,28 +415,34 @@ class Embios(object):
             id += 1
         return threads
     
+    @command()
     def lockscheduler(self, freeze=True):
         """ Freezes/Unfreezes the scheduler """
         resp = self.lib.monitorcommand(struct.pack("IIII", 16, 1 if freeze else 0, 0, 0), "III", ("before", None, None))
         return True if resp.before == 1 else False
     
+    @command()
     def unlockscheduler(self):
         """ Unfreezes the scheduler """
         return self.lib.monitorcommand(struct.pack("IIII", 16, 0, 0, 0), "III", ("before", None, None))
     
+    @command()
     def suspendthread(self, id, suspend=True):
         """ Suspends the thread with the specified id """
         resp = self.lib.monitorcommand(struct.pack("IIII", 17, 1 if suspend else 0, id, 0), "III", ("before", None, None))
         return True if resp.before == 1 else False
     
+    @command()
     def resumethread(self, id):
         """ Resumes the thread with the specified id """
         return self.lib.monitorcommand(struct.pack("IIII", 17, 0, id, 0), "III", ("before", None, None))
     
+    @command()
     def killthread(self, id):
         """ Kills the thread with the specified id """
         return self.lib.monitorcommand(struct.pack("IIII", 18, id, 0, 0), "III", ("before", None, None))
     
+    @command()
     def createthread(self, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state):
         """ Creates a thread with the specified attributes """
         if threadtype == "user":
@@ -398,14 +464,17 @@ class Embios(object):
             raise DeviceError("The device returned the error code "+str(resp.id))
         return resp
     
+    @command()
     def flushcaches(self):
         """ Flushes the CPU instruction and data cache """
         return self.lib.monitorcommand(struct.pack("IIII", 20, 0, 0, 0), "III", (None, None, None))
     
+    @command()
     def execimage(self, addr):
         """ Runs the emBIOS app at 'addr' """
         return self.lib.monitorcommand(struct.pack("IIII", 21, addr, 0, 0), "III", ("rc", None, None))
     
+    @command()
     def run(self, app):
         """ Uploads and runs the emBIOS app in the string 'app' """
         try:
@@ -435,38 +504,45 @@ class Embios(object):
         self.execimage(baseaddr)
         return Bunch(baseaddr=baseaddr, name=name)
     
+    @command()
     def bootflashread(self, memaddr, flashaddr, size):
         """ Copies the data in the bootflash at 'flashaddr' of the specified size
             to the memory at addr 'memaddr'
         """
         return self.lib.monitorcommand(struct.pack("IIII", 22, memaddr, flashaddr, size), "III", (None, None, None))
     
+    @command()
     def bootflashwrite(self, memaddr, flashaddr, size):
         """ Copies the data in the memory at 'memaddr' of the specified size
             to the boot flash at addr 'flashaddr'
         """
         return self.lib.monitorcommand(struct.pack("IIII", 23, memaddr, flashaddr, size), "III", (None, None, None))
     
+    @command()
     def execfirmware(self, addr):
         """ Executes the firmware at 'addr' and passes all control to it. """
         return self.lib.monitorcommand(struct.pack("IIII", 24, addr, 0, 0))
     
+    @command()
     def aesencrypt(self, addr, size, keyindex):
         """ Encrypts the buffer at 'addr' with the specified size
             with the hardware AES key index 'keyindex'
         """
         return self.lib.monitorcommand(struct.pack("IBBHII", 25, 1, 0, keyindex, addr, size), "III", (None, None, None))
     
+    @command()
     def aesdecrypt(self, addr, size, keyindex):
         """ Decrypts the buffer at 'addr' with the specified size
             with the hardware AES key index 'keyindex'
         """
         return self.lib.monitorcommand(struct.pack("IBBHII", 25, 0, 0, keyindex, addr, size), "III", (None, None, None))
     
+    @command()
     def hmac_sha1(self, addr, size, destination):
         """ Generates a HMAC-SHA1 hash of the buffer and saves it to 'destination' """
         return self.lib.monitorcommand(struct.pack("IIII", 26, addr, size, destination), "III", (None, None, None))
 
+    @command()
     def ipodnano2g_getnandinfo(self):
         """ Target-specific function: ipodnano2g
             Gathers some information about the NAND chip used
@@ -474,6 +550,7 @@ class Embios(object):
         if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0001, 0, 0, 0), "IHHHH", ("type", "pagesperblock", "banks", "userblocks", "blocks"))
     
+    @command()
     def ipodnano2g_nandread(self, addr, start, count, doecc, checkempty):
         """ Target-specific function: ipodnano2g
             Reads data from the NAND chip into memory
@@ -481,6 +558,7 @@ class Embios(object):
         if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0002, addr | (0x80000000 if doecc != 0 else 0) | (0x40000000 if checkempty != 0 else 0), start, count), "III", (None, None, None))
     
+    @command()
     def ipodnano2g_nandwrite(self, addr, start, count, doecc):
         """ Target-specific function: ipodnano2g
             Writes data to the NAND chip
@@ -488,6 +566,7 @@ class Embios(object):
         if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0003, addr | (0x80000000 if doecc != 0 else 0), start, count), "III", (None, None, None))
     
+    @command()
     def ipodnano2g_nanderase(self, addr, start, count):
         """ Target-specific function: ipodnano2g
             Erases blocks on the NAND chip and stores the results to memory
@@ -495,6 +574,7 @@ class Embios(object):
         if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0004, addr, start, count), "III", (None, None, None))
     
+    @command()
     def ipodclassic_gethddinfo(self):
         """ Target-specific function: ipodclassic
             Gather information about the hard disk drive
@@ -502,6 +582,7 @@ class Embios(object):
         if self.lib.dev.hwtypeid != 0x4c435049: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0001, 0, 0, 0), "IQQII", ("identifyptr", "totalsectors", "virtualsectors", "bbtptr", "bbtsize"))
     
+    @command()
     def ipodclassic_hddaccess(self, type, sector, count, addr):
         """ Target-specific function: ipodclassic
             Access the hard disk, type = 0 (read) / 1 (write)
@@ -511,6 +592,7 @@ class Embios(object):
         if (rc > 0x80000000):
             raise DeviceError("HDD access (type=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (type, sector, count, addr, rc))
     
+    @command()
     def ipodclassic_writebbt(self, bbt, tempaddr):
         """ Target-specific function: ipodclassic
             Write hard drive bad block table
@@ -538,6 +620,7 @@ class Embios(object):
                 count = 1
         self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
     
+    @command()
     def storage_get_info(self, volume):
         """ Get information about a storage device """
         result = self.lib.monitorcommand(struct.pack("IIII", 27, volume, 0, 0), "IIIIIIII", ("version", None, None, "sectorsize", "numsectors", "vendorptr", "productptr", "revisionptr"))
@@ -548,18 +631,21 @@ class Embios(object):
         result.revision = self.readstring(result.revisionptr)
         return result
     
+    @command()
     def storage_read_sectors_md(self, volume, sector, count, addr):
         """ Read sectors from as storage device """
         result = self.lib.monitorcommand(struct.pack("IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None, None))
         if result.rc > 0x80000000:
             raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
-
+    
+    @command()
     def storage_write_sectors_md(self, volume, sector, count, addr):
         """ Read sectors from as storage device """
         result = self.lib.monitorcommand(struct.pack("IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None, None))
         if result.rc > 0x80000000:
             raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
-
+    
+    @command()
     def file_open(self, filename, mode):
         """ Opens a file and returns the handle """
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(filename), 30, mode, 0, 0, filename, 0), "III", ("fd", None, None))
@@ -567,20 +653,23 @@ class Embios(object):
             raise DeviceError("file_open(filename=\"%s\", mode=0x%X) failed with RC=0x%08X, errno=%d" % (filename, mode, result.fd, self.errno()))
         return result.fd
     
+    @command()
     def file_size(self, fd):
         """ Gets the size of a file referenced by a handle """
         result = self.lib.monitorcommand(struct.pack("IIII", 31, fd, 0, 0), "III", ("size", None, None))
         if result.size > 0x80000000:
             raise DeviceError("file_size(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.size, self.errno()))
         return result.size
-
+    
+    @command()
     def file_read(self, fd, addr, size):
         """ Reads data from a file referenced by a handle """
         result = self.lib.monitorcommand(struct.pack("IIII", 32, fd, addr, size), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_read(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
         return result.rc
-
+    
+    @command()
     def file_write(self, fd, addr, size):
         """ Writes data from a file referenced by a handle """
         result = self.lib.monitorcommand(struct.pack("IIII", 33, fd, addr, size), "III", ("rc", None, None))
@@ -588,6 +677,7 @@ class Embios(object):
             raise DeviceError("file_write(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def file_seek(self, fd, offset, whence):
         """ Seeks the file handle to the specified position in the file """
         result = self.lib.monitorcommand(struct.pack("IIII", 34, fd, offset, whence), "III", ("rc", None, None))
@@ -595,6 +685,7 @@ class Embios(object):
             raise DeviceError("file_seek(fd=%d, offset=0x%08X, whence=%d) failed with RC=0x%08X, errno=%d" % (fd, offset, whence, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def file_truncate(self, fd, length):
         """ Truncates a file referenced by a handle to a specified length """
         result = self.lib.monitorcommand(struct.pack("IIII", 35, fd, offset, 0), "III", ("rc", None, None))
@@ -602,6 +693,7 @@ class Embios(object):
             raise DeviceError("file_truncate(fd=%d, length=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, length, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def file_sync(self, fd):
         """ Flushes a file handles' buffers """
         result = self.lib.monitorcommand(struct.pack("IIII", 36, fd, 0, 0), "III", ("rc", None, None))
@@ -609,6 +701,7 @@ class Embios(object):
             raise DeviceError("file_sync(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def file_close(self, fd):
         """ Closes a file handle """
         result = self.lib.monitorcommand(struct.pack("IIII", 37, fd, 0, 0), "III", ("rc", None, None))
@@ -616,6 +709,7 @@ class Embios(object):
             raise DeviceError("file_close(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def file_close_all(self):
         """ Closes all file handles opened through the debugger """
         result = self.lib.monitorcommand(struct.pack("IIII", 38, 0, 0, 0), "III", ("rc", None, None))
@@ -623,6 +717,7 @@ class Embios(object):
             raise DeviceError("file_close_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
         return result.rc
     
+    @command()
     def file_kill_all(self):
         """ Kills all file handles (in the whole system) """
         result = self.lib.monitorcommand(struct.pack("IIII", 39, 0, 0, 0), "III", ("rc", None, None))
@@ -630,6 +725,7 @@ class Embios(object):
             raise DeviceError("file_kill_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
         return result.rc
     
+    @command()
     def file_unlink(self, filename):
         """ Removes a file """
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(filename), 40, 0, 0, 0, filename, 0), "III", ("rc", None, None))
@@ -637,6 +733,7 @@ class Embios(object):
             raise DeviceError("file_unlink(filename=\"%s\") failed with RC=0x%08X, errno=%d" % (filename, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def file_rename(self, oldname, newname):
         """ Renames a file """
         result = self.lib.monitorcommand(struct.pack("IIII248s%dsB" % min(247, len(newname)), 41, 0, 0, 0, oldname, newname, 0), "III", ("rc", None, None))
@@ -644,6 +741,7 @@ class Embios(object):
             raise DeviceError("file_rename(oldname=\"%s\", newname=\"%s\") failed with RC=0x%08X, errno=%d" % (oldname, newname, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def dir_open(self, dirname):
         """ Opens a directory and returns the handle """
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 42, 0, 0, 0, dirname, 0), "III", ("handle", None, None))
@@ -651,6 +749,7 @@ class Embios(object):
             raise DeviceError("dir_open(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.handle, self.errno()))
         return result.handle
     
+    @command()
     def dir_read(self, handle):
         """ Reads the next entry from a directory """
         result = self.lib.monitorcommand(struct.pack("IIII", 43, handle, 0, 0), "III", ("version", "maxpath", "ptr"))
@@ -664,6 +763,7 @@ class Embios(object):
         ret.name = ret.name[:ret.name.index('\x00')]
         return ret
     
+    @command()
     def dir_close(self, handle):
         """ Closes a directory handle """
         result = self.lib.monitorcommand(struct.pack("IIII", 44, handle, 0, 0), "III", ("rc", None, None))
@@ -671,6 +771,7 @@ class Embios(object):
             raise DeviceError("dir_close(handle=0x%08X) failed with RC=0x%08X, errno=%d" % (handle, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def dir_close_all(self):
         """ Closes all directory handles opened through the debugger """
         result = self.lib.monitorcommand(struct.pack("IIII", 45, 0, 0, 0), "III", ("rc", None, None))
@@ -678,6 +779,7 @@ class Embios(object):
             raise DeviceError("dir_close_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
         return result.rc
     
+    @command()
     def dir_kill_all(self):
         """ Kills all directory handles (in the whole system) """
         result = self.lib.monitorcommand(struct.pack("IIII", 46, 0, 0, 0), "III", ("rc", None, None))
@@ -685,6 +787,7 @@ class Embios(object):
             raise DeviceError("dir_kill_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
         return result.rc
     
+    @command()
     def dir_create(self, dirname):
         """ Creates a directory """
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 47, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
@@ -692,6 +795,7 @@ class Embios(object):
             raise DeviceError("dir_create(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def dir_remove(self, dirname):
         """ Removes an (empty) directory """
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 48, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
@@ -699,11 +803,13 @@ class Embios(object):
             raise DeviceError("dir_remove(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def errno(self):
         """ Returns the number of the last error that happened """
         result = self.lib.monitorcommand(struct.pack("IIII", 49, 0, 0, 0), "III", ("errno", None, None))
         return result.errno
     
+    @command()
     def disk_mount(self, volume):
         """ Mounts a volume """
         result = self.lib.monitorcommand(struct.pack("IIII", 50, volume, 0, 0), "III", ("rc", None, None))
@@ -711,6 +817,7 @@ class Embios(object):
             raise DeviceError("disk_mount(volume=%d) failed with RC=0x%08X, errno=%d" % (volume, result.rc, self.errno()))
         return result.rc
     
+    @command()
     def disk_unmount(self, volume):
         """ Unmounts a volume """
         result = self.lib.monitorcommand(struct.pack("IIII", 51, volume, 0, 0), "III", ("rc", None, None))
