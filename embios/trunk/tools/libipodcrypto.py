@@ -37,7 +37,6 @@ def s5l8701cryptdfu(data):
     header = "87011.0\0\0\x08\0\0" + struct.pack("<I", len(data))
     embios = libembios.Embios()
     embios.write(0x08000000, header.ljust(0x800, "\0") + data)
-    embios.lib.dev.timeout = 20000
     embios.hmac_sha1(0x08000800, len(data), 0x08000010)
     embios.hmac_sha1(0x08000000, 0x40, 0x08000040)
     embios.aesencrypt(0x08000000, len(data) + 0x800, 1)
@@ -47,7 +46,6 @@ def s5l8701cryptdfu(data):
 def s5l8701decryptdfu(data):
     embios = libembios.Embios()
     embios.write(0x08000000, data)
-    embios.lib.dev.timeout = 20000
     embios.aesdecrypt(0x08000000, len(data), 1)
     return embios.read(0x08000800, len(data) - 0x800)
 
@@ -57,7 +55,6 @@ def s5l8701cryptfirmware(data):
     header = "\0\0\0\0\x02\0\0\0\x01\0\0\0\x40\0\0\0\0\0\0\0" + struct.pack("<I", len(data))
     embios = libembios.Embios()
     embios.write(0x08000000, header.ljust(0x800, "\0") + data)
-    embios.lib.dev.timeout = 20000
     embios.hmac_sha1(0x08000800, len(data), 0x0800001c)
     embios.hmac_sha1(0x08000000, 0x200, 0x080001d4)
     embios.aesencrypt(0x08000800, len(data), 1)
@@ -67,7 +64,6 @@ def s5l8701cryptfirmware(data):
 def s5l8701decryptfirmware(data):
     embios = libembios.Embios()
     embios.write(0x08000000, data)
-    embios.lib.dev.timeout = 20000
     embios.aesdecrypt(0x08000800, len(data) - 0x800, 1)
     return embios.read(0x08000800, len(data) - 0x800)
 
@@ -77,7 +73,6 @@ def s5l8702cryptnor(data):
     header = "87021.0\x01\0\0\0\0" + struct.pack("<I", len(data)) + hashlib.sha1(data).digest()[:0x10]
     embios = libembios.Embios()
     embios.write(0x08000000, header.ljust(0x800, "\0") + data)
-    embios.lib.dev.timeout = 20000
     embios.aesencrypt(0x08000800, len(data), 2)
     embios.aesencrypt(0x08000010, 0x10, 2)
     embios.write(0x08000040, hashlib.sha1(embios.read(0x08000000, 0x40)).digest()[:0x10])
@@ -88,7 +83,6 @@ def s5l8702cryptnor(data):
 def s5l8702decryptnor(data):
     embios = libembios.Embios()
     embios.write(0x08000000, data[0x800:])
-    embios.lib.dev.timeout = 20000
     embios.aesdecrypt(0x08000000, len(data) - 0x800, 1)
     return embios.read(0x08000000, len(data) - 0x800)
 
@@ -99,7 +93,6 @@ def s5l8702genpwnage(data):
     header = ("87021.0\x03\0\0\0\0" + struct.pack("<IIII", len(data) - 0x830, len(data) - 0x4f6, len(data) - 0x7b0, 0x2ba)).ljust(0x40, "\0")
     embios = libembios.Embios()
     embios.write(0x08000000, header + hashlib.sha1(header).digest()[:0x10])
-    embios.lib.dev.timeout = 5000
     embios.aesencrypt(0x08000040, 0x10, 1)
     return embios.read(0x08000000, 0x50) + data + cert.ljust((len(cert) + 0xf) & ~0xf, "\0")
 
