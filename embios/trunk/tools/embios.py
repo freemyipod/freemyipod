@@ -31,7 +31,7 @@ from functools import wraps
 
 import libembios
 import libembiosdata
-from misc import Error, Logger, getfuncdoc
+from misc import Error, Logger, getfuncdoc, gethwname
 
 
 class NotImplementedError(Error):
@@ -206,10 +206,7 @@ class Commandline(object):
             <infotype> may be either of 'version', 'packetsize', 'usermemrange'.
         """
         if infotype == "version":
-            try:
-                hwtype = libembiosdata.hwtypes[self.embios.lib.dev.hwtypeid]
-            except KeyError:
-                hwtype = "UNKNOWN (ID = " + self._hex(self.embios.lib.dev.hwtypeid) + ")"
+            hwtype = gethwname(self.embios.lib.dev.hwtypeid)
             self.logger.info("Connected to " + \
                              libembiosdata.swtypes[self.embios.lib.dev.swtypeid] + \
                              " v" + str(self.embios.lib.dev.version.majorv) + \

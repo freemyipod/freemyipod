@@ -27,6 +27,7 @@
 """
 
 import sys
+import libembiosdata
 
 class Logger(object):
     """
@@ -85,6 +86,14 @@ class Error(Exception):
     def __str__(self):
         if self.value != None:
             return repr(self.value)
+
+
+def gethwname(id):
+    try:
+        hwtype = libembiosdata.hwtypes[id]
+    except KeyError:
+        hwtype = "UNKNOWN (ID = " + self._hex(id) + ")"
+    return hwtype
 
 
 def trimdoc(docstring):

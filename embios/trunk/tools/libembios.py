@@ -26,7 +26,7 @@ import struct
 import usb.core
 import libembiosdata
 
-from misc import Bunch, Error
+from misc import Bunch, Error, gethwname
 from functools import wraps
 
 class ArgumentError(Error):
@@ -45,7 +45,7 @@ class ReceiveError(Error):
     pass
     
 
-def command(timeout = None):
+def command(timeout = None, target = None):
     """
         Decorator for all commands.
         It adds the "timeout" variable to all commands.
@@ -57,8 +57,11 @@ def command(timeout = None):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # precommand stuff
             self = args[0] # little cheat as it expects self being always the first argument
+            # precommand stuff
+            if target is not None:
+                if self.lib.dev.hwtypeid != target:
+                    raise DeviceError("Wrong device for target-specific command. Expected \'" + gethwname(target) + "\' but got \'" + gethwname(self.lib.dev.hwtypeid) + "\'")
             timeout = None
             if "timeout" in kwargs.keys():
                 timeout = kwargs['timeout']
@@ -521,62 +524,55 @@ class Embios(object):
         """ Generates a HMAC-SHA1 hash of the buffer and saves it to 'destination' """
         return self.lib.monitorcommand(struct.pack("IIII", 26, addr, size, destination), "III", (None, None, None))
 
-    @command()
+    @command(target = 0x47324e49)
     def ipodnano2g_getnandinfo(self):
         """ Target-specific function: ipodnano2g
             Gathers some information about the NAND chip used
         """
-        if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0001, 0, 0, 0), "IHHHH", ("type", "pagesperblock", "banks", "userblocks", "blocks"))
     
-    @command(timeout = 30000)
+    @command(timeout = 30000, target = 0x47324e49)
     def ipodnano2g_nandread(self, addr, start, count, doecc, checkempty):
         """ Target-specific function: ipodnano2g
             Reads data from the NAND chip into memory
         """
-        if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0002, addr | (0x80000000 if doecc != 0 else 0) | (0x40000000 if checkempty != 0 else 0), start, count), "III", (None, None, None))
     
-    @command(timeout = 30000)
+    @command(timeout = 30000, target = 0x47324e49)
     def ipodnano2g_nandwrite(self, addr, start, count, doecc):
         """ Target-specific function: ipodnano2g
             Writes data to the NAND chip
         """
-        if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0003, addr | (0x80000000 if doecc != 0 else 0), start, count), "III", (None, None, None))
     
-    @command(timeout = 30000)
+    @command(timeout = 30000, target = 0x47324e49)
     def ipodnano2g_nanderase(self, addr, start, count):
         """ Target-specific function: ipodnano2g
             Erases blocks on the NAND chip and stores the results to memory
         """
-        if self.lib.dev.hwtypeid != 0x47324e49: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0004, addr, start, count), "III", (None, None, None))
     
-    @command()
+    @command(target = 0x4c435049)
     def ipodclassic_gethddinfo(self):
         """ Target-specific function: ipodclassic
             Gather information about the hard disk drive
         """
-        if self.lib.dev.hwtypeid != 0x4c435049: raise DeviceError("Wrong device for target-specific command.")
         return self.lib.monitorcommand(struct.pack("IIII", 0xffff0001, 0, 0, 0), "IQQII", ("identifyptr", "totalsectors", "virtualsectors", "bbtptr", "bbtsize"))
     
-    @command(timeout = 30000)
+    @command(timeout = 30000, target = 0x4c435049)
     def ipodclassic_hddaccess(self, type, sector, count, addr):
         """ Target-specific function: ipodclassic
             Access the hard disk, type = 0 (read) / 1 (write)
         """
-        if self.lib.dev.hwtypeid != 0x4c435049: raise DeviceError("Wrong device for target-specific command.")
         rc = self.lib.monitorcommand(struct.pack("IIQIIII", 0xffff0002, type, sector, count, addr, 0, 0), "III", ("rc", None, None))
         if (rc > 0x80000000):
             raise DeviceError("HDD access (type=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (type, sector, count, addr, rc))
     
-    @command()
+    @command(target = 0x4c435049)
     def ipodclassic_writebbt(self, bbt, tempaddr):
         """ Target-specific function: ipodclassic
             Write hard drive bad block table
         """
-        if self.lib.dev.hwtypeid != 0x4c435049: raise DeviceError("Wrong device for target-specific command.")
         try:
             bbtheader = struct.unpack("<8s2024sQII512I", bbt[:4096])
         except struct.error:
