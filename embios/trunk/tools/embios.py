@@ -639,7 +639,6 @@ class Commandline(object):
         size = self._hexint(size)
         self.logger.info("Dumping boot flash addresses "+self._hex(addr_flash)+" - "+
                          hex(addr_flash+size)+" to "+self._hex(addr_mem)+" - "+self._hex(addr_mem+size)+"\n")
-        self.embios.lib.dev.timeout = 5000
         self.embios.bootflashread(addr_mem, addr_flash, size)
     
     @command
@@ -664,7 +663,6 @@ class Commandline(object):
                 self.logger.info(".")
                 time.sleep(1)
             self.logger.info("\n")
-        self.embios.lib.dev.timeout = 30000
         self.embios.bootflashwrite(addr_mem, addr_flash, size)
     
     @command
@@ -694,7 +692,6 @@ class Commandline(object):
         addr = self._hexint(addr)
         size = self._hexint(size)
         keyindex = self._hexint(keyindex)
-        self.embios.lib.dev.timeout = 30000
         self.embios.aesencrypt(addr, size, keyindex)
     
     @command
@@ -705,7 +702,6 @@ class Commandline(object):
         addr = self._hexint(addr)
         size = self._hexint(size)
         keyindex = self._hexint(keyindex)
-        self.embios.lib.dev.timeout = 30000
         self.embios.aesdecrypt(addr, size, keyindex)
     
     @command
@@ -720,7 +716,6 @@ class Commandline(object):
         self.logger.info("Generating hmac-sha1 hash from the buffer at " + self._hex(addr) + \
                          " with the size " + self._hex(size) + " and saving it to " + \
                          self._hex(destination) + " - " + self._hex(destination+sha1size) + "...")
-        self.embios.lib.dev.timeout = 30000
         self.embios.hmac_sha1(addr, size, destination)
         self.logger.info("done\n")
         data = self.embios.read(destination, sha1size)
@@ -753,7 +748,6 @@ class Commandline(object):
         checkempty = int(checkempty)
         self.logger.info("Reading " + self._hex(count) + " NAND pages starting at " + \
                          self._hex(start) + " to " + self._hex(addr) + "...")
-        self.embios.lib.dev.timeout = 30000
         self.embios.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
         self.logger.info("done\n")
 
@@ -769,7 +763,6 @@ class Commandline(object):
         doecc = int(doecc)
         self.logger.info("Writing " + self._hex(count) + " NAND pages starting at " + \
                          self._hex(start) + " from " + self._hex(addr) + "...")
-        self.embios.lib.dev.timeout = 30000
         self.embios.ipodnano2g_nandwrite(addr, start, count, doecc)
         self.logger.info("done\n")
 
@@ -784,7 +777,6 @@ class Commandline(object):
         count = self._hexint(count)
         self.logger.info("Erasing " + self._hex(count) + " NAND blocks starting at " + \
                          self._hex(start) + " and logging to " + self._hex(addr) + "...")
-        self.embios.lib.dev.timeout = 30000
         self.embios.ipodnano2g_nanderase(addr, start, count)
         self.logger.info("done\n")
 
@@ -808,7 +800,6 @@ class Commandline(object):
         infofile.write("Number of blocks: "     + str(info["blocks"]) + "\r\n")
         infofile.write("Number of user blocks: "+ str(info["userblocks"]) + "\r\n")
         infofile.write("Pages per block: "      + str(info["pagesperblock"]) + "\r\n")
-        self.embios.lib.dev.timeout = 30000
         for i in range(info["banks"] * info["blocks"] * info["pagesperblock"] / 8192):
             self.logger.info(".")
             self.embios.ipodnano2g_nandread(0x08000000, i * 8192, 8192, 1, 1)
@@ -841,7 +832,6 @@ class Commandline(object):
             statusfile = open(filename, 'wb')
         except IOError:
             raise ArgumentError("Can not open file for writing!")
-        self.embios.lib.dev.timeout = 30000
         for i in range(info["banks"] * info["blocks"] / 64):
             self.logger.info(".")
             self.embios.ipodnano2g_nanderase(0x08000000, i * 64, 64)
@@ -861,7 +851,6 @@ class Commandline(object):
             f = open(filename, 'rb')
         except IOError:
             raise ArgumentError("File not readable. Does it exist?")
-        self.embios.lib.dev.timeout = 30000
         self.logger.info("Writing bad block table to disk...")
         data = self.embios.ipodclassic_writebbt(f.read(), tempaddr)
         f.close()
@@ -890,7 +879,6 @@ class Commandline(object):
         count = self._hexint(count)
         addr = self._hexint(addr)
         self.logger.info("Reading volume %s sectors %X - %X to %08X..." % (volume, sector, sector + count - 1, addr))
-        self.embios.lib.dev.timeout = 50000
         self.embios.storage_read_sectors_md(volume, sector, count, addr)
         self.logger.info("done\n")
 
@@ -904,7 +892,6 @@ class Commandline(object):
         count = self._hexint(count)
         addr = self._hexint(addr)
         self.logger.info("Writing %08X to volume %s sectors %X - %X..." % (addr, volume, sector, sector + count - 1))
-        self.embios.lib.dev.timeout = 50000
         self.embios.storage_write_sectors_md(volume, sector, count, addr)
         self.logger.info("done\n")
 
@@ -925,7 +912,6 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("Could not open local file for writing.")
         self.logger.info("Reading volume %s sectors %X - %X to %s..." % (volume, sector, sector + count - 1, file))
-        self.embios.lib.dev.timeout = 50000
         storageinfo = self.embios.storage_get_info(volume)
         while count > 0:
             sectors = min(count, int(buffsize / storageinfo.sectorsize))
@@ -953,7 +939,6 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("Could not open local file for reading.")
         self.logger.info("Writing %s to volume %s sectors %X - %X..." % (file, volume, sector, sector + count - 1))
-        self.embios.lib.dev.timeout = 50000
         storageinfo = self.embios.storage_get_info(volume)
         while count > 0:
             sectors = min(count, int(buffsize / storageinfo.sectorsize))
@@ -973,7 +958,6 @@ class Commandline(object):
         """
             Creates a directory
         """
-        self.embios.lib.dev.timeout = 30000
         self.logger.info("Creating directory " + dirname + "...")
         self.embios.dir_create(dirname)
         self.logger.info(" done\n")
@@ -983,7 +967,6 @@ class Commandline(object):
         """
             Removes an empty directory
         """
-        self.embios.lib.dev.timeout = 30000
         self.logger.info("Removing directory " + dirname + "...")
         self.embios.dir_remove(dirname)
         self.logger.info(" done\n")
@@ -993,7 +976,6 @@ class Commandline(object):
         """
             Removes a file
         """
-        self.embios.lib.dev.timeout = 30000
         self.logger.info("Removing file " + filename + "...")
         self.embios.file_unlink(filename)
         self.logger.info(" done\n")
@@ -1003,7 +985,6 @@ class Commandline(object):
         """
             Renames or moves a file or directory
         """
-        self.embios.lib.dev.timeout = 30000
         self.logger.info("Renaming " + oldname + " to " + newname + "...")
         self.embios.file_rename(oldname, newname)
         self.logger.info(" done\n")
@@ -1020,7 +1001,6 @@ class Commandline(object):
             f = open(localname, 'wb')
         except IOError:
             raise ArgumentError("Could not open local file for writing.")
-        self.embios.lib.dev.timeout = 30000
         self.logger.info("Downloading file " + remotename + " to " + localname + "...")
         fd = self.embios.file_open(remotename, 0)
         size = self.embios.file_size(fd)
@@ -1044,7 +1024,6 @@ class Commandline(object):
             f = open(localname, 'rb')
         except IOError:
             raise ArgumentError("Could not open local file for reading.")
-        self.embios.lib.dev.timeout = 30000
         self.logger.info("Uploading file " + localname + " to " + remotename + "...")
         fd = self.embios.file_open(remotename, 0x15)
         while True:
@@ -1063,7 +1042,6 @@ class Commandline(object):
         """
             Lists all files in the specified path
         """
-        self.embios.lib.dev.timeout = 30000
         handle = self.embios.dir_open(path)
         self.logger.info("Directory listing of " + path + ":\n")
         while True:
