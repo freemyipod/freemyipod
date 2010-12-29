@@ -23,8 +23,6 @@
 
 import sys
 import os
-import inspect
-import re
 import time
 import struct
 import locale
@@ -32,8 +30,8 @@ import locale
 from functools import wraps
 
 import libembios
-from libembios import Error
 import libembiosdata
+from misc import Error, Logger, getfuncdoc
 
 
 class NotImplementedError(Error):
@@ -59,38 +57,8 @@ def usage(errormsg=None, specific=False):
         It is auto generated from various places.
     """
     logger = Logger()
-    cmddict= Commandline.cmddict
-    doc = {}
-    # This sorts the output of various internal functions
-    # and puts everything in easy readable form
-    for function in cmddict:
-        function = cmddict[function].func
-        docinfo = {}
-        name = function.__name__
-        args = inspect.getargspec(function)[0]
-        docinfo['varargs'] = False
-        if inspect.getargspec(function)[1]:
-            docinfo['varargs'] = True
-        kwargvalues = inspect.getargspec(function)[3]
-        kwargs = {}
-        if args:
-            if kwargvalues:
-                argnum = len(args) - len(kwargvalues)
-                kwargnum = len(kwargvalues)
-                kwargs = dict(zip(args[argnum:], kwargvalues))
-            else:
-                argnum = len(args)
-        else:
-            argnum = 0
-        docinfo['args'] = args[1:argnum]
-        docinfo['kwargs'] = kwargs
-        if function.__doc__:
-            # strip unneccessary whitespace
-            docinfo['documentation'] = re.sub(r'\n        ', '\n', function.__doc__)
-        else:
-            docinfo['documentation'] = None
-        doc[name] = docinfo
-
+    cmddict = Commandline.cmddict
+    doc = getfuncdoc(cmddict)
     if not specific:
         logger.log("Please provide a command and (if needed) parameters as command line arguments\n\n")
         logger.log("Available commands:\n\n")
@@ -99,7 +67,7 @@ def usage(errormsg=None, specific=False):
     for function in sorted(doc.items()):
         function = function[0]
         if specific == False or specific == function:
-            logger.log("  " + function + " ")
+            logger.log(function + " ", 2)
             for arg in doc[function]['args']:
                 logger.log("<" + arg + "> ")
             if doc[function]['kwargs']:
@@ -107,43 +75,15 @@ def usage(errormsg=None, specific=False):
                     logger.log("[" + kwarg + "] ")
             if doc[function]['varargs']:
                 logger.log("<db1> ... <dbN>")
+            logger.log("\n")
             if doc[function]['documentation']:
-                logger.log(doc[function]['documentation']+"\n")
-    
+                logger.log(doc[function]['documentation']+"\n", 4)
+            logger.log("\n")
     logger.log("\n")
 
     if errormsg:
         logger.error(str(errormsg)+"\n")
     exit(2)
-
-
-class Logger(object):
-    """
-        Simple stdout logger.
-        Loglevel 4 is most verbose, Loglevel 0: Only say something if there is an error.
-        The log function doesn't care about the loglevel and always logs to stdout.
-    """
-    def __init__(self):
-        # Possible values: 0 (only errors), 1 (warnings), 2 (info, recommended for production use), 3 and more (debug)
-        self.loglevel = 3
-        
-    def log(self, text):
-        sys.stdout.write(text)
-    
-    def debug(self, text):
-        if self.loglevel >= 3:
-            self.log("DEBUG: " + text)
-    
-    def info(self, text):
-        if self.loglevel >= 2:
-            self.log(text)
-    
-    def warn(self, text):
-        if self.loglevel >= 1:
-            self.log("WARNING: " + text)
-    
-    def error(self, text):
-        self.log("ERROR: " + text)
 
 
 def command(func):
@@ -506,24 +446,24 @@ class Commandline(object):
                          % (len(threads), cpuload * 100, coreload * 100, threadload * 100))
         self.logger.info("Thread dump:\n")
         for thread in threads:
-            self.logger.info("  "+thread.name+":\n")
-            self.logger.info("    Thread id: "      + str(thread.id)+"\n")
-            self.logger.info("    Thread type: "    + thread.type+"\n")
-            self.logger.info("    Thread state: "   + thread.state+"\n")
-            self.logger.info("    Block type: "     + thread.block_type+"\n")
-            self.logger.info("    Blocked by: "     + self._hex(thread.blocked_by_ptr)+"\n")
-            self.logger.info("    Priority: "       + str(thread.priority)+"/255\n")
-            self.logger.info("    Current CPU load: %.1f%%\n" % ((thread.cpuload * 100) / 255.))
-            self.logger.info("    CPU time (total): "+str(datetime.timedelta(microseconds = thread.cputime_total))+"\n")
-            self.logger.info("    Stack address: "  + self._hex(thread.stackaddr)+"\n")
-            self.logger.info("    Registers:\n")
+            self.logger.info(thread.name+":\n", 2)
+            self.logger.info("Thread id: "      + str(thread.id)+"\n", 4)
+            self.logger.info("Thread type: "    + thread.type+"\n", 4)
+            self.logger.info("Thread state: "   + thread.state+"\n", 4)
+            self.logger.info("Block type: "     + thread.block_type+"\n", 4)
+            self.logger.info("Blocked by: "     + self._hex(thread.blocked_by_ptr)+"\n", 4)
+            self.logger.info("Priority: "       + str(thread.priority)+"/255\n", 4)
+            self.logger.info("Current CPU load: %.1f%%\n" % ((thread.cpuload * 100) / 255.), 4)
+            self.logger.info("CPU time (total): "+str(datetime.timedelta(microseconds = thread.cputime_total))+"\n", 4)
+            self.logger.info("Stack address: "  + self._hex(thread.stackaddr)+"\n", 4)
+            self.logger.info("Registers:\n", 4)
             for registerrange in range(4):
                 self.logger.info("      ")
                 for register in range(registerrange, 16, 4):
                     registerrepr = "r"+str(register)
                     self.logger.info("{0:3s}: 0x{1:08X}   ".format(registerrepr, thread.regs["r"+str(register)]))
                 self.logger.info("\n")
-            self.logger.info("     cpsr: 0x{0:08X}".format(thread.regs.cpsr))
+            self.logger.info("cpsr: 0x{0:08X}".format(thread.regs.cpsr), 6)
             self.logger.info("\n")
     
     @command

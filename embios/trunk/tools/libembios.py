@@ -26,14 +26,8 @@ import struct
 import usb.core
 import libembiosdata
 
+from misc import Bunch, Error
 from functools import wraps
-
-class Error(Exception):
-    def __init__(self, value=None):
-        self.value = value
-    def __str__(self):
-        if self.value != None:
-            return repr(self.value)
 
 class ArgumentError(Error):
     pass
@@ -49,24 +43,7 @@ class SendError(Error):
 
 class ReceiveError(Error):
     pass
-
-
-class Bunch(dict):
-    """
-        This is a dict whose items can also be accessed with
-        bunchinstance.something.
-    """
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
     
-    def __getstate__(self):
-        return self
-    
-    def __setstate__(self, state):
-        self.update(state)
-        self.__dict__ = self
-
 
 def command(timeout = None):
     """
@@ -96,6 +73,8 @@ def command(timeout = None):
             if timeout is not None:
                 self.lib.dev.timeout = oldtimeout
             return ret
+        func._command = True
+        wrapper.func = func
         return wrapper
     return decorator
 
@@ -962,31 +941,45 @@ class Dev(object):
 
 
 if __name__ == "__main__":
-    # Some tests
-    import sys
-    embios = Embios()
-    resp = embios.getversioninfo()
-    sys.stdout.write("Embios device version information: " + libembiosdata.swtypes[resp.swtypeid] + " v" + str(resp.majorv) + "." + str(resp.minorv) + 
-                     "." + str(resp.patchv) + " r" + str(resp.revision) + " running on " + libembiosdata.hwtypes[resp.hwtypeid] + "\n")
-    resp = embios.getusermemrange()
-    sys.stdout.write("Usermemrange: "+hex(resp.lower)+" - "+hex(resp.upper)+"\n")
-    memaddr = resp.lower
-    maxlen = resp.upper - resp.lower
-    f = open("./embios.py", "rb")
-    sys.stdout.write("Loading test file (embios.py) to send over USB...\n")
-    datastr = f.read()[:maxlen]
-    sys.stdout.write("Sending data...\n")
-    embios.write(memaddr, datastr)
-    sys.stdout.write("Encrypting data with the hardware key...\n")
-    embios.aesencrypt(memaddr, len(datastr), 0)
-    sys.stdout.write("Reading data back and saving it to 'libembios-test-encrypted.bin'...\n")
-    f = open("./libembios-test-encrypted.bin", "wb")
-    f.write(embios.read(memaddr, len(datastr)))
-    sys.stdout.write("Decrypting the data again...\n")
-    embios.aesdecrypt(memaddr, len(datastr), 0)
-    sys.stdout.write("Reading data back from device...\n")
-    readdata = embios.read(memaddr, len(datastr))
-    if readdata == datastr:
-        sys.stdout.write("Data matches!")
-    else:
-        sys.stdout.write("Data does NOT match. Something went wrong")
+    from misc import Logger
+    logger = Logger()
+    if sys.argv[1] == "test":
+        # Some tests
+        import sys
+        embios = Embios()
+        resp = embios.getversioninfo()
+        logger.log("Embios device version information: " + libembiosdata.swtypes[resp.swtypeid] + " v" + str(resp.majorv) + "." + str(resp.minorv) + 
+                         "." + str(resp.patchv) + " r" + str(resp.revision) + " running on " + libembiosdata.hwtypes[resp.hwtypeid] + "\n")
+        resp = embios.getusermemrange()
+        logger.log("Usermemrange: "+hex(resp.lower)+" - "+hex(resp.upper)+"\n")
+        memaddr = resp.lower
+        maxlen = resp.upper - resp.lower
+        f = open("./embios.py", "rb")
+        logger.log("Loading test file (embios.py) to send over USB...\n")
+        datastr = f.read()[:maxlen]
+        logger.log("Sending data...\n")
+        embios.write(memaddr, datastr)
+        logger.log("Encrypting data with the hardware key...\n")
+        embios.aesencrypt(memaddr, len(datastr), 0)
+        logger.log("Reading data back and saving it to 'libembios-test-encrypted.bin'...\n")
+        f = open("./libembios-test-encrypted.bin", "wb")
+        f.write(embios.read(memaddr, len(datastr)))
+        logger.log("Decrypting the data again...\n")
+        embios.aesdecrypt(memaddr, len(datastr), 0)
+        logger.log("Reading data back from device...\n")
+        readdata = embios.read(memaddr, len(datastr))
+        if readdata == datastr:
+            logger.log("Data matches!")
+        else:
+            logger.log("Data does NOT match. Something went wrong")
+    
+    elif sys.argv[1] == "gendoc":
+        # Generates Documentation
+        from misc import gendoc
+        logger.log("Generating documentation\n")
+        cmddict = {}
+        for attr, value in Embios.__dict__.iteritems():
+            if getattr(value, 'func', False):
+                if getattr(value.func, '_command', False):
+                    cmddict[value.func.__name__] = value
+        logger.log(gendoc(cmddict))
