@@ -21,6 +21,11 @@
 #
 #
 
+"""
+    emBIOS client library.
+    Provides functions to communicate with emBIOS devices via the USB bus.
+"""
+
 import sys
 import struct
 import usb.core

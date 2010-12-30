@@ -21,6 +21,11 @@
 #
 #
 
+"""
+    Command line interface to communicate with emBIOS devices.
+    Run it without arguments to see usage information.
+"""
+
 import sys
 import os
 import time
@@ -71,8 +76,8 @@ def usage(errormsg=None, specific=False):
             for arg in doc[function]['args']:
                 logger.log("<" + arg + "> ")
             if doc[function]['kwargs']:
-                for kwarg in doc[function]['kwargs']:
-                    logger.log("[" + kwarg + "] ")
+                for kwvalue, kwarg in enumerate(doc[function]['kwargs']):
+                    logger.log("[" + kwarg + " = " + str(kwvalue) + "] ")
             if doc[function]['varargs']:
                 logger.log("<db1> ... <dbN>")
             logger.log("\n")
@@ -235,7 +240,7 @@ class Commandline(object):
     def reset(self, force=False):
         """
             Resets the device"
-            If <force> is 1, the reset will be forced, otherwise it will be gracefully,
+            If [force] is 1, the reset will be forced, otherwise it will be gracefully,
             which may take some time.
         """
         force = self._bool(force)
@@ -247,7 +252,7 @@ class Commandline(object):
     def poweroff(self, force=False):
         """
             Powers the device off
-            If <force> is 1, the poweroff will be forced, otherwise it will be gracefully,
+            If [force] is 1, the poweroff will be forced, otherwise it will be gracefully,
             which may take some time.
         """
         force = self._bool(force)
@@ -328,10 +333,10 @@ class Commandline(object):
     def i2cread(self, bus, slave, addr, size):
         """
             Reads data from an I2C device
-            <bus> the bus index
-            <slave> the slave address
-            <addr> the start address on the I2C device
-            <size> the number of bytes to read
+            <bus>: the bus index
+            <slave>: the slave address
+            <addr>: the start address on the I2C device
+            <size>: the number of bytes to read
         """
         bus = self._hexint(bus)
         slave = self._hexint(slave)
@@ -347,10 +352,10 @@ class Commandline(object):
     def i2cwrite(self, bus, slave, addr, *args):
         """
             Writes data to an I2C device
-            <bus> the bus index
-            <slave> the slave address
-            <addr> the start address on the I2C device
-            <db1> ... <dbN> the data in single bytes, encoded in hex,
+            <bus>: the bus index
+            <slave>: the slave address
+            <addr>: the start address on the I2C device
+            <db1> ... <dbN>: the data in single bytes, encoded in hex,
                 seperated by whitespaces, eg. 37 5A 4F EB
         """
         bus = self._hexint(bus)
@@ -510,13 +515,13 @@ class Commandline(object):
     def createthread(self, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state):
         """
             Creates a new thread and returns its thread ID
-            <namepointer> a pointer to the thread's name
-            <entrypoint> a pointer to the entrypoint of the thread
-            <stackpointer> a pointer to the stack of the thread
-            <stacksize> the size of the thread's stack
-            <type> the thread type, vaild are: 0 => user thread, 1 => system thread
-            <priority> the priority of the thread, from 1 to 255
-            <state> the thread's initial state, valid are: 1 => ready, 0 => suspended
+            <namepointer>: a pointer to the thread's name
+            <entrypoint>: a pointer to the entrypoint of the thread
+            <stackpointer>: a pointer to the stack of the thread
+            <stacksize>: the size of the thread's stack
+            <type>: the thread type, vaild are: 0 => user thread, 1 => system thread
+            <priority>: the priority of the thread, from 1 to 255
+            <state>: the thread's initial state, valid are: 1 => ready, 0 => suspended
         """
         nameptr = self._hexint(nameptr)
         entrypoint = self._hexint(entrypoint)
@@ -586,7 +591,7 @@ class Commandline(object):
             This may BRICK your device (unless it has a good recovery option)
             <addr_mem>: the address in memory to copy the data from
             <addr_bootflsh>: the address in bootflash to write to
-            <force>: Use this flag to suppress the 5 seconds delay
+            [force]: Use this flag to suppress the 5 seconds delay
         """
         addr_flash = self._hexint(addr_flash)
         addr_mem = self._hexint(addr_mem)
@@ -605,8 +610,8 @@ class Commandline(object):
     @command
     def runfirmware(self, addr, filename):
         """
-            Uploads the firmware in 'filename' to the beginning of the
-            user memory and executes it
+            Uploads the firmware in <filename>
+            to the address at <addr> and executes it.
         """
         addr = self._hexint(addr)
         self.uploadfile(addr, filename)
@@ -615,7 +620,7 @@ class Commandline(object):
     @command
     def execfirmware(self, addr):
         """
-            Executes the firmware at addr
+            Executes the firmware at <addr>
         """
         addr = self._hexint(addr)
         self.logger.info("Running firmware at "+self._hex(addr)+". Bye.")
@@ -625,6 +630,9 @@ class Commandline(object):
     def aesencrypt(self, addr, size, keyindex):
         """
             Encrypts a buffer using a hardware key
+            <addr>: the starting address of the buffer
+            <size>: the size of the buffer
+            <keyindex>: the index of the key in the crypto unit
         """
         addr = self._hexint(addr)
         size = self._hexint(size)
@@ -635,6 +643,9 @@ class Commandline(object):
     def aesdecrypt(self, addr, size, keyindex):
         """
             Decrypts a buffer using a hardware key
+            <addr>: the starting address of the buffer
+            <size>: the size of the buffer
+            <keyindex>: the index of the key in the crypto unit
         """
         addr = self._hexint(addr)
         size = self._hexint(size)
@@ -644,7 +655,10 @@ class Commandline(object):
     @command
     def hmac_sha1(self, addr, size, destination):
         """
-            Generates a HMAC-SHA1 hash of the buffer and saves it to 'destination'
+            Generates a HMAC-SHA1 hash of the buffer
+            <addr>: the starting address of the buffer
+            <size>: the size of the buffer
+            <destination>: the location where the key will be stored
         """
         addr = self._hexint(addr)
         size = self._hexint(size)
@@ -677,11 +691,16 @@ class Commandline(object):
         """
             Target-specific function: ipodnano2g
             Reads data from the NAND chip into memory
+            <addr>: the memory location where the data is written to
+            <start>: start block
+            <count>: block count
+            <doecc>: FIXME
+            <checkempty>: FIXME
         """
         addr = self._hexint(addr)
         start = self._hexint(start)
         count = self._hexint(count)
-        doecc = int(doecc)
+        doecc = int(doecc) # FIXME shouldn't this be bool?
         checkempty = int(checkempty)
         self.logger.info("Reading " + self._hex(count) + " NAND pages starting at " + \
                          self._hex(start) + " to " + self._hex(addr) + "...")
@@ -693,11 +712,15 @@ class Commandline(object):
         """
             Target-specific function: ipodnano2g
             Writes data to the NAND chip
+            <addr>: the memory location where the data is read from
+            <start>: start block
+            <count>: block count
+            <doecc>: FIXME
         """
         addr = self._hexint(addr)
         start = self._hexint(start)
         count = self._hexint(count)
-        doecc = int(doecc)
+        doecc = int(doecc) # FIXME shouldn't this be bool?
         self.logger.info("Writing " + self._hex(count) + " NAND pages starting at " + \
                          self._hex(start) + " from " + self._hex(addr) + "...")
         self.embios.ipodnano2g_nandwrite(addr, start, count, doecc)
@@ -708,6 +731,9 @@ class Commandline(object):
         """
             Target-specific function: ipodnano2g
             Erases blocks on the NAND chip and stores the results to memory
+            <addr>: the memory location where the results are stored
+            <start>: start block
+            <count>: block count
         """
         addr = self._hexint(addr)
         start = self._hexint(start)
@@ -722,6 +748,7 @@ class Commandline(object):
         """
             Target-specific function: ipodnano2g
             Dumps the whole NAND chip to four files
+            <filenameprefix>: prefix of the files that will be created
         """
         info = self.embios.ipodnano2g_getnandinfo()
         self.logger.info("Dumping NAND contents...")
@@ -754,7 +781,8 @@ class Commandline(object):
         """
             Target-specific function: ipodnano2g
             Wipes the whole NAND chip and logs the result to a file
-            <force>: Use this flag to suppress the 5 seconds delay
+            <filename>: location of the log file
+            [force]: use this flag to suppress the 5 seconds delay
         """
         self.logger.warn("Wiping the whole NAND chip!\n")
         if force == False:
@@ -797,6 +825,7 @@ class Commandline(object):
     def getvolumeinfo(self, volume):
         """
             Gathers some information about a storage volume used
+            <volume>: FIXME
         """
         volume = self._hexint(volume)
         data = self.embios.storage_get_info(volume)
@@ -836,7 +865,7 @@ class Commandline(object):
     def readrawstoragefile(self, volume, sector, count, file, buffer = False, buffsize = "100000"):
         """
             Reads <count> sectors starting at <sector> from storage <volume> to file <file>,
-            buffering them in memory at <buffer> in chunks of <buffsize> bytes (both optional).
+            buffering them in memory at [buffer] in chunks of [buffsize] bytes (both optional).
         """
         volume = self._hexint(volume)
         sector = self._hexint(sector)
@@ -863,7 +892,7 @@ class Commandline(object):
     def writerawstoragefile(self, volume, sector, count, file, buffer = False, buffsize = "100000"):
         """
             Writes contents of <file> to <count> sectors starting at <sector> on storage <volume>,
-            buffering them in memory at <buffer> in chunks of <buffsize> bytes (both optional).
+            buffering them in memory at [buffer] in chunks of [buffsize] bytes (both optional).
         """
         volume = self._hexint(volume)
         sector = self._hexint(sector)
@@ -893,7 +922,7 @@ class Commandline(object):
     @command
     def mkdir(self, dirname):
         """
-            Creates a directory
+            Creates a directory with the name <dirname>
         """
         self.logger.info("Creating directory " + dirname + "...")
         self.embios.dir_create(dirname)
@@ -902,7 +931,7 @@ class Commandline(object):
     @command
     def rmdir(self, dirname):
         """
-            Removes an empty directory
+            Removes an empty directory with the name <dirname>
         """
         self.logger.info("Removing directory " + dirname + "...")
         self.embios.dir_remove(dirname)
@@ -911,7 +940,7 @@ class Commandline(object):
     @command
     def rm(self, filename):
         """
-            Removes a file
+            Removes a file with the name <filename>
         """
         self.logger.info("Removing file " + filename + "...")
         self.embios.file_unlink(filename)
@@ -920,7 +949,7 @@ class Commandline(object):
     @command
     def mv(self, oldname, newname):
         """
-            Renames or moves a file or directory
+            Renames or moves file or directory <oldname> to <newname>
         """
         self.logger.info("Renaming " + oldname + " to " + newname + "...")
         self.embios.file_rename(oldname, newname)
@@ -930,6 +959,10 @@ class Commandline(object):
     def get(self, remotename, localname, buffer = False, buffsize = "10000"):
         """
             Downloads a file
+            <remotename>: filename on the device
+            <localname>: filename on the computer
+            [buffer]: buffer address (optional)
+            [buffsize]: buffer size (optional)
         """
         if buffer == False: buffer = self.embios.lib.dev.usermem.lower
         else: buffer = self._hexint(buffer)
@@ -953,6 +986,10 @@ class Commandline(object):
     def put(self, localname, remotename, buffer = False, buffsize = "10000"):
         """
             Uploads a file
+            <remotename>: filename on the device
+            <localname>: filename on the computer
+            [buffer]: buffer address (optional)
+            [buffsize]: buffer size (optional)
         """
         if buffer == False: buffer = self.embios.lib.dev.usermem.lower
         else: buffer = self._hexint(buffer)
@@ -978,6 +1015,7 @@ class Commandline(object):
     def ls(self, path = "/"):
         """
             Lists all files in the specified path
+            [path]: the path which is listed
         """
         handle = self.embios.dir_open(path)
         self.logger.info("Directory listing of " + path + ":\n")
