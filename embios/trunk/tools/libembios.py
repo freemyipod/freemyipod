@@ -26,7 +26,7 @@ import struct
 import usb.core
 import libembiosdata
 
-from misc import Bunch, Error, gethwname
+from misc import Logger, Bunch, Error, gethwname
 from functools import wraps
 
 class ArgumentError(Error):
@@ -92,8 +92,10 @@ class Embios(object):
         feature from external. So DON'T EVER use a parameter called 'timeout'
         in your commands. Variables are ok.
     """
-    def __init__(self):
-        self.lib = Lib()
+    def __init__(self, loglevel = 2, logtarget = "stdout", logfile = "tools.log"):
+        self.logger = Logger(loglevel, logtarget, logfile)
+        self.logger.debug("Initializing Embios object\n")
+        self.lib = Lib(self.logger)
         
         self.getversioninfo()
         self.getpacketsizeinfo()
@@ -152,7 +154,9 @@ class Embios(object):
         self.lib.dev.version.majorv = resp.majorv
         self.lib.dev.version.minorv = resp.minorv
         self.lib.dev.version.patchv = resp.patchv
+        self.logger.debug("Device Software Type ID = " + str(resp.swtypeid) + "\n")
         self.lib.dev.swtypeid = resp.swtypeid
+        self.logger.debug("Device Hardware Type ID = " + str(resp.hwtypeid) + "\n")
         self.lib.dev.hwtypeid = resp.hwtypeid
         return resp
     
@@ -162,9 +166,13 @@ class Embios(object):
             It also sets the properties of the device object accordingly.
         """
         resp = self.lib.monitorcommand(struct.pack("IIII", 1, 1, 0, 0), "HHII", ("coutmax", "cinmax", "doutmax", "dinmax"))
+        self.logger.debug("Device cout packet size limit = " + str(resp.coutmax) + "\n")
         self.lib.dev.packetsizelimit.cout = resp.coutmax
+        self.logger.debug("Device cin packet size limit = " + str(resp.cinmax) + "\n")
         self.lib.dev.packetsizelimit.cin = resp.cinmax
+        self.logger.debug("Device din packet size limit = " + str(resp.doutmax) + "\n")
         self.lib.dev.packetsizelimit.din = resp.dinmax
+        self.logger.debug("Device dout packet size limit = " + str(resp.dinmax) + "\n")
         self.lib.dev.packetsizelimit.dout = resp.doutmax
         return resp
     
@@ -172,6 +180,7 @@ class Embios(object):
     def getusermemrange(self):
         """ This returns the memory range the user has access to. """
         resp = self.lib.monitorcommand(struct.pack("IIII", 1, 2, 0, 0), "III", ("lower", "upper", None))
+        self.logger.debug("Device user memory = 0x%x - 0x%x\n" % (resp.lower, resp.upper))
         self.lib.dev.usermem.lower = resp.lower
         self.lib.dev.usermem.upper = resp.upper
         return resp
@@ -802,7 +811,9 @@ class Embios(object):
     
 
 class Lib(object):
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
+        self.logger.debug("Initializing Lib object\n")
         self.idVendor = 0xFFFF
         self.idProduct = 0xE000
         
@@ -811,10 +822,11 @@ class Lib(object):
         self.connect()
     
     def connect(self):
-        self.dev = Dev(self.idVendor, self.idProduct)
+        self.dev = Dev(self.idVendor, self.idProduct, self.logger)
         self.connected = True
     
     def monitorcommand(self, cmd, rcvdatatypes=None, rcvstruct=None):
+        self.logger.debug("Sending monitorcommand\n")
         writelen = self.dev.cout(cmd)
         if rcvdatatypes:
             rcvdatatypes = "I" + rcvdatatypes # add the response
@@ -822,6 +834,7 @@ class Lib(object):
             data = struct.unpack(rcvdatatypes, data)
             response = data[0]
             if libembiosdata.responsecodes[response] == "ok":
+                self.logger.debug("Response: OK\n")
                 if rcvstruct:
                     datadict = Bunch()
                     counter = 1 # start with 1, 0 is the id
@@ -833,19 +846,28 @@ class Lib(object):
                 else:
                     return data
             elif libembiosdata.responsecodes[response] == "unsupported":
+                self.logger.debug("Response: UNSUPPORTED\n")
                 raise DeviceError("The device does not support this command.")
             elif libembiosdata.responsecodes[response] == "invalid":
+                self.logger.debug("Response: INVALID\n")
                 raise DeviceError("Invalid command! This should NOT happen!")
             elif libembiosdata.responsecodes[response] == "busy":
+                self.logger.debug("Response: BUSY\n")
                 raise DeviceError("Device busy")
+            else:
+                self.logger.debug("Response: UNKOWN\n")
+                raise DeviceError("Invalid response! This should NOT happen!")
         else:
             return writelen
 
 
 class Dev(object):
-    def __init__(self, idVendor, idProduct):
+    def __init__(self, idVendor, idProduct, logger):
         self.idVendor = idVendor
         self.idProduct = idProduct
+        
+        self.logger = logger
+        self.logger.debug("Initializing Dev object\n")
         
         self.interface = 0
         self.timeout = 100
@@ -853,6 +875,7 @@ class Dev(object):
         self.connect()
         self.findEndpoints()
         
+        self.logger.debug("Successfully connected to device\n")
         
         # Device properties
         self.packetsizelimit = Bunch()
@@ -877,27 +900,35 @@ class Dev(object):
         self.disconnect()
     
     def findEndpoints(self):
+        self.logger.debug("Searching for device endpoints:\n")
         epcounter = 0
         self.endpoint = Bunch()
         for cfg in self.dev:
             for intf in cfg:
                 for ep in intf:
                     if epcounter == 0:
+                        self.logger.debug("Found cout endpoint at 0x%x\n" % ep.bEndpointAddress)
                         self.endpoint.cout = ep.bEndpointAddress
                     elif epcounter == 1:
+                        self.logger.debug("Found cin endpoint at 0x%x\n" % ep.bEndpointAddress)
                         self.endpoint.cin = ep.bEndpointAddress
                     elif epcounter == 2:
+                        self.logger.debug("Found dout endpoint at 0x%x\n" % ep.bEndpointAddress)
                         self.endpoint.dout = ep.bEndpointAddress
                     elif epcounter == 3:
+                        self.logger.debug("Found din endpoint at 0x%x\n" % ep.bEndpointAddress)
                         self.endpoint.din = ep.bEndpointAddress
                     epcounter += 1
         if epcounter <= 3:
             raise DeviceError("Not all endpoints found in the descriptor. Only "+str(epcounter)+" found, we need 4")
     
     def connect(self):
+        self.logger.debug("Looking for emBIOS device\n")
         self.dev = usb.core.find(idVendor=self.idVendor, idProduct=self.idProduct)
         if self.dev is None:
             raise DeviceNotFoundError()
+        self.logger.debug("Device Found!\n")
+        self.logger.debug("Setting first configuration\n")
         self.dev.set_configuration()
     
     def disconnect(self):
@@ -916,21 +947,25 @@ class Dev(object):
         return read
     
     def cout(self, data):
+        self.logger.debug("Sending data to cout endpoint with the size " + str(len(data)) + "\n")
         if self.packetsizelimit.cout and len(data) > self.packetsizelimit.cout:
             raise SendError("Packet too big")
         return self.send(self.endpoint.cout, data)
     
     def cin(self, size):
+        self.logger.debug("Receiving data on the cin endpoint with the size " + str(size) + "\n")
         if self.packetsizelimit.cin and size > self.packetsizelimit.cin:
             raise ReceiveError("Packet too big")
         return self.receive(self.endpoint.cin, size)
     
     def dout(self, data):
+        self.logger.debug("Sending data to cout endpoint with the size " + str(len(data)) + "\n")
         if self.packetsizelimit.dout and len(data) > self.packetsizelimit.dout:
             raise SendError("Packet too big")
         return self.send(self.endpoint.dout, data)
     
     def din(self, size):
+        self.logger.debug("Receiving data on the din endpoint with the size " + str(size) + "\n")
         if self.packetsizelimit.din and size > self.packetsizelimit.din:
             raise ReceiveError("Packet too big")
         return self.receive(self.endpoint.din, size)

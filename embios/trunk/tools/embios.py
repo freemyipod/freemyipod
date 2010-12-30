@@ -124,7 +124,7 @@ class Commandline(object):
     def __init__(self):
         self.logger = Logger()
         try:
-            self.embios = libembios.Embios()
+            self.embios = libembios.Embios(loglevel = 2)
         except libembios.DeviceNotFoundError:
             self.logger.error("No emBIOS device found!")
             exit(1)
