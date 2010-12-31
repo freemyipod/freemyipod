@@ -515,6 +515,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             break;
         case 16:  // FREEZE SCHEDULER
             dbgsendbuf[1] = scheduler_freeze(dbgrecvbuf[1]);
+            scheduler_switch(-1);
             dbgsendbuf[0] = 1;
             size = 16;
             break;
