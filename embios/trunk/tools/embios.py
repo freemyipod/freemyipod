@@ -687,40 +687,40 @@ class Commandline(object):
         self.logger.info("Pages per block: "        + str(data["pagesperblock"]))
 
     @command
-    def ipodnano2g_nandread(self, addr, start, count, doecc, checkempty):
+    def ipodnano2g_nandread(self, addr, start, count, doecc=True, checkempty=True):
         """
             Target-specific function: ipodnano2g
             Reads data from the NAND chip into memory
             <addr>: the memory location where the data is written to
             <start>: start block
             <count>: block count
-            <doecc>: FIXME
-            <checkempty>: FIXME
+            [doecc]: use ecc error correction data
+            [checkempty]: set statusflags if pages are empty
         """
         addr = self._hexint(addr)
         start = self._hexint(start)
         count = self._hexint(count)
-        doecc = int(doecc) # FIXME shouldn't this be bool?
-        checkempty = int(checkempty)
+        doecc = self._bool(doecc)
+        checkempty = self._bool(checkempty)
         self.logger.info("Reading " + self._hex(count) + " NAND pages starting at " + \
                          self._hex(start) + " to " + self._hex(addr) + "...")
         self.embios.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
         self.logger.info("done\n")
 
     @command
-    def ipodnano2g_nandwrite(self, addr, start, count, doecc):
+    def ipodnano2g_nandwrite(self, addr, start, count, doecc=True):
         """
             Target-specific function: ipodnano2g
             Writes data to the NAND chip
             <addr>: the memory location where the data is read from
             <start>: start block
             <count>: block count
-            <doecc>: FIXME
+            [doecc]: create ecc error correction data
         """
         addr = self._hexint(addr)
         start = self._hexint(start)
         count = self._hexint(count)
-        doecc = int(doecc) # FIXME shouldn't this be bool?
+        doecc = self._bool(doecc)
         self.logger.info("Writing " + self._hex(count) + " NAND pages starting at " + \
                          self._hex(start) + " from " + self._hex(addr) + "...")
         self.embios.ipodnano2g_nandwrite(addr, start, count, doecc)
@@ -825,7 +825,7 @@ class Commandline(object):
     def getvolumeinfo(self, volume):
         """
             Gathers some information about a storage volume used
-            <volume>: FIXME
+            <volume>: volume id
         """
         volume = self._hexint(volume)
         data = self.embios.storage_get_info(volume)

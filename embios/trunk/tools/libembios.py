@@ -550,14 +550,14 @@ class Embios(object):
         """ Target-specific function: ipodnano2g
             Reads data from the NAND chip into memory
         """
-        return self.lib.monitorcommand(struct.pack("IIII", 0xffff0002, addr | (0x80000000 if doecc != 0 else 0) | (0x40000000 if checkempty != 0 else 0), start, count), "III", (None, None, None))
+        return self.lib.monitorcommand(struct.pack("IIII", 0xffff0002, addr | (0x80000000 if doecc else 0) | (0x40000000 if checkempty else 0), start, count), "III", (None, None, None))
     
     @command(timeout = 30000, target = 0x47324e49)
     def ipodnano2g_nandwrite(self, addr, start, count, doecc):
         """ Target-specific function: ipodnano2g
             Writes data to the NAND chip
         """
-        return self.lib.monitorcommand(struct.pack("IIII", 0xffff0003, addr | (0x80000000 if doecc != 0 else 0), start, count), "III", (None, None, None))
+        return self.lib.monitorcommand(struct.pack("IIII", 0xffff0003, addr | (0x80000000 if doecc else 0), start, count), "III", (None, None, None))
     
     @command(timeout = 30000, target = 0x47324e49)
     def ipodnano2g_nanderase(self, addr, start, count):
