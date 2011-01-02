@@ -404,7 +404,7 @@ int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool 
         if (rc)
         {
             void* buf = buffer;
-            int sect;
+            uint64_t sect;
             for (sect = sector; sect < sector + cnt; sect++)
             {
                 rc = -1;
