@@ -1068,14 +1068,14 @@ class Commandline(object):
         else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
         try: self.mkdir(remotepath)
-        except: pass
+        except: self.logger.info(" failed\n")
         pathlen = len(localpath)
         for d in os.walk(localpath):
             prefix = remotepath + "/" + d[0].replace("\\", "/")[pathlen:] + "/"
             for dir in d[1]:
                 if dir != ".svn":
                     try: self.mkdir(prefix + dir)
-                    except: pass
+                    except: self.logger.info(" failed\n")
             for f in d[2]:
                 if not prefix.find("/.svn/") > -1:
                     self.put(d[0] + "/" + f, prefix + f, buffer, buffsize)
