@@ -947,6 +947,24 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
+    def rmtree(self, path):
+        """
+            Recursively removes a folder
+            <path>: the folder to be removed
+        """
+        handle = self.embios.dir_open(path)
+        while True:
+            try:
+                entry = self.embios.dir_read(handle)
+                if entry.name == "." or entry.name == "..": continue
+                elif entry.attributes & 0x10:
+                    self.rmtree(path + "/" + entry.name)
+                else: self.rm(path + "/" + entry.name)
+            except: break
+        self.embios.dir_close(handle)
+        self.rmdir(path)
+
+    @command
     def mv(self, oldname, newname):
         """
             Renames or moves file or directory <oldname> to <newname>
@@ -983,11 +1001,37 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
+    def gettree(self, remotepath, localpath, buffer = False, buffsize = "10000"):
+        """
+            Downloads a directory tree
+            <remotepath>: path on the device
+            <localpath>: path on the computer
+            [buffer]: buffer address (optional)
+            [buffsize]: buffer size (optional)
+        """
+        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        else: buffer = self._hexint(buffer)
+        buffsize = self._hexint(buffsize)
+        try: os.mkdir(localpath)
+        except: pass
+
+        handle = self.embios.dir_open(remotepath)
+        while True:
+            try:
+                entry = self.embios.dir_read(handle)
+                if entry.name == "." or entry.name == "..": continue
+                elif entry.attributes & 0x10:
+                    self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
+                else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
+            except: break
+        self.embios.dir_close(handle)
+
+    @command
     def put(self, localname, remotename, buffer = False, buffsize = "10000"):
         """
             Uploads a file
-            <remotename>: filename on the device
             <localname>: filename on the computer
+            <remotename>: filename on the device
             [buffer]: buffer address (optional)
             [buffsize]: buffer size (optional)
         """
@@ -1010,6 +1054,31 @@ class Commandline(object):
         self.embios.file_close(fd)
         f.close()
         self.logger.info(" done\n")
+
+    @command
+    def puttree(self, localpath, remotepath, buffer = False, buffsize = "10000"):
+        """
+            Uploads a directory tree
+            <localpath>: path on the computer
+            <remotepath>: path on the device
+            [buffer]: buffer address (optional)
+            [buffsize]: buffer size (optional)
+        """
+        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        else: buffer = self._hexint(buffer)
+        buffsize = self._hexint(buffsize)
+        try: self.mkdir(remotepath)
+        except: pass
+        pathlen = len(localpath)
+        for d in os.walk(localpath):
+            prefix = remotepath + "/" + d[0].replace("\\", "/")[pathlen:] + "/"
+            for dir in d[1]:
+                if dir != ".svn":
+                    try: self.mkdir(prefix + dir)
+                    except: pass
+            for f in d[2]:
+                if not prefix.find("/.svn/") > -1:
+                    self.put(d[0] + "/" + f, prefix + f, buffer, buffsize)
 
     @command
     def ls(self, path = "/"):
