@@ -40,7 +40,7 @@ firstinstfiles = [(1, "/iLoader", 1), \
                   (2, "/iLoader/iLoader.cfg", "../iloader/themes/ipodclassic-default/iLoader/iloader.cfg", 1), \
                   (2, "/iLoader/theme.ucl", "../iloader/themes/ipodclassic-default/iLoader/theme.ucl", 2)]
 
-commonfiles = [(2, "/iLoader/NORFlash.bak", -2, 10)]
+commonfiles = [(2, "/iLoader/NORFlash.bak", -2, 3)]
 
 if len(sys.argv) > 4 and sys.argv[4] != "-":
     pathlen = len(sys.argv[4])
@@ -51,7 +51,7 @@ if len(sys.argv) > 4 and sys.argv[4] != "-":
                 firstinstfiles.append((1, prefix + dir, 1))
         for f in d[2]:
             if not prefix.find("/.svn/") > -1:
-                firstinstfiles.append((2, prefix + f, d[0] + "/" + f, os.path.getsize(d[0] + "/" + f) / 100000 + 1))
+                firstinstfiles.append((2, prefix + f, d[0] + "/" + f, os.path.getsize(d[0] + "/" + f) / 500000 + 1))
 
 file = open(sys.argv[1], "rb")
 installer = file.read()
@@ -139,7 +139,7 @@ for f in commonfiles:
     statuscommon = statuscommon + f[3]
 
 script = flash + struct.pack("<IIII", 0, len(flash) + 16 + len(firstinstall), \
-                             statusfirst, statusfirst + statuscommon) \
+                             statusfirst, statuscommon) \
        + firstinstall + common + struct.pack("<I", 0)
 file = open(sys.argv[2], "wb")
 file.write(installer + script.ljust(scriptsize, '\0') + filedata)
