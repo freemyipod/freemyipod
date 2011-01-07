@@ -62,7 +62,7 @@ void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, ui
         AESSTATUS = 6;
         AESGO = go;
         go = 3;
-        while ((AESSTATUS & 6) == 0) sleep(100);
+        while ((AESSTATUS & 6) == 0) yield();
 	    invalidate_dcache();
         if (direction == HWKEYAES_DECRYPT)
 		{
