@@ -76,7 +76,7 @@ def usage(errormsg=None, specific=False):
             for arg in doc[function]['args']:
                 logger.log("<" + arg + "> ")
             if doc[function]['kwargs']:
-                for kwvalue, kwarg in enumerate(doc[function]['kwargs']):
+                for kwarg, kwvalue in doc[function]['kwargs'].iteritems():
                     logger.log("[" + kwarg + " = " + str(kwvalue) + "] ")
             if doc[function]['varargs']:
                 logger.log("<db1> ... <dbN>")
