@@ -39,7 +39,7 @@ void setup_tick()
     THCMD = (1 << 1);   /* TH_CLR */
 
     /* configure timer for 10 kHz */
-    TBPRE = 208 - 1;    /* prescaler */
+    TBPRE = 337 - 1;    /* prescaler */
     TBCON = (0 << 13) | /* TB_INT1_EN */
             (1 << 12) | /* TB_INT0_EN */
             (0 << 11) | /* TB_START */
