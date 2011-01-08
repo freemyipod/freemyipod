@@ -446,6 +446,7 @@ lcddata_1:
 	.hword 0xc000
 lcddata_2:
 lcddata_3:
+	.hword 0xc010
 	.hword 0x4008
 	.hword 0x0808
 	.hword 0x8110
@@ -599,6 +600,78 @@ lcddata_3:
 	.hword 0x0173
 	.hword 0xc000
 
+	.code 16
+
+thumb_nrv2e_d8:
+	mov r7,r2
+        mov r4,#1; neg r5,r4 @ r5= -1 initial condition
+        lsl r4,#31 @ 1<<31: refill next time
+        mov r6,#5
+        lsl r6,#8 @ 0x500 @ nrv2e M2_MAX_OFFSET
+        b top_n2e
+
+nrv2e_done:
+	blx flushcache
+	bx r7
+
+get1_n2e: @ In: Carry set [from adding 0x80000000 (1<<31) to itself]
+        ldrb r4,[r0] @ zero-extend next byte
+        adc r4,r4 @ double and insert CarryIn as low bit
+        add r0,#1
+        lsl r4,#24 @ move to top byte, and set CarryOut from old bit 8
+        mov pc,lr @ return, stay in current (THUMB) mode
+
+lit_n2e:
+        ldrb r3,[r0]; add r0,#1
+        strb r3,[r2]; add r2,#1
+top_n2e:
+        add r4,r4; mov lr,pc; beq get1_n2e; bcs lit_n2e
+        mov r1,#1; b getoff_n2e
+
+off_n2e:
+        sub r1,#1
+        add r4,r4; mov lr,pc; beq get1_n2e; adc r1,r1
+getoff_n2e:
+        add r4,r4; mov lr,pc; beq get1_n2e; adc r1,r1
+        add r4,r4; mov lr,pc; beq get1_n2e; bcc off_n2e
+
+        sub r3,r1,#3 @ set Carry
+        mov r1,#0 @ Carry unaffected
+        blo offprev_n2e @ r1 was 2; tests Carry only
+        lsl r3,#8
+        ldrb r5,[r0]; add r0,#1 @ low 7+1 r4
+        orr r5,r3
+        mvn r5,r5; beq nrv2e_done @ r5= ~r5
+        asr r5,#1; bcs lenlast_n2e
+        b lenmore_n2e
+
+offprev_n2e:
+        add r4,r4; mov lr,pc; beq get1_n2e; bcs lenlast_n2e
+lenmore_n2e:
+        mov r1,#1
+        add r4,r4; mov lr,pc; beq get1_n2e; bcs lenlast_n2e
+len_n2e:
+        add r4,r4; mov lr,pc; beq get1_n2e; adc r1,r1
+        add r4,r4; mov lr,pc; beq get1_n2e; bcc len_n2e
+        add r1,#6-2
+        b gotlen_n2e
+
+lenlast_n2e:
+        add r4,r4; mov lr,pc; beq get1_n2e; adc r1,r1 @ 0,1,2,3
+        add r1,#2
+gotlen_n2e: @ 'cmn': add the inputs, set condition codes, discard the sum
+        cmn r6,r5; bcs near_n2e @ within M2_MAX_OFFSET
+        add r1,#1 @ too far away, so minimum match length is 3
+near_n2e:
+        ldrb r3,[r2] @ force cacheline allocate
+copy_n2e:
+        ldrb r3,[r2,r5]
+        strb r3,[r2]; add r2,#1
+        sub r1,#1; bne copy_n2e
+        b top_n2e
+
+	.code 32
+
 font:
 	.byte 0, 0, 0, 0, 0
 	.byte 0, 0, 95, 0, 0
@@ -696,78 +769,6 @@ font:
 	.byte 0, 65, 54, 8, 0
 	.byte 2, 1, 2, 4, 2
 
-	.code 16
-	.align 1
-
-thumb_nrv2e_d8:
-	mov r7,r2
-        mov r4,#1; neg r5,r4 @ r5= -1 initial condition
-        lsl r4,#31 @ 1<<31: refill next time
-        mov r6,#5
-        lsl r6,#8 @ 0x500 @ nrv2e M2_MAX_OFFSET
-        b top_n2e
-
-nrv2e_done:
-	blx flushcache
-	bx r7
-
-get1_n2e: @ In: Carry set [from adding 0x80000000 (1<<31) to itself]
-        ldrb r4,[r0] @ zero-extend next byte
-        adc r4,r4 @ double and insert CarryIn as low bit
-        add r0,#1
-        lsl r4,#24 @ move to top byte, and set CarryOut from old bit 8
-        mov pc,lr @ return, stay in current (THUMB) mode
-
-lit_n2e:
-        ldrb r3,[r0]; add r0,#1
-        strb r3,[r2]; add r2,#1
-top_n2e:
-        add r4,r4; mov lr,pc; beq get1_n2e; bcs lit_n2e
-        mov r1,#1; b getoff_n2e
-
-off_n2e:
-        sub r1,#1
-        add r4,r4; mov lr,pc; beq get1_n2e; adc r1,r1
-getoff_n2e:
-        add r4,r4; mov lr,pc; beq get1_n2e; adc r1,r1
-        add r4,r4; mov lr,pc; beq get1_n2e; bcc off_n2e
-
-        sub r3,r1,#3 @ set Carry
-        mov r1,#0 @ Carry unaffected
-        blo offprev_n2e @ r1 was 2; tests Carry only
-        lsl r3,#8
-        ldrb r5,[r0]; add r0,#1 @ low 7+1 r4
-        orr r5,r3
-        mvn r5,r5; beq nrv2e_done @ r5= ~r5
-        asr r5,#1; bcs lenlast_n2e
-        b lenmore_n2e
-
-offprev_n2e:
-        add r4,r4; mov lr,pc; beq get1_n2e; bcs lenlast_n2e
-lenmore_n2e:
-        mov r1,#1
-        add r4,r4; mov lr,pc; beq get1_n2e; bcs lenlast_n2e
-len_n2e:
-        add r4,r4; mov lr,pc; beq get1_n2e; adc r1,r1
-        add r4,r4; mov lr,pc; beq get1_n2e; bcc len_n2e
-        add r1,#6-2
-        b gotlen_n2e
-
-lenlast_n2e:
-        add r4,r4; mov lr,pc; beq get1_n2e; adc r1,r1 @ 0,1,2,3
-        add r1,#2
-gotlen_n2e: @ 'cmn': add the inputs, set condition codes, discard the sum
-        cmn r6,r5; bcs near_n2e @ within M2_MAX_OFFSET
-        add r1,#1 @ too far away, so minimum match length is 3
-near_n2e:
-        ldrb r3,[r2] @ force cacheline allocate
-copy_n2e:
-        ldrb r3,[r2,r5]
-        strb r3,[r2]; add r2,#1
-        sub r1,#1; bne copy_n2e
-        b top_n2e
-
-	.code 32
 	.align 2
 
 foundfile:
@@ -1074,11 +1075,10 @@ val_80100db0:
 	bne	lcdbyteseq
 	movne	r0, r0,lsl#4
 	bne	udelay
-	tst	r8, #0x20
 	mov	r10, #0x22000000
-	ldreq	r6, val_80100db0
+	ldr	r6, val_80100db0
 	orr	r10, r10, #0x10000
-	streq	r6, [r4]
+	str	r6, [r4]
 	add	r11, r10, #0x25800
 	mov	r0, #-1
 fillbuff:
@@ -1101,7 +1101,7 @@ printerror:
 	bl	sendlcdd
 	add	r0, r9, #0x11
 	bl	sendlcdc
-	sub	r0, r9, #0xc1
+	add	r0, r9, #0x3f
 	bl	sendlcdd
 	add	r0, r9, #0x12
 	bl	sendlcdc

@@ -425,6 +425,7 @@ lcddata_1:
 	.hword 0xc000
 lcddata_2:
 lcddata_3:
+	.hword 0xc010
 	.hword 0x4008
 	.hword 0x0808
 	.hword 0x8110
@@ -772,11 +773,10 @@ val_80100db0:
 	bne	lcdbyteseq
 	movne	r0, r0,lsl#4
 	bne	udelay
-	tst	r8, #0x20
 	adr	r1, _stubend + 4
-	ldreq	r6, val_80100db0
+	ldr	r6, val_80100db0
 	ldr	r0, _stubend
-	streq	r6, [r4]
+	str	r6, [r4]
 	add	r0, r1, r0
 	mov	r2, #0x08000000
 movepayloadloop:

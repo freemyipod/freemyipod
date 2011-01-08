@@ -60,7 +60,7 @@ static void lcd_send_cmd(uint16_t cmd)
 static void lcd_send_data(uint16_t data)
 {
     while (LCDSTATUS & 0x10);
-    LCDWDATA = data;
+    LCDWDATA = (data & 0xff) | ((data & 0x7f00) << 1);
 }
 
 static uint32_t lcd_detect()
