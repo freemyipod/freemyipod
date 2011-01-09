@@ -44,7 +44,7 @@ static bool lcdconsole_needs_update;
 void lcdconsole_init()
 {
     displaylcd(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, (void*)0xffffffff, 0);
-    memset(framebuf, -1, sizeof(framebuf));
+    memset(framebuf, LCDCONSOLE_BGCOLOR, sizeof(framebuf));
     current_row = 0;
     current_col = -1;
     lcdconsole_needs_update = false;

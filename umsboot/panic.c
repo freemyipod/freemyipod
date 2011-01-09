@@ -32,16 +32,16 @@ void panic(enum panic_severity severity, const char* string)
 {
     enter_critical_section();
     while (!displaylcd_safe());
-    lcdconsole_puts_noblit("\n*PANIC*\n", 0, -1);
-    lcdconsole_puts_noblit(string, 0, -1);
-    lcdconsole_puts_noblit("\n", 0, -1);
+    lcdconsole_puts_noblit("\n*PANIC*\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
+    lcdconsole_puts_noblit(string, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
+    lcdconsole_puts_noblit("\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
     lcdconsole_update();
     hang();
 }
 
 static int pprfunc(void* ptr, unsigned char letter)
 {
-    lcdconsole_putc_noblit(letter, 0, -1);
+    lcdconsole_putc_noblit(letter, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
     return true;
 }
 
@@ -50,11 +50,11 @@ void panicf(enum panic_severity severity, const char* string, ...)
     va_list ap;
     enter_critical_section();
     while (!displaylcd_safe());
-    lcdconsole_puts_noblit("\n*PANIC*\n", 0, -1);
+    lcdconsole_puts_noblit("\n*PANIC*\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
     va_start(ap, string);
     format(pprfunc, NULL, string, ap);
     va_end(ap);
-    lcdconsole_puts_noblit("\n", 0, -1);
+    lcdconsole_puts_noblit("\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
     lcdconsole_update();
     hang();
 }

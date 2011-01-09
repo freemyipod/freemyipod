@@ -131,7 +131,7 @@ void main()
     while (vbus_state() && !usb_ejected);
     udelay(200000);
     usb_exit();
-    lcdconsole_puts("\nLoading UBI file...\n", 0, 0xffff);
+    lcdconsole_puts("\nLoading UBI file...\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
     int found = 0;
     uint16_t cluster;
     uint32_t size;
@@ -151,17 +151,17 @@ void main()
                             + RAMDISK_SECTORSIZE - 1) / RAMDISK_SECTORSIZE;
     if (!found)
     {
-        lcdconsole_puts("No UBI file found!", 0, 0xffff);
+        lcdconsole_puts("No UBI file found!", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
         return;
     }
     if (found != 1)
     {
-        lcdconsole_puts("Multiple UBI files found!\nPlease copy exactly one.", 0, 0xffff);
+        lcdconsole_puts("Multiple UBI files found!\nPlease copy exactly one.", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
         return;
     }
     if (!size || !cluster)
     {
-        lcdconsole_puts("UBI file is empty!", 0, 0xffff);
+        lcdconsole_puts("UBI file is empty!", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
         return;
     }
     uint16_t dest = 0;
@@ -171,7 +171,7 @@ void main()
         cluster = *((uint16_t*)&ramdisk[swapmap[1 + (cluster / (RAMDISK_SECTORSIZE / 2))]]
                                        [(cluster % (RAMDISK_SECTORSIZE / 2)) * 2]); 
     }
-    lcdconsole_puts("Rearranging files...\n", 0, 0xffff);
+    lcdconsole_puts("Rearranging files...\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
     uint16_t offset = RAMDISK_SECTORS - totalclusters - 2;
     memset(newfat, 0, sizeof(newfat));
     memset(newdir, 0, sizeof(newdir));
@@ -205,7 +205,7 @@ void main()
     memcpy(ramdisk[offset + 1], newdir, RAMDISK_SECTORSIZE);
     memcpy(ramdisk[offset - fatsectors + 1], newfat, fatsectors * RAMDISK_SECTORSIZE);
     fat16_write_mbr(_ramdiskptr, totalclusters + fatsectors + 2);
-    lcdconsole_puts("Booting...", 0, 0xffff);
+    lcdconsole_puts("Booting...", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
     displaylcd_sync();
     udelay(10000);
     execfirmware(ramdisk[0]);
@@ -229,7 +229,7 @@ void init()
     i2c_init();
 #endif
     power_init();
-    lcdconsole_puts(welcomestring, 0, 0xffff);
+    lcdconsole_puts(welcomestring, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
 #ifdef HAVE_BACKLIGHT
     backlight_init();
 #endif
