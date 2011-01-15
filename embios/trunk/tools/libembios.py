@@ -356,6 +356,8 @@ class Embios(object):
         tablesize = resp.tablesize
         size = tablesize
         structver = resp.structver
+        if resp.structver != 1:
+            raise DeviceError("The thread struct version is unknown! Help!")
         offset = 0
         data = ""
         while size > 0:
