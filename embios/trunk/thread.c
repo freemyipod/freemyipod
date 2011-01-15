@@ -464,6 +464,22 @@ int thread_terminate(int thread)
     return ret;
 }
 
+int thread_killlevel(enum thread_type type, bool killself)
+{
+    int i;
+    int count = 0;
+    uint32_t mode = enter_critical_section();
+    for (i = 0; i < MAX_THREADS; i++)
+        if (scheduler_threads[i].type == USER_THREAD && scheduler_threads[i].state != THREAD_FREE
+         && (killself || current_thread != &scheduler_threads[i]))
+        {
+            thread_terminate(i);
+            count++;
+        }
+    leave_critical_section(mode);
+    return count;
+}
+
 enum thread_state thread_get_state(int thread)
 {
     return scheduler_threads[thread].state;

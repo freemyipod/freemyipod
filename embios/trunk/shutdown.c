@@ -23,11 +23,13 @@
 
 #include "global.h"
 #include "storage.h"
+#include "thread.h"
 
 
 void shutdown(bool shutdownhw)
 {
     DEBUGF("Shutting down...");
+    thread_killlevel(USER_THREAD, false);
 #ifdef HAVE_USB
     usb_exit();
 #endif
