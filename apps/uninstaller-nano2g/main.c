@@ -227,6 +227,6 @@ void main(void)
     rendertext(&lcdbuffer[177], 0, 0xffff, "Uninstallation successful!   ", 176);
     displaylcd(0, 175, 0, 131, lcdbuffer, 0);
     sleep(1000000);
-    shutdown(true);
+    shutdown(false);
     reset();
 }

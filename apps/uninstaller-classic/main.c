@@ -100,7 +100,6 @@ void main(void)
     rendertext(&lcdbuffer[320 * 194 + 10], 0, 0xffff, "Will enter DFU mode in 5 seconds...", 320);
     displaylcd(0, 319, 0, 239, lcdbuffer, 0);
     sleep(5000000);
-    backlight_on(false);
     shutdown(true);
     reset();
 }

@@ -33,6 +33,7 @@ void shutdown(bool shutdownhw)
 #endif
 #ifdef HAVE_STORAGE_FLUSH
     storage_flush();
+    storage_sleepnow();
 #endif
     if (shutdownhw)
     {
@@ -42,9 +43,6 @@ void shutdown(bool shutdownhw)
 #endif
 #ifdef HAVE_LCD_SHUTDOWN
         lcd_shutdown();
-#endif
-#ifdef HAVE_STORAGE
-        storage_sleepnow();
 #endif
     }
 #ifdef HAVE_LCD
