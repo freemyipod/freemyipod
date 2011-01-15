@@ -4,30 +4,30 @@
 #    Copyright 2010 TheSeven
 #
 #
-#    This file is part of emBIOS.
+#    This file is part of emCORE.
 #
-#    emBIOS is free software: you can redistribute it and/or
+#    emCORE is free software: you can redistribute it and/or
 #    modify it under the terms of the GNU General Public License as
 #    published by the Free Software Foundation, either version 2 of the
 #    License, or (at your option) any later version.
 #
-#    emBIOS is distributed in the hope that it will be useful,
+#    emCORE is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #    See the GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with emBIOS.  If not, see <http://www.gnu.org/licenses/>.
+#    along with emCORE.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
 
 import sys
-import libembiosbootcfg
+import libemcorebootcfg
 from optparse import *
 
 parser = OptionParser("usage: %prog [options] <infile> <outfile>")
 filegroup = OptionGroup(parser, "Booting from a file",
-                        "Use these options to configure emBIOS to try "
+                        "Use these options to configure emCORE to try "
 		        "booting from a file on a FAT32 partition")
 filegroup.add_option("--file", help = "Boot from FILE")
 filegroup.add_option("--file-compressed", action = "store_true", default = False,
@@ -36,7 +36,7 @@ filegroup.add_option("--file-run-from", type = "int", metavar = "ADDR",
                      help = "Make sure FILE is executed from memory address ADDR")
 parser.add_option_group(filegroup)
 flashgroup = OptionGroup(parser, "Booting from a boot flash image",
-                         "Use these options to configure emBIOS to try "
+                         "Use these options to configure emCORE to try "
                          "booting from an image located in the boot flash")
 flashgroup.add_option("--flash", metavar = "NAME", help = "Boot from flash image NAME")
 flashgroup.add_option("--flash-compressed", action = "store_true", default = False,
@@ -45,7 +45,7 @@ flashgroup.add_option("--flash-run-from", type = "int", metavar = "ADDR",
                       help = "Make sure the image is executed from memory address ADDR")
 parser.add_option_group(flashgroup)
 mmapgroup = OptionGroup(parser, "Booting from a memory region",
-                        "Use these options to configure emBIOS to try "
+                        "Use these options to configure emCORE to try "
                         "booting from a memory location, such as an embedded "
 			"app or an app located on a memory-mapped flash")
 mmapgroup.add_option("--mmap-addr", metavar = "ADDR", help = "Boot from memory location ADDR")
@@ -91,7 +91,7 @@ if options.mmap_addr:
         config["mmapcopy"] = True
         config["mmapdest"] = options.mmap_run_from
 
-data = libembiosbootcfg.configure(data, **config)
+data = libemcorebootcfg.configure(data, **config)
 
 file = open(args[1], "wb")
 file.write(data)

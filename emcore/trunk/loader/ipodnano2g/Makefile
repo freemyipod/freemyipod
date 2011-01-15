@@ -1,6 +1,6 @@
-NAME := embiosldr-ipodnano2g
+NAME := emcoreldr-ipodnano2g
 
-EMBIOSDIR ?= ../../
+EMCOREDIR ?= ../../
 
 CROSS   ?= arm-none-eabi-
 CC      := $(CROSS)gcc
@@ -8,7 +8,7 @@ AS      := $(CROSS)as
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
-CRYPTDFU := python $(EMBIOSDIR)/tools/ipodcrypt.py s5l8701-cryptdfu
+CRYPTDFU := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8701-cryptdfu
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -mcpu=arm940t
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
@@ -75,7 +75,7 @@ else
 endif
 	@rm -f $@.dep.tmp
 
-build/__embios_%.o: $(EMBIOSDIR)/export/%.S
+build/__emcore_%.o: $(EMCOREDIR)/export/%.S
 	@echo [CC]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))

@@ -4,25 +4,25 @@
 #    Copyright 2010 TheSeven, benedikt93, Farthen
 #
 #
-#    This file is part of emBIOS.
+#    This file is part of emCORE.
 #
-#    emBIOS is free software: you can redistribute it and/or
+#    emCORE is free software: you can redistribute it and/or
 #    modify it under the terms of the GNU General Public License as
 #    published by the Free Software Foundation, either version 2 of the
 #    License, or (at your option) any later version.
 #
-#    emBIOS is distributed in the hope that it will be useful,
+#    emCORE is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #    See the GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with emBIOS.  If not, see <http://www.gnu.org/licenses/>.
+#    along with emCORE.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
 
 """
-    Command line interface to communicate with emBIOS devices.
+    Command line interface to communicate with emCORE devices.
     Run it without arguments to see usage information.
 """
 
@@ -34,8 +34,8 @@ import locale
 
 from functools import wraps
 
-import libembios
-import libembiosdata
+import libemcore
+import libemcoredata
 from misc import Error, Logger, getfuncdoc, gethwname
 
 
@@ -129,9 +129,9 @@ class Commandline(object):
     def __init__(self):
         self.logger = Logger()
         try:
-            self.embios = libembios.Embios(loglevel = 2)
-        except libembios.DeviceNotFoundError:
-            self.logger.error("No emBIOS device found!")
+            self.emcore = libemcore.Emcore(loglevel = 2)
+        except libemcore.DeviceNotFoundError:
+            self.logger.error("No emCORE device found!")
             exit(1)
         self.getinfo("version")
         
@@ -142,15 +142,15 @@ class Commandline(object):
         if func in self.cmddict:
             try:
                 self.cmddict[func](*args)
-            except (ArgumentError, libembios.ArgumentError), e:
+            except (ArgumentError, libemcore.ArgumentError), e:
                 usage(e, specific=func)
-            except (ArgumentError, libembios.ArgumentError):
+            except (ArgumentError, libemcore.ArgumentError):
                 usage("Syntax Error in function '" + func + "'", specific=func)
             except ArgumentTypeError, e:
                 usage(e, specific=func)
             except NotImplementedError:
                 self.logger.error("This function is not implemented yet!")
-            except libembios.DeviceError, e:
+            except libemcore.DeviceError, e:
                 self.logger.error(str(e))
             except TypeError, e:
                 # Only act on TypeErrors for the function we called, not on TypeErrors raised by another function.
@@ -158,7 +158,7 @@ class Commandline(object):
                     self.logger.error(usage("Argument Error in '" + func + "': Wrong argument count", specific=func))
                 else:
                     raise
-            except libembios.usb.core.USBError:
+            except libemcore.usb.core.USBError:
                 self.logger.error("There is a problem with the USB connection.")
         else:
             usage("No such command")
@@ -207,31 +207,31 @@ class Commandline(object):
     @command
     def getinfo(self, infotype):
         """
-            Get info on the running emBIOS.
+            Get info on the running emCORE.
             <infotype> may be either of 'version', 'packetsize', 'usermemrange'.
         """
         if infotype == "version":
-            hwtype = gethwname(self.embios.lib.dev.hwtypeid)
+            hwtype = gethwname(self.emcore.lib.dev.hwtypeid)
             self.logger.info("Connected to " + \
-                             libembiosdata.swtypes[self.embios.lib.dev.swtypeid] + \
-                             " v" + str(self.embios.lib.dev.version.majorv) + \
-                             "." + str(self.embios.lib.dev.version.minorv) + \
-                             "." + str(self.embios.lib.dev.version.patchv) + \
-                             " r" + str(self.embios.lib.dev.version.revision) + \
+                             libemcoredata.swtypes[self.emcore.lib.dev.swtypeid] + \
+                             " v" + str(self.emcore.lib.dev.version.majorv) + \
+                             "." + str(self.emcore.lib.dev.version.minorv) + \
+                             "." + str(self.emcore.lib.dev.version.patchv) + \
+                             " r" + str(self.emcore.lib.dev.version.revision) + \
                              " running on " + hwtype + "\n")
         
         elif infotype == "packetsize":
-            self.logger.info("Maximum packet sizes: \n command out: " + str(self.embios.lib.dev.packetsizelimit.cout) + \
-                             "\n command in: " + str(self.embios.lib.dev.packetsizelimit.cin) + \
-                             "\n data in: " + str(self.embios.lib.dev.packetsizelimit.din) + \
-                             "\n data out: " + str(self.embios.lib.dev.packetsizelimit.dout))
+            self.logger.info("Maximum packet sizes: \n command out: " + str(self.emcore.lib.dev.packetsizelimit.cout) + \
+                             "\n command in: " + str(self.emcore.lib.dev.packetsizelimit.cin) + \
+                             "\n data in: " + str(self.emcore.lib.dev.packetsizelimit.din) + \
+                             "\n data out: " + str(self.emcore.lib.dev.packetsizelimit.dout))
         
         elif infotype == "usermemrange":
-            resp = self.embios.getusermemrange()
+            resp = self.emcore.getusermemrange()
             self.logger.info("The user memory range is " + \
-                             self._hex(self.embios.lib.dev.usermem.lower) + \
+                             self._hex(self.emcore.lib.dev.usermem.lower) + \
                              " - " + \
-                             self._hex(self.embios.lib.dev.usermem.upper - 1))
+                             self._hex(self.emcore.lib.dev.usermem.upper - 1))
         
         else:
             raise ArgumentTypeError("one out of 'version', 'packetsize', 'usermemrange'", infotype)
@@ -246,7 +246,7 @@ class Commandline(object):
         force = self._bool(force)
         if force: self.logger.info("Resetting forcefully...\n")
         else: self.logger.info("Resetting...\n")
-        self.embios.reset(force)
+        self.emcore.reset(force)
     
     @command
     def poweroff(self, force=False):
@@ -258,7 +258,7 @@ class Commandline(object):
         force = self._bool(force)
         if force: self.logger.info("Powering off forcefully...\n")
         else: self.logger.info("Powering off...\n")
-        self.embios.poweroff(force)
+        self.emcore.poweroff(force)
     
     @command
     def uploadfile(self, addr, filename):
@@ -275,7 +275,7 @@ class Commandline(object):
         self.logger.info("Writing file '" + filename + \
                          "' to memory at " + self._hex(addr) + "...")
         with f:
-            self.embios.write(addr, f.read())
+            self.emcore.write(addr, f.read())
         f.close()
         self.logger.info("done\n")
     
@@ -297,7 +297,7 @@ class Commandline(object):
                          " with the size " + self._hex(size) + \
                          " to '"+filename+"'...")
         with f:
-            f.write(self.embios.read(addr, size))
+            f.write(self.emcore.read(addr, size))
         f.close()
         self.logger.info("done\n")
 
@@ -313,7 +313,7 @@ class Commandline(object):
         if integer > 0xFFFFFFFF:
             raise ArgumentError("Specified integer too long")
         data = struct.pack("I", integer)
-        self.embios.write(addr, data)
+        self.emcore.write(addr, data)
         self.logger.info("Integer '" + self._hex(integer) + \
                          "' written successfully to " + self._hex(addr) + "\n")
 
@@ -324,7 +324,7 @@ class Commandline(object):
             <addr>: the address to download the integer from
         """
         addr = self._hexint(addr)
-        data = self.embios.read(addr, 4)
+        data = self.emcore.read(addr, 4)
         integer = struct.unpack("I", data)[0]
         self.logger.info("Integer '" + self._hex(integer) + \
                          "' read from address " + self._hex(addr) + "\n")
@@ -342,7 +342,7 @@ class Commandline(object):
         slave = self._hexint(slave)
         addr = self._hexint(addr)
         size = self._hexint(size)
-        data = self.embios.i2cread(bus, slave, addr, size)
+        data = self.emcore.i2cread(bus, slave, addr, size)
         bytes = struct.unpack("%dB" % len(data), data)
         self.logger.info("Data read from I2C:\n")
         for index, byte in enumerate(bytes):
@@ -365,7 +365,7 @@ class Commandline(object):
         for arg in args:
             data += chr(self._hexint(arg))
         self.logger.info("Writing data to I2C...\n")
-        self.embios.i2cwrite(bus, slave, addr, data)
+        self.emcore.i2cwrite(bus, slave, addr, data)
         self.logger.info("done\n")
 
     @command
@@ -374,7 +374,7 @@ class Commandline(object):
             Reads data from the USB console continuously
         """
         while True:
-            resp = self.embios.usbcread()
+            resp = self.emcore.usbcread()
             self.logger.log(resp.data)
             time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
 
@@ -388,7 +388,7 @@ class Commandline(object):
             text += word + " "
         text = text[:-1]
         self.logger.info("Writing '"+ text +"' to the usb console\n")
-        self.embios.usbcwrite(text)
+        self.emcore.usbcwrite(text)
 
     @command
     def readdevconsole(self, bitmask):
@@ -398,7 +398,7 @@ class Commandline(object):
         """
         bitmask = self._hexint(bitmask)
         while True:
-            resp = self.embios.cread()
+            resp = self.emcore.cread()
             self.logger.log(resp.data)
             time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
     
@@ -415,7 +415,7 @@ class Commandline(object):
         text = text[:-1]
         self.logger.info("Writing '" + text + \
                          "' to the device consoles identified with " + self._hex(bitmask) + "\n")
-        self.embios.cwrite(text, bitmask)
+        self.emcore.cwrite(text, bitmask)
 
     @command
     def flushconsolebuffers(self, bitmask):
@@ -426,7 +426,7 @@ class Commandline(object):
         bitmask = self._hexint(bitmask)
         self.logger.info("Flushing consoles identified with the bitmask " + \
                          self._hex(bitmask) + "\n")
-        self.embios.cflush(bitmask)
+        self.emcore.cflush(bitmask)
 
     @command
     def getprocinfo(self):
@@ -434,7 +434,7 @@ class Commandline(object):
             Fetches data on the currently running processes
         """
         import datetime
-        threads = self.embios.getprocinfo()
+        threads = self.emcore.getprocinfo()
         threadload = 0
         idleload = 0
         for thread in threads:
@@ -474,7 +474,7 @@ class Commandline(object):
             Locks (freezes) the scheduler
         """
         self.logger.info("Will now lock scheduler\n")
-        self.embios.lockscheduler()
+        self.emcore.lockscheduler()
     
     @command
     def unlockscheduler(self):
@@ -482,7 +482,7 @@ class Commandline(object):
             Unlocks (unfreezes) the scheduler
         """
         self.logger.info("Will now unlock scheduler\n")
-        self.embios.unlockscheduler()
+        self.emcore.unlockscheduler()
     
     @command
     def suspendthread(self, threadid):
@@ -491,7 +491,7 @@ class Commandline(object):
         """
         threadid = self._hexint(threadid)
         self.logger.info("Suspending the thread with the threadid "+self._hex(threadid)+"\n")
-        self.embios.suspendthread(threadid)
+        self.emcore.suspendthread(threadid)
 
     @command
     def resumethread(self, threadid):
@@ -500,7 +500,7 @@ class Commandline(object):
         """
         threadid = self._hexint(threadid)
         self.logger.info("Resuming the thread with the threadid "+self._hex(threadid)+"\n")
-        self.embios.resumethread(threadid)
+        self.emcore.resumethread(threadid)
 
     @command
     def killthread(self, threadid):
@@ -509,7 +509,7 @@ class Commandline(object):
         """
         threadid = self._hexint(threadid)
         self.logger.info("Killing the thread with the threadid " + self._hex(threadid) + "\n")
-        self.embios.killthread(threadid)
+        self.emcore.killthread(threadid)
 
     @command
     def createthread(self, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state):
@@ -528,8 +528,8 @@ class Commandline(object):
         stackpointer = self._hexint(stackpointer)
         stacksize = self._hexint(stacksize)
         priority = self._hexint(priority)
-        data = self.embios.createthread(nameptr, entrypoint, stackptr, stacksize, type, priority, state)
-        name = self.embios.readstring(nameptr)
+        data = self.emcore.createthread(nameptr, entrypoint, stackptr, stacksize, type, priority, state)
+        name = self.emcore.readstring(nameptr)
         self.logger.info("Created a thread with the threadid " + data.id + \
                          ", the name \"" + name + "\"" + \
                          ", the entrypoint at " + self._hex(entrypoint) + \
@@ -540,7 +540,7 @@ class Commandline(object):
     @command
     def run(self, filename):
         """
-            Uploads the emBIOS application <filename> to
+            Uploads the emCORE application <filename> to
             the memory and executes it
         """
         try:
@@ -548,17 +548,17 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("File not readable. Does it exist?")
         with f:
-            data = self.embios.run(f.read())
-        self.logger.info("Executed emBIOS application \"" + data.name + "\" at address " + self._hex(data.baseaddr))
+            data = self.emcore.run(f.read())
+        self.logger.info("Executed emCORE application \"" + data.name + "\" at address " + self._hex(data.baseaddr))
 
     @command
     def execimage(self, addr):
         """
-            Executes the emBIOS application at <addr>.
+            Executes the emCORE application at <addr>.
         """
         addr = self._hexint(addr)
-        self.logger.info("Starting emBIOS app at "+self._hex(addr)+"\n")
-        self.embios.execimage(addr)
+        self.logger.info("Starting emCORE app at "+self._hex(addr)+"\n")
+        self.emcore.execimage(addr)
     
     @command
     def flushcaches(self):
@@ -566,7 +566,7 @@ class Commandline(object):
             Flushes the CPUs data and instruction caches.
         """
         self.logger.info("Flushing CPU data and instruction caches...")
-        self.embios.flushcaches()
+        self.emcore.flushcaches()
         self.logger.info("done\n")
     
     @command
@@ -581,7 +581,7 @@ class Commandline(object):
         size = self._hexint(size)
         self.logger.info("Dumping boot flash addresses "+self._hex(addr_flash)+" - "+
                          hex(addr_flash+size)+" to "+self._hex(addr_mem)+" - "+self._hex(addr_mem+size)+"\n")
-        self.embios.bootflashread(addr_mem, addr_flash, size)
+        self.emcore.bootflashread(addr_mem, addr_flash, size)
     
     @command
     def writebootflash(self, addr_flash, addr_mem, size, force=False):
@@ -605,7 +605,7 @@ class Commandline(object):
                 self.logger.info(".")
                 time.sleep(1)
             self.logger.info("\n")
-        self.embios.bootflashwrite(addr_mem, addr_flash, size)
+        self.emcore.bootflashwrite(addr_mem, addr_flash, size)
     
     @command
     def runfirmware(self, addr, filename):
@@ -624,7 +624,7 @@ class Commandline(object):
         """
         addr = self._hexint(addr)
         self.logger.info("Running firmware at "+self._hex(addr)+". Bye.")
-        self.embios.execfirmware(addr)
+        self.emcore.execfirmware(addr)
     
     @command
     def aesencrypt(self, addr, size, keyindex):
@@ -637,7 +637,7 @@ class Commandline(object):
         addr = self._hexint(addr)
         size = self._hexint(size)
         keyindex = self._hexint(keyindex)
-        self.embios.aesencrypt(addr, size, keyindex)
+        self.emcore.aesencrypt(addr, size, keyindex)
     
     @command
     def aesdecrypt(self, addr, size, keyindex):
@@ -650,7 +650,7 @@ class Commandline(object):
         addr = self._hexint(addr)
         size = self._hexint(size)
         keyindex = self._hexint(keyindex)
-        self.embios.aesdecrypt(addr, size, keyindex)
+        self.emcore.aesdecrypt(addr, size, keyindex)
     
     @command
     def hmac_sha1(self, addr, size, destination):
@@ -667,9 +667,9 @@ class Commandline(object):
         self.logger.info("Generating hmac-sha1 hash from the buffer at " + self._hex(addr) + \
                          " with the size " + self._hex(size) + " and saving it to " + \
                          self._hex(destination) + " - " + self._hex(destination+sha1size) + "...")
-        self.embios.hmac_sha1(addr, size, destination)
+        self.emcore.hmac_sha1(addr, size, destination)
         self.logger.info("done\n")
-        data = self.embios.read(destination, sha1size)
+        data = self.emcore.read(destination, sha1size)
         hash = ord(data)
         self.logger.info("The generated hash is "+self._hex(hash))
 
@@ -679,7 +679,7 @@ class Commandline(object):
             Target-specific function: ipodnano2g
             Gathers some information about the NAND chip used
         """
-        data = self.embios.ipodnano2g_getnandinfo()
+        data = self.emcore.ipodnano2g_getnandinfo()
         self.logger.info("NAND chip type: "         + self._hex(data["type"])+"\n")
         self.logger.info("Number of banks: "        + str(data["banks"])+"\n")
         self.logger.info("Number of blocks: "       + str(data["blocks"])+"\n")
@@ -704,7 +704,7 @@ class Commandline(object):
         checkempty = self._bool(checkempty)
         self.logger.info("Reading " + self._hex(count) + " NAND pages starting at " + \
                          self._hex(start) + " to " + self._hex(addr) + "...")
-        self.embios.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
+        self.emcore.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
         self.logger.info("done\n")
 
     @command
@@ -723,7 +723,7 @@ class Commandline(object):
         doecc = self._bool(doecc)
         self.logger.info("Writing " + self._hex(count) + " NAND pages starting at " + \
                          self._hex(start) + " from " + self._hex(addr) + "...")
-        self.embios.ipodnano2g_nandwrite(addr, start, count, doecc)
+        self.emcore.ipodnano2g_nandwrite(addr, start, count, doecc)
         self.logger.info("done\n")
 
     @command
@@ -740,7 +740,7 @@ class Commandline(object):
         count = self._hexint(count)
         self.logger.info("Erasing " + self._hex(count) + " NAND blocks starting at " + \
                          self._hex(start) + " and logging to " + self._hex(addr) + "...")
-        self.embios.ipodnano2g_nanderase(addr, start, count)
+        self.emcore.ipodnano2g_nanderase(addr, start, count)
         self.logger.info("done\n")
 
     @command
@@ -750,7 +750,7 @@ class Commandline(object):
             Dumps the whole NAND chip to four files
             <filenameprefix>: prefix of the files that will be created
         """
-        info = self.embios.ipodnano2g_getnandinfo()
+        info = self.emcore.ipodnano2g_getnandinfo()
         self.logger.info("Dumping NAND contents...")
         try:
             infofile = open(filenameprefix+"_info.txt", 'wb')
@@ -766,10 +766,10 @@ class Commandline(object):
         infofile.write("Pages per block: "      + str(info["pagesperblock"]) + "\r\n")
         for i in range(info["banks"] * info["blocks"] * info["pagesperblock"] / 8192):
             self.logger.info(".")
-            self.embios.ipodnano2g_nandread(0x08000000, i * 8192, 8192, 1, 1)
-            datafile.write(self.embios.read(0x08000000, 0x01000000))
-            sparefile.write(self.embios.read(0x09000000, 0x00080000))
-            statusfile.write(self.embios.read(0x09080000, 0x00008000))
+            self.emcore.ipodnano2g_nandread(0x08000000, i * 8192, 8192, 1, 1)
+            datafile.write(self.emcore.read(0x08000000, 0x01000000))
+            sparefile.write(self.emcore.read(0x09000000, 0x00080000))
+            statusfile.write(self.emcore.read(0x09080000, 0x00008000))
         infofile.close()
         datafile.close()
         sparefile.close()
@@ -791,7 +791,7 @@ class Commandline(object):
                 self.logger.info(".")
                 time.sleep(1)
             self.logger.info("\n")
-        info = self.embios.ipodnano2g_getnandinfo()
+        info = self.emcore.ipodnano2g_getnandinfo()
         self.logger.info("Wiping NAND contents...")
         try:
             statusfile = open(filename, 'wb')
@@ -799,8 +799,8 @@ class Commandline(object):
             raise ArgumentError("Can not open file for writing!")
         for i in range(info["banks"] * info["blocks"] / 64):
             self.logger.info(".")
-            self.embios.ipodnano2g_nanderase(0x08000000, i * 64, 64)
-            statusfile.write(self.embios.read(0x08000000, 0x00000100))
+            self.emcore.ipodnano2g_nanderase(0x08000000, i * 64, 64)
+            statusfile.write(self.emcore.read(0x08000000, 0x00000100))
         statusfile.close()
         self.logger.info("done\n")
 
@@ -817,7 +817,7 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("File not readable. Does it exist?")
         self.logger.info("Writing bad block table to disk...")
-        data = self.embios.ipodclassic_writebbt(f.read(), tempaddr)
+        data = self.emcore.ipodclassic_writebbt(f.read(), tempaddr)
         f.close()
         self.logger.info(" done\n")
 
@@ -828,7 +828,7 @@ class Commandline(object):
             <volume>: volume id
         """
         volume = self._hexint(volume)
-        data = self.embios.storage_get_info(volume)
+        data = self.emcore.storage_get_info(volume)
         self.logger.info("Sector size: "+str(data["sectorsize"])+"\n")
         self.logger.info("Number of sectors: "+str(data["numsectors"])+"\n")
         self.logger.info("Vendor: "+data["vendor"]+"\n")
@@ -845,7 +845,7 @@ class Commandline(object):
         count = self._hexint(count)
         addr = self._hexint(addr)
         self.logger.info("Reading volume %s sectors %X - %X to %08X..." % (volume, sector, sector + count - 1, addr))
-        self.embios.storage_read_sectors_md(volume, sector, count, addr)
+        self.emcore.storage_read_sectors_md(volume, sector, count, addr)
         self.logger.info("done\n")
 
     @command
@@ -858,7 +858,7 @@ class Commandline(object):
         count = self._hexint(count)
         addr = self._hexint(addr)
         self.logger.info("Writing %08X to volume %s sectors %X - %X..." % (addr, volume, sector, sector + count - 1))
-        self.embios.storage_write_sectors_md(volume, sector, count, addr)
+        self.emcore.storage_write_sectors_md(volume, sector, count, addr)
         self.logger.info("done\n")
 
     @command
@@ -870,7 +870,7 @@ class Commandline(object):
         volume = self._hexint(volume)
         sector = self._hexint(sector)
         count = self._hexint(count)
-        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
         else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
         try:
@@ -878,11 +878,11 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("Could not open local file for writing.")
         self.logger.info("Reading volume %s sectors %X - %X to %s..." % (volume, sector, sector + count - 1, file))
-        storageinfo = self.embios.storage_get_info(volume)
+        storageinfo = self.emcore.storage_get_info(volume)
         while count > 0:
             sectors = min(count, int(buffsize / storageinfo.sectorsize))
-            self.embios.storage_read_sectors_md(volume, sector, sectors, buffer)
-            f.write(self.embios.read(buffer, storageinfo.sectorsize * sectors))
+            self.emcore.storage_read_sectors_md(volume, sector, sectors, buffer)
+            f.write(self.emcore.read(buffer, storageinfo.sectorsize * sectors))
             sector = sector + sectors
             count = count - sectors
         f.close()
@@ -897,7 +897,7 @@ class Commandline(object):
         volume = self._hexint(volume)
         sector = self._hexint(sector)
         count = self._hexint(count)
-        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
         else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
         try:
@@ -905,15 +905,15 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("Could not open local file for reading.")
         self.logger.info("Writing %s to volume %s sectors %X - %X..." % (file, volume, sector, sector + count - 1))
-        storageinfo = self.embios.storage_get_info(volume)
+        storageinfo = self.emcore.storage_get_info(volume)
         while count > 0:
             sectors = min(count, int(buffsize / storageinfo.sectorsize))
             bytes = storageinfo.sectorsize * sectors
             data = f.read(bytes)
             if len(data) == 0: break
             while len(data) < bytes: data = data + f.read(bytes - len(data))
-            self.embios.write(buffer, data)
-            self.embios.storage_write_sectors_md(volume, sector, sectors, buffer)
+            self.emcore.write(buffer, data)
+            self.emcore.storage_write_sectors_md(volume, sector, sectors, buffer)
             sector = sector + sectors
             count = count - sectors
         f.close()
@@ -925,7 +925,7 @@ class Commandline(object):
             Creates a directory with the name <dirname>
         """
         self.logger.info("Creating directory " + dirname + "...")
-        self.embios.dir_create(dirname)
+        self.emcore.dir_create(dirname)
         self.logger.info(" done\n")
 
     @command
@@ -934,7 +934,7 @@ class Commandline(object):
             Removes an empty directory with the name <dirname>
         """
         self.logger.info("Removing directory " + dirname + "...")
-        self.embios.dir_remove(dirname)
+        self.emcore.dir_remove(dirname)
         self.logger.info(" done\n")
 
     @command
@@ -943,7 +943,7 @@ class Commandline(object):
             Removes a file with the name <filename>
         """
         self.logger.info("Removing file " + filename + "...")
-        self.embios.file_unlink(filename)
+        self.emcore.file_unlink(filename)
         self.logger.info(" done\n")
 
     @command
@@ -952,16 +952,16 @@ class Commandline(object):
             Recursively removes a folder
             <path>: the folder to be removed
         """
-        handle = self.embios.dir_open(path)
+        handle = self.emcore.dir_open(path)
         while True:
             try:
-                entry = self.embios.dir_read(handle)
+                entry = self.emcore.dir_read(handle)
                 if entry.name == "." or entry.name == "..": continue
                 elif entry.attributes & 0x10:
                     self.rmtree(path + "/" + entry.name)
                 else: self.rm(path + "/" + entry.name)
             except: break
-        self.embios.dir_close(handle)
+        self.emcore.dir_close(handle)
         self.rmdir(path)
 
     @command
@@ -970,7 +970,7 @@ class Commandline(object):
             Renames or moves file or directory <oldname> to <newname>
         """
         self.logger.info("Renaming " + oldname + " to " + newname + "...")
-        self.embios.file_rename(oldname, newname)
+        self.emcore.file_rename(oldname, newname)
         self.logger.info(" done\n")
 
     @command
@@ -982,7 +982,7 @@ class Commandline(object):
             [buffer]: buffer address (optional)
             [buffsize]: buffer size (optional)
         """
-        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
         else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
         try:
@@ -990,13 +990,13 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("Could not open local file for writing.")
         self.logger.info("Downloading file " + remotename + " to " + localname + "...")
-        fd = self.embios.file_open(remotename, 0)
-        size = self.embios.file_size(fd)
+        fd = self.emcore.file_open(remotename, 0)
+        size = self.emcore.file_size(fd)
         while size > 0:
-            bytes = self.embios.file_read(fd, buffer, buffsize)
-            f.write(self.embios.read(buffer, bytes))
+            bytes = self.emcore.file_read(fd, buffer, buffsize)
+            f.write(self.emcore.read(buffer, bytes))
             size = size - bytes
-        self.embios.file_close(fd)
+        self.emcore.file_close(fd)
         f.close()
         self.logger.info(" done\n")
 
@@ -1009,22 +1009,22 @@ class Commandline(object):
             [buffer]: buffer address (optional)
             [buffsize]: buffer size (optional)
         """
-        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
         else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
         try: os.mkdir(localpath)
         except: pass
 
-        handle = self.embios.dir_open(remotepath)
+        handle = self.emcore.dir_open(remotepath)
         while True:
             try:
-                entry = self.embios.dir_read(handle)
+                entry = self.emcore.dir_read(handle)
                 if entry.name == "." or entry.name == "..": continue
                 elif entry.attributes & 0x10:
                     self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
                 else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
             except: break
-        self.embios.dir_close(handle)
+        self.emcore.dir_close(handle)
 
     @command
     def put(self, localname, remotename, buffer = False, buffsize = "10000"):
@@ -1035,7 +1035,7 @@ class Commandline(object):
             [buffer]: buffer address (optional)
             [buffsize]: buffer size (optional)
         """
-        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
         else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
         try:
@@ -1043,15 +1043,15 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("Could not open local file for reading.")
         self.logger.info("Uploading file " + localname + " to " + remotename + "...")
-        fd = self.embios.file_open(remotename, 0x15)
+        fd = self.emcore.file_open(remotename, 0x15)
         while True:
             data = f.read(buffsize)
             if len(data) == 0: break
-            self.embios.write(buffer, data)
+            self.emcore.write(buffer, data)
             bytes = 0
             while bytes < len(data):
-                bytes = bytes + self.embios.file_write(fd, buffer + bytes, len(data) - bytes)
-        self.embios.file_close(fd)
+                bytes = bytes + self.emcore.file_write(fd, buffer + bytes, len(data) - bytes)
+        self.emcore.file_close(fd)
         f.close()
         self.logger.info(" done\n")
 
@@ -1064,7 +1064,7 @@ class Commandline(object):
             [buffer]: buffer address (optional)
             [buffsize]: buffer size (optional)
         """
-        if buffer == False: buffer = self.embios.lib.dev.usermem.lower
+        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
         else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
         try: self.mkdir(remotepath)
@@ -1086,16 +1086,16 @@ class Commandline(object):
             Lists all files in the specified path
             [path]: the path which is listed
         """
-        handle = self.embios.dir_open(path)
+        handle = self.emcore.dir_open(path)
         self.logger.info("Directory listing of " + path + ":\n")
         while True:
             try:
-                entry = self.embios.dir_read(handle)
+                entry = self.emcore.dir_read(handle)
                 if entry.attributes & 0x10: size = "DIR"
                 else: size = locale.format("%d", entry.size, True).rjust(13)
                 self.logger.info(entry.name.ljust(50) + " - " + size + "\n")
             except: break
-        self.embios.dir_close(handle)
+        self.emcore.dir_close(handle)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

@@ -4,20 +4,20 @@
 #    Copyright 2010 TheSeven
 #
 #
-#    This file is part of emBIOS.
+#    This file is part of emCORE.
 #
-#    emBIOS is free software: you can redistribute it and/or
+#    emCORE is free software: you can redistribute it and/or
 #    modify it under the terms of the GNU General Public License as
 #    published by the Free Software Foundation, either version 2 of the
 #    License, or (at your option) any later version.
 #
-#    emBIOS is distributed in the hope that it will be useful,
+#    emCORE is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #    See the GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License along
-#    with emBIOS.  If not, see <http://www.gnu.org/licenses/>.
+#    with emCORE.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
 
@@ -29,7 +29,7 @@ import time
 import usb
 
 
-class embiosldr:
+class emcoreldr:
   def __init__(self, generation = 0):
     busses = usb.busses()
  
@@ -45,7 +45,7 @@ class embiosldr:
             self.maxin = 528;
             self.maxout = 528
             self.handle = handle
-            print("Connected to emBIOS Loader Recovery Mode on iPod Nano 2G, USB version %s" % dev.deviceVersion)
+            print("Connected to emCORE Loader Recovery Mode on iPod Nano 2G, USB version %s" % dev.deviceVersion)
             return
           handle.releaseInterface()
 

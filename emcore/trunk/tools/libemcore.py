@@ -4,32 +4,32 @@
 #    Copyright 2010 TheSeven, benedikt93, Farthen
 #
 #
-#    This file is part of emBIOS.
+#    This file is part of emCORE.
 #
-#    emBIOS is free software: you can redistribute it and/or
+#    emCORE is free software: you can redistribute it and/or
 #    modify it under the terms of the GNU General Public License as
 #    published by the Free Software Foundation, either version 2 of the
 #    License, or (at your option) any later version.
 #
-#    emBIOS is distributed in the hope that it will be useful,
+#    emCORE is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #    See the GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with emBIOS.  If not, see <http://www.gnu.org/licenses/>.
+#    along with emCORE.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
 
 """
-    emBIOS client library.
-    Provides functions to communicate with emBIOS devices via the USB bus.
+    emCORE client library.
+    Provides functions to communicate with emCORE devices via the USB bus.
 """
 
 import sys
 import struct
 import usb.core
-import libembiosdata
+import libemcoredata
 
 from misc import Logger, Bunch, Error, gethwname
 from functools import wraps
@@ -87,9 +87,9 @@ def command(timeout = None, target = None):
     return decorator
 
 
-class Embios(object):
+class Emcore(object):
     """
-        Class for all embios functions.
+        Class for all emcore functions.
         They all get the "@command()" decorator.
         This decorator has a timeout variable that can be set to change the
         device timeout for the duration of the function.
@@ -99,7 +99,7 @@ class Embios(object):
     """
     def __init__(self, loglevel = 2, logtarget = "stdout", logfile = "tools.log"):
         self.logger = Logger(loglevel, logtarget, logfile)
-        self.logger.debug("Initializing Embios object\n")
+        self.logger.debug("Initializing Emcore object\n")
         self.lib = Lib(self.logger)
         
         self.getversioninfo()
@@ -153,7 +153,7 @@ class Embios(object):
     
     @command()
     def getversioninfo(self):
-        """ This returns the emBIOS version and device information. """
+        """ This returns the emCORE version and device information. """
         resp = self.lib.monitorcommand(struct.pack("IIII", 1, 0, 0, 0), "IBBBBI", ("revision", "majorv", "minorv", "patchv", "swtypeid", "hwtypeid"))
         self.lib.dev.version.revision = resp.revision
         self.lib.dev.version.majorv = resp.majorv
@@ -167,7 +167,7 @@ class Embios(object):
     
     @command()
     def getpacketsizeinfo(self):
-        """ This returns the emBIOS max packet size information.
+        """ This returns the emCORE max packet size information.
             It also sets the properties of the device object accordingly.
         """
         resp = self.lib.monitorcommand(struct.pack("IIII", 1, 1, 0, 0), "HHII", ("coutmax", "cinmax", "doutmax", "dinmax"))
@@ -381,7 +381,7 @@ class Embios(object):
             info = Bunch()
             info.id = id
             state = threaddata[17]
-            info.state = libembiosdata.thread_state[state]
+            info.state = libemcoredata.thread_state[state]
             if info.state == "THREAD_FREE":
                 id += 1
                 continue
@@ -403,8 +403,8 @@ class Embios(object):
             info.blocked_by_ptr = threaddata[25]
             info.stackaddr = threaddata[26]
             info.err_no = threaddata[27]
-            info.block_type = libembiosdata.thread_block[threaddata[28]]
-            info.type = libembiosdata.thread_type[threaddata[29]]
+            info.block_type = libemcoredata.thread_block[threaddata[28]]
+            info.type = libemcoredata.thread_type[threaddata[29]]
             info.priority = threaddata[30]
             info.cpuload = threaddata[31]
             threads.append(info)
@@ -467,19 +467,19 @@ class Embios(object):
     
     @command()
     def execimage(self, addr):
-        """ Runs the emBIOS app at 'addr' """
+        """ Runs the emCORE app at 'addr' """
         return self.lib.monitorcommand(struct.pack("IIII", 21, addr, 0, 0), "III", ("rc", None, None))
     
     @command()
     def run(self, app):
-        """ Uploads and runs the emBIOS app in the string 'app' """
+        """ Uploads and runs the emCORE app in the string 'app' """
         try:
             appheader = struct.unpack("<8sIIIIIIIIII", app[:48])
         except struct.error:
-            raise ArgumentError("The specified app is not an emBIOS application")
+            raise ArgumentError("The specified app is not an emCORE application")
         header = appheader[0]
         if header != "emBIexec":
-            raise ArgumentError("The specified app is not an emBIOS application")
+            raise ArgumentError("The specified app is not an emCORE application")
         baseaddr = appheader[2]
         threadnameptr = appheader[8]
         nameptr = threadnameptr - baseaddr
@@ -490,12 +490,12 @@ class Embios(object):
                 if ord(char) == 0:
                     break
             except TypeError:
-                raise ArgumentError("The specified app is not an emBIOS application")
+                raise ArgumentError("The specified app is not an emCORE application")
             name += char
             nameptr += 1
         usermem = self.getusermemrange()
         if usermem.lower > baseaddr or usermem.upper < baseaddr + len(app):
-            raise ArgumentError("The baseaddress of the specified emBIOS application is out of range of the user memory range on the device. Are you sure that this application is compatible with your device?")
+            raise ArgumentError("The baseaddress of the specified emCORE application is out of range of the user memory range on the device. Are you sure that this application is compatible with your device?")
         self.write(baseaddr, app)
         self.execimage(baseaddr)
         return Bunch(baseaddr=baseaddr, name=name)
@@ -590,9 +590,9 @@ class Embios(object):
         try:
             bbtheader = struct.unpack("<8s2024sQII512I", bbt[:4096])
         except struct.error:
-            raise ArgumentError("The specified file is not an emBIOS hard disk BBT")
+            raise ArgumentError("The specified file is not an emCORE hard disk BBT")
         if bbtheader[0] != "emBIbbth":
-            raise ArgumentError("The specified file is not an emBIOS hard disk BBT")
+            raise ArgumentError("The specified file is not an emCORE hard disk BBT")
         virtualsectors = bbtheader[2]
         bbtsectors = bbtheader[3]
         self.write(tempaddr, bbt)
@@ -838,7 +838,7 @@ class Lib(object):
             data = self.dev.cin(struct.calcsize(rcvdatatypes))
             data = struct.unpack(rcvdatatypes, data)
             response = data[0]
-            if libembiosdata.responsecodes[response] == "ok":
+            if libemcoredata.responsecodes[response] == "ok":
                 self.logger.debug("Response: OK\n")
                 if rcvstruct:
                     datadict = Bunch()
@@ -850,13 +850,13 @@ class Lib(object):
                     return datadict
                 else:
                     return data
-            elif libembiosdata.responsecodes[response] == "unsupported":
+            elif libemcoredata.responsecodes[response] == "unsupported":
                 self.logger.debug("Response: UNSUPPORTED\n")
                 raise DeviceError("The device does not support this command.")
-            elif libembiosdata.responsecodes[response] == "invalid":
+            elif libemcoredata.responsecodes[response] == "invalid":
                 self.logger.debug("Response: INVALID\n")
                 raise DeviceError("Invalid command! This should NOT happen!")
-            elif libembiosdata.responsecodes[response] == "busy":
+            elif libemcoredata.responsecodes[response] == "busy":
                 self.logger.debug("Response: BUSY\n")
                 raise DeviceError("Device busy")
             else:
@@ -928,7 +928,7 @@ class Dev(object):
             raise DeviceError("Not all endpoints found in the descriptor. Only "+str(epcounter)+" found, we need 4")
     
     def connect(self):
-        self.logger.debug("Looking for emBIOS device\n")
+        self.logger.debug("Looking for emCORE device\n")
         self.dev = usb.core.find(idVendor=self.idVendor, idProduct=self.idProduct)
         if self.dev is None:
             raise DeviceNotFoundError()
@@ -982,28 +982,28 @@ if __name__ == "__main__":
     if sys.argv[1] == "test":
         # Some tests
         import sys
-        embios = Embios()
-        resp = embios.getversioninfo()
-        logger.log("Embios device version information: " + libembiosdata.swtypes[resp.swtypeid] + " v" + str(resp.majorv) + "." + str(resp.minorv) + 
-                         "." + str(resp.patchv) + " r" + str(resp.revision) + " running on " + libembiosdata.hwtypes[resp.hwtypeid] + "\n")
-        resp = embios.getusermemrange()
+        emcore = Emcore()
+        resp = emcore.getversioninfo()
+        logger.log("Emcore device version information: " + libemcoredata.swtypes[resp.swtypeid] + " v" + str(resp.majorv) + "." + str(resp.minorv) + 
+                         "." + str(resp.patchv) + " r" + str(resp.revision) + " running on " + libemcoredata.hwtypes[resp.hwtypeid] + "\n")
+        resp = emcore.getusermemrange()
         logger.log("Usermemrange: "+hex(resp.lower)+" - "+hex(resp.upper)+"\n")
         memaddr = resp.lower
         maxlen = resp.upper - resp.lower
-        f = open("./embios.py", "rb")
-        logger.log("Loading test file (embios.py) to send over USB...\n")
+        f = open("./emcore.py", "rb")
+        logger.log("Loading test file (emcore.py) to send over USB...\n")
         datastr = f.read()[:maxlen]
         logger.log("Sending data...\n")
-        embios.write(memaddr, datastr)
+        emcore.write(memaddr, datastr)
         logger.log("Encrypting data with the hardware key...\n")
-        embios.aesencrypt(memaddr, len(datastr), 0)
-        logger.log("Reading data back and saving it to 'libembios-test-encrypted.bin'...\n")
-        f = open("./libembios-test-encrypted.bin", "wb")
-        f.write(embios.read(memaddr, len(datastr)))
+        emcore.aesencrypt(memaddr, len(datastr), 0)
+        logger.log("Reading data back and saving it to 'libemcore-test-encrypted.bin'...\n")
+        f = open("./libemcore-test-encrypted.bin", "wb")
+        f.write(emcore.read(memaddr, len(datastr)))
         logger.log("Decrypting the data again...\n")
-        embios.aesdecrypt(memaddr, len(datastr), 0)
+        emcore.aesdecrypt(memaddr, len(datastr), 0)
         logger.log("Reading data back from device...\n")
-        readdata = embios.read(memaddr, len(datastr))
+        readdata = emcore.read(memaddr, len(datastr))
         if readdata == datastr:
             logger.log("Data matches!")
         else:
@@ -1014,7 +1014,7 @@ if __name__ == "__main__":
         from misc import gendoc
         logger.log("Generating documentation\n")
         cmddict = {}
-        for attr, value in Embios.__dict__.iteritems():
+        for attr, value in Emcore.__dict__.iteritems():
             if getattr(value, 'func', False):
                 if getattr(value.func, '_command', False):
                     cmddict[value.func.__name__] = value

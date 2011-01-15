@@ -1,24 +1,24 @@
 @
 @
-@    emBIOS Loader for iPod Classic
+@    emCORE Loader for iPod Classic
 @
 @    Copyright 2010 TheSeven
 @
 @
-@    This file is part of emBIOS.
+@    This file is part of emCORE.
 @
-@    emBIOS is free software: you can redistribute it and/or
+@    emCORE is free software: you can redistribute it and/or
 @    modify it under the terms of the GNU General Public License as
 @    published by the Free Software Foundation, either version 2 of the
 @    License, or (at your option) any later version.
 @
-@    emBIOS is distributed in the hope that it will be useful,
+@    emCORE is distributed in the hope that it will be useful,
 @    but WITHOUT ANY WARRANTY; without even the implied warranty of
 @    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 @    See the GNU General Public License for more details.
 @
 @    You should have received a copy of the GNU General Public License along
-@    with emBIOS.  If not, see <http://www.gnu.org/licenses/>.
+@    with emCORE.  If not, see <http://www.gnu.org/licenses/>.
 @
 @
 
@@ -1210,15 +1210,15 @@ val_00010618:
 	.word 0x00010618
 
 bootfilename:
-	.ascii "embios  "
+	.ascii "emcore  "
 
 text:
-	.ascii "emBIOS Loader v"
+	.ascii "emCORE Loader v"
 	.ascii VERSION
 	.ascii " r"
 	.ascii VERSION_SVN
 	.ascii "\0"
-	.ascii "Loading emBIOS...\0"
+	.ascii "Loading emCORE...\0"
 
 errormessage:
 	.ascii "File not found!\0"
