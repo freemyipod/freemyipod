@@ -103,6 +103,12 @@ class Emcore(object):
         self.lib = Lib(self.logger)
         
         self.getversioninfo()
+        if self.lib.dev.swtypeid != 2:
+            if self.lib.dev.swtypeid == 1:
+                raise DeviceError("Connected to emBIOS. emBIOS is not supported by libemcore")
+            else:
+                raise DeviceError("Connected to unknown software type. Exiting")
+        
         self.getpacketsizeinfo()
         self.getusermemrange()
     
