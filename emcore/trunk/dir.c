@@ -26,31 +26,46 @@
 #include "debug.h"
 #include "thread.h"
 
-#ifndef MAX_OPEN_DIRS
-#define MAX_OPEN_DIRS 16
-#endif
-
-static DIR opendirs[MAX_OPEN_DIRS];
+static struct mutex dir_mutex;
+static DIR* opendirs;
 
 #ifdef HAVE_HOTSWAP
 // release all dir handles on a given volume "by force", to avoid leaks
 int release_dirs(int volume)
 {
-    DIR* pdir = opendirs;
-    int dd;
+    DIR* prev;
     int closed = 0;
-    for ( dd=0; dd<MAX_OPEN_DIRS; dd++, pdir++)
-    {
+    mutex_lock(&dir_mutex, TIMEOUT_BLOCK);
 #ifdef HAVE_MULTIVOLUME
-        if (pdir->fatdir.file.volume == volume)
-#else
-        (void)volume;
-#endif
+    DIR* d;
+    while (opendirs && opendirs->fatdir.file.volume == volume)
+    {
+        prev = opendirs;
+        opendirs = opendirs->next;
+        free(prev);
+        closed++;
+    }
+    for (d = opendirs; d; d = d->next)
+    {
+        while (d && d->fatdir.file.volume == volume)
         {
-            pdir->busy = false; /* mark as available, no further action */
+            prev->next = d->next;
+            free(d);
             closed++;
         }
+        prev = d;
     }
+#else
+    (void)volume;
+    while (opendirs)
+    {
+        prev = opendirs;
+        opendirs = opendirs->next;
+        free(prev);
+        closed++;
+    }
+#endif
+    mutex_unlock(&dir_mutex);
     return closed; /* return how many we did */
 }
 #endif /* #ifdef HAVE_HOTSWAP */
@@ -61,8 +76,7 @@ DIR* opendir(const char* name)
     char* part;
     char* end;
     struct fat_direntry entry;
-    int dd;
-    DIR* pdir = opendirs;
+    DIR* pdir;
 #ifdef HAVE_MULTIVOLUME
     int volume;
 #endif
@@ -72,18 +86,8 @@ DIR* opendir(const char* name)
         return NULL;
     }
 
-    /* find a free dir descriptor */
-    for ( dd=0; dd<MAX_OPEN_DIRS; dd++, pdir++)
-        if ( !pdir->busy )
-            break;
-
-    if ( dd == MAX_OPEN_DIRS ) {
-        DEBUGF("Too many dirs open");
-        errno = EMFILE;
-        return NULL;
-    }
-
-    pdir->busy = true;
+    pdir = (DIR*)memalign(0x10, sizeof(DIR));
+    if (!pdir) return NULL;
     pdir->process = current_thread;
 
 #ifdef HAVE_MULTIVOLUME
@@ -96,7 +100,7 @@ DIR* opendir(const char* name)
 
     if ( fat_opendir(IF_MV2(volume,) &pdir->fatdir, 0, NULL) < 0 ) {
         DEBUGF("Failed opening root dir");
-        pdir->busy = false;
+        free(pdir);
         return NULL;
     }
 
@@ -106,7 +110,7 @@ DIR* opendir(const char* name)
         while (1) {
             if ((fat_getnext(&pdir->fatdir,&entry) < 0) ||
                 (!entry.name[0])) {
-                pdir->busy = false;
+                free(pdir);
                 return NULL;
             }
             if ( (entry.attr & FAT_ATTR_DIRECTORY) &&
@@ -127,7 +131,7 @@ DIR* opendir(const char* name)
                                  &pdir->fatdir) < 0 ) {
                     DEBUGF("Failed opening dir '%s' (%ld)",
                            part, entry.firstcluster);
-                    pdir->busy = false;
+                    free(pdir);
                     return NULL;
                 }
 #ifdef HAVE_MULTIVOLUME
@@ -138,28 +142,53 @@ DIR* opendir(const char* name)
         }
     }
 
+    mutex_lock(&dir_mutex, TIMEOUT_BLOCK);
+    pdir->next = opendirs;
+    opendirs = pdir;
+    mutex_unlock(&dir_mutex);
+
     return pdir;
 }
 
 int closedir(DIR* dir)
 {
-    dir->busy=false;
+    if (!dir) return 0;
+    DIR* d;
+    mutex_lock(&dir_mutex, TIMEOUT_BLOCK);
+    if (opendirs == dir) opendirs = dir->next;
+    else
+        for (d = opendirs; d; d = d->next)
+            if (d->next == dir)
+                d->next = dir->next;
+    mutex_unlock(&dir_mutex);
+    free(dir);
     return 0;
 }
 
 int closedir_all_of_process(struct scheduler_thread* process)
 {
-    DIR* pdir = opendirs;
-    int dd;
+    DIR* d;
+    DIR* prev;
     int closed = 0;
-    for ( dd=0; dd<MAX_OPEN_DIRS; dd++, pdir++)
+    mutex_lock(&dir_mutex, TIMEOUT_BLOCK);
+    while (opendirs && opendirs->process == process)
     {
-        if (pdir->process == process)
+        prev = opendirs;
+        opendirs = opendirs->next;
+        free(prev);
+        closed++;
+    }
+    for (d = opendirs; d; d = d->next)
+    {
+        while (d && d->process == process)
         {
-            pdir->busy = false; /* mark as available, no further action */
+            prev->next = d->next;
+            free(d);
             closed++;
         }
+        prev = d;
     }
+    mutex_unlock(&dir_mutex);
     return closed; /* return how many we did */
 }
 
@@ -168,8 +197,7 @@ struct dirent* readdir(DIR* dir)
     struct fat_direntry entry;
     struct dirent* theent = &(dir->theent);
 
-    if (!dir->busy)
-        return NULL;
+    if (!dir) return NULL;
 
 #ifdef HAVE_MULTIVOLUME
     /* Volumes (secondary file systems) get inserted into the root directory

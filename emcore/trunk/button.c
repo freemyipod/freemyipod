@@ -53,22 +53,25 @@ int button_unregister_handler(void (*handler)(enum button_event, int which, int 
 {
     struct button_hook_entry* h;
     struct button_hook_entry* handle = NULL;
-    int result = 0;
+    int result = -1;
     mutex_lock(&button_mutex, TIMEOUT_BLOCK);
     if (head_button_hook && head_button_hook->handler == handler)
     {
         handle = head_button_hook;
         head_button_hook = head_button_hook->next;
+        free(handle);
+        result = 0;
     }
     else
     {
-        for (h = head_button_hook; h && h->next->handler != handler; h = h->next);
-        if (h)
-        {
-            handle = h->next;
-            h->next = h->next->next;
-        }
-        else result = -1;
+        for (h = head_button_hook; h && h->next; h = h->next);
+            if (h->next->handler != handler)
+            {
+                handle = h->next;
+                h->next = h->next->next;
+                free(handle);
+                result = 0;
+            }
     }
     mutex_unlock(&button_mutex);
     if (handle) free(handle);
@@ -96,7 +99,7 @@ void button_unregister_all_of_thread(struct scheduler_thread* process)
         head_button_hook = head_button_hook->next;
         free(prev);
     }
-    for (h = head_button_hook->next; h; h = h->next)
+    for (h = head_button_hook; h; h = h->next)
     {
         while (h && h->owner == process)
         {

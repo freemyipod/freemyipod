@@ -28,10 +28,6 @@
 #include "libc/include/_ansi.h"
 #include "thread.h"
 
-#ifndef MAX_OPEN_FILES
-#define MAX_OPEN_FILES 32
-#endif
-
 #ifndef SEEK_SET
 #define SEEK_SET 0
 #endif

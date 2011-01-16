@@ -47,8 +47,8 @@ struct dirent {
 #else
 #include "fat.h"
 
-typedef struct {
-    bool busy;
+typedef struct dirdesc {
+    struct dirdesc* next;
     long startcluster;
     struct fat_dir fatdir;
     struct dirent theent;

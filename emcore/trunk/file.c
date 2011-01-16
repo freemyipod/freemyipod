@@ -37,20 +37,21 @@
 */
 
 struct filedesc {
-    unsigned char cache[SECTOR_SIZE] CACHEALIGN_ATTR;
+    unsigned char cache[SECTOR_SIZE];
     int cacheoffset; /* invariant: 0 <= cacheoffset <= SECTOR_SIZE */
     long fileoffset;
     long size;
     int attr;
     struct fat_file fatfile;
-    bool busy;
+    struct filedesc* next;
+    struct scheduler_thread* process;
     bool write;
     bool dirty;
     bool trunc;
-    struct scheduler_thread* process;
-} CACHEALIGN_ATTR;
+};
 
-static struct filedesc openfiles[MAX_OPEN_FILES] CACHEALIGN_ATTR;
+static struct mutex file_mutex;
+static struct filedesc* openfiles;
 
 static int flush_cache(int fd);
 
@@ -63,10 +64,9 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
 {
     DIR* dir;
     struct dirent* entry;
-    int fd;
     char pathnamecopy[MAX_PATH];
     char* name;
-    struct filedesc* file = NULL;
+    struct filedesc* file;
     int rc;
 
     DEBUGF("open(\"%s\",%d)",pathname,flags);
@@ -78,28 +78,20 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
         return -1;
     }
 
-    /* find a free file descriptor */
-    for ( fd=0; fd<MAX_OPEN_FILES; fd++ )
-        if ( !openfiles[fd].busy )
-            break;
-
-    if ( fd == MAX_OPEN_FILES ) {
-        DEBUGF("Too many files open");
+    file = (struct filedesc*)memalign(0x10, sizeof(struct filedesc));
+    if (!file)
+    {
         errno = EMFILE;
         return -2;
     }
-
-    file = &openfiles[fd];
     memset(file, 0, sizeof(struct filedesc));
-
+    file->process = current_thread;
     if (flags & (O_RDWR | O_WRONLY)) {
         file->write = true;
 
         if (flags & O_TRUNC)
             file->trunc = true;
     }
-    file->busy = true;
-    file->process = current_thread;
 
     strlcpy(pathnamecopy, pathname, sizeof(pathnamecopy));
 
@@ -118,14 +110,14 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
     if (!dir) {
         DEBUGF("Failed opening dir");
         errno = EIO;
-        file->busy = false;
+        free(file);
         return -4;
     }
 
     if(name[0] == 0) {
         DEBUGF("Empty file name");
         errno = EINVAL;
-        file->busy = false;
+        free(file);
         closedir(dir);
         return -5;
     }
@@ -152,7 +144,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
             if (rc < 0) {
                 DEBUGF("Couldn't create %s in %s",name,pathnamecopy);
                 errno = EIO;
-                file->busy = false;
+                free(file);
                 closedir(dir);
                 return rc * 10 - 6;
             }
@@ -162,14 +154,14 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
         else {
             DEBUGF("Couldn't find %s in %s",name,pathnamecopy);
             errno = ENOENT;
-            file->busy = false;
+            free(file);
             closedir(dir);
             return -7;
         }
     } else {
         if(file->write && (file->attr & FAT_ATTR_DIRECTORY)) {
             errno = EISDIR;
-            file->busy = false;
+            free(file);
             closedir(dir);
             return -8;
         }
@@ -180,12 +172,20 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
     file->fileoffset = 0;
 
     if (file->write && (flags & O_APPEND)) {
-        rc = lseek(fd,0,SEEK_END);
+        rc = lseek((int)file,0,SEEK_END);
         if (rc < 0 )
+        {
+            free(file);
             return rc * 10 - 9;
+        }
     }
 
-    return fd;
+    mutex_lock(&file_mutex, TIMEOUT_BLOCK);
+    file->next = openfiles;
+    openfiles = file;
+    mutex_unlock(&file_mutex);
+
+    return (int)file;
 }
 
 int file_open(const char* pathname, int flags)
@@ -196,57 +196,68 @@ int file_open(const char* pathname, int flags)
 
 int close(int fd)
 {
-    struct filedesc* file = &openfiles[fd];
     int rc = 0;
-
+    struct filedesc* f = (struct filedesc*)fd;
     DEBUGF("close(%d)", fd);
-
-    if (fd < 0 || fd > MAX_OPEN_FILES-1) {
-        errno = EINVAL;
-        return -1;
-    }
-    if (!file->busy) {
+    if (!f)
+    {
         errno = EBADF;
         return -2;
     }
-    if (file->write) {
+    if (f->write)
+    {
         rc = fsync(fd);
         if (rc < 0)
             return rc * 10 - 3;
     }
-
-    file->busy = false;
+    mutex_lock(&file_mutex, TIMEOUT_BLOCK);
+    if (openfiles == f) openfiles = openfiles->next;
+    else
+        for (f = openfiles; f; f = f->next)
+            if ((int)(f->next) == fd)
+                f->next = f->next->next;
+    mutex_unlock(&file_mutex);
+    free((void*)fd);
     return 0;
 }
 
 int close_all_of_process(struct scheduler_thread* process)
 {
-    struct filedesc* pfile = openfiles;
-    int fd;
+    struct filedesc* f;
+    struct filedesc* prev;
     int closed = 0;
-    for ( fd=0; fd<MAX_OPEN_FILES; fd++, pfile++)
+    mutex_lock(&file_mutex, TIMEOUT_BLOCK);
+    while (openfiles && openfiles->process == process)
     {
-        if (pfile->process == process)
+        prev = openfiles;
+        openfiles = openfiles->next;
+        if (openfiles->write) fsync((int)openfiles);
+        free(prev);
+        closed++;
+    }
+    for (f = openfiles; f; f = f->next)
+    {
+        while (f && f->process == process)
         {
-            pfile->busy = false; /* mark as available, no further action */
+            prev->next = f->next;
+            if (f->write) fsync((int)f);
+            free(f);
             closed++;
         }
+        prev = f;
     }
+    mutex_unlock(&file_mutex);
     return closed; /* return how many we did */
 }
 
 int fsync(int fd)
 {
-    struct filedesc* file = &openfiles[fd];
+    struct filedesc* file = (struct filedesc*)fd;
     int rc = 0;
 
     DEBUGF("fsync(%d)", fd);
 
-    if (fd < 0 || fd > MAX_OPEN_FILES-1) {
-        errno = EINVAL;
-        return -1;
-    }
-    if (!file->busy) {
+    if (!file) {
         errno = EBADF;
         return -2;
     }
@@ -364,7 +375,7 @@ int rename(const char* path, const char* newpath)
         return - 5;
     }
 
-    file = &openfiles[fd];
+    file = (struct filedesc*)fd;
 
     rc = fat_rename(&file->fatfile, &dir->fatdir, nameptr,
                     file->size, file->attr);
@@ -404,7 +415,7 @@ int rename(const char* path, const char* newpath)
 int ftruncate(int fd, off_t size)
 {
     int rc, sector;
-    struct filedesc* file = &openfiles[fd];
+    struct filedesc* file = (struct filedesc*)fd;
 
     sector = size / SECTOR_SIZE;
     if (size % SECTOR_SIZE)
@@ -430,7 +441,7 @@ int ftruncate(int fd, off_t size)
 static int flush_cache(int fd)
 {
     int rc;
-    struct filedesc* file = &openfiles[fd];
+    struct filedesc* file = (struct filedesc*)fd;
     long sector = file->fileoffset / SECTOR_SIZE;
 
     DEBUGF("Flushing dirty sector cache");
@@ -462,14 +473,9 @@ static int readwrite(int fd, void* buf, long count, bool write)
     struct filedesc* file;
     int rc, rc2;
 
-    if (fd < 0 || fd > MAX_OPEN_FILES-1) {
-        errno = EINVAL;
-        return -1;
-    }
+    file = (struct filedesc*)fd;
 
-    file = &openfiles[fd];
-
-    if ( !file->busy ) {
+    if (!file) {
         errno = EBADF;
         return -1;
     }
@@ -643,7 +649,7 @@ static int readwrite(int fd, void* buf, long count, bool write)
 
 ssize_t write(int fd, const void* buf, size_t count)
 {
-    if (!openfiles[fd].write) {
+    if (!((struct filedesc*)fd)->write) {
         errno = EACCES;
         return -1;
     }
@@ -663,15 +669,11 @@ off_t lseek(int fd, off_t offset, int whence)
     long oldsector;
     int sectoroffset;
     int rc;
-    struct filedesc* file = &openfiles[fd];
+    struct filedesc* file = (struct filedesc*)fd;
 
     DEBUGF("lseek(%d,%ld,%d)",fd,offset,whence);
 
-    if (fd < 0 || fd > MAX_OPEN_FILES-1) {
-        errno = EINVAL;
-        return -1;
-    }
-    if ( !file->busy ) {
+    if (!file) {
         errno = EBADF;
         return -1;
     }
@@ -741,13 +743,9 @@ off_t lseek(int fd, off_t offset, int whence)
 
 off_t filesize(int fd)
 {
-    struct filedesc* file = &openfiles[fd];
+    struct filedesc* file = (struct filedesc*)fd;
 
-    if (fd < 0 || fd > MAX_OPEN_FILES-1) {
-        errno = EINVAL;
-        return -1;
-    }
-    if ( !file->busy ) {
+    if (!file) {
         errno = EBADF;
         return -1;
     }
@@ -760,21 +758,39 @@ off_t filesize(int fd)
 /* release all file handles on a given volume "by force", to avoid leaks */
 int release_files(int volume)
 {
-    struct filedesc* pfile = openfiles;
-    int fd;
+    struct filedesc* prev;
     int closed = 0;
-    for ( fd=0; fd<MAX_OPEN_FILES; fd++, pfile++)
-    {
+    mutex_lock(&file_mutex, TIMEOUT_BLOCK);
 #ifdef HAVE_MULTIVOLUME
-        if (pfile->fatfile.volume == volume)
-#else
-        (void)volume;
-#endif
+    struct filedesc* f;
+    while (openfiles && openfiles->fatfile.volume == volume)
+    {
+        prev = openfiles;
+        openfiles = openfiles->next;
+        free(prev);
+        closed++;
+    }
+    for (f = openfiles; f; f = f->next)
+    {
+        while (f && f->fatfile.volume == volume)
         {
-            pfile->busy = false; /* mark as available, no further action */
+            prev->next = f->next;
+            free(f);
             closed++;
         }
+        prev = f;
     }
+#else
+    (void)volume;
+    while (openfiles)
+    {
+        prev = openfiles;
+        openfiles = openfiles->next;
+        free(prev);
+        closed++;
+    }
+#endif
+    mutex_unlock(&file_mutex);
     return closed; /* return how many we did */
 }
 #endif /* #ifdef HAVE_HOTSWAP */
