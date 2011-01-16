@@ -714,7 +714,7 @@ void dbgthread(void)
                 power_off();
                 break;
             case DBGACTION_RESET:
-                shutdown(true);
+                shutdown(false);
                 reset();
                 break;
             case DBGACTION_CWRITE:
@@ -739,9 +739,9 @@ void dbgthread(void)
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_EXECFIRMWARE:
-                shutdown(false);
                 dbgasyncsendbuf[0] = 1;
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                shutdown(false);
                 execfirmware((void*)dbgactionaddr, (void*)dbgactionoffset,
                              (size_t)dbgactionlength);
 #ifdef HAVE_BOOTFLASH
