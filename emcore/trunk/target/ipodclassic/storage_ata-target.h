@@ -31,7 +31,7 @@ extern uint16_t ata_identify_data[0x100];
 extern uint64_t ata_total_sectors;
 
 #ifdef ATA_HAVE_BBT
-extern uint16_t ata_bbt[ATA_BBT_PAGES][0x20];
+extern uint16_t (*ata_bbt)[0x20];
 extern uint64_t ata_virtual_sectors;
 
 int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool write);

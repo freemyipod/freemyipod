@@ -42,7 +42,7 @@ static bool ata_powered;
 
 #ifdef ATA_HAVE_BBT
 #include "panic.h"
-uint16_t ata_bbt[ATA_BBT_PAGES][0x20];
+uint16_t (*ata_bbt)[0x20];
 uint64_t ata_virtual_sectors;
 uint32_t ata_last_offset;
 uint64_t ata_last_phys;
@@ -337,49 +337,51 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
 {
 #ifdef ATA_HAVE_BBT
     if (sector + count > ata_virtual_sectors) RET_ERR(0);
-    while (count)
-    {
-        uint32_t offset;
-        uint32_t l0idx = sector >> 15;
-        uint32_t l0offs = sector & 0x7fff;
-        uint32_t cnt = MIN(count, 0x8000 - l0offs);
-        uint32_t l0data = ata_bbt[0][l0idx << 1];
-        uint32_t base = ata_bbt[0][(l0idx << 1) | 1] << 12;
-        if (l0data < 0x8000) offset = l0data + base;
-        else
+    if (ata_bbt)
+        while (count)
         {
-            uint32_t l1idx = (sector >> 10) & 0x1f;
-            uint32_t l1offs = sector & 0x3ff;
-            cnt = MIN(count, 0x400 - l1offs);
-            uint32_t l1data = ata_bbt[l0data & 0x7fff][l1idx];
-            if (l1data < 0x8000) offset = l1data + base;
+            uint32_t offset;
+            uint32_t l0idx = sector >> 15;
+            uint32_t l0offs = sector & 0x7fff;
+            uint32_t cnt = MIN(count, 0x8000 - l0offs);
+            uint32_t l0data = ata_bbt[0][l0idx << 1];
+            uint32_t base = ata_bbt[0][(l0idx << 1) | 1] << 12;
+            if (l0data < 0x8000) offset = l0data + base;
             else
             {
-                uint32_t l2idx = (sector >> 5) & 0x1f;
-                uint32_t l2offs = sector & 0x1f;
-                cnt = MIN(count, 0x20 - l2offs);
-                uint32_t l2data = ata_bbt[l1data & 0x7fff][l2idx];
-                if (l2data < 0x8000) offset = l2data + base;
+                uint32_t l1idx = (sector >> 10) & 0x1f;
+                uint32_t l1offs = sector & 0x3ff;
+                cnt = MIN(count, 0x400 - l1offs);
+                uint32_t l1data = ata_bbt[l0data & 0x7fff][l1idx];
+                if (l1data < 0x8000) offset = l1data + base;
                 else
                 {
-                    uint32_t l3idx = sector & 0x1f;
-                    uint32_t l3data = ata_bbt[l2data & 0x7fff][l3idx];
-                    for (cnt = 1; cnt < count && l3idx + cnt < 0x20; cnt++)
-                        if (ata_bbt[l2data & 0x7fff][l3idx + cnt] != l3data)
-                            break;
-                    offset = l3data + base;
+                    uint32_t l2idx = (sector >> 5) & 0x1f;
+                    uint32_t l2offs = sector & 0x1f;
+                    cnt = MIN(count, 0x20 - l2offs);
+                    uint32_t l2data = ata_bbt[l1data & 0x7fff][l2idx];
+                    if (l2data < 0x8000) offset = l2data + base;
+                    else
+                    {
+                        uint32_t l3idx = sector & 0x1f;
+                        uint32_t l3data = ata_bbt[l2data & 0x7fff][l3idx];
+                        for (cnt = 1; cnt < count && l3idx + cnt < 0x20; cnt++)
+                            if (ata_bbt[l2data & 0x7fff][l3idx + cnt] != l3data)
+                                break;
+                        offset = l3data + base;
+                    }
                 }
             }
+            uint64_t phys = sector + offset;
+            if (offset != ata_last_offset && phys - ata_last_phys < 64) ata_soft_reset();
+            ata_last_offset = offset;
+            ata_last_phys = phys + cnt;
+            PASS_RC(ata_rw_sectors_internal(phys, cnt, buffer, write), 0, 0);
+            buffer += cnt * SECTOR_SIZE;
+            sector += cnt;
+            count -= cnt;
         }
-        uint64_t phys = sector + offset;
-        if (offset != ata_last_offset && phys - ata_last_phys < 64) ata_soft_reset();
-        ata_last_offset = offset;
-        ata_last_phys = phys + cnt;
-        PASS_RC(ata_rw_sectors_internal(phys, cnt, buffer, write), 0, 0);
-        buffer += cnt * SECTOR_SIZE;
-        sector += cnt;
-        count -= cnt;
-    }
+    else PASS_RC(ata_rw_sectors_internal(sector, count, buffer, write), 0, 0);
     return 0;
 }
 
@@ -529,28 +531,31 @@ int ata_init(void)
     ata_total_sectors = 0;
 #ifdef ATA_HAVE_BBT
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
-    memset(ata_bbt, 0, sizeof(ata_bbt));
+    ata_bbt = NULL;
     ata_power_up();
-    uint32_t* buf = (uint32_t*)(ata_bbt[ARRAYLEN(ata_bbt) - 64]);
-    ata_bbt_read_sectors(0, 1, buf);
-    if (!memcmp(buf, "emBIbbth", 8))
+    uint32_t* buf = (uint32_t*)memalign(0x10, 0x1000);
+    if (buf)
     {
-        ata_virtual_sectors = (((uint64_t)buf[0x1fd]) << 32) | buf[0x1fc];
-        uint32_t count = buf[0x1ff];
-        if (count > (ATA_BBT_PAGES >> 6))
-            panicf(PANIC_KILLTHREAD, "ATA: BBT too big! (%d pages, limit: %d)\n", count << 6, ATA_BBT_PAGES);
-        uint32_t i;
-        uint32_t cnt;
-        for (i = 0; i < count; i += cnt)
+        ata_bbt_read_sectors(0, 1, buf);
+        if (!memcmp(buf, "emBIbbth", 8))
         {
-            uint32_t phys = buf[0x200 + i];
-            for (cnt = 1; cnt < count; cnt++)
-                if (buf[0x200 + i + cnt] != phys + cnt)
-                    break;
-            ata_bbt_read_sectors(phys, cnt, ata_bbt[i << 6]);
+            ata_virtual_sectors = (((uint64_t)buf[0x1fd]) << 32) | buf[0x1fc];
+            uint32_t count = buf[0x1ff];
+            ata_bbt = (typeof(ata_bbt))memalign(0x10, 0x1000 * count);
+            uint32_t i;
+            uint32_t cnt;
+            for (i = 0; i < count; i += cnt)
+            {
+                uint32_t phys = buf[0x200 + i];
+                for (cnt = 1; cnt < count; cnt++)
+                    if (buf[0x200 + i + cnt] != phys + cnt)
+                        break;
+                ata_bbt_read_sectors(phys, cnt, ata_bbt[i << 6]);
+            }
         }
+        else ata_virtual_sectors = ata_total_sectors;
+        free(buf);
     }
-    else ata_virtual_sectors = ata_total_sectors;
     mutex_unlock(&ata_mutex);
 #endif
     thread_create(&ata_thread_handle, "ATA idle monitor", ata_thread, ata_stack,

@@ -38,7 +38,6 @@
 
 
 #define ATA_HAVE_BBT
-#define ATA_BBT_PAGES 2304
 
 
 #endif
