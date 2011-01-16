@@ -43,6 +43,7 @@ enum button_event
 
 struct button_hook_entry
 {
+    struct button_hook_entry* next;
     struct scheduler_thread* owner;
     void (*handler)(enum button_event, int which, int value);
 };

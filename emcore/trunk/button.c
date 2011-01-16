@@ -26,71 +26,84 @@
 #include "thread.h"
 
 
-#ifndef BUTTON_MAX_HOOKS
-#define BUTTON_MAX_HOOKS 16
-#endif
-
-
-static struct button_hook_entry button_hooks[BUTTON_MAX_HOOKS] IBSS_ATTR;
+static struct button_hook_entry* head_button_hook IBSS_ATTR;
 static struct mutex button_mutex;
 
 
 void button_init()
 {
-    memset(button_hooks, 0, sizeof(button_hooks));
+    head_button_hook = NULL;
     mutex_init(&button_mutex);
 }
 
 int button_register_handler(void (*handler)(enum button_event, int which, int value))
 {
-    int i;
+    struct button_hook_entry* hook;
+    hook = (struct button_hook_entry*)malloc(sizeof(struct button_hook_entry));
+    hook->owner = current_thread;
+    hook->handler = handler;
     mutex_lock(&button_mutex, TIMEOUT_BLOCK);
-    for (i = 0; i < BUTTON_MAX_HOOKS; i++)
-        if (button_hooks[i].owner == NULL)
-        {
-            button_hooks[i].owner = current_thread;
-            button_hooks[i].handler = handler;
-            mutex_unlock(&button_mutex);
-            return 0;
-        }
+    hook->next = head_button_hook;
+    head_button_hook = hook;
     mutex_unlock(&button_mutex);
-    return -1;
+    return 0;
 }
 
 int button_unregister_handler(void (*handler)(enum button_event, int which, int value))
 {
-    int i;
+    struct button_hook_entry* h;
+    struct button_hook_entry* handle = NULL;
+    int result = 0;
     mutex_lock(&button_mutex, TIMEOUT_BLOCK);
-    for (i = 0; i < BUTTON_MAX_HOOKS; i++)
-        if (button_hooks[i].handler == handler)
+    if (head_button_hook && head_button_hook->handler == handler)
+    {
+        handle = head_button_hook;
+        head_button_hook = head_button_hook->next;
+    }
+    else
+    {
+        for (h = head_button_hook; h && h->next->handler != handler; h = h->next);
+        if (h)
         {
-            button_hooks[i].owner = NULL;
-            button_hooks[i].handler = NULL;
-            mutex_unlock(&button_mutex);
-            return 0;
+            handle = h->next;
+            h->next = h->next->next;
         }
+        else result = -1;
+    }
     mutex_unlock(&button_mutex);
-    return -1;
+    if (handle) free(handle);
+    return result;
 }
 
 void button_send_event(enum button_event eventtype, int which, int value)
 {
     DEBUGF("Sending button event: %d, %02X, %02X", eventtype, which, value);
-    int i;
-    for (i = 0; i < BUTTON_MAX_HOOKS; i++)
-        if (button_hooks[i].owner != NULL)
-            button_hooks[i].handler(eventtype, which, value);
+    struct button_hook_entry* h;
+    mutex_lock(&button_mutex, TIMEOUT_BLOCK);
+    for (h = head_button_hook; h; h = h->next)
+        h->handler(eventtype, which, value);
+    mutex_unlock(&button_mutex);
 }
 
 void button_unregister_all_of_thread(struct scheduler_thread* process)
 {
-    int i;
+    struct button_hook_entry* h;
+    struct button_hook_entry* prev;
     mutex_lock(&button_mutex, TIMEOUT_BLOCK);
-    for (i = 0; i < BUTTON_MAX_HOOKS; i++)
-        if (button_hooks[i].owner == process)
+    while (head_button_hook && head_button_hook->owner == process)
+    {
+        prev = head_button_hook;
+        head_button_hook = head_button_hook->next;
+        free(prev);
+    }
+    for (h = head_button_hook->next; h; h = h->next)
+    {
+        while (h && h->owner == process)
         {
-            button_hooks[i].owner = NULL;
-            button_hooks[i].handler = NULL;
+            prev->next = h->next;
+            free(h);
         }
+        prev = h;
+    }
     mutex_unlock(&button_mutex);
 }
