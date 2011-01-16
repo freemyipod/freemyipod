@@ -820,6 +820,37 @@ class Emcore(object):
             raise DeviceError("disk_unmount(volume=%d) failed with RC=0x%08X, errno=%d" % (volume, result.rc, self.errno()))
         return result.rc
     
+    @command()
+    def malloc(self, size):
+        """ Allocates 'size' bytes and returns a pointer to the allocated memory """
+        result = self.lib.monitorcommand(struct.pack("IIII", 52, size, 0, 0), "III", ("ptr", None, None))
+        return result.ptr
+    
+    @command()
+    def memalign(self, align, size):
+        """ Allocates 'size' bytes aligned to 'align' and returns a pointer to the allocated memory """
+        result = self.lib.monitorcommand(struct.pack("IIII", 53, align, size, 0), "III", ("ptr", None, None))
+        return result.ptr
+    
+    @command()
+    def realloc(self, ptr, size):
+        """ The size of the memory block pointed to by 'ptr' is changed to the 'size' bytes,
+            expanding or reducing the amount of memory available in the block.
+            Returns a pointer to the reallocated memory.
+        """
+        result = self.lib.monitorcommand(struct.pack("IIII", 54, ptr, size, 0), "III", ("ptr", None, None))
+        return result.ptr
+    
+    @command()
+    def reownalloc(self, ptr, owner):
+        """ Changes the owner of the memory allocation 'ptr' to the thread struct at addr 'owner' """
+        return self.lib.monitorcommand(struct.pack("IIII", 55, ptr, owner, 0), "III", (None, None, None))
+    
+    @command()
+    def free(self, ptr):
+        """ Frees the memory space pointed to by 'ptr' """
+        return self.lib.monitorcommand(struct.pack("IIII", 56, addr, 0, 0), "III", (None, None, None))
+    
 
 class Lib(object):
     def __init__(self, logger):
@@ -1025,3 +1056,19 @@ if __name__ == "__main__":
                 if getattr(value.func, '_command', False):
                     cmddict[value.func.__name__] = value
         logger.log(gendoc(cmddict))
+    
+    elif sys.argv[1] == "malloctest":
+        emcore = Emcore()
+        logger.log("Allocating 200 bytes of memory: ")
+        addr = emcore.malloc(200)
+        logger.log("0x%x\n" % addr)
+        logger.log("Reallocating to 2000 bytes: ")
+        addr = emcore.realloc(addr, 2000)
+        logger.log("0x%x\n" % addr)
+        logger.log("Freeing 0x%x\n" % addr)
+        emcore.free(addr)
+        logger.log("Allocating 1000 bytes of memory aligned to 100 bytes: ")
+        addr = emcore.memalign(100, 1000)
+        logger.log("0x%x\n" % addr)
+        logger.log("Freeing 0x%x\n" % addr)
+        emcore.free(addr)
