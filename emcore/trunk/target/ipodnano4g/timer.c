@@ -53,5 +53,5 @@ void setup_tick()
 void INT_TIMERB(void)
 {
     TBCON = TBCON;
-    scheduler_switch(-1);
+    scheduler_switch(NULL);
 }

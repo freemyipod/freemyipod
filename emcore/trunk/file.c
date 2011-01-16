@@ -25,6 +25,7 @@
 #include "fat.h"
 #include "dir.h"
 #include "util.h"
+#include "thread.h"
 
 /*
   These functions provide a roughly POSIX-compatible file IO API.
@@ -34,8 +35,6 @@
   having to re-read the sector each time.
   The penalty is the RAM used for the cache and slightly more complex code.
 */
-
-extern struct scheduler_thread* current_thread;
 
 struct filedesc {
     unsigned char cache[SECTOR_SIZE] CACHEALIGN_ATTR;

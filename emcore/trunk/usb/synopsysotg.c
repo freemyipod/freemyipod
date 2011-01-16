@@ -48,6 +48,7 @@ struct ep_type
 
 static struct ep_type endpoints[5];
 static struct usb_ctrlrequest ctrlreq CACHEALIGN_ATTR;
+static struct scheduler_thread synopsysotg_thread_handle;
 static uint32_t synopsysotg_stack[0x40] STACK_ATTR;
 
 int usb_drv_port_speed(void)
@@ -405,8 +406,8 @@ void usb_drv_init(void)
     /* unmask irq */
     interrupt_enable(IRQ_USB_FUNC, true);
 
-    thread_create("synopsysotg", usb_check_vbus, synopsysotg_stack,
-                  sizeof(synopsysotg_stack), OS_THREAD, 63, true);
+    thread_create(&synopsysotg_thread_handle, "synopsysotg", usb_check_vbus,
+                  synopsysotg_stack, sizeof(synopsysotg_stack), OS_THREAD, 63, true);
 
     usb_drv_power_down();
 }

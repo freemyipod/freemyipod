@@ -31,7 +31,6 @@
 #endif
 
 
-extern struct scheduler_thread* current_thread;
 static struct button_hook_entry button_hooks[BUTTON_MAX_HOOKS] IBSS_ATTR;
 static struct mutex button_mutex;
 

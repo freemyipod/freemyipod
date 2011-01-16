@@ -68,6 +68,7 @@ arm/memset-arm.S
 
 init.c
 util.c
+malloc.c
 #ifdef HAVE_LCD
 drawing.S
 lcdconsole.c

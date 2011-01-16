@@ -35,8 +35,6 @@
 #define THREAD_FOUND 1
 #define THREAD_OK 0
 #define THREAD_TIMEOUT -1
-#define NO_MORE_THREADS -2
-#define INVALID_THREAD -3
 #define ALREADY_SUSPENDED -4
 #define ALREADY_RESUMED -5
 
@@ -70,7 +68,7 @@ enum thread_type
 };
 
 
-#define SCHEDULER_THREAD_INFO_VERSION 1
+#define SCHEDULER_THREAD_INFO_VERSION 2
 
 struct scheduler_thread
 {
@@ -81,6 +79,7 @@ struct scheduler_thread
     uint32_t cputime_current;
     uint64_t cputime_total;
     uint32_t startusec;
+    struct scheduler_thread* thread_next;
     struct scheduler_thread* queue_next;
     uint32_t timeout;
     uint32_t blocked_since;
@@ -107,18 +106,23 @@ struct wakeup
 };
 
 
+extern struct scheduler_thread* head_thread IBSS_ATTR;
+extern struct scheduler_thread* current_thread IBSS_ATTR;
+
+
 void scheduler_init() INITCODE_ATTR;
 void scheduler_pause_accounting() ICODE_ATTR;
 void scheduler_resume_accounting() ICODE_ATTR;
-void scheduler_switch(int thread) ICODE_ATTR;
+void scheduler_switch(struct scheduler_thread* thread) ICODE_ATTR;
 bool scheduler_freeze(bool value);
-int thread_create(const char* name, const void* code, void* stack,
-                  int stacksize, enum thread_type type, int priority, bool run);
-int thread_suspend(int thread);
-int thread_resume(int thread);
-int thread_terminate(int thread);
+struct scheduler_thread* thread_create(struct scheduler_thread* thread, const char* name,
+                                       const void* code, void* stack, int stacksize,
+                                       enum thread_type type, int priority, bool run);
+int thread_suspend(struct scheduler_thread* thread);
+int thread_resume(struct scheduler_thread* thread);
+int thread_terminate(struct scheduler_thread* thread);
 int thread_killlevel(enum thread_type type, bool killself);
-enum thread_state thread_get_state(int thread);
+enum thread_state thread_get_state(struct scheduler_thread* thread);
 void thread_exit();
 void mutex_init(struct mutex* obj) ICODE_ATTR;
 int mutex_lock(struct mutex* obj, int timeout) ICODE_ATTR;

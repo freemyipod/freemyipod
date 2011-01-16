@@ -24,12 +24,12 @@
 #include "fat.h"
 #include "dir.h"
 #include "debug.h"
+#include "thread.h"
 
 #ifndef MAX_OPEN_DIRS
 #define MAX_OPEN_DIRS 16
 #endif
 
-extern struct scheduler_thread* current_thread;
 static DIR opendirs[MAX_OPEN_DIRS];
 
 #ifdef HAVE_HOTSWAP

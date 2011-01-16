@@ -75,16 +75,18 @@ struct bootinfo_t
 
 static const char welcomestring[] INITCONST_ATTR = "emCORE v" VERSION " r" VERSION_SVN "\n\n";
 static const char initthreadname[] INITCONST_ATTR = "Initialization thread";
+static struct scheduler_thread initthread_handle INITBSS_ATTR;
 static uint32_t initstack[0x400] INITSTACK_ATTR;
 extern int _loadspaceend;
 #ifdef HAVE_STORAGE
 static const char storageinitthreadname[] INITCONST_ATTR = "Storage init thread";
+static struct scheduler_thread storageinitthread_handle INITBSS_ATTR;
 static uint32_t storageinitstack[0x400] INITBSS_ATTR;
 static struct wakeup storageinitwakeup;
 #endif
 struct bootinfo_t bootinfo_src INITHEAD_ATTR =
 {
-    .signature = "emBIboot",
+    .signature = "emCOboot",
     .version = 0,
     .trydataflash = false,
     .trybootflash = false,
@@ -200,8 +202,9 @@ void initthread()
     cputs(CONSOLE_BOOT, welcomestring);
 #ifdef HAVE_STORAGE
     wakeup_init(&storageinitwakeup);
-    int storagethread = thread_create(storageinitthreadname, storageinitthread, storageinitstack,
-                                      sizeof(storageinitstack), USER_THREAD, 127, true);
+    thread_create(&storageinitthread_handle, storageinitthreadname,
+                  storageinitthread, storageinitstack,
+                  sizeof(storageinitstack), USER_THREAD, 127, true);
 #endif
 #ifdef HAVE_USB
     usb_init();
@@ -219,11 +222,11 @@ void initthread()
     while (true)
     {
         if (wakeup_wait(&storageinitwakeup, 100000) == THREAD_OK) break;
-        enum thread_state state = thread_get_state(storagethread);
+        enum thread_state state = thread_get_state(&storageinitthread_handle);
         if (state == THREAD_DEFUNCT || state == THREAD_DEFUNCT_ACK)
         {
             if (wakeup_wait(&storageinitwakeup, 0) == THREAD_OK) break;
-            thread_terminate(storagethread);
+            thread_terminate(&storageinitthread_handle);
             break;
         }
     }
@@ -251,6 +254,6 @@ void init()
     targetinit_early();
 #endif
     interrupt_init();
-    thread_create(initthreadname, initthread, initstack,
+    thread_create(&initthread_handle, initthreadname, initthread, initstack,
                   sizeof(initstack), USER_THREAD, 127, true);
 }

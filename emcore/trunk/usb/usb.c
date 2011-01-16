@@ -84,10 +84,9 @@ enum dbgaction_t
     DBGACTION_STORAGE
 };
 
+static struct scheduler_thread dbgthread_handle IBSS_ATTR;
 static uint32_t dbgstack[0x200] STACK_ATTR;
 struct wakeup dbgwakeup IBSS_ATTR;
-extern struct scheduler_thread* scheduler_threads;
-extern struct scheduler_thread* current_thread;
 static enum dbgaction_t dbgaction IBSS_ATTR;
 static int dbgi2cbus;
 static int dbgi2cslave;
@@ -365,7 +364,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             case 0:  // GET VERSION INFO
                 dbgsendbuf[1] = VERSION_SVN_INT;
                 dbgsendbuf[2] = VERSION_MAJOR | (VERSION_MINOR << 8)
-                              | (VERSION_PATCH << 16) | (1 << 24);
+                              | (VERSION_PATCH << 16) | (2 << 24);
                 dbgsendbuf[3] = PLATFORM_ID;
                 break;
             case 1:  // GET PACKET SIZE INFO
@@ -508,41 +507,43 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
         case 15:  // GET PROCESS INFO
             dbgsendbuf[0] = 1;
             dbgsendbuf[1] = SCHEDULER_THREAD_INFO_VERSION;
-            dbgsendbuf[2] = MAX_THREADS * sizeof(struct scheduler_thread);
-            memcpy(&dbgsendbuf[4], (void*)(((uint32_t)&scheduler_threads) + dbgrecvbuf[1]),
-                   dbgrecvbuf[2]);
-            size = dbgrecvbuf[2] + 16;
+            dbgsendbuf[2] = (uint32_t)head_thread;
+            size = 16;
             break;
         case 16:  // FREEZE SCHEDULER
             dbgsendbuf[1] = scheduler_freeze(dbgrecvbuf[1]);
-            scheduler_switch(-1);
+            scheduler_switch(NULL);
             dbgsendbuf[0] = 1;
             size = 16;
             break;
         case 17:  // SUSPEND THREAD
             if (dbgrecvbuf[1])
             {
-                if (thread_suspend(dbgrecvbuf[2]) == -4) dbgsendbuf[1] = 1;
+                if (thread_suspend((struct scheduler_thread*)(dbgrecvbuf[2])) == ALREADY_SUSPENDED)
+                    dbgsendbuf[1] = 1;
                 else dbgsendbuf[1] = 0;
             }
             else
             {
-                if (thread_resume(dbgrecvbuf[2]) == -5) dbgsendbuf[1] = 0;
+                if (thread_resume((struct scheduler_thread*)(dbgrecvbuf[2])) == ALREADY_RESUMED)
+                    dbgsendbuf[1] = 0;
                 else dbgsendbuf[1] = 1;
             }
             dbgsendbuf[0] = 1;
             size = 16;
             break;
         case 18:  // KILL THREAD
-            thread_terminate(dbgrecvbuf[1]);
+            thread_terminate((struct scheduler_thread*)(dbgrecvbuf[1]));
             dbgsendbuf[0] = 1;
             size = 16;
             break;
         case 19:  // KILL THREAD
             dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = thread_create((const char*)dbgsendbuf[1], (const void*)dbgsendbuf[2],
-                                          (char*)dbgsendbuf[3], dbgsendbuf[4], dbgsendbuf[5],
-                                          dbgsendbuf[6], dbgsendbuf[7]);
+            dbgsendbuf[1] = (uint32_t)thread_create(NULL, (const char*)(dbgsendbuf[1]),
+                                                    (const void*)(dbgsendbuf[2]),
+                                                    (char*)(dbgsendbuf[3]),
+                                                    dbgsendbuf[4], (enum thread_type)dbgsendbuf[5],
+                                                    dbgsendbuf[6], dbgsendbuf[7]);
             size = 16;
             break;
         case 20:  // FLUSH CACHE
@@ -646,22 +647,19 @@ void usb_handle_bus_reset(void)
 
 void dbgthread(void)
 {
-    int i;
-    int t;
+    struct scheduler_thread* t;
     while (1)
     {
         wakeup_wait(&dbgwakeup, TIMEOUT_BLOCK);
-        for (i = 0; i < MAX_THREADS; i++)
-            if (scheduler_threads[i].state == THREAD_DEFUNCT)
+        for (t = head_thread; t; t = t->thread_next)
+            if (t->state == THREAD_DEFUNCT)
             {
-                if (scheduler_threads[i].block_type == THREAD_DEFUNCT_STKOV)
+                if (t->block_type == THREAD_DEFUNCT_STKOV)
                 {
-                    if (scheduler_threads[i].name)
-                        cprintf(1, "\n*PANIC*\nStack overflow! (%s)\n",
-                                scheduler_threads[i].name);
-                    else cprintf(1, "\n*PANIC*\nStack overflow! (ID %d)\n", i);
+                    if (t->name) cprintf(1, "\n*PANIC*\nStack overflow! (%s)\n", t->name);
+                    else cprintf(1, "\n*PANIC*\nStack overflow! (%08X)\n", t);
                 }
-                scheduler_threads[i].state = THREAD_DEFUNCT_ACK;
+                t->state = THREAD_DEFUNCT_ACK;
             }
         if (dbgaction != DBGACTION_IDLE)
         {
@@ -931,7 +929,8 @@ void usb_init(void)
     wakeup_init(&dbgconsendwakeup);
     wakeup_init(&dbgconrecvwakeup);
     dbgconsoleattached = false;
-    thread_create("monitor worker", dbgthread, dbgstack, sizeof(dbgstack), CORE_THREAD, 255, true);
+    thread_create(&dbgthread_handle, "monitor worker", dbgthread, dbgstack,
+                  sizeof(dbgstack), CORE_THREAD, 255, true);
     usb_drv_init();
 }
 

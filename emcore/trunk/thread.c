@@ -26,6 +26,7 @@
 #include "timer.h"
 #include "panic.h"
 #include "util.h"
+#include "malloc.h"
 #ifdef HAVE_STORAGE
 #include "dir.h"
 #include "file.h"
@@ -35,8 +36,9 @@
 #endif
 
 
-struct scheduler_thread scheduler_threads[MAX_THREADS] IBSS_ATTR;
+struct scheduler_thread* head_thread IBSS_ATTR;
 struct scheduler_thread* current_thread IBSS_ATTR;
+struct scheduler_thread idle_thread IBSS_ATTR;
 uint32_t last_tick IBSS_ATTR;
 bool scheduler_frozen IBSS_ATTR;
 extern struct wakeup dbgwakeup;
@@ -84,7 +86,6 @@ void mutex_remove_from_queue(struct mutex* obj, struct scheduler_thread* thread)
 int mutex_lock(struct mutex* obj, int timeout)
 {
     int ret = THREAD_OK;
-    struct scheduler_thread* thread;
     uint32_t mode = enter_critical_section();
 
     if (!obj->count)
@@ -224,14 +225,15 @@ void sleep(int usecs)
 
 void scheduler_init(void)
 {
-    memset(scheduler_threads, 0, sizeof(scheduler_threads));
-    scheduler_frozen = false;
     last_tick = USEC_TIMER;
-    current_thread = scheduler_threads;
-    current_thread->state = THREAD_RUNNING;
-    current_thread->startusec = last_tick;
-    current_thread->name = "idle thread";
-    current_thread->stack = (uint32_t*)-1;
+    scheduler_frozen = false;
+    head_thread = &idle_thread;
+    current_thread = &idle_thread;
+    memset(&idle_thread, 0, sizeof(idle_thread));
+    idle_thread.state = THREAD_RUNNING;
+    idle_thread.startusec = last_tick;
+    idle_thread.name = "idle thread";
+    idle_thread.stack = (uint32_t*)-1;
     setup_tick();
 }
 
@@ -254,18 +256,17 @@ void scheduler_resume_accounting()
     current_thread->startusec = USEC_TIMER;
 }
 
-void scheduler_switch(int thread)
+void scheduler_switch(struct scheduler_thread* thread)
 {
-    int i;
+    struct scheduler_thread* t;
     uint32_t score, best;
     uint32_t usec = USEC_TIMER;
     if (current_thread->state == THREAD_RUNNING) current_thread->state = THREAD_READY;
     if ((int)current_thread->stack != -1 && *current_thread->stack != 0xaffebeaf)
     {
-        for (i = 0; i < MAX_THREADS; i++)
-            if (scheduler_threads[i].state != THREAD_FREE)
-                if (scheduler_threads[i].type == USER_THREAD)
-                    scheduler_threads[i].state = THREAD_SUSPENDED;
+        for (t = head_thread; t; t = t->thread_next)
+            if (t->type == USER_THREAD)
+                t->state = THREAD_SUSPENDED;
         current_thread->state = THREAD_DEFUNCT;
         current_thread->block_type = THREAD_DEFUNCT_STKOV;
         wakeup_signal(&dbgwakeup);
@@ -275,116 +276,120 @@ void scheduler_switch(int thread)
     {
         uint32_t diff = usec - last_tick;
         last_tick = usec;
-        for (i = 0; i < MAX_THREADS; i++)
+        for (t = head_thread; t; t = t->thread_next)
         {
-            scheduler_threads[i].cpuload = 255 * scheduler_threads[i].cputime_current / diff;
-            scheduler_threads[i].cputime_current = 0;
+            t->cpuload = 255 * t->cputime_current / diff;
+            t->cputime_current = 0;
         }
     }
 
     if (scheduler_frozen) thread = 0;
     else
     {
-        for (i = 0; i < MAX_THREADS; i++)
-            if (scheduler_threads[i].state == THREAD_BLOCKED
-             && scheduler_threads[i].timeout != -1
-             && TIME_AFTER(usec, scheduler_threads[i].blocked_since
-                               + scheduler_threads[i].timeout))
+        for (t = head_thread; t; t = t->thread_next)
+            if (t->state == THREAD_BLOCKED && t->timeout != -1
+             && TIME_AFTER(usec, t->blocked_since + t->timeout))
             {
-                if (scheduler_threads[i].block_type == THREAD_BLOCK_MUTEX)
-                    mutex_remove_from_queue((struct mutex*)scheduler_threads[i].blocked_by,
-                                            &scheduler_threads[i]);
-                scheduler_threads[i].state = THREAD_READY;
-                scheduler_threads[i].block_type = THREAD_NOT_BLOCKED;
-                scheduler_threads[i].blocked_by = NULL;
-                scheduler_threads[i].timeout = 0;
+                if (t->block_type == THREAD_BLOCK_MUTEX)
+                    mutex_remove_from_queue((struct mutex*)t->blocked_by, t);
+                t->state = THREAD_READY;
+                t->block_type = THREAD_NOT_BLOCKED;
+                t->blocked_by = NULL;
+                t->timeout = 0;
             }
 
-        if (thread >= 0 && thread < MAX_THREADS && scheduler_threads[thread].state == THREAD_READY)
-            current_thread = &scheduler_threads[thread];
+        if (thread && thread->state == THREAD_READY) current_thread = thread;
         else
         {
-            thread = 0;
+            thread = NULL;
             best = 0xffffffff;
-            for (i = 0; i < MAX_THREADS; i++)
-                if (scheduler_threads[i].state == THREAD_READY && scheduler_threads[i].priority)
+            for (t = head_thread; t; t = t->thread_next)
+                if (t->state == THREAD_READY && t->priority)
                 {
-                    score = scheduler_threads[i].cputime_current / scheduler_threads[i].priority;
+                    score = t->cputime_current / t->priority;
                     if (score < best)
                     {
                         best = score;
-                        thread = i;
+                        thread = t;
                     }
                 }
         }
     }
 
-    current_thread = &scheduler_threads[thread];
+    current_thread = thread;
     current_thread->state = THREAD_RUNNING;
 }
 
-int thread_create(const char* name, const void* code, void* stack,
-                  int stacksize, enum thread_type type, int priority, bool run)
+struct scheduler_thread* thread_create(struct scheduler_thread* thread, const char* name,
+                                       const void* code, void* stack, int stacksize,
+                                       enum thread_type type, int priority, bool run)
 {
-    int ret = NO_MORE_THREADS;
-    int i;
+    bool stack_alloced = false;
+    if (!stack)
+    {
+        stack = malloc(stacksize);
+        stack_alloced = true;
+    }
+    if (!stack) return NULL;
+    if (!thread) thread = (struct scheduler_thread*)malloc(sizeof(struct scheduler_thread));
+    if (!thread)
+    {
+        if (stack_alloced) free(stack);
+        return NULL;
+    }
+    reownalloc(thread, thread);
+    reownalloc(stack, thread);
 
+    int i;
     for (i = 0; i < stacksize >> 2; i ++) ((uint32_t*)stack)[i] = 0xaffebeaf;
 
+    memset(thread, 0, sizeof(struct scheduler_thread));
+    thread->state = run ? THREAD_READY : THREAD_SUSPENDED;
+    thread->type = type;
+    thread->name = name;
+    thread->priority = priority;
+    thread->cpsr = 0x1f;
+    thread->regs[15] = (uint32_t)code;
+    thread->regs[14] = (uint32_t)thread_exit;
+    thread->regs[13] = (uint32_t)stack + stacksize;
+    thread->stack = stack;
+
     uint32_t mode = enter_critical_section();
-
-    for (i = 0; i < MAX_THREADS; i++)
-        if (scheduler_threads[i].state == THREAD_FREE)
-        {
-            ret = i;
-            memset(&scheduler_threads[i], 0, sizeof(struct scheduler_thread));
-            scheduler_threads[i].state = run ? THREAD_READY : THREAD_SUSPENDED;
-            scheduler_threads[i].type = type;
-            scheduler_threads[i].name = name;
-            scheduler_threads[i].priority = priority;
-            scheduler_threads[i].cpsr = 0x1f;
-            scheduler_threads[i].regs[15] = (uint32_t)code;
-            scheduler_threads[i].regs[14] = (uint32_t)thread_exit;
-            scheduler_threads[i].regs[13] = (uint32_t)stack + stacksize;
-            scheduler_threads[i].stack = stack;
-            break;
-        }
-
+    thread->thread_next = head_thread;
+    head_thread = thread;
     leave_critical_section(mode);
-    return ret;
+
+    return thread;
 }
 
-int thread_suspend(int thread)
+int thread_suspend(struct scheduler_thread* thread)
 {
     int ret = THREAD_OK;
-    struct scheduler_thread* t = &scheduler_threads[thread];
     bool needsswitch = false;
     uint32_t mode = enter_critical_section();
 
-    if (thread == -1) t = current_thread;
-    else if (thread < 0 || thread >= MAX_THREADS) ret = INVALID_THREAD;
-    else if (t->state == THREAD_FREE) ret = INVALID_THREAD;
-    else if (t->state == THREAD_SUSPENDED) ret = ALREADY_SUSPENDED;
+    if (!thread) thread = current_thread;
+    if (thread->state == THREAD_SUSPENDED) ret = ALREADY_SUSPENDED;
     if (ret == THREAD_OK)
     {
-        if (t->state == THREAD_RUNNING) needsswitch = true;
-        else if (t->state == THREAD_BLOCKED)
+        if (thread->state == THREAD_RUNNING) needsswitch = true;
+        else if (thread->state == THREAD_BLOCKED)
         {
-            if (t->block_type == THREAD_BLOCK_SLEEP)
+            if (thread->block_type == THREAD_BLOCK_SLEEP)
             {
-                if (t->timeout != -1) t->timeout -= USEC_TIMER - t->blocked_since;
+                if (thread->timeout != -1) thread->timeout -= USEC_TIMER - thread->blocked_since;
             }
-            else if (t->block_type == THREAD_BLOCK_MUTEX)
+            else if (thread->block_type == THREAD_BLOCK_MUTEX)
             {
-                mutex_remove_from_queue((struct mutex*)t->blocked_by, t);
-                if (t->timeout != -1) t->timeout -= USEC_TIMER - t->blocked_since;
+                mutex_remove_from_queue((struct mutex*)thread->blocked_by, thread);
+                if (thread->timeout != -1) thread->timeout -= USEC_TIMER - thread->blocked_since;
             }
-            else if (t->block_type == THREAD_BLOCK_WAKEUP)
+            else if (thread->block_type == THREAD_BLOCK_WAKEUP)
             {
-                if (t->timeout != -1) t->timeout -= USEC_TIMER - t->blocked_since;
+                if (thread->timeout != -1) thread->timeout -= USEC_TIMER - thread->blocked_since;
             }
         }
-        t->state = THREAD_SUSPENDED;
+        thread->state = THREAD_SUSPENDED;
     }
 
     leave_critical_section(mode);
@@ -394,100 +399,93 @@ int thread_suspend(int thread)
     return ret;
 }
 
-int thread_resume(int thread)
+int thread_resume(struct scheduler_thread* thread)
 {
     int ret = THREAD_OK;
-    struct scheduler_thread* t = &scheduler_threads[thread];
     bool needsswitch = false;
     uint32_t mode = enter_critical_section();
 
-    if (thread == -1) t = current_thread;
-    else if (thread < 0 || thread >= MAX_THREADS) ret = INVALID_THREAD;
-    else if (t->state == THREAD_FREE) ret = INVALID_THREAD;
-    else if (t->state != THREAD_SUSPENDED) ret = ALREADY_RESUMED;
+    if (!thread) thread = current_thread;
+    if (thread->state != THREAD_SUSPENDED) ret = ALREADY_RESUMED;
     if (ret == THREAD_OK)
     {
-        if (t->block_type == THREAD_BLOCK_SLEEP)
-            t->blocked_since = USEC_TIMER;
-        else if (t->block_type == THREAD_BLOCK_MUTEX)
+        if (thread->block_type == THREAD_BLOCK_SLEEP)
+            thread->blocked_since = USEC_TIMER;
+        else if (thread->block_type == THREAD_BLOCK_MUTEX)
         {
-            mutex_add_to_queue((struct mutex*)t->blocked_by, t);
-            t->blocked_since = USEC_TIMER;
-            t->state = THREAD_BLOCKED;
+            mutex_add_to_queue((struct mutex*)thread->blocked_by, thread);
+            thread->blocked_since = USEC_TIMER;
+            thread->state = THREAD_BLOCKED;
         }
-        else if (t->block_type == THREAD_BLOCK_WAKEUP)
+        else if (thread->block_type == THREAD_BLOCK_WAKEUP)
         {
-            t->blocked_since = USEC_TIMER;
-            t->state = THREAD_BLOCKED;
+            thread->blocked_since = USEC_TIMER;
+            thread->state = THREAD_BLOCKED;
         }
-        else t->state = THREAD_READY;
+        else thread->state = THREAD_READY;
     }
 
     leave_critical_section(mode);
     return ret;
 }
 
-int thread_terminate(int thread)
+int thread_terminate(struct scheduler_thread* thread)
 {
-    int ret = THREAD_OK;
-    struct scheduler_thread* t = &scheduler_threads[thread];
+    struct scheduler_thread* t;
     bool needsswitch = false;
     uint32_t mode = enter_critical_section();
 
-    if (thread == -1) t = current_thread;
-    else if (thread < 0 || thread >= MAX_THREADS) ret = INVALID_THREAD;
-    else if (t->state == THREAD_FREE) ret = INVALID_THREAD;
-    if (ret == THREAD_OK)
+    if (!thread) thread = current_thread;
+    if (thread->state == THREAD_RUNNING) needsswitch = true;
+    else if (thread->state == THREAD_BLOCKED)
     {
-        if (t->state == THREAD_RUNNING) needsswitch = true;
-        else if (t->state == THREAD_BLOCKED)
-        {
-            if (t->block_type == THREAD_BLOCK_MUTEX)
-                mutex_remove_from_queue((struct mutex*)t->blocked_by, t);
-            else if (t->block_type == THREAD_BLOCK_WAKEUP)
-                ((struct wakeup*)t->blocked_by)->waiter = NULL;
-        }
-        t->state = THREAD_FREE;
+        if (thread->block_type == THREAD_BLOCK_MUTEX)
+            mutex_remove_from_queue((struct mutex*)t->blocked_by, thread);
+        else if (thread->block_type == THREAD_BLOCK_WAKEUP)
+            ((struct wakeup*)thread->blocked_by)->waiter = NULL;
+    }
+    for (t = head_thread; t && t->thread_next != thread; t = t->thread_next);
+    if (t) t->thread_next = thread->thread_next;
+
+    leave_critical_section(mode);
+
 #ifdef HAVE_STORAGE
-        close_all_of_process(t);
-        closedir_all_of_process(t);
+    close_all_of_process(thread);
+    closedir_all_of_process(thread);
 #endif
 #ifdef HAVE_BUTTON
-        button_unregister_all_of_thread(t);
+    button_unregister_all_of_thread(thread);
 #endif
-    }
-
-    leave_critical_section(mode);
+    free_all_of_thread(thread);
 
     if (needsswitch) context_switch();
 
-    return ret;
+    return THREAD_OK;
 }
 
 int thread_killlevel(enum thread_type type, bool killself)
 {
-    int i;
+    struct scheduler_thread* t;
     int count = 0;
     uint32_t mode = enter_critical_section();
-    for (i = 0; i < MAX_THREADS; i++)
-        if (scheduler_threads[i].type == USER_THREAD && scheduler_threads[i].state != THREAD_FREE
-         && (killself || current_thread != &scheduler_threads[i]))
+    for (t = head_thread; t; t = t->thread_next);
+        if (t->type <= type && (killself || current_thread != t))
         {
-            thread_terminate(i);
+            thread_terminate(t);
             count++;
         }
     leave_critical_section(mode);
     return count;
 }
 
-enum thread_state thread_get_state(int thread)
+enum thread_state thread_get_state(struct scheduler_thread* thread)
 {
-    return scheduler_threads[thread].state;
+    return thread->state;
 }
 
 void thread_exit()
 {
-    thread_terminate(-1);
+    thread_terminate(NULL);
 }
 
 int* __errno()

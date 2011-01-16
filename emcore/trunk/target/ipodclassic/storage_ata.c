@@ -36,7 +36,8 @@ static struct wakeup ata_wakeup;
 static uint32_t ata_dma_flags;
 static long ata_last_activity_value = -1;
 static long ata_sleep_timeout = 20000000;
-static uint32_t ata_stack[0x80];
+static struct scheduler_thread ata_thread_handle;
+static uint32_t ata_stack[0x80] STACK_ATTR;
 static bool ata_powered;
 
 #ifdef ATA_HAVE_BBT
@@ -552,7 +553,7 @@ int ata_init(void)
     else ata_virtual_sectors = ata_total_sectors;
     mutex_unlock(&ata_mutex);
 #endif
-    thread_create("ATA idle monitor", ata_thread, ata_stack,
+    thread_create(&ata_thread_handle, "ATA idle monitor", ata_thread, ata_stack,
                   sizeof(ata_stack), USER_THREAD, 1, true);
     return 0;
 }

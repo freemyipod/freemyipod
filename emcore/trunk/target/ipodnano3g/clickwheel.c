@@ -32,7 +32,8 @@
 
 static struct wakeup clickwheel_wakeup IBSS_ATTR;
 static volatile uint32_t clickwheel_packet IBSS_ATTR;
-static uint32_t clickwheel_stack[0x100];
+static struct scheduler_thread clickwheel_thread_handle;
+static uint32_t clickwheel_stack[0x100] STACK_ATTR;
 static bool oldtouched IBSS_ATTR;
 static int oldpos IBSS_ATTR;
 static int oldbuttons IBSS_ATTR;
@@ -150,7 +151,8 @@ void clickwheel_init()
         sleep(20000);
     }
     while (WHEEL0C & 4);
-    thread_create("Clickwheel dispatcher", clickwheel_thread, clickwheel_stack,
+    thread_create(&clickwheel_thread_handle, "Clickwheel dispatcher",
+                  clickwheel_thread, clickwheel_stack,
                   sizeof(clickwheel_stack), OS_THREAD, 200, true);
 }
 

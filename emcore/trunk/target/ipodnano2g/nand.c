@@ -88,7 +88,8 @@ static int nand_powered = 0;
 static int nand_interleaved = 0;
 static int nand_cached = 0;
 static long nand_last_activity_value = -1;
-static uint32_t nand_stack[0x80];
+static struct scheduler_thread nand_thread_handle;
+static uint32_t nand_stack[0x80] STACK_ATTR;
 
 static struct mutex nand_mtx;
 static struct wakeup nand_wakeup;
@@ -795,7 +796,7 @@ int nand_device_init(void)
     nand_cached = ((nand_type[0] >> 23) & 1);
 
     nand_last_activity_value = USEC_TIMER;
-    thread_create("NAND idle monitor", nand_thread, nand_stack,
+    thread_create(&nand_thread_handle, "NAND idle monitor", nand_thread, nand_stack,
                   sizeof(nand_stack), USER_THREAD, 1, true);
 
     return 0;
