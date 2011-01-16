@@ -62,6 +62,7 @@ _start:
 	bhi	.copysdram
 	ldr	r0, =_ibssstart
 	ldr	r1, =_ibssend
+	mov	r2, #0
 .clearibss:
 	cmp	r1, r0
 	strhi	r2, [r0], #4

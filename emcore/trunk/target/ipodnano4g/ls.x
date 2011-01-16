@@ -56,9 +56,16 @@ SECTIONS
         *(.initcode*)
         *(.initrodata*)
         *(.initdata*)
-        *(.inittail*)
         . = ALIGN(0x4);
         _initend = .;
+    } > INIT
+
+    .inittail :
+    {
+        _inittailstart = .;
+        *(.inittail*)
+        . = ALIGN(0x4);
+        _inittailend = .;
     } > INIT
 
     .ibss (NOLOAD) :

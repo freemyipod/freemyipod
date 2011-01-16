@@ -86,6 +86,7 @@ struct initbss
 {
     struct scheduler_thread initthread;
     uint32_t initstack[0x400];
+    void* bootalloc;
 #ifdef HAVE_STORAGE
     struct scheduler_thread storagethread;
     uint32_t storagestack[0x400];
@@ -234,6 +235,7 @@ void initthread()
             cprintf(CONSOLE_BOOT, unknownboottypestr, option->type);
         }
     cputs(CONSOLE_BOOT, nobootoptionsstr);
+    free(ib->bootalloc);
 }
 
 void init() INITCODE_ATTR;
@@ -251,7 +253,6 @@ void init()
 #ifdef HAVE_TARGETINIT_EARLY
     targetinit_early();
 #endif
-    interrupt_init();
     malloc_init();
     size_t size = (size_t)(&bootinfo) - (size_t)(&_poolstart) + bootinfo.totalsize;
     void* bootalloc = malloc(size);
@@ -260,6 +261,8 @@ void init()
     ib = (struct initbss*)malloc(sizeof(struct initbss));
     reownalloc(ib, &(ib->initthread));
     reownalloc(bootalloc, &(ib->initthread));
+    ib->bootalloc = bootalloc;
     thread_create(&(ib->initthread), initthreadname, initthread, ib->initstack,
                   sizeof(ib->initstack), USER_THREAD, 127, true);
+    interrupt_init();
 }

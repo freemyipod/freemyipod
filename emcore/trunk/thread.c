@@ -283,7 +283,7 @@ void scheduler_switch(struct scheduler_thread* thread)
         }
     }
 
-    if (scheduler_frozen) thread = 0;
+    if (scheduler_frozen) thread = &idle_thread;
     else
     {
         for (t = head_thread; t; t = t->thread_next)
@@ -301,7 +301,7 @@ void scheduler_switch(struct scheduler_thread* thread)
         if (thread && thread->state == THREAD_READY) current_thread = thread;
         else
         {
-            thread = NULL;
+            thread = &idle_thread;
             best = 0xffffffff;
             for (t = head_thread; t; t = t->thread_next)
                 if (t->state == THREAD_READY && t->priority)
@@ -325,20 +325,25 @@ struct scheduler_thread* thread_create(struct scheduler_thread* thread, const ch
                                        enum thread_type type, int priority, bool run)
 {
     bool stack_alloced = false;
+    bool thread_alloced = false;
     if (!stack)
     {
         stack = malloc(stacksize);
         stack_alloced = true;
     }
     if (!stack) return NULL;
-    if (!thread) thread = (struct scheduler_thread*)malloc(sizeof(struct scheduler_thread));
+    if (!thread)
+    {
+        thread = (struct scheduler_thread*)malloc(sizeof(struct scheduler_thread));
+        thread_alloced = true;
+    }
     if (!thread)
     {
         if (stack_alloced) free(stack);
         return NULL;
     }
-    reownalloc(thread, thread);
-    reownalloc(stack, thread);
+    if (thread_alloced) reownalloc(thread, thread);
+    if (stack_alloced) reownalloc(stack, thread);
 
     int i;
     for (i = 0; i < stacksize >> 2; i ++) ((uint32_t*)stack)[i] = 0xaffebeaf;

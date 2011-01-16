@@ -556,6 +556,7 @@ int ata_init(void)
         else ata_virtual_sectors = ata_total_sectors;
         free(buf);
     }
+    else ata_virtual_sectors = ata_total_sectors;
     mutex_unlock(&ata_mutex);
 #endif
     thread_create(&ata_thread_handle, "ATA idle monitor", ata_thread, ata_stack,
