@@ -151,11 +151,13 @@ leave_critical_section:
 .global execfirmware
 .type execfirmware, %function
 execfirmware:
-	str	r0, [sp,#-4]!
+	stmfd	sp!, {r0-r2}
 	bl	interrupt_shutdown
-	bl	clean_dcache
-	ldr	r1, [sp], #4
 	msr	cpsr_c, #0xd3
+	ldmfd	sp, {r0-r2}
+	bl	memmove
+	bl	clean_dcache
+	ldr	r1, [sp]
 	mrc	p15, 0, r0,c1,c0
 	bic	r0, r0, #5
 	mcr	p15, 0, r0,c1,c0

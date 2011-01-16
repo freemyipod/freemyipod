@@ -33,7 +33,7 @@ void context_switch(void) ICODE_ATTR;
 void resume_thread(void) __attribute__((noreturn)) ICODE_ATTR;
 uint32_t enter_critical_section(void) ICODE_ATTR;
 void leave_critical_section(uint32_t mode) ICODE_ATTR;
-void execfirmware(void* addr) ICODE_ATTR;
+void execfirmware(void* dest, void* src, size_t size) ICODE_ATTR;
 
 
 #endif

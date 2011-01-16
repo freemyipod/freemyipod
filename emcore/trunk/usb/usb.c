@@ -81,7 +81,12 @@ enum dbgaction_t
     DBGACTION_HWKEYAES,
     DBGACTION_HMACSHA1,
     DBGACTION_TARGETSPECIFIC,
-    DBGACTION_STORAGE
+    DBGACTION_STORAGE,
+    DBGACTION_MALLOC,
+    DBGACTION_MEMALIGN,
+    DBGACTION_REALLOC,
+    DBGACTION_REOWNALLOC,
+    DBGACTION_FREE
 };
 
 static struct scheduler_thread dbgthread_handle IBSS_ATTR;
@@ -107,8 +112,8 @@ static bool dbgconsoleattached IBSS_ATTR;
 
 static const char dbgconoverflowstr[] = "\n\n[overflowed]\n\n";
 
-extern int _initstart;   // These aren't ints at all, but gcc complains about void types being
-extern int _sdramstart;  // used here, and we only need the address, so just make it happy...
+extern int _poolstart;   // These aren't ints at all, but gcc complains about void types being
+extern int _poolend;     // used here, and we only need the address, so just make it happy...
 
 
 static struct usb_device_descriptor CACHEALIGN_ATTR device_descriptor =
@@ -373,8 +378,8 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
                 dbgsendbuf[3] = usb_drv_get_max_in_size();
                 break;
             case 2:  // GET USER MEMORY INFO
-                dbgsendbuf[1] = (uint32_t)&_initstart;
-                dbgsendbuf[2] = (uint32_t)&_sdramstart;
+                dbgsendbuf[1] = (uint32_t)&_poolstart;
+                dbgsendbuf[2] = (uint32_t)&_poolend;
                 break;
             default:
                 dbgsendbuf[0] = 2;
@@ -537,7 +542,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             dbgsendbuf[0] = 1;
             size = 16;
             break;
-        case 19:  // KILL THREAD
+        case 19:  // CREATE THREAD
             dbgsendbuf[0] = 1;
             dbgsendbuf[1] = (uint32_t)thread_create(NULL, (const char*)(dbgsendbuf[1]),
                                                     (const void*)(dbgsendbuf[2]),
@@ -573,6 +578,8 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
         case 24:  // EXECFIRMWARE
             if (set_dbgaction(DBGACTION_EXECFIRMWARE, 0)) break;
             dbgactionaddr = dbgrecvbuf[1];
+            dbgactionoffset = dbgrecvbuf[2];
+            dbgactionlength = dbgrecvbuf[3];
             break;
 #ifdef HAVE_HWKEYAES
         case 25:  // HWKEYAES
@@ -623,6 +630,29 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
                 memcpy(dbgasyncsendbuf, dbgrecvbuf, sizeof(dbgasyncsendbuf));
             break;
 #endif
+        case 52:  // MALLOC
+            if (set_dbgaction(DBGACTION_MALLOC, 0)) break;
+            dbgactionlength = dbgrecvbuf[1];
+            break;
+        case 53:  // MEMALIGN
+            if (set_dbgaction(DBGACTION_MEMALIGN, 0)) break;
+            dbgactionoffset = dbgrecvbuf[1];
+            dbgactionlength = dbgrecvbuf[2];
+            break;
+        case 54:  // REALLOC
+            if (set_dbgaction(DBGACTION_REALLOC, 0)) break;
+            dbgactionaddr = dbgrecvbuf[1];
+            dbgactionlength = dbgrecvbuf[2];
+            break;
+        case 55:  // REOWNALLOC
+            if (set_dbgaction(DBGACTION_REOWNALLOC, 0)) break;
+            dbgactionaddr = dbgrecvbuf[1];
+            dbgactionoffset = dbgrecvbuf[2];
+            break;
+        case 56:  // FREE
+            if (set_dbgaction(DBGACTION_FREE, 0)) break;
+            dbgactionaddr = dbgrecvbuf[1];
+            break;
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -712,7 +742,8 @@ void dbgthread(void)
                 shutdown(false);
                 dbgasyncsendbuf[0] = 1;
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                execfirmware((void*)dbgactionaddr);
+                execfirmware((void*)dbgactionaddr, (void*)dbgactionoffset,
+                             (size_t)dbgactionlength);
 #ifdef HAVE_BOOTFLASH
             case DBGACTION_READBOOTFLASH:
                 bootflash_readraw((void*)dbgactionaddr, dbgactionoffset, dbgactionlength);
@@ -912,6 +943,33 @@ void dbgthread(void)
                 }
                 break;
 #endif
+            case DBGACTION_MALLOC:
+                dbgasyncsendbuf[0] = 1;
+                dbgasyncsendbuf[1] = (uint32_t)malloc((size_t)dbgactionlength);
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_MEMALIGN:
+                dbgasyncsendbuf[0] = 1;
+                dbgasyncsendbuf[1] = (uint32_t)memalign((size_t)dbgactionoffset,
+                                                        (size_t)dbgactionlength);
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_REALLOC:
+                dbgasyncsendbuf[0] = 1;
+                dbgasyncsendbuf[1] = (uint32_t)realloc((void*)dbgactionaddr,
+                                                       (size_t)dbgactionlength);
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_REOWNALLOC:
+                dbgasyncsendbuf[0] = 1;
+                reownalloc((void*)dbgactionaddr, (void*)dbgactionoffset);
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_FREE:
+                dbgasyncsendbuf[0] = 1;
+                free((void*)dbgactionaddr);
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
             }
             dbgaction = DBGACTION_IDLE;
         }
