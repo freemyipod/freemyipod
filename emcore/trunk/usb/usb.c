@@ -705,7 +705,7 @@ void dbgthread(void)
                 break;
             case DBGACTION_EXECIMAGE:
                 dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = execimage((void*)dbgactionaddr);
+                dbgasyncsendbuf[1] = execimage((void*)dbgactionaddr, false);
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_EXECFIRMWARE:

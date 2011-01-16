@@ -27,7 +27,7 @@
 #include "mmu.h"
 
 
-int execimage(void* image)
+int execimage(void* image, bool nomalloc)
 {
     struct execimage_header* header = (struct execimage_header*)image;
     if (memcmp(header, "emBIexec", 8))

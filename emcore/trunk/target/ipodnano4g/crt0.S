@@ -59,13 +59,6 @@ _start:
 	ldrhi	r3, [r0], #4
 	strhi	r3, [r1], #4
 	bhi	.copysdram
-	ldr	r0, =_initbssstart
-	ldr	r1, =_initbssend
-	mov	r2, #0
-.clearinitbss:
-	cmp	r1, r0
-	strhi	r2, [r0], #4
-	bhi	.clearinitbss
 	ldr	r0, =_ibssstart
 	ldr	r1, =_ibssend
 .clearibss:
@@ -108,7 +101,7 @@ _start:
 	msr	cpsr_c, #0xdb
 	ldr	sp, =_abortstackend
 	msr	cpsr_c, #0x1f
-	ldr	sp, =_initstackend
+	ldr	sp, =_abortstackend
 	bl	init
 	bl	context_switch
 	mov	r0, #0

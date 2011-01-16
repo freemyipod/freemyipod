@@ -5,24 +5,20 @@ STARTUP(build/ipodnano4g/target/ipodnano4g/crt0.o)
 
 MEMORY
 {
-    INIT : ORIGIN = 0x08000000, LENGTH = 0x01eff000
-    INITBSS : ORIGIN = 0x09e00000, LENGTH = 0x0017f000
-    INITSTACK : ORIGIN = 0x09f7f000, LENGTH = 0x00001000
+    INIT : ORIGIN = 0x08000000, LENGTH = 0x01f80000
     SRAM : ORIGIN = 0x22000000, LENGTH = 0x00030000
     SDRAM : ORIGIN = 0x09f80000, LENGTH = 0x00080000
 }
 
 SECTIONS
 {
-    .init :
+    .inithead :
     {
-        _initstart = .;
+        _initheadstart = .;
+        _poolstart = .;
 	*(.inithead*)
-        *(.initcode*)
-        *(.initrodata*)
-        *(.initdata*)
         . = ALIGN(0x4);
-        _initend = .;
+        _initheadend = .;
     } > INIT
 
     .sram :
@@ -41,6 +37,7 @@ SECTIONS
     .sdram :
     {
         _sdramstart = .;
+        _poolend = .;
         *(.text*)
         *(.glue_7)
         *(.glue_7t)
@@ -53,16 +50,16 @@ SECTIONS
     } > SDRAM AT> INIT
     _sdramsource = LOADADDR(.sdram);
 
-    .initbss (NOLOAD) :
+    .init :
     {
-        _initbssstart = .;
-        *(.initbss*)
+        _initstart = .;
+        *(.initcode*)
+        *(.initrodata*)
+        *(.initdata*)
+        *(.inittail*)
         . = ALIGN(0x4);
-        _initstackstart = .;
-        . += 0x400;
-        _initstackend = .;
-        _initbssend = .;
-    } > INITBSS
+        _initend = .;
+    } > INIT
 
     .ibss (NOLOAD) :
     {
@@ -76,6 +73,7 @@ SECTIONS
         . += 0x400;
         _abortstackend = .;
         *(.stack*)
+        . = ALIGN(0x4);
         _ibssend = .;
     } > SRAM
 
@@ -87,14 +85,6 @@ SECTIONS
         . = ALIGN(0x4);
         _bssend = .;
     } > SDRAM
-
-    .initstack (NOLOAD) :
-    {
-        _loadspaceend = .;
-        *(.initstack*)
-        *(COMMON)
-        . = ALIGN(0x4);
-    } > INITSTACK
 
     /DISCARD/ :
     {

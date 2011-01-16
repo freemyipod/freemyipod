@@ -44,7 +44,7 @@ struct execimage_header
 };
 
 
-int execimage(void* image);
+int execimage(void* image, bool nomalloc);
 
 
 #endif
