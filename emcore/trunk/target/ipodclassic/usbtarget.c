@@ -42,7 +42,7 @@ int usb_target_handle_request(uint32_t* buffer, int bufsize)
             buffer[4] = ata_virtual_sectors;
             buffer[5] = ata_virtual_sectors >> 32;
             buffer[6] = (uint32_t)ata_bbt;
-            buffer[7] = ATA_BBT_PAGES << 6;
+            buffer[7] = 0;
 #else
             buffer[4] = ata_total_sectors;
             buffer[5] = ata_total_sectors >> 32;
