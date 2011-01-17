@@ -267,6 +267,16 @@ class Emcore(object):
         return data
     
     @command()
+    def upload(self, data):
+        """ Allocates memory of the size of 'data' and uploads 'data' to that memory region.
+            Returns the address where 'data' is stored
+        """
+        addr = self.malloc(len(data))
+        self.logger.debug("Uploading %d bytes to 0x%x\n" % (len(data), addr))
+        self.write(addr, data)
+        return addr
+    
+    @command()
     def readstring(self, addr, maxlength = 256):
         """ Reads a zero terminated string from memory 
             Reads only a maximum of 'maxlength' chars.
@@ -521,9 +531,10 @@ class Emcore(object):
         return self.lib.monitorcommand(struct.pack("IIII", 23, memaddr, flashaddr, size), "III", (None, None, None))
     
     @command()
-    def execfirmware(self, addr):
-        """ Executes the firmware at 'addr' and passes all control to it. """
-        return self.lib.monitorcommand(struct.pack("IIII", 24, addr, 0, 0))
+    def execfirmware(self, targetaddr, addr, size):
+        """ Moves the firmware at 'addr' with size 'size' to 'targetaddr' and passes all control to it. """
+        self.logger.debug("Moving firmware at 0x%x with the size %d to 0x%x and executing it\n" % (addr, size, targetaddr))
+        return self.lib.monitorcommand(struct.pack("IIII", 24, targetaddr, addr, size))
     
     @command(timeout = 30000)
     def aesencrypt(self, addr, size, keyindex):
@@ -823,13 +834,17 @@ class Emcore(object):
     @command()
     def malloc(self, size):
         """ Allocates 'size' bytes and returns a pointer to the allocated memory """
+        self.logger.debug("Allocating %d bytes of memory\n" % size)
         result = self.lib.monitorcommand(struct.pack("IIII", 52, size, 0, 0), "III", ("ptr", None, None))
+        self.logger.debug("Allocated %d bytes of memory at 0x%x\n" % (size, result.ptr))
         return result.ptr
     
     @command()
     def memalign(self, align, size):
         """ Allocates 'size' bytes aligned to 'align' and returns a pointer to the allocated memory """
+        self.logger.debug("Allocating %d bytes of memory aligned to 0x%x\n" % (size, align))
         result = self.lib.monitorcommand(struct.pack("IIII", 53, align, size, 0), "III", ("ptr", None, None))
+        self.logger.debug("Allocated %d bytes of memory at 0x%x\n" % (size, result.ptr))
         return result.ptr
     
     @command()
@@ -838,17 +853,21 @@ class Emcore(object):
             expanding or reducing the amount of memory available in the block.
             Returns a pointer to the reallocated memory.
         """
+        self.logger.debug("Reallocating 0x%x to have the new size %d\n" % (ptr, size))
         result = self.lib.monitorcommand(struct.pack("IIII", 54, ptr, size, 0), "III", ("ptr", None, None))
+        self.logger.debug("Reallocated memory at 0x%x to 0x%x with the new size %d\n" % (ptr, result.ptr, size))
         return result.ptr
     
     @command()
     def reownalloc(self, ptr, owner):
         """ Changes the owner of the memory allocation 'ptr' to the thread struct at addr 'owner' """
+        self.logger.debug("Changing owner of the memory region 0x%x to 0x%x" % (ptr, owner))
         return self.lib.monitorcommand(struct.pack("IIII", 55, ptr, owner, 0), "III", (None, None, None))
     
     @command()
     def free(self, ptr):
         """ Frees the memory space pointed to by 'ptr' """
+        self.logger.debug("Freeing the memory region at 0x%x\n" % ptr)
         return self.lib.monitorcommand(struct.pack("IIII", 56, addr, 0, 0), "III", (None, None, None))
     
 
@@ -868,7 +887,7 @@ class Lib(object):
         self.connected = True
     
     def monitorcommand(self, cmd, rcvdatatypes=None, rcvstruct=None):
-        self.logger.debug("Sending monitorcommand\n")
+        self.logger.debug("Sending monitorcommand [0x%s]\n" % cmd[3::-1].encode("hex"))
         writelen = self.dev.cout(cmd)
         if rcvdatatypes:
             rcvdatatypes = "I" + rcvdatatypes # add the response

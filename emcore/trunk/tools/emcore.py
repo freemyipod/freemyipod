@@ -170,6 +170,8 @@ class Commandline(object):
         """
         if type(something) == bool:
             return something
+        if something is None:
+            return False
         elif type(something) == int or type(something) == long:
             return bool(something)
         elif type(something == str):
@@ -195,7 +197,7 @@ class Commandline(object):
                 return int(something, 16)
             except ValueError:
                 raise ArgumentTypeError("hexadecimal coded integer", "'"+str(something)+"'")
-        elif type(something) == NoneType:
+        elif something is None:
             return None
         else:
             raise ArgumentTypeError("hexadecimal coded integer", "'"+str(something)+"'")
@@ -261,23 +263,31 @@ class Commandline(object):
         self.emcore.poweroff(force)
     
     @command
-    def uploadfile(self, addr, filename):
+    def uploadfile(self, filename, addr = None):
         """
             Uploads a file to the device
-            <offset>: the address to upload the file to
-            <filename>: the path to the file
+            <filename>: The path to the file
+            [addr]: The address to upload the file to. Allocates a chunk of memory if not given.
         """
         addr = self._hexint(addr)
         try:
             f = open(filename, 'rb')
         except IOError:
             raise ArgumentError("File not readable. Does it exist?")
-        self.logger.info("Writing file '" + filename + \
-                         "' to memory at " + self._hex(addr) + "...")
+        if addr is not None:
+            self.logger.info("Writing file '" + filename + \
+                            "' to memory at " + self._hex(addr) + "...\n")
+        else:
+            self.logger.info("Writing file '" + filename + " to an allocated memory region...\n")
         with f:
-            self.emcore.write(addr, f.read())
+            if addr is not None:
+                self.emcore.write(addr, f.read())
+            else:
+                addr = self.emcore.upload(f.read())
+            size = f.tell()
         f.close()
-        self.logger.info("done\n")
+        self.logger.info("Done uploading " + str(size) + " bytes to 0x" + self._hex(addr) + "\n")
+        return addr, size
     
     @command
     def downloadfile(self, addr, size, filename):
@@ -608,23 +618,23 @@ class Commandline(object):
         self.emcore.bootflashwrite(addr_mem, addr_flash, size)
     
     @command
-    def runfirmware(self, addr, filename):
+    def runfirmware(self, targetaddr, filename):
         """
             Uploads the firmware in <filename>
-            to the address at <addr> and executes it.
+            to an allocated buffer and executes it at <targetaddr>.
         """
-        addr = self._hexint(addr)
-        self.uploadfile(addr, filename)
-        self.execfirmware(addr)
+        targetaddr = self._hexint(targetaddr)
+        addr, size = self.uploadfile(filename)
+        self.execfirmware(targetaddr, addr, size)
     
     @command
-    def execfirmware(self, addr):
+    def execfirmware(self, targetaddr, addr, size):
         """
-            Executes the firmware at <addr>
+            Moves the firmware at <addr> with <size> to <targetaddr> and executes it
         """
         addr = self._hexint(addr)
-        self.logger.info("Running firmware at "+self._hex(addr)+". Bye.")
-        self.emcore.execfirmware(addr)
+        self.logger.info("Running firmware at "+self._hex(targetaddr)+". Bye.\n")
+        self.emcore.execfirmware(targetaddr, addr, size)
     
     @command
     def aesencrypt(self, addr, size, keyindex):
