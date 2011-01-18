@@ -10,8 +10,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include <zlib.h>
+//#include <zlib.h>
+#include "ucl/ucl.h"
 #include "compress.h"
 #include "stubs.h"
 
@@ -24,10 +26,13 @@
 int
 fopen_stream_u(stream *fp, const char *path, const char *mode)
 {
-	fp->u.filep = fopen(path, mode);
-	fp->type = (fp->u.filep) ? UNCOMPRESSED : INVALID;
+	fp->filep = fopen(path, mode);
+	fp->type = (fp->filep) ? UNCOMPRESSED : INVALID;
 	fp->mode = mode;
-	return (fp->u.filep) ? 0 : 1;
+    fp->buffer = NULL;
+    fp->bufsize = 0;
+    fp->bufused = 0;
+	return (fp->filep) ? 0 : 1;
 }
 
 /* Read from stream.  Return number of elements read.  */
@@ -39,12 +44,12 @@ fread_stream(void *ptr, size_t size, size_t nmemb, stream *str)
 
 	switch (str->type) {
 		case UNCOMPRESSED:
-		read = fread(ptr, size, nmemb, str->u.filep);
+		read = fread(ptr, size, nmemb, str->filep);
 		break;
 
-		case COMPRESSED:
-		read = gzread(str->u.gzfilep, ptr, size * nmemb) / size;
-		break;
+//		case COMPRESSED:
+//		read = gzread(str->u.gzfilep, ptr, size * nmemb) / size;
+//		break;
 
 		default:
 		abort();
@@ -62,11 +67,19 @@ fwrite_stream(const void *ptr, size_t size, size_t nmemb, stream *str)
 
 	switch (str->type) {
 		case UNCOMPRESSED:
-		written = fwrite(ptr, size, nmemb, str->u.filep);
+		written = fwrite(ptr, size, nmemb, str->filep);
 		break;
 
 		case COMPRESSED:
-		written = gzwrite(str->u.gzfilep, ptr, size * nmemb) / size;
+        if (str->bufused + size * nmemb > str->bufsize)
+        {
+            str->bufsize = (str->bufused + size * nmemb + 0xfff) & ~0xfff;
+            str->buffer = (char*)realloc(str->buffer, str->bufsize);
+        }
+        memcpy(&str->buffer[str->bufused], ptr, size * nmemb);
+        str->bufused += size * nmemb;
+        written = nmemb;
+		//written = gzwrite(str->u.gzfilep, ptr, size * nmemb) / size;
 		break;
 
 		default:
@@ -83,10 +96,34 @@ fclose_stream(stream *str)
 {
 	switch (str->type) {
 		case UNCOMPRESSED:
-		return fclose(str->u.filep);
+		return fclose(str->filep);
 
 		case COMPRESSED:
-		return gzclose(str->u.gzfilep);
+        {
+            int outsize = str->bufused + str->bufused / 8 + 256;
+            str->buffer = (char*)realloc(str->buffer, str->bufused);
+            char* buffer = (char*)malloc(outsize);
+            int r = ucl_nrv2e_99_compress(str->buffer, str->bufused, buffer, &outsize, 0, 10, NULL, NULL);
+            free(str->buffer);
+            if (r != UCL_E_OK)
+            {
+                free(buffer);
+                /* this should NEVER happen */
+                printf("internal error - compression failed: %d\n", r);
+                return 2;
+            }
+            buffer = (char*)realloc(buffer, outsize);
+            int done = 0;
+            while (done < outsize)
+            {
+                int bytes = fwrite(&buffer[done], 1, outsize - done, str->filep);
+                if (bytes <= 0) return 3;
+                done += bytes;
+            }
+            free(buffer);
+		    return fclose(str->filep);
+        }
+//		return gzclose(str->u.gzfilep);
 
 		default:
 		abort();
@@ -100,24 +137,25 @@ ferror_stream(stream *str)
 {
 	switch (str->type) {
 		case UNCOMPRESSED:
-		return ferror(str->u.filep);
+		return ferror(str->filep);
 
 		case COMPRESSED:
-		{
-			const char *err;
-			int errno;
-
-			err = gzerror(str->u.gzfilep, &errno);
-			if (errno == Z_OK || errno == Z_STREAM_END)
-				return 0;
-			else if (errno == Z_ERRNO)
-				return 1;
-			else {
-				fprintf(stderr, "%s\n", err);
-				return 1;
-			}
-		}
-		break;
+		return ferror(str->filep);
+//		{
+//			const char *err;
+//			int errno;
+//
+//			err = gzerror(str->u.gzfilep, &errno);
+//			if (errno == Z_OK || errno == Z_STREAM_END)
+//				return 0;
+//			else if (errno == Z_ERRNO)
+//				return 1;
+//			else {
+//				fprintf(stderr, "%s\n", err);
+//				return 1;
+//			}
+//		}
+//		break;
 
 		default:
 		abort();
@@ -131,10 +169,10 @@ fseek_stream(stream *str, long offset, int whence)
 {
 	switch (str->type) {
 		case UNCOMPRESSED:
-		return fseek(str->u.filep, offset, whence);
+		return fseek(str->filep, offset, whence);
 
-		case COMPRESSED:
-		return gzseek(str->u.gzfilep, offset, whence);
+//		case COMPRESSED:
+//		return gzseek(str->u.gzfilep, offset, whence);
 
 		default:
 		abort();
@@ -156,12 +194,12 @@ reopen_stream_compressed(stream *str)
 	if (str->type == INVALID)
 		abort();
 
-	fd = fileno(str->u.filep);
+	fd = fileno(str->filep);
 	/* Get current (buffered) file position.  */
-	offset = ftell(str->u.filep);
+	offset = ftell(str->filep);
 
 	/* Make sure there's nothing left in buffers.  */
-	fflush(str->u.filep);
+	fflush(str->filep);
 
 	/* Reposition underlying FD.  (Might be unnecessary?)  */
 	roffset = lseek(fd, offset, SEEK_SET);
@@ -169,8 +207,8 @@ reopen_stream_compressed(stream *str)
 	assert(roffset == offset);
 
 	/* Reopen as compressed stream.  */
-	str->u.gzfilep = gzdopen(fd, str->mode);
-	gzsetparams(str->u.gzfilep, 9, Z_DEFAULT_STRATEGY);
+	//str->u.gzfilep = gzdopen(fd, str->mode);
+	//gzsetparams(str->u.gzfilep, 9, Z_DEFAULT_STRATEGY);
 	str->type = COMPRESSED;
 }
 

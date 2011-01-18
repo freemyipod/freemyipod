@@ -645,6 +645,7 @@ dump_symbols(symbols, number_of_symbols);
 				case R_ARM_PLT32:
 				case R_ARM_GOTPC:
 				case R_ARM_GOT32:
+				case R_ARM_V4BX:
 					relocation_needed = 0;
 					break;
 				default:

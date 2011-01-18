@@ -10,7 +10,7 @@
 #ifndef __ELF2FLT_COMPRESS_H__
 #define __ELF2FLT_COMPRESS_H__
 
-#include <zlib.h>
+//#include <zlib.h>
 
 typedef enum
 {
@@ -25,11 +25,15 @@ typedef struct
 {
   stream_type type;
   const char *mode;
-  union
-    {
-      FILE *filep;
-      gzFile gzfilep;
-    } u;
+  FILE *filep;
+  char* buffer;
+  int bufsize;
+  int bufused;
+//  union
+//    {
+//      FILE *filep;
+//      gzFile gzfilep;
+//    } u;
 } stream;
 
 int fopen_stream_u(stream *fp, const char *path, const char *mode);
