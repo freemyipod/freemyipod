@@ -153,7 +153,9 @@ leave_critical_section:
 execfirmware:
 	stmfd	sp!, {r0-r2}
 	bl	interrupt_shutdown
+	mov	r0, sp
 	msr	cpsr_c, #0xd3
+	mov	sp, r0
 	ldmfd	sp, {r0-r2}
 	bl	memmove
 	bl	clean_dcache
