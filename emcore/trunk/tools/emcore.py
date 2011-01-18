@@ -56,7 +56,7 @@ class ArgumentTypeError(Error):
             return "Expected " + str(self.expected) + ", but saw something else"
 
 
-def usage(errormsg=None, specific=False):
+def usage(errormsg=None, specific=False, docstring=True):
     """
         Prints the usage information.
         It is auto generated from various places.
@@ -80,8 +80,8 @@ def usage(errormsg=None, specific=False):
                     logger.log("[" + kwarg + " = " + str(kwvalue) + "] ")
             if doc[function]['varargs']:
                 logger.log("<db1> ... <dbN>")
-            logger.log("\n")
-            if doc[function]['documentation']:
+            if docstring and doc[function]['documentation']:
+                logger.log("\n")
                 logger.log(doc[function]['documentation']+"\n", 4)
             logger.log("\n")
     logger.log("\n")
@@ -205,6 +205,11 @@ class Commandline(object):
     @staticmethod
     def _hex(integer):
         return "0x%x" % integer
+    
+    @command
+    def help(self):
+        """ Generates a list of functions """
+        usage(None, False, False)
     
     @command
     def getinfo(self, infotype):
