@@ -11,6 +11,7 @@ SECTIONS
 {
     .text :
     {
+        __emcore_app_base = .;
 	KEEP(.emcoreentrypoint*)
 	*(.emcoreentrypoint*)
         *(.text*)
@@ -29,10 +30,8 @@ SECTIONS
 
     .bss (NOLOAD) :
     {
-        __bss_start = .;
         *(.bss*)
         *(COMMON)
-        __bss_end = .;
     } > VIRTUAL
 
     /DISCARD/ :
