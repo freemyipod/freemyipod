@@ -2,7 +2,7 @@ NAME := emcoreldr-ipodnano2g
 
 EMCOREDIR ?= ../../
 
-CROSS   ?= arm-none-eabi-
+CROSS   ?= arm-elf-eabi-
 CC      := $(CROSS)gcc
 AS      := $(CROSS)as
 LD      := $(CROSS)ld
