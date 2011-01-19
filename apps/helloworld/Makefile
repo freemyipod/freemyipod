@@ -41,11 +41,11 @@ else
 endif
 
 build/$(NAME).elf: ls.x $(OBJ)
-	@echo "[LD]     $@"
+	@echo [LD]     $@
 	@$(LD) $(LDFLAGS) -o $@ -T ls.x $(OBJ)
 
 build/%.o: %.c build/version.h
-	@echo "[CC]     $<"
+	@echo [CC]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
 else
@@ -62,7 +62,7 @@ endif
 	@rm -f $@.dep.tmp
 
 build/%.o: %.S build/version.h
-	@echo "[CC]     $<"
+	@echo [CC]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
 else
@@ -79,7 +79,7 @@ endif
 	@rm -f $@.dep.tmp
 
 build/__emcore_%.o: $(EMCOREDIR)/export/%.S
-	@echo "[CC]     $<"
+	@echo [CC]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
 else
@@ -88,7 +88,7 @@ endif
 	@$(CC) -c $(CFLAGS) -o $@ $<
 
 build/version.h: version.h .svn/entries build
-	@echo "[PP]     $<"
+	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
 	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
 else
