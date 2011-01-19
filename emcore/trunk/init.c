@@ -62,12 +62,14 @@ enum boottype
 {
     BOOTTYPE_PIGGYBACKED = 1,
     BOOTTYPE_BOOTFLASH = 2,
-    BOOTTYPE_FILESYSTEM = 3
+    BOOTTYPE_FILESYSTEM = 3,
+    BOOTTYPE_FAKESUCCESS = 4
 };
 
 struct bootoption
 {
-    struct bootoption* next;
+    struct bootoption* success_next;
+    struct bootoption* fail_next;
     enum boottype type;
     char* source;
 };
@@ -174,13 +176,15 @@ void initthread()
 #endif
     DEBUGF("Finished initialisation sequence");
 
-    struct bootoption* option;
-    bool done = false;
-    for (option = bootinfo.options; !done && option; option = option->next)
+    struct bootoption* option = bootinfo.options;
+    bool success = false;
+    while (option)
+    {
+        success = false;
         switch (option->type)
         {
         case BOOTTYPE_PIGGYBACKED:
-            done = execimage(option->source, true) != NULL;
+            success = execimage(option->source, true) != NULL;
             break;
 
 #ifdef HAVE_BOOTFLASH
@@ -195,8 +199,8 @@ void initthread()
                 free(buffer);
                 break;
             }
-            done = execimage(buffer, false) != NULL;
-            if (!done) free(buffer);
+            success = execimage(buffer, false) != NULL;
+            if (!success) free(buffer);
             break;
         }
 #endif
@@ -225,16 +229,23 @@ void initthread()
                 break;
             }
             close(fd);
-            done = execimage(buffer, false) != NULL;
-            if (!done) free(buffer);
+            success = execimage(buffer, false) != NULL;
+            if (!success) free(buffer);
             break;
         }
 #endif
 
+        case BOOTTYPE_FAKESUCCESS:
+            success = true;
+            break;
+
         default:
             cprintf(CONSOLE_BOOT, unknownboottypestr, option->type);
         }
-    cputs(CONSOLE_BOOT, nobootoptionsstr);
+        if (success) option = option->success_next;
+        else option = option->fail_next;
+    }
+    if (!success) cputs(CONSOLE_BOOT, nobootoptionsstr);
     free(ib->bootalloc);
 }
 
