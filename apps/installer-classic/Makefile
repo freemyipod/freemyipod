@@ -11,7 +11,7 @@ BITMAPS = build/sidepane.ucl build/warning.ucl build/installing.ucl build/format
 FLASHFILES = flashfiles/uninstaller-classic.embiosapp.ucl flashfiles/iloader.cfg.ucl flashfiles/iloader.embiosapp.ucl \
              flashfiles/embiosldr-ipodclassic.bin flashfiles/embios-ipodclassic.ucl flashfiles/umsboot-ipodclassic.ucl
 
-CROSS   ?= arm-none-eabi-
+CROSS   ?= arm-elf-eabi-
 CC      := $(CROSS)gcc
 AS      := $(CROSS)as
 LD      := $(CROSS)ld

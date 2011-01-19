@@ -10,7 +10,7 @@
 DIR = ../build/
 OUT = $(DIR)libucl/
 
-CROSS   ?= arm-none-eabi-
+CROSS   ?= arm-elf-eabi-
 CC      := $(CROSS)gcc
 AR      := $(CROSS)ar
 RANLIB  := $(CROSS)ranlib

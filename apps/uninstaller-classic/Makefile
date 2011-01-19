@@ -2,7 +2,7 @@ NAME := uninstaller-classic
 
 EMBIOSDIR ?= ../../embios/trunk/
 
-CROSS   ?= arm-none-eabi-
+CROSS   ?= arm-elf-eabi-
 CC      := $(CROSS)gcc
 AS      := $(CROSS)as
 LD      := $(CROSS)ld

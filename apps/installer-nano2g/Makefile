@@ -15,7 +15,7 @@ BITMAPS = build/backdrop.ucl build/welcome.ucl build/repartition.ucl build/insta
 FLASHFILES = flashfiles/uninstaller-nano2g.embiosapp.ucl flashfiles/iloader.cfg.ucl flashfiles/iloader.embiosapp.ucl \
              flashfiles/embiosldr-ipodnano2g.dfu flashfiles/embios-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
 
-CROSS   ?= arm-none-eabi-
+CROSS   ?= arm-elf-eabi-
 CC      := $(CROSS)gcc
 AS      := $(CROSS)as
 LD      := $(CROSS)ld
