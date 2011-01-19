@@ -1,4 +1,9 @@
 /*
+ * elf2emcoreapp.c: Convert ELF (or any BFD format) to emCORE executable format
+ *
+ * (c) 2011, Michael Sparmann <theseven@gmx.net>
+ *
+ * Based on:
  * elf2flt.c: Convert ELF (or any BFD format) to FLAT binary format
  *
  * (c) 1999-2002, Greg Ungerer <gerg@snapgear.com>
@@ -73,8 +78,8 @@ const char *elf2flt_progname;
 #include <getopt.h>
 #endif
 
-/* from uClinux-x.x.x/include/linux */
-#include "flat.h"     /* Binary flat header description                      */
+#define _TOOL
+#include "../../emcore/trunk/execimage.h"
 #include "compress.h"
 
 #ifdef TARGET_e1
@@ -109,6 +114,13 @@ const char *elf2flt_progname;
 #define ARCH	"nios2"
 #else
 #error "Don't know how to support your CPU architecture??"
+#endif
+
+#ifndef R_ARM_V4BX
+#define R_ARM_V4BX 40
+#endif
+#ifndef R_ARM_JUMP24
+#define R_ARM_JUMP24 29
 #endif
 
 #if defined(TARGET_m68k) || defined(TARGET_h8300) || defined(TARGET_bfin)
@@ -784,6 +796,8 @@ dump_symbols(symbols, number_of_symbols);
 #if defined(TARGET_arm)
 				case R_ARM_ABS32:
 					relocation_needed = 1;
+					sym_vma = bfd_section_vma(abs_bfd, sym_section);
+					sym_addr += sym_vma + q->addend;
 					if (verbose)
 						fprintf(stderr,
 							"%s vma=0x%x, value=0x%x, address=0x%x "
@@ -793,8 +807,6 @@ dump_symbols(symbols, number_of_symbols);
 							q->address, sym_addr,
 							(*p)->howto->rightshift,
 							*(uint32_t *)r_mem);
-					sym_vma = bfd_section_vma(abs_bfd, sym_section);
-					sym_addr += sym_vma + q->addend;
 					break;
 				case R_ARM_GOT32:
 				case R_ARM_GOTPC:
@@ -807,8 +819,8 @@ dump_symbols(symbols, number_of_symbols);
 							"%s vma=0x%x, value=0x%x, address=0x%x "
 							"sym_addr=0x%x rs=0x%x, opcode=0x%x\n",
 							"PLT32",
-							sym_vma, (*(q->sym_ptr_ptr))->value,
-							q->address, sym_addr,
+							0, (*(q->sym_ptr_ptr))->value,
+							q->address, (sym_addr-q->address)>>(*p)->howto->rightshift,
 							(*p)->howto->rightshift,
 							*(uint32_t *)r_mem);
 				case R_ARM_PC24:
@@ -1585,7 +1597,7 @@ static void usage(void)
 	"       -a              : use existing symbol references\n"
 	"                         instead of recalculating from\n"
 	"                         relocation info\n"
-        "       -R reloc-file   : read relocations from a separate file\n"
+    "       -R reloc-file   : read relocations from a separate file\n"
 	"       -p abs-pic-file : GOT/PIC processing with files\n"
 	"       -s stacksize    : set application stack size\n"
 	"       -o output-file  : output file name\n\n",
@@ -1643,19 +1655,13 @@ int main(int argc, char *argv[])
   void *data;
   uint32_t *reloc;
 
-  struct flat_hdr hdr;
+  struct emcoreapp_header hdr;
 
   elf2flt_progname = argv[0];
   xmalloc_set_program_name(elf2flt_progname);
 
   if (argc < 2)
   	usage();
-
-  if (sizeof(hdr) != 64)
-    fatal(
-	    "Potential flat header incompatibility detected\n"
-	    "header size should be 64 but is %d",
-	    sizeof(hdr));
 
 #ifndef TARGET_e1
   stack = 4096;
@@ -1858,22 +1864,17 @@ int main(int argc, char *argv[])
   text_offs = real_address_bits(text_vma);
 
   /* Fill in the binflt_flat header */
-  memcpy(hdr.magic,"bFLT",4);
-  hdr.rev         = FLAT_VERSION;
-  hdr.entry       = sizeof(hdr) + bfd_get_start_address(abs_bfd);
-  hdr.data_start  = sizeof(hdr) + text_offs + text_len;
-  hdr.data_end    = sizeof(hdr) + text_offs + text_len +data_len;
-  hdr.bss_end     = sizeof(hdr) + text_offs + text_len +data_len+bss_len;
-  hdr.stack_size  = stack; /* FIXME */
-  hdr.reloc_start = sizeof(hdr) + text_offs + text_len +data_len;
-  hdr.reloc_count = reloc_len;
-  hdr.flags       = 0
-	  | (load_to_ram || text_has_relocs ? FLAT_FLAG_RAM : 0)
-	  | (ktrace ? FLAT_FLAG_KTRACE : 0)
-	  | (pic_with_got ? FLAT_FLAG_GOTPIC : 0)
-	  | (docompress ? (docompress == 2 ? FLAT_FLAG_GZDATA : FLAT_FLAG_GZIP) : 0);
-  hdr.build_date = (uint32_t)time(NULL);
-  memset(hdr.filler, 0x00, sizeof(hdr.filler));
+  memcpy(hdr.signature, "emCOexec", 8);
+  hdr.version = EMCOREAPP_HEADER_VERSION;
+  hdr.textstart = sizeof(hdr);
+  hdr.textsize = text_len + data_len;
+  hdr.bsssize = bss_len;
+  hdr.stacksize = stack;
+  hdr.entrypoint = bfd_get_start_address(abs_bfd);
+  hdr.relocstart = sizeof(hdr) + text_len + data_len;
+  hdr.reloccount = reloc_len;
+  hdr.flags = docompress ? EMCOREAPP_FLAG_COMPRESSED : 0;
+  hdr.creationtime = (uint32_t)time(NULL);
 
   for (i=0; i<reloc_len; i++) reloc[i] = reloc[i];
 
@@ -1886,9 +1887,9 @@ int main(int argc, char *argv[])
   }
   
   if (!ofile) {
-    ofile = xmalloc(strlen(fname) + 5 + 1); /* 5 to add suffix */
+    ofile = xmalloc(strlen(fname) + 10 + 1); /* 10 to add suffix */
     strcpy(ofile, fname);
-    strcat(ofile, ".bflt");
+    strcat(ofile, ".emcoreapp");
   }
 
   if ((fd = open (ofile, O_WRONLY|O_BINARY|O_CREAT|O_TRUNC, 0744)) < 0)

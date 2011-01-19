@@ -1,5 +1,9 @@
 /*
- * Helper functions to handle compression via zlib
+ * Helper functions to handle compression via UCL
+ *
+ * Copyright (C) 2011 Michael Sparmann
+ *
+ * Based on: Helper functions to handle compression via zlib
  *
  * Copyright (C) 2007-2008 Julian Brown
  * Copyright (C) 2008 Mike Frysinger

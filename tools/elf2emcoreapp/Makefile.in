@@ -1,0 +1,79 @@
+srcdir = @srcdir@
+VPATH = @srcdir@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+
+bindir = @bindir@
+libdir = @libdir@
+includedir = @includedir@
+
+CC = @CC@
+CPU = @target_cpu@
+TARGET = @target_alias@
+SYMBOL_PREFIX = @SYMBOL_PREFIX@
+CFLAGS = @CFLAGS@
+INCLUDES = -I$(srcdir) @bfd_include_dir@ @binutils_include_dir@ -I../ucl/include
+CPPFLAGS = @CPPFLAGS@ $(DEFS) $(INCLUDES)
+LDFLAGS = @LDFLAGS@
+LDLIBS = @LIBS@ ../ucl/src/libucl.a
+INSTALL = @INSTALL@
+DEFS = @DEFS@ \
+	-DTARGET_$(CPU) \
+	-DTARGET_CPU=\"$(CPU)\" \
+	-DSYMBOL_PREFIX=\"$(SYMBOL_PREFIX)\" \
+	-DBINUTILS_LDSCRIPTDIR=\"@binutils_ldscript_dir@\" \
+	-DTARGET_ALIAS=\"$(TARGET)\" \
+	-DNO_GOT_CHECK=@got_check@ \
+	-DUSE_EMIT_RELOCS=@emit_relocs@ \
+	-DEMIT_CTOR_DTOR=@emit_ctor_dtor@ \
+	-DALWAYS_RELOC_TEXT=@always_reloc_text@
+EXEEXT = @EXEEXT@
+OBJEXT = @OBJEXT@
+
+HOST = @host_alias@
+
+ifneq (,$(findstring mingw32,$(HOST)))
+   LDLIBS += -lws2_32
+endif
+
+# force link order under cygwin to avoid getopts / libiberty clash
+ifneq ($(strip $(shell gcc -v 2>&1 | grep "cygwin")),)
+   LDLIBS := -lcygwin $(LDLIBS)
+endif
+
+target_bindir = $(prefix)/$(TARGET)/bin
+target_libdir = $(prefix)/$(TARGET)/lib
+
+
+PROG_ELF2EMCOREAPP = elf2emcoreapp$(EXEEXT)
+
+PROGS = $(PROG_ELF2EMCOREAPP)
+
+all: $(PROGS)
+
+# We need to declare the link explicitly because make only provides
+# implicit rules when EXEEXT is set to nothing
+link = $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+$(PROG_ELF2EMCOREAPP): elf2emcoreapp.o compress.o stubs.o
+	$(link)
+
+Makefile: $(srcdir)/Makefile.in
+	./config.status $@
+
+clean:
+	-rm -f $(PROGS) *.$(OBJEXT) .deps
+
+distclean: clean
+	-rm -f Makefile config.log config.status config.cache
+	-rm -rf autom4te.cache
+
+install:
+	$(INSTALL) -d $(target_bindir)
+	$(INSTALL) -d $(target_libdir)
+	$(INSTALL) -m 755 $(PROG_ELF2EMCOREAPP) $(bindir)/$(TARGET)-$(PROG_ELF2EMCOREAPP)
+	$(INSTALL) -m 755 $(PROG_ELF2EMCOREAPP) $(target_bindir)/$(PROG_ELF2EMCOREAPP)
+
+sinclude .deps
+.deps:
+	$(CC) -MM $(CPPFLAGS) $(srcdir)/*.c > .deps

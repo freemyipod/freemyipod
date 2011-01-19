@@ -19,7 +19,6 @@
 #endif
 #include <stdint.h>
 
-#define	FLAT_VERSION			0x00000004L
 
 #ifdef CONFIG_BINFMT_SHARED_FLAT
 #define	MAX_SHARED_LIBS			(4)
@@ -32,35 +31,23 @@
  * development,  all fields are in network byte order.
  */
 
-struct flat_hdr {
-    char magic[4];
-    uint32_t rev;          /* version (as above) */
-    uint32_t entry;        /* Offset of first executable instruction
-                              with text segment from beginning of file */
-    uint32_t data_start;   /* Offset of data segment from beginning of
-                              file */
-    uint32_t data_end;     /* Offset of end of data segment from beginning
-                              of file */
-    uint32_t bss_end;      /* Offset of end of bss segment from beginning
-                              of file */
-
-    /* (It is assumed that data_end through bss_end forms the bss segment.) */
-
-    uint32_t stack_size;   /* Size of stack, in bytes */
-    uint32_t reloc_start;  /* Offset of relocation records from beginning
-                              of file */
-    uint32_t reloc_count;  /* Number of relocation records */
-    uint32_t flags;       
-    uint32_t build_date;   /* When the program/library was built */
-    uint32_t filler[5];    /* Reservered, set to zero */
+#define	EMCOREAPP_HEADER_VERSION 1
+struct emcoreapp_header
+{
+	char signature[8];
+	uint32_t version version;
+    off_t textstart;
+    size_t textsize;
+    size_t bsssize;
+    size_t stacksize;
+	off_t entrypoint;
+	off_t relocstart;
+	uint32_t reloccount;
+	uint32_t flags;
+    uint32_t creationtime;
 };
 
-#define FLAT_FLAG_RAM    0x0001 /* load program entirely into RAM */
-#define FLAT_FLAG_GOTPIC 0x0002 /* program is PIC with GOT */
-#define FLAT_FLAG_GZIP   0x0004 /* all but the header is compressed */
-#define FLAT_FLAG_GZDATA 0x0008 /* only data/relocs are compressed (for XIP) */
-#define FLAT_FLAG_KTRACE 0x0010 /* output useful kernel trace for debugging */
-#define FLAT_FLAG_L1STK  0x0020 /* use a 4k stack in L1 scratch memory.  */
+#define HEADER_FLAG_UCL 0x00000001 /* all but the header is compressed */
 
 #ifdef __KERNEL__ /* so systems without linux headers can compile the apps */
 /*
