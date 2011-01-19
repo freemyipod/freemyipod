@@ -484,37 +484,17 @@ class Emcore(object):
     @command()
     def execimage(self, addr):
         """ Runs the emCORE app at 'addr' """
-        return self.lib.monitorcommand(struct.pack("IIII", 21, addr, 0, 0), "III", ("rc", None, None))
+        return self.lib.monitorcommand(struct.pack("IIII", 21, addr, 0, 0), "III", ("thread", None, None))
     
     @command()
     def run(self, app):
         """ Uploads and runs the emCORE app in the string 'app' """
-        try:
-            appheader = struct.unpack("<8sIIIIIIIIII", app[:48])
-        except struct.error:
+        if app[:8] != "emCOexec":
             raise ArgumentError("The specified app is not an emCORE application")
-        header = appheader[0]
-        if header != "emBIexec":
-            raise ArgumentError("The specified app is not an emCORE application")
-        baseaddr = appheader[2]
-        threadnameptr = appheader[8]
-        nameptr = threadnameptr - baseaddr
-        name = ""
-        while True:
-            char = app[nameptr:nameptr+1]
-            try:
-                if ord(char) == 0:
-                    break
-            except TypeError:
-                raise ArgumentError("The specified app is not an emCORE application")
-            name += char
-            nameptr += 1
-        usermem = self.getusermemrange()
-        if usermem.lower > baseaddr or usermem.upper < baseaddr + len(app):
-            raise ArgumentError("The baseaddress of the specified emCORE application is out of range of the user memory range on the device. Are you sure that this application is compatible with your device?")
+        baseaddr = self.malloc(len(app))
         self.write(baseaddr, app)
-        self.execimage(baseaddr)
-        return Bunch(baseaddr=baseaddr, name=name)
+        result = self.execimage(baseaddr)
+        return Bunch(thread=result.thread)
     
     @command(timeout = 5000)
     def bootflashread(self, memaddr, flashaddr, size):

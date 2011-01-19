@@ -564,7 +564,7 @@ class Commandline(object):
             raise ArgumentError("File not readable. Does it exist?")
         with f:
             data = self.emcore.run(f.read())
-        self.logger.info("Executed emCORE application \"" + data.name + "\" at address " + self._hex(data.baseaddr))
+        self.logger.info("Executed emCORE application as thread " + self._hex(data.thread))
 
     @command
     def execimage(self, addr):
