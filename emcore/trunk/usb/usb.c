@@ -560,6 +560,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
         case 21:  // EXECIMAGE
             if (set_dbgaction(DBGACTION_EXECIMAGE, 0)) break;
             dbgactionaddr = dbgrecvbuf[1];
+            dbgactiontype = dbgrecvbuf[2];
             break;
 #ifdef HAVE_BOOTFLASH
         case 22:  // READ BOOT FLASH
@@ -735,7 +736,7 @@ void dbgthread(void)
                 break;
             case DBGACTION_EXECIMAGE:
                 dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = execimage((void*)dbgactionaddr, false);
+                dbgasyncsendbuf[1] = (uint32_t)execimage((void*)dbgactionaddr, dbgactiontype);
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_EXECFIRMWARE:

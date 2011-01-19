@@ -196,5 +196,7 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
 #ifdef HAVE_HMACSHA1
     .hmacsha1 = hmacsha1,
 #endif
-    .int_dma_set_handler = int_dma_set_handler
+    .int_dma_set_handler = int_dma_set_handler,
+    .thread_set_name = thread_set_name,
+    .thread_set_priority = thread_set_priority
 };

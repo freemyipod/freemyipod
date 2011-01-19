@@ -1,6 +1,6 @@
 //
 //
-//    Copyright 2010 TheSeven
+//    Copyright 2011 TheSeven
 //
 //
 //    This file is part of emCORE.
@@ -25,26 +25,36 @@
 #define __EXECIMAGE_H__
 
 
+#ifdef _TOOL
+#include <stdint.h>
+#else
 #include "global.h"
+#include "thread.h"
+#endif
 
 
-struct execimage_header
+#define EMCOREAPP_HEADER_VERSION 1
+struct emcoreapp_header
 {
-    char signature[8];
-    int version;
-    void* baseaddr;
-    int size;
-    uint32_t crc32;
-    void* stackaddr;
-    int stacksize;
-    void* entrypoint;
-    char* threadname;
-    int threadtype;
-    int threadpriority;
+	char signature[8];
+	uint32_t version;
+    off_t textstart;
+    size_t textsize;
+    size_t bsssize;
+    size_t stacksize;
+	off_t entrypoint;
+	off_t relocstart;
+	uint32_t reloccount;
+	uint32_t flags;
+    uint32_t creationtime;
 };
 
+#define EMCOREAPP_FLAG_COMPRESSED 0x00000001
 
-int execimage(void* image, bool nomalloc);
+
+#ifndef _TOOL
+struct scheduler_thread* execimage(void* image, bool copy);
+#endif
 
 
 #endif

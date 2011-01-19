@@ -434,6 +434,22 @@ int thread_resume(struct scheduler_thread* thread)
     return ret;
 }
 
+void thread_set_name(struct scheduler_thread* thread, char* name)
+{
+    uint32_t mode = enter_critical_section();
+    if (!thread) thread = current_thread;
+    thread->name = name;
+    leave_critical_section(mode);
+}
+
+void thread_set_priority(struct scheduler_thread* thread, int priority)
+{
+    uint32_t mode = enter_critical_section();
+    if (!thread) thread = current_thread;
+    thread->priority = priority;
+    leave_critical_section(mode);
+}
+
 int thread_terminate(struct scheduler_thread* thread)
 {
     struct scheduler_thread* t;

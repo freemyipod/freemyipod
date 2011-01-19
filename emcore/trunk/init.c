@@ -180,7 +180,7 @@ void initthread()
         switch (option->type)
         {
         case BOOTTYPE_PIGGYBACKED:
-            done = execimage(option->source, true) > 0;
+            done = execimage(option->source, true) != NULL;
             break;
 
 #ifdef HAVE_BOOTFLASH
@@ -195,7 +195,7 @@ void initthread()
                 free(buffer);
                 break;
             }
-            done = execimage(buffer, false);
+            done = execimage(buffer, false) != NULL;
             if (!done) free(buffer);
             break;
         }
@@ -225,7 +225,7 @@ void initthread()
                 break;
             }
             close(fd);
-            done = execimage(buffer, false);
+            done = execimage(buffer, false) != NULL;
             if (!done) free(buffer);
             break;
         }

@@ -120,6 +120,8 @@ struct scheduler_thread* thread_create(struct scheduler_thread* thread, const ch
                                        enum thread_type type, int priority, bool run);
 int thread_suspend(struct scheduler_thread* thread);
 int thread_resume(struct scheduler_thread* thread);
+void thread_set_name(struct scheduler_thread* thread, char* name);
+void thread_set_priority(struct scheduler_thread* thread, int priority);
 int thread_terminate(struct scheduler_thread* thread);
 int thread_killlevel(enum thread_type type, bool killself);
 enum thread_state thread_get_state(struct scheduler_thread* thread);

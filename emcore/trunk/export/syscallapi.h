@@ -68,7 +68,7 @@
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
    new function which are "waiting" at the end of the function table) */
-#define EMCORE_MIN_API_VERSION 0
+#define EMCORE_MIN_API_VERSION 1
 
 /* NOTE: To support backwards compatibility, only add new functions at
          the end of the structure.  Every time you add a new function,
@@ -229,6 +229,8 @@ struct emcore_syscall_table
     typeof(hmacsha1) *hmacsha1;
     typeof(reset) *reset;
     typeof(int_dma_set_handler) *int_dma_set_handler;
+    typeof(thread_set_name) *thread_set_name;
+    typeof(thread_set_priority) *thread_set_priority;
 };
 
 
