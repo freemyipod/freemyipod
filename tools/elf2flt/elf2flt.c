@@ -798,6 +798,7 @@ dump_symbols(symbols, number_of_symbols);
 					break;
 				case R_ARM_GOT32:
 				case R_ARM_GOTPC:
+                case R_ARM_V4BX:
 					/* Should be fine as is */
 					break;
 				case R_ARM_PLT32:
@@ -811,6 +812,7 @@ dump_symbols(symbols, number_of_symbols);
 							(*p)->howto->rightshift,
 							*(uint32_t *)r_mem);
 				case R_ARM_PC24:
+                case R_ARM_JUMP24:
 					sym_vma = 0;
 					sym_addr = (sym_addr-q->address)>>(*p)->howto->rightshift;
 					break;
@@ -1403,7 +1405,7 @@ DIS29_RELOCATION:
 					((*p)->howto->type != R_ARM_PLT32)))
 					tmp.c[i3] = (hl >> 24) & 0xff;
 				if ((*p)->howto->type == R_ARM_ABS32)
-					*(uint32_t *)r_mem = htonl(hl);
+					*(uint32_t *)r_mem = hl;
 				else
 					*(uint32_t *)r_mem = tmp.l;
 #elif defined(TARGET_e1)
@@ -1857,24 +1859,23 @@ int main(int argc, char *argv[])
 
   /* Fill in the binflt_flat header */
   memcpy(hdr.magic,"bFLT",4);
-  hdr.rev         = htonl(FLAT_VERSION);
-  hdr.entry       = htonl(sizeof(hdr) + bfd_get_start_address(abs_bfd));
-  hdr.data_start  = htonl(sizeof(hdr) + text_offs + text_len);
-  hdr.data_end    = htonl(sizeof(hdr) + text_offs + text_len +data_len);
-  hdr.bss_end     = htonl(sizeof(hdr) + text_offs + text_len +data_len+bss_len);
-  hdr.stack_size  = htonl(stack); /* FIXME */
-  hdr.reloc_start = htonl(sizeof(hdr) + text_offs + text_len +data_len);
-  hdr.reloc_count = htonl(reloc_len);
-  hdr.flags       = htonl(0
+  hdr.rev         = FLAT_VERSION;
+  hdr.entry       = sizeof(hdr) + bfd_get_start_address(abs_bfd);
+  hdr.data_start  = sizeof(hdr) + text_offs + text_len;
+  hdr.data_end    = sizeof(hdr) + text_offs + text_len +data_len;
+  hdr.bss_end     = sizeof(hdr) + text_offs + text_len +data_len+bss_len;
+  hdr.stack_size  = stack; /* FIXME */
+  hdr.reloc_start = sizeof(hdr) + text_offs + text_len +data_len;
+  hdr.reloc_count = reloc_len;
+  hdr.flags       = 0
 	  | (load_to_ram || text_has_relocs ? FLAT_FLAG_RAM : 0)
 	  | (ktrace ? FLAT_FLAG_KTRACE : 0)
 	  | (pic_with_got ? FLAT_FLAG_GOTPIC : 0)
-	  | (docompress ? (docompress == 2 ? FLAT_FLAG_GZDATA : FLAT_FLAG_GZIP) : 0)
-	  );
-  hdr.build_date = htonl((uint32_t)time(NULL));
+	  | (docompress ? (docompress == 2 ? FLAT_FLAG_GZDATA : FLAT_FLAG_GZIP) : 0);
+  hdr.build_date = (uint32_t)time(NULL);
   memset(hdr.filler, 0x00, sizeof(hdr.filler));
 
-  for (i=0; i<reloc_len; i++) reloc[i] = htonl(reloc[i]);
+  for (i=0; i<reloc_len; i++) reloc[i] = reloc[i];
 
   if (verbose) {
     printf("SIZE: .text=0x%04x, .data=0x%04x, .bss=0x%04x",
