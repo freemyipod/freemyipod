@@ -224,7 +224,7 @@ static const struct usb_string_descriptor CACHEALIGN_ATTR lang_descriptor =
 
 void usb_setup_dbg_listener()
 {
-    usb_drv_recv(dbgendpoints[0], dbgrecvbuf, usb_drv_port_speed() ? 512 : 64);
+    usb_drv_recv(dbgendpoints[0], dbgrecvbuf, 512);
 }
 
 void usb_handle_control_request(struct usb_ctrlrequest* req)
