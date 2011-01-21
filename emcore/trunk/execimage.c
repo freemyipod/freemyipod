@@ -25,6 +25,7 @@
 #include "console.h"
 #include "execimage.h"
 #include "mmu.h"
+#include "malloc.h"
 
 
 struct scheduler_thread* execimage(void* image, bool copy)
@@ -37,11 +38,13 @@ struct scheduler_thread* execimage(void* image, bool copy)
                 header->signature[0], header->signature[1], header->signature[2],
                 header->signature[3], header->signature[4], header->signature[5],
                 header->signature[6], header->signature[7]);
+        if (!copy) free(image);
         return NULL;
     }
     if (header->version != EMCOREAPP_HEADER_VERSION)
     {
         cprintf(CONSOLE_BOOT, "execimage: Unsupported version! (%08X)\n", header->version);
+        if (!copy) free(image);
         return NULL;
     }
     off_t offset = header->textstart;
@@ -52,7 +55,10 @@ struct scheduler_thread* execimage(void* image, bool copy)
 	off_t relocstart = header->relocstart - offset;
 	uint32_t reloccount = header->reloccount;
 	bool compressed = header->flags & EMCOREAPP_FLAG_COMPRESSED;
-    size_t finalsize = textsize + bsssize + stacksize;
+	bool lib = header->flags & EMCOREAPP_FLAG_LIBRARY;
+    size_t finalsize;
+    if (lib) finalsize = textsize + bsssize;
+    else finalsize = textsize + bsssize + stacksize;
     size_t datasize = relocstart + reloccount * 4;
     size_t tempsize = MAX(finalsize, datasize);
     if (compressed)
@@ -61,22 +67,24 @@ struct scheduler_thread* execimage(void* image, bool copy)
         if (!alloc)
         {
             cprintf(CONSOLE_BOOT, "execimage: Out of memory!\n");
+            if (!copy) free(image);
             return NULL;
         }
         uint32_t decompsize;
         if (ucl_decompress(image + offset, datasize, alloc, &decompsize))
         {
             cprintf(CONSOLE_BOOT, "execimage: Decompression failed!\n");
+            if (!copy) free(image);
             free(alloc);
             return NULL;
         }
+        if (!copy) free(image);
         if (datasize != decompsize)
         {
             cprintf(CONSOLE_BOOT, "execimage: Decompressed size mismatch!\n");
             free(alloc);
             return NULL;
         }
-        if (!copy) free(image);
         image = alloc;
     }
     else if (copy)
@@ -93,12 +101,14 @@ struct scheduler_thread* execimage(void* image, bool copy)
     else
     {
         memcpy(image, image + offset, datasize);
-        image = realloc(image, tempsize);
-        if (!image)
+        void* newimage = realloc(image, tempsize);
+        if (!newimage)
         {
+            free(image);
             cprintf(CONSOLE_BOOT, "execimage: Out of memory!\n");
             return NULL;
         }
+        else image = newimage;
     }
     for (; reloccount; reloccount--, relocstart += 4)
     {
@@ -109,10 +119,18 @@ struct scheduler_thread* execimage(void* image, bool copy)
     if (tempsize != finalsize) realloc(image, finalsize); /* Can only shrink => safe */
     clean_dcache();
     invalidate_icache();
-    struct scheduler_thread* thread = thread_create(NULL, NULL, image + entrypoint,
-                                                    image + textsize + bsssize, stacksize,
-                                                    USER_THREAD, 127, false);
-    reownalloc(image, thread);
-    thread_resume(thread);
+    struct scheduler_thread* thread;
+    if (lib) thread = (struct scheduler_thread*)library_register(image, image + entrypoint);
+    else
+    {
+        thread = thread_create(NULL, NULL, image + entrypoint, image + textsize + bsssize,
+                               stacksize, USER_THREAD, 127, false);
+        if (thread)
+        {
+            reownalloc(image, thread);
+            thread_resume(thread);
+        }
+        else free(image);
+    }
     return thread;
 }

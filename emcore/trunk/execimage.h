@@ -50,6 +50,7 @@ struct emcoreapp_header
 };
 
 #define EMCOREAPP_FLAG_COMPRESSED 0x00000001
+#define EMCOREAPP_FLAG_LIBRARY    0x00000002
 
 
 #ifndef _TOOL

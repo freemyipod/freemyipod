@@ -27,6 +27,7 @@
 #include "panic.h"
 #include "util.h"
 #include "malloc.h"
+#include "library.h"
 #ifdef HAVE_STORAGE
 #include "dir.h"
 #include "file.h"
@@ -470,6 +471,7 @@ int thread_terminate(struct scheduler_thread* thread)
 
     leave_critical_section(mode);
 
+    library_release_all_of_thread(thread);
 #ifdef HAVE_STORAGE
     close_all_of_process(thread);
     closedir_all_of_process(thread);
