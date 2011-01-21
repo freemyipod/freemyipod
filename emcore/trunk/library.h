@@ -39,6 +39,7 @@ struct emcorelib_header
     uint32_t headerversion;
     uint32_t identifier;
 	uint32_t version;
+	uint32_t minversion;
     int (*initfunc)();
     int (*shutdownfunc)();
     void* api;
@@ -67,11 +68,11 @@ enum library_sourcetype
 #ifndef _TOOL
 struct library_handle* library_register(void* image, struct emcorelib_header* header);
 int library_unload(struct library_handle* lib);
-struct emcorelib_header* get_library(uint32_t identifier, uint32_t minversion, uint32_t maxversion,
+struct emcorelib_header* get_library(uint32_t identifier, uint32_t version,
                                      enum library_sourcetype sourcetype, void* source);
-struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t minversion,
-                                         uint32_t maxversion, enum library_sourcetype sourcetype,
-                                         void* source, struct scheduler_thread* owner);
+struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t version,
+                                         enum library_sourcetype sourcetype, void* source,
+                                         struct scheduler_thread* owner);
 int release_library(struct emcorelib_header* lib);
 int release_library_ext(struct emcorelib_header* lib, struct scheduler_thread* owner);
 int library_release_all_of_thread(struct scheduler_thread* thread);

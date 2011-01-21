@@ -125,36 +125,34 @@ int library_unload(struct library_handle* lib)
     return 0;
 }
 
-struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t minversion,
-                                         uint32_t maxversion, enum library_sourcetype sourcetype,
-                                         void* source, struct scheduler_thread* owner)
+struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t version,
+                                         enum library_sourcetype sourcetype, void* source,
+                                         struct scheduler_thread* owner)
 {
     int i;
-    int version = minversion - 1;
     struct library_handle* h;
-    struct library_handle* best = NULL;
+    struct library_handle* lib = NULL;
     mutex_lock(&library_mutex, TIMEOUT_BLOCK);
     for (h = library_list_head; h; h = h->next)
         if (h->lib->identifier == identifier &&
-            h->lib->version > version && h->lib->version <= maxversion)
+            h->lib->minversion <= version && h->lib->version >= version)
         {
-            best = h;
-            version = h->lib->version;
+            lib = h;
             break;
         }
-    if (!best)
+    if (!lib)
     {
         switch (sourcetype)
         {
         case LIBSOURCE_RAM_ALLOCED:
         {
-            best = (struct library_handle*)execimage(source, false);
+            lib = (struct library_handle*)execimage(source, false);
             break;
         }
 
         case LIBSOURCE_RAM_NEEDCOPY:
         {
-            best = (struct library_handle*)execimage(source, true);
+            lib = (struct library_handle*)execimage(source, true);
             break;
         }
 
@@ -170,7 +168,7 @@ struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t minversio
                 free(buffer);
                 break;
             }
-            best = (struct library_handle*)execimage(buffer, false);
+            lib = (struct library_handle*)execimage(buffer, false);
             break;
         }
 #endif
@@ -199,49 +197,52 @@ struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t minversio
                 break;
             }
             close(fd);
-            best = (struct library_handle*)execimage(buffer, false);
+            lib = (struct library_handle*)execimage(buffer, false);
             break;
         }
 #endif
         }
-        if (!best)
+        if (h->lib->identifier != identifier ||
+            h->lib->minversion > version && h->lib->version < version)
+            lib = NULL;
+        if (!lib)
         {
             mutex_unlock(&library_mutex);
             return NULL;
         }
     }
-    for (i = 0; i < ARRAYLEN(best->users); i++)
-        if (best->users[i] == NULL)
+    for (i = 0; i < ARRAYLEN(lib->users); i++)
+        if (lib->users[i] == NULL)
         {
-            best->users[i] = owner;
+            lib->users[i] = owner;
             mutex_unlock(&library_mutex);
-            return best->lib;
+            return lib->lib;
         }
-    if (best->moreusers)
-        for (i = 0; i < best->moreusers_size / 4; i++)
+    if (lib->moreusers)
+        for (i = 0; i < lib->moreusers_size / 4; i++)
             if (h->moreusers[i] == NULL)
                 {
                     h->moreusers[i] = owner;
                     mutex_unlock(&library_mutex);
-                    return best->lib;
+                    return lib->lib;
                 }
-    void* newalloc = realloc(best->moreusers, best->moreusers_size + 64);
+    void* newalloc = realloc(lib->moreusers, lib->moreusers_size + 64);
     if (!newalloc)
     {
         mutex_unlock(&library_mutex);
         return NULL;
     }
-    best->moreusers = (void**)newalloc;
-    best->moreusers[best->moreusers_size / 4] = owner;
-    best->moreusers_size += 64;
+    lib->moreusers = (void**)newalloc;
+    lib->moreusers[lib->moreusers_size / 4] = owner;
+    lib->moreusers_size += 64;
     mutex_unlock(&library_mutex);
-    return best->lib;
+    return lib->lib;
 }
 
-struct emcorelib_header* get_library(uint32_t identifier, uint32_t minversion, uint32_t maxversion,
+struct emcorelib_header* get_library(uint32_t identifier, uint32_t version,
                                      enum library_sourcetype sourcetype, void* source)
 {
-    return get_library_ext(identifier, minversion, maxversion, sourcetype, source, current_thread);
+    return get_library_ext(identifier, version, sourcetype, source, current_thread);
 }
 
 int release_library_ext(struct emcorelib_header* lib, struct scheduler_thread* owner)
