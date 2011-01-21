@@ -71,17 +71,11 @@ struct scheduler_thread* execimage(void* image, bool copy)
             return NULL;
         }
         uint32_t decompsize;
-        if (ucl_decompress(image + offset, datasize, alloc, &decompsize))
-        {
-            cprintf(CONSOLE_BOOT, "execimage: Decompression failed!\n");
-            if (!copy) free(image);
-            free(alloc);
-            return NULL;
-        }
+        ucl_decompress(image + offset, datasize, alloc, &decompsize);
         if (!copy) free(image);
         if (datasize != decompsize)
         {
-            cprintf(CONSOLE_BOOT, "execimage: Decompressed size mismatch!\n");
+            cprintf(CONSOLE_BOOT, "execimage: Decompression failed!\n");
             free(alloc);
             return NULL;
         }

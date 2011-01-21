@@ -187,6 +187,16 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define int_dma_set_handler __emcore_syscall->int_dma_set_handler
 #define thread_set_name __emcore_syscall->thread_set_name
 #define thread_set_priority __emcore_syscall->thread_set_priority
+#define malloc __emcore_syscall->malloc
+#define memalign __emcore_syscall->memalogn
+#define realloc __emcore_syscall->realloc
+#define reownalloc __emcore_syscall->reownalloc
+#define free __emcore_syscall->free
+#define library_unload __emcore_syscall->library_unload
+#define get_library __emcore_syscall->get_library
+#define get_library_ext __emcore_syscall->get_library_ext
+#define release_library __emcore_syscall->release_library
+#define release_library_ext __emcore_syscall->release_library_ext
 
 
 #endif

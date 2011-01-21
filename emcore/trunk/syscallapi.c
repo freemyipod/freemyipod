@@ -198,5 +198,15 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
 #endif
     .int_dma_set_handler = int_dma_set_handler,
     .thread_set_name = thread_set_name,
-    .thread_set_priority = thread_set_priority
+    .thread_set_priority = thread_set_priority,
+    .malloc = malloc,
+    .memalign = memalign,
+    .realloc = realloc,
+    .reownalloc = reownalloc,
+    .free = free,
+    .library_unload = library_unload,
+    .get_library = get_library,
+    .get_library_ext = get_library_ext,
+    .release_library = release_library,
+    .release_library_ext = release_library_ext
 };

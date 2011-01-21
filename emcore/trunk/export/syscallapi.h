@@ -57,6 +57,8 @@
 #include "../contextswitch.h"
 #include "../hwkeyaes.h"
 #include "../hmacsha1.h"
+#include "../malloc.h"
+#include "../library.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
 #include "../libc/include/stdio.h"
@@ -231,6 +233,16 @@ struct emcore_syscall_table
     typeof(int_dma_set_handler) *int_dma_set_handler;
     typeof(thread_set_name) *thread_set_name;
     typeof(thread_set_priority) *thread_set_priority;
+    typeof(malloc) *malloc;
+    typeof(memalign) *memalign;
+    typeof(realloc) *realloc;
+    typeof(reownalloc) *reownalloc;
+    typeof(free) *free;
+    typeof(library_unload) *library_unload;
+    typeof(get_library) *get_library;
+    typeof(get_library_ext) *get_library_ext;
+    typeof(release_library) *release_library;
+    typeof(release_library_ext) *release_library_ext;
 };
 
 

@@ -56,6 +56,7 @@ struct library_handle
 
 enum library_sourcetype
 {
+    LIBSOURCE_NONE = 0,
     LIBSOURCE_RAM_ALLOCED = 1,
     LIBSOURCE_RAM_NEEDCOPY = 2,
     LIBSOURCE_BOOTFLASH = 3,

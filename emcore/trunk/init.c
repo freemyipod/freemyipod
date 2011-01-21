@@ -200,7 +200,6 @@ void initthread()
                 break;
             }
             success = execimage(buffer, false) != NULL;
-            if (!success) free(buffer);
             break;
         }
 #endif
@@ -230,7 +229,6 @@ void initthread()
             }
             close(fd);
             success = execimage(buffer, false) != NULL;
-            if (!success) free(buffer);
             break;
         }
 #endif

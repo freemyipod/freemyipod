@@ -64,6 +64,7 @@ struct library_handle* library_register(void* image, struct emcorelib_header* he
     handle->next = library_list_head;
     handle->lib = header;
     handle->alloc = image;
+    library_list_head = handle;
     mutex_unlock(&library_mutex);
     return handle;
 }
@@ -143,8 +144,71 @@ struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t minversio
         }
     if (!best)
     {
-        mutex_unlock(&library_mutex);
-        return NULL;
+        switch (sourcetype)
+        {
+        case LIBSOURCE_RAM_ALLOCED:
+        {
+            best = (struct library_handle*)execimage(source, false);
+            break;
+        }
+
+        case LIBSOURCE_RAM_NEEDCOPY:
+        {
+            best = (struct library_handle*)execimage(source, true);
+            break;
+        }
+
+#ifdef HAVE_BOOTFLASH
+        case LIBSOURCE_BOOTFLASH:
+        {
+            int size = bootflash_filesize((char*)source);
+            if (size <= 0) break;
+            void* buffer = memalign(0x10, size);
+            if (!buffer) break;
+            if (bootflash_read((char*)source, buffer, 0, size) != size)
+            {
+                free(buffer);
+                break;
+            }
+            best = (struct library_handle*)execimage(buffer, false);
+            break;
+        }
+#endif
+
+#ifdef HAVE_STORAGE
+        case LIBSOURCE_FILESYSTEM:
+        {
+            int fd = file_open((char*)source, O_RDONLY);
+            if (fd <= 0) break;
+            int size = filesize(fd);
+            if (size <= 0)
+            {
+                close(fd);
+                break;
+            }
+            void* buffer = memalign(0x10, size);
+            if (!buffer)
+            {
+                close(fd);
+                break;
+            }
+            if (read(fd, buffer, size) != size)
+            {
+                free(buffer);
+                close(fd);
+                break;
+            }
+            close(fd);
+            best = (struct library_handle*)execimage(buffer, false);
+            break;
+        }
+#endif
+        }
+        if (!best)
+        {
+            mutex_unlock(&library_mutex);
+            return NULL;
+        }
     }
     for (i = 0; i < ARRAYLEN(best->users); i++)
         if (best->users[i] == NULL)

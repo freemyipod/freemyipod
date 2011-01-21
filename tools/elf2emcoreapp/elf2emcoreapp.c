@@ -148,9 +148,10 @@ const char *elf2flt_progname;
 
 int verbose = 0;      /* extra output when running */
 int pic_with_got = 0; /* do elf/got processing with PIC code */
-int load_to_ram = 0;  /* instruct loader to allocate everything into RAM */
+int load_to_ram = 1;  /* instruct loader to allocate everything into RAM */
 int ktrace = 0;       /* instruct loader output kernel trace on load */
-int docompress = 0;   /* 1 = compress everything, 2 = compress data only */
+int docompress = 0;   /* 1 = compress everything */
+int lib = 0;          /* 1 = this is a shared library */
 int use_resolved = 0; /* If true, get the value of symbol references from */
 		      /* the program contents, not from the relocation table. */
 		      /* In this case, the input ELF file must be already */
@@ -1590,10 +1591,8 @@ static void usage(void)
     fprintf(stderr, "Usage: %s [vrzd] [-p <abs-pic-file>] [-s stack-size] "
 	"[-o <output-file>] <elf-file>\n\n"
 	"       -v              : verbose operation\n"
-	"       -r              : force load to RAM\n"
-	"       -k              : enable kernel trace on load (for debug)\n"
+	"       -l              : the file to be processed is a shared library\n"
 	"       -z              : compress code/data/relocs\n"
-	"       -d              : compress data/relocs\n"
 	"       -a              : use existing symbol references\n"
 	"                         instead of recalculating from\n"
 	"                         relocation info\n"
@@ -1669,22 +1668,16 @@ int main(int argc, char *argv[])
   stack = 0x2020;
 #endif
 
-  while ((opt = getopt(argc, argv, "avzdrkp:s:o:R:")) != -1) {
+  while ((opt = getopt(argc, argv, "avzlp:s:o:R:")) != -1) {
     switch (opt) {
     case 'v':
       verbose++;
       break;
-    case 'r':
-      load_to_ram++;
-      break;
-    case 'k':
-      ktrace++;
+    case 'l':
+      lib = 1;
       break;
     case 'z':
       docompress = 1;
-      break;
-    case 'd':
-      docompress = 2;
       break;
     case 'p':
       pfile = optarg;
@@ -1711,12 +1704,6 @@ int main(int argc, char *argv[])
     }
   }
   
-  /*
-   * if neither the -r or -p options was given,  default to
-   * a RAM load as that is the only option that makes sense.
-   */
-  if (!load_to_ram && !pfile)
-    load_to_ram = 1;
 
   fname = argv[argc-1];
 
@@ -1873,7 +1860,8 @@ int main(int argc, char *argv[])
   hdr.entrypoint = bfd_get_start_address(abs_bfd);
   hdr.relocstart = sizeof(hdr) + text_len + data_len;
   hdr.reloccount = reloc_len;
-  hdr.flags = docompress ? EMCOREAPP_FLAG_COMPRESSED : 0;
+  hdr.flags = (docompress ? EMCOREAPP_FLAG_COMPRESSED : 0)
+            | (lib ? EMCOREAPP_FLAG_LIBRARY : 0);
   hdr.creationtime = (uint32_t)time(NULL);
 
   for (i=0; i<reloc_len; i++) reloc[i] = reloc[i];
@@ -1889,7 +1877,8 @@ int main(int argc, char *argv[])
   if (!ofile) {
     ofile = xmalloc(strlen(fname) + 10 + 1); /* 10 to add suffix */
     strcpy(ofile, fname);
-    strcat(ofile, ".emcoreapp");
+    if (lib) strcat(ofile, ".emcorelib");
+    else strcat(ofile, ".emcoreapp");
   }
 
   if ((fd = open (ofile, O_WRONLY|O_BINARY|O_CREAT|O_TRUNC, 0744)) < 0)
