@@ -1,7 +1,8 @@
 #include "syscallwrappers.h"
 
 
-#define EMCORE_LIB_HEADER(lib_identifier, lib_version, init_func, shutdown_func, api_pointer)     \
+#define EMCORE_LIB_HEADER(lib_identifier, lib_version, lib_min_version, init_func, shutdown_func, \
+                          api_pointer)                                                            \
     struct emcore_syscall_table* __emcore_syscall;                                                \
     int __emcore_lib_init()                                                                       \
     {                                                                                             \
@@ -10,14 +11,15 @@
         if (__emcore_syscall->table_version < EMCORE_API_VERSION                                  \
          || __emcore_syscall->table_minversion > EMCORE_API_VERSION)                              \
              return 0x80000000;                                                                   \
-        if (init_func) return init_func();                                                        \
     }                                                                                             \
     struct emcorelib_header __emcore_lib_header __attribute__((section(".emcoreentrypoint"))) =   \
     {                                                                                             \
         .headerversion = EMCORELIB_HEADER_VERSION,                                                \
         .identifier = lib_identifier,                                                             \
         .version = lib_version,                                                                   \
-        .initfunc = __emcore_lib_init,                                                            \
+        .minversion = lib_min_version,                                                            \
+        .setupfunc = __emcore_lib_init,                                                           \
+        .initfunc = init_func,                                                                    \
         .shutdownfunc = shutdown_func,                                                            \
         .api = &api_pointer                                                                       \
     };

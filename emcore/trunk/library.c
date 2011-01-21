@@ -52,7 +52,8 @@ struct library_handle* library_register(void* image, struct emcorelib_header* he
             mutex_unlock(&library_mutex);
             return NULL;
         }
-    if (header->initfunc && header->initfunc() < 0)
+    if ((header->setupfunc && header->setupfunc() < 0)
+     || (header->initfunc && header->initfunc() < 0))
     {
         mutex_unlock(&library_mutex);
         return NULL;

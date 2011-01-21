@@ -40,6 +40,7 @@ struct emcorelib_header
     uint32_t identifier;
 	uint32_t version;
 	uint32_t minversion;
+    int (*setupfunc)();
     int (*initfunc)();
     int (*shutdownfunc)();
     void* api;
