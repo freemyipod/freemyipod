@@ -12,6 +12,12 @@ ifndef V
 SILENT = @
 endif
 
+ifeq ($(shell uname),WindowsNT)
+CCACHE :=
+else
+CCACHE := $(shell which ccache)
+endif
+
 ifdef RBARCH
 CFLAGS += -arch $(RBARCH)
 endif
@@ -35,7 +41,7 @@ libucl$(RBARCH).a: $(OUT) $(OBJS)
 
 $(OUT)/%.o: %.c
 	@echo CC $<
-	$(SILENT)$(CC) $(CFLAGS) -c $< -o $@
+	$(SILENT)$(CCACHE) $(CC) $(CFLAGS) -c $< -o $@
     
 # some trickery to build ppc and i386 from a single call
 ifeq ($(RBARCH),)

@@ -10,8 +10,14 @@
 DIR = ../build/
 OUT = $(DIR)libucl/
 
+ifeq ($(shell uname),WindowsNT)
+CCACHE :=
+else
+CCACHE := $(shell which ccache)
+endif
+
 CROSS   ?= arm-elf-eabi-
-CC      := $(CROSS)gcc
+CC      := $(CCACHE) $(CROSS)gcc
 AR      := $(CROSS)ar
 RANLIB  := $(CROSS)ranlib
 

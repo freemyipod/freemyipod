@@ -2,8 +2,14 @@ NAME := emcoreldr-ipodclassic
 
 EMCOREDIR ?= ../../
 
+ifeq ($(shell uname),WindowsNT)
+CCACHE :=
+else
+CCACHE := $(shell which ccache)
+endif
+
 CROSS   ?= arm-elf-eabi-
-CC      := $(CROSS)gcc
+CC      := $(CCACHE) $(CROSS)gcc
 AS      := $(CROSS)as
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy

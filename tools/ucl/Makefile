@@ -13,16 +13,22 @@ TARGET2 = ../ucl2e10singleblk
 TARGET3 = ../ucl2e10singleblkunpack
 TARGETS = $(TARGET) $(TARGET2) $(TARGET3)
 
+ifeq ($(shell uname),WindowsNT)
+CCACHE :=
+else
+CCACHE := $(shell which ccache)
+endif
+
 ALL: $(TARGETS)
 
 $(TARGET): uclpack.o src/libucl.a
-	$(CC) uclpack.o src/libucl.a -o $(TARGET)
+	$(CCACHE) $(CC) uclpack.o src/libucl.a -o $(TARGET)
 
 $(TARGET2): ucl2e10singleblk.o src/libucl.a
-	$(CC) ucl2e10singleblk.o src/libucl.a -o $(TARGET2)
+	$(CCACHE) $(CC) ucl2e10singleblk.o src/libucl.a -o $(TARGET2)
 
 $(TARGET3): ucl2e10singleblkunpack.o src/libucl.a
-	$(CC) ucl2e10singleblkunpack.o src/libucl.a -o $(TARGET3)
+	$(CCACHE) $(CC) ucl2e10singleblkunpack.o src/libucl.a -o $(TARGET3)
 
 uclpack.o: uclpack.c
 

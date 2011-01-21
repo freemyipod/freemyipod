@@ -7,7 +7,13 @@ bindir = @bindir@
 libdir = @libdir@
 includedir = @includedir@
 
-CC = @CC@
+ifeq ($(shell uname),WindowsNT)
+CCACHE :=
+else
+CCACHE := $(shell which ccache)
+endif
+
+CC = $(CCACHE) @CC@
 CPU = @target_cpu@
 TARGET = @target_alias@
 SYMBOL_PREFIX = @SYMBOL_PREFIX@
