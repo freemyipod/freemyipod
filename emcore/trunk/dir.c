@@ -46,15 +46,13 @@ int release_dirs(int volume)
         closed++;
     }
     for (d = opendirs; d; d = d->next)
-    {
-        while (d && d->fatdir.file.volume == volume)
+        while (d->next && d->next->fatdir.file.volume == volume)
         {
-            prev->next = d->next;
-            free(d);
+            prev = d->next;
+            d->next = d->next->next;
+            free(prev);
             closed++;
         }
-        prev = d;
-    }
 #else
     (void)volume;
     while (opendirs)
@@ -179,15 +177,13 @@ int closedir_all_of_process(struct scheduler_thread* process)
         closed++;
     }
     for (d = opendirs; d; d = d->next)
-    {
-        while (d && d->process == process)
+        while (d->next && d->next->process == process)
         {
-            prev->next = d->next;
-            free(d);
+            prev = d->next;
+            d->next = d->next->next;
+            free(prev);
             closed++;
         }
-        prev = d;
-    }
     mutex_unlock(&dir_mutex);
     return closed; /* return how many we did */
 }

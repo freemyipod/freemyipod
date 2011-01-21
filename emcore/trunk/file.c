@@ -236,16 +236,13 @@ int close_all_of_process(struct scheduler_thread* process)
         closed++;
     }
     for (f = openfiles; f; f = f->next)
-    {
-        while (f && f->process == process)
+        while (f->next && f->next->process == process)
         {
-            prev->next = f->next;
-            if (f->write) fsync((int)f);
-            free(f);
+            prev = f->next;
+            f->next = f->next->next;
+            free(prev);
             closed++;
         }
-        prev = f;
-    }
     mutex_unlock(&file_mutex);
     return closed; /* return how many we did */
 }
@@ -771,15 +768,13 @@ int release_files(int volume)
         closed++;
     }
     for (f = openfiles; f; f = f->next)
-    {
-        while (f && f->fatfile.volume == volume)
+        while (f->next && f->next->fatfile.volume == volume)
         {
-            prev->next = f->next;
-            free(f);
+            prev = f->next;
+            f->next = f->next->next;
+            free(prev);
             closed++;
         }
-        prev = f;
-    }
 #else
     (void)volume;
     while (openfiles)

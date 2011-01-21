@@ -100,13 +100,11 @@ void button_unregister_all_of_thread(struct scheduler_thread* process)
         free(prev);
     }
     for (h = head_button_hook; h; h = h->next)
-    {
-        while (h && h->owner == process)
+        while (h->next && h->next->owner == process)
         {
-            prev->next = h->next;
-            free(h);
+            prev = h->next;
+            h->next = h->next->next;
+            free(prev);
         }
-        prev = h;
-    }
     mutex_unlock(&button_mutex);
 }
