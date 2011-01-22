@@ -292,13 +292,12 @@ int fsync(int fd)
 int remove(const char* name)
 {
     int rc;
-    struct filedesc* file;
     /* Can't use dircache now, because we need to access the fat structures. */
     int fd = open_internal(name, O_WRONLY, false);
     if ( fd < 0 )
         return fd * 10 - 1;
 
-    file = &openfiles[fd];
+    struct filedesc* file = (struct filedesc*)fd;
     rc = fat_remove(&(file->fatfile));
     if ( rc < 0 ) {
         DEBUGF("Failed removing file: %d", rc);
