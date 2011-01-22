@@ -628,7 +628,7 @@ class Emcore(object):
     @command(timeout = 50000)
     def storage_read_sectors_md(self, volume, sector, count, addr):
         """ Read sectors from as storage device """
-        self.logger.debug("Reading %d sectors from disk at volume %d, sector %d to memory at 0x%x\n" % (count, volume, sector, addr)
+        self.logger.debug("Reading %d sectors from disk at volume %d, sector %d to memory at 0x%x\n" % (count, volume, sector, addr))
         result = self.lib.monitorcommand(struct.pack("IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
         self.logger.debug("Read sectors, result: 0x%x\n" % result.rc)
         if result.rc > 0x80000000:
@@ -637,7 +637,7 @@ class Emcore(object):
     @command(timeout = 50000)
     def storage_write_sectors_md(self, volume, sector, count, addr):
         """ Read sectors from as storage device """
-        self.logger.debug("Writing %d sectors from memory at 0x%x to disk at volume %d, sector %d\n" % (count, addr, volume, sector)
+        self.logger.debug("Writing %d sectors from memory at 0x%x to disk at volume %d, sector %d\n" % (count, addr, volume, sector))
         result = self.lib.monitorcommand(struct.pack("IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
         self.logger.debug("Wrote sectors, result: 0x%x\n" % result.rc)
         if result.rc > 0x80000000:
