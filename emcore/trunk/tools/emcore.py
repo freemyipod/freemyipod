@@ -1038,7 +1038,7 @@ class Commandline(object):
                 try:
                     self.logger.info("Downloading file " + remotename + " to " + localname + "...")
                     while size > 0:
-                        bytes = self.emcore.file_read(fd, buffsize, buffer)
+                        bytes = self.emcore.file_read(fd, buffsize, buffer).rc
                         f.write(self.emcore.read(buffer, bytes))
                         size = size - bytes
                 finally:

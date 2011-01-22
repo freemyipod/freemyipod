@@ -2399,12 +2399,13 @@ int fat_getnext(struct fat_dir *dir, struct fat_direntry *entry)
             rc = fat_readwrite(&dir->file, 1, dir->sectorcache, false);
             if (rc == 0) {
                 /* eof */
+                DEBUGF("fat_getnext() - Reached end of dir cluster chain");
                 entry->name[0] = 0;
                 break;
             }
             if (rc < 0) {
-                DEBUGF( "fat_getnext() - Couldn't read dir"
-                        " (error code %d)", rc);
+                DEBUGF("fat_getnext() - Couldn't read dir"
+                       " (error code %d)", rc);
                 return rc * 10 - 1;
             }
             dir->sector = dir->file.lastsector;
@@ -2425,6 +2426,7 @@ int fat_getnext(struct fat_dir *dir, struct fat_direntry *entry)
 
             if (firstbyte == 0) {
                 /* last entry */
+                DEBUGF("fat_getnext() - Reached final directory entry");
                 entry->name[0] = 0;
                 dir->entrycount = 0;
                 return 0;

@@ -85,7 +85,11 @@ DIR* opendir(const char* name)
     }
 
     pdir = (DIR*)memalign(0x10, sizeof(DIR));
-    if (!pdir) return NULL;
+    if (!pdir)
+    {
+        DEBUGF("Failed to allocate directory handle");
+        return NULL;
+    }
     pdir->process = current_thread;
 
 #ifdef HAVE_MULTIVOLUME
@@ -108,6 +112,7 @@ DIR* opendir(const char* name)
         while (1) {
             if ((fat_getnext(&pdir->fatdir,&entry) < 0) ||
                 (!entry.name[0])) {
+                DEBUGF("Directory not found");
                 free(pdir);
                 return NULL;
             }

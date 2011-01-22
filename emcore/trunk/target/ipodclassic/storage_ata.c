@@ -552,6 +552,7 @@ int ata_init(void)
                         break;
                 ata_bbt_read_sectors(phys, cnt, ata_bbt[i << 6]);
             }
+            reownalloc(ata_bbt, NULL);
         }
         else ata_virtual_sectors = ata_total_sectors;
         free(buf);
