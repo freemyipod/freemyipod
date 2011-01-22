@@ -883,7 +883,13 @@ class Emcore(object):
     def free(self, ptr):
         """ Frees the memory space pointed to by 'ptr' """
         self.logger.debug("Freeing the memory region at 0x%x\n" % ptr)
-        return self.lib.monitorcommand(struct.pack("IIII", 56, addr, 0, 0), "III", (None, None, None))
+        return self.lib.monitorcommand(struct.pack("IIII", 56, ptr, 0, 0), "III", (None, None, None))
+    
+    @command()
+    def free_all(self):
+        """ Frees all memory allocations created by the monitor thread """
+        self.logger.debug("Freeing all memory allocations created by the monitor thread\n")
+        return self.lib.monitorcommand(struct.pack("IIII", 57, 0, 0, 0), "III", (None, None, None))
     
 
 class Lib(object):
