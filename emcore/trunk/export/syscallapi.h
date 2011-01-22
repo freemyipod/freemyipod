@@ -33,6 +33,7 @@
 #include "../disk.h"
 #include "../dir.h"
 #include "../file.h"
+#include "../fat.h"
 #include "../format.h"
 #include "../drawing.h"
 #include "../lcdconsole.h"
@@ -243,6 +244,7 @@ struct emcore_syscall_table
     typeof(get_library_ext) *get_library_ext;
     typeof(release_library) *release_library;
     typeof(release_library_ext) *release_library_ext;
+    typeof(fat_enable_flushing) *fat_enable_flushing;
 };
 
 

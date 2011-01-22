@@ -197,6 +197,7 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define get_library_ext __emcore_syscall->get_library_ext
 #define release_library __emcore_syscall->release_library
 #define release_library_ext __emcore_syscall->release_library_ext
+#define fat_enable_flushing __emcore_syscall->fat_enable_flushing
 
 
 #endif

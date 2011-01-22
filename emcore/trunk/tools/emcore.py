@@ -886,29 +886,31 @@ class Commandline(object):
         sector = self._hexint(sector)
         count = self._hexint(count)
         buffsize = self._hexint(buffsize)
-        if buffer is None:
-            buffer = self.emcore.malloc(buffsize)
-            malloc = True
-        else:
-            buffer = self._hexint(buffer)
-            malloc = False
         try:
+            f = open(file, 'wb')
+        except IOError:
+            raise ArgumentError("Could not open local file for writing.")
+        try:
+            if buffer is None:
+                buffer = self.emcore.malloc(buffsize)
+                malloc = True
+            else:
+                buffer = self._hexint(buffer)
+                malloc = False
             try:
-                f = open(file, 'wb')
-            except IOError:
-                raise ArgumentError("Could not open local file for writing.")
-            self.logger.info("Reading volume %s sectors %X - %X to %s..." % (volume, sector, sector + count - 1, file))
-            storageinfo = self.emcore.storage_get_info(volume)
-            while count > 0:
-                sectors = min(count, int(buffsize / storageinfo.sectorsize))
-                self.emcore.storage_read_sectors_md(volume, sector, sectors, buffsize, buffer)
-                f.write(self.emcore.read(buffer, storageinfo.sectorsize * sectors))
-                sector = sector + sectors
-                count = count - sectors
-            f.close()
+                self.logger.info("Reading volume %s sectors %X - %X to %s..." % (volume, sector, sector + count - 1, file))
+                storageinfo = self.emcore.storage_get_info(volume)
+                while count > 0:
+                    sectors = min(count, int(buffsize / storageinfo.sectorsize))
+                    self.emcore.storage_read_sectors_md(volume, sector, sectors, buffsize, buffer)
+                    f.write(self.emcore.read(buffer, storageinfo.sectorsize * sectors))
+                    sector = sector + sectors
+                    count = count - sectors
+            finally:
+                if malloc == True:
+                    self.emcore.free(buffer)
         finally:
-            if malloc == True:
-                self.emcore.free(buffer)
+            f.close()
         self.logger.info("done\n")
 
     @command
@@ -921,33 +923,35 @@ class Commandline(object):
         sector = self._hexint(sector)
         count = self._hexint(count)
         buffsize = self._hexint(buffsize)
-        if buffer is None:
-            buffer = self.emcore.malloc(buffsize)
-            malloc = True
-        else:
-            buffer = self._hexint(buffer)
-            malloc = False
         try:
+            f = open(file, 'rb')
+        except IOError:
+            raise ArgumentError("Could not open local file for reading.")
+        try:
+            if buffer is None:
+                buffer = self.emcore.malloc(buffsize)
+                malloc = True
+            else:
+                buffer = self._hexint(buffer)
+                malloc = False
             try:
-                f = open(file, 'rb')
-            except IOError:
-                raise ArgumentError("Could not open local file for reading.")
-            self.logger.info("Writing %s to volume %s sectors %X - %X..." % (file, volume, sector, sector + count - 1))
-            storageinfo = self.emcore.storage_get_info(volume)
-            while count > 0:
-                sectors = min(count, int(buffsize / storageinfo.sectorsize))
-                bytes = storageinfo.sectorsize * sectors
-                data = f.read(bytes)
-                if len(data) == 0: break
-                while len(data) < bytes: data = data + f.read(bytes - len(data))
-                self.emcore.write(buffer, data)
-                self.emcore.storage_write_sectors_md(volume, sector, sectors, buffsize, buffer)
-                sector = sector + sectors
-                count = count - sectors
-            f.close()
+                self.logger.info("Writing %s to volume %s sectors %X - %X..." % (file, volume, sector, sector + count - 1))
+                storageinfo = self.emcore.storage_get_info(volume)
+                while count > 0:
+                    sectors = min(count, int(buffsize / storageinfo.sectorsize))
+                    bytes = storageinfo.sectorsize * sectors
+                    data = f.read(bytes)
+                    if len(data) == 0: break
+                    while len(data) < bytes: data = data + f.read(bytes - len(data))
+                    self.emcore.write(buffer, data)
+                    self.emcore.storage_write_sectors_md(volume, sector, sectors, buffsize, buffer)
+                    sector = sector + sectors
+                    count = count - sectors
+            finally:
+                if malloc == True:
+                    self.emcore.free(buffer)
         finally:
-            if malloc == True:
-                self.emcore.free(buffer)
+            f.close()
         self.logger.info("done\n")
 
     @command
@@ -1014,29 +1018,33 @@ class Commandline(object):
             [buffer]: buffer address (optional)
         """
         buffsize = self._hexint(buffsize)
-        if buffer is None:
-            buffer = self.emcore.malloc(buffsize)
-            malloc = True
-        else:
-            buffer = self._hexint(buffer)
-            malloc = False
         try:
+            f = open(localname, 'wb')
+        except IOError:
+            raise ArgumentError("Could not open local file for writing.")
+        try:
+            if buffer is None:
+                buffer = self.emcore.malloc(buffsize)
+                malloc = True
+            else:
+                buffer = self._hexint(buffer)
+                malloc = False
             try:
-                f = open(localname, 'wb')
-            except IOError:
-                raise ArgumentError("Could not open local file for writing.")
-            self.logger.info("Downloading file " + remotename + " to " + localname + "...")
-            fd = self.emcore.file_open(remotename, 0)
-            size = self.emcore.file_size(fd)
-            while size > 0:
-                bytes = self.emcore.file_read(fd, buffsize, buffer)
-                f.write(self.emcore.read(buffer, bytes))
-                size = size - bytes
-            self.emcore.file_close(fd)
-            f.close()
+                self.logger.info("Downloading file " + remotename + " to " + localname + "...")
+                fd = self.emcore.file_open(remotename, 0)
+                try:
+                    size = self.emcore.file_size(fd)
+                    while size > 0:
+                        bytes = self.emcore.file_read(fd, buffsize, buffer)
+                        f.write(self.emcore.read(buffer, bytes))
+                        size = size - bytes
+                finally:
+                    self.emcore.file_close(fd)
+            finally:
+                if malloc == True:
+                    self.emcore.free(buffer)
         finally:
-            if malloc == True:
-                self.emcore.free(buffer)
+            f.close()
         self.logger.info(" done\n")
 
     @command
@@ -1049,29 +1057,30 @@ class Commandline(object):
             [buffer]: buffer address (optional)
         """
         buffsize = self._hexint(buffsize)
-        if buffer is None:
-            buffer = self.emcore.malloc(buffsize)
-            malloc = True
-        else:
-            buffer = self._hexint(buffer)
-            malloc = False
+        handle = self.emcore.dir_open(remotepath)
         try:
-            try: os.mkdir(localpath)
-            except: pass
-
-            handle = self.emcore.dir_open(remotepath)
-            while True:
-                try:
-                    entry = self.emcore.dir_read(handle)
-                    if entry.name == "." or entry.name == "..": continue
-                    elif entry.attributes & 0x10:
-                        self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
-                    else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
-                except: break
-            self.emcore.dir_close(handle)
+            if buffer is None:
+                buffer = self.emcore.malloc(buffsize)
+                malloc = True
+            else:
+                buffer = self._hexint(buffer)
+                malloc = False
+            try:
+                try: os.mkdir(localpath)
+                except: pass
+                while True:
+                    try:
+                        entry = self.emcore.dir_read(handle)
+                        if entry.name == "." or entry.name == "..": continue
+                        elif entry.attributes & 0x10:
+                            self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
+                        else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
+                    except: break
+            finally:
+                if malloc == True:
+                    self.emcore.free(buffer)
         finally:
-            if malloc == True:
-                self.emcore.free(buffer)
+            self.emcore.dir_close(handle)
 
     @command
     def put(self, localname, remotename, buffsize = 0x10000, buffer = None):
@@ -1083,31 +1092,35 @@ class Commandline(object):
             [buffer]: buffer address (optional)
         """
         buffsize = self._hexint(buffsize)
-        if buffer is None:
-            buffer = self.emcore.malloc(buffsize)
-            malloc = True
-        else:
-            buffer = self._hexint(buffer)
-            malloc = False
         try:
+            f = open(localname, 'rb')
+        except IOError:
+            raise ArgumentError("Could not open local file for reading.")
+        try:
+            if buffer is None:
+                buffer = self.emcore.malloc(buffsize)
+                malloc = True
+            else:
+                buffer = self._hexint(buffer)
+                malloc = False
             try:
-                f = open(localname, 'rb')
-            except IOError:
-                raise ArgumentError("Could not open local file for reading.")
-            self.logger.info("Uploading file " + localname + " to " + remotename + "...\n")
-            fd = self.emcore.file_open(remotename, 0x15)
-            while True:
-                data = f.read(buffsize)
-                if len(data) == 0: break
-                self.emcore.write(buffer, data)
-                bytes = 0
-                while bytes < len(data):
-                    bytes = bytes + self.emcore.file_write(fd, len(data) - bytes, buffer + bytes)
-            self.emcore.file_close(fd)
-            f.close()
+                self.logger.info("Uploading file " + localname + " to " + remotename + "...")
+                fd = self.emcore.file_open(remotename, 0x15)
+                try:
+                    while True:
+                        data = f.read(buffsize)
+                        if len(data) == 0: break
+                        self.emcore.write(buffer, data)
+                        bytes = 0
+                        while bytes < len(data):
+                            bytes = bytes + self.emcore.file_write(fd, len(data) - bytes, buffer + bytes)
+                finally:
+                    self.emcore.file_close(fd)
+            finally:
+                if malloc == True:
+                    self.emcore.free(buffer)
         finally:
-            if malloc == True:
-                self.emcore.free(buffer)
+            f.close()
         self.logger.info(" done\n")
 
     @command
@@ -1137,7 +1150,7 @@ class Commandline(object):
                         try: self.mkdir(prefix + dir)
                         except: self.logger.info(" failed\n")
                 for f in d[2]:
-                    if not prefix.find("/.svn/") > -1:
+                    if prefix.find("/.svn/") == -1:
                         self.put(d[0] + "/" + f, prefix + f, buffsize, buffer)
         finally:
             if malloc == True:

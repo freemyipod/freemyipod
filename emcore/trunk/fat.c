@@ -179,6 +179,7 @@ struct bpb
 
 static struct bpb fat_bpbs[NUM_VOLUMES]; /* mounted partition info */
 static bool initialized = false;
+static bool flush_fat_disabled = false;
 
 static int update_fsinfo(IF_MV_NONVOID(struct bpb* fat_bpb));
 static int flush_fat(IF_MV_NONVOID(struct bpb* fat_bpb));
@@ -1024,6 +1025,11 @@ static int flush_fat(IF_MV_NONVOID(struct bpb* fat_bpb))
     int i;
     int rc;
     unsigned char *sec;
+    if (flush_fat_disabled)
+    {
+        DEBUGF("flush_fat() skipped");
+        return 0;
+    }
     DEBUGF("flush_fat()");
 
     mutex_lock(&cache_mutex, TIMEOUT_BLOCK);
@@ -2559,3 +2565,9 @@ bool fat_ismounted(int volume)
     return (volume<NUM_VOLUMES && fat_bpbs[volume].mounted);
 }
 #endif
+
+void fat_enable_flushing(bool state)
+{
+    flush_fat_disabled = !state;
+    if (state) flush_fat();
+}

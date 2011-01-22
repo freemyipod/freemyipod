@@ -222,6 +222,7 @@ class Emcore(object):
         din_maxsize = self.lib.dev.packetsizelimit.din
         data = ""
         (headsize, bodysize, tailsize) = self._alignsplit(addr, size, cin_maxsize, 16)
+        self.logger.debug("Downloading %d bytes from 0x%x, split as (%d/%d/%d)\n" % (size, addr, headsize, bodysize, tailsize))
         if headsize != 0:
             data += self._readmem(addr, headsize)
             addr += headsize
@@ -247,6 +248,7 @@ class Emcore(object):
         cout_maxsize = self.lib.dev.packetsizelimit.cout - self.lib.headersize
         dout_maxsize = self.lib.dev.packetsizelimit.dout
         (headsize, bodysize, tailsize) = self._alignsplit(addr, len(data), cout_maxsize, 16)
+        self.logger.debug("Uploading %d bytes to 0x%x, split as (%d/%d/%d)\n" % (len(data), addr, headsize, bodysize, tailsize))
         offset = 0
         if headsize != 0:
             self._writemem(addr, data[offset:offset+headsize])
@@ -272,7 +274,6 @@ class Emcore(object):
             Returns the address where 'data' is stored
         """
         addr = self.malloc(len(data))
-        self.logger.debug("Uploading %d bytes to 0x%x\n" % (len(data), addr))
         self.write(addr, data)
         return addr
     
@@ -618,36 +619,24 @@ class Emcore(object):
         return result
     
     @command(timeout = 50000)
-    def storage_read_sectors_md(self, volume, sector, count, size = 0x100000, addr = None):
-        """ Read sectors from as storage device. If addr is not given it allocates a buffer itself. """
-        if addr is None:
-            addr = self.malloc(size)
-            malloc = True
-        else:
-            malloc = False
-        try:
-            result = self.lib.monitorcommand(struct.pack("IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
-        finally:
-            if malloc == True:
-                self.free(addr)
+    def storage_read_sectors_md(self, volume, sector, count, addr):
+        """ Read sectors from as storage device """
+        result = self.lib.monitorcommand(struct.pack("IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
-    
-    def storage_write_sectors_md(self, volume, sector, count, size = 0x100000, addr = None):
-        """ Read sectors from as storage device. If addr is not given it allocates a buffer itself. """
-        if addr is None:
-            addr = self.malloc(size)
-            malloc = True
-        else:
-            malloc = False
-        try:
-            result = self.lib.monitorcommand(struct.pack("IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
-        finally:
-            if malloc == True:
-                self.free(addr)
+
+    @command(timeout = 50000)
+    def storage_write_sectors_md(self, volume, sector, count, addr):
+        """ Read sectors from as storage device """
+        result = self.lib.monitorcommand(struct.pack("IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
-            raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
+            raise DeviceError("storage_write_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
     
+    @command(timeout = 30000)
+    def fat_enable_flushing(self, state):
+        """ Enables/disables flushing the FAT cache after every transaction """
+        self.lib.monitorcommand(struct.pack("IIII", 58, state, 0, 0), "III", (None, None, None))
+
     @command(timeout = 30000)
     def file_open(self, filename, mode):
         """ Opens a file and returns the handle """
@@ -665,7 +654,7 @@ class Emcore(object):
         return result.size
     
     @command(timeout = 30000)
-    def file_read(self, fd, size = 0x100000, addr = None):
+    def file_read(self, fd, size = 0x10000, addr = None):
         """ Reads data from a file referenced by a handle. If addr is not given it allocates a buffer itself. """
         if addr is None:
             addr = self.malloc(size)
@@ -674,26 +663,18 @@ class Emcore(object):
             malloc = False
         try:
             result = self.lib.monitorcommand(struct.pack("IIII", 32, fd, addr, size), "III", ("rc", None, None))
-        finally:
+            if result.rc > 0x80000000:
+                raise DeviceError("file_read(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
+        except:
             if malloc == True:
                 self.free(addr)
-        if result.rc > 0x80000000:
-            raise DeviceError("file_read(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
-        return result.rc
+            raise
+        return Bunch(rc = result.rc, addr = addr)
     
     @command(timeout = 30000)
-    def file_write(self, fd, size = 0x100000, addr = None):
-        """ Writes data from a file referenced by a handle. If addr is not given it allocates a buffer itself. """
-        if addr is None:
-            addr = self.malloc(size)
-            malloc = True
-        else:
-            malloc = False
-        try:
-            result = self.lib.monitorcommand(struct.pack("IIII", 33, fd, addr, size), "III", ("rc", None, None))
-        finally:
-            if malloc == True:
-                self.free(addr)
+    def file_write(self, fd, size, addr):
+        """ Writes data from a file referenced by a handle. """
+        result = self.lib.monitorcommand(struct.pack("IIII", 33, fd, addr, size), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_write(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
         return result.rc

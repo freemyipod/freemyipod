@@ -628,6 +628,7 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
         case 50:  // DISK_MOUNT
         case 51:  // DISK_UNMOUNT
 #endif
+        case 58:  // FAT_ENABLE_FLUSHING
             if (!set_dbgaction(DBGACTION_STORAGE, 0))
                 memcpy(dbgasyncsendbuf, dbgrecvbuf, sizeof(dbgasyncsendbuf));
             break;
@@ -945,6 +946,11 @@ void dbgthread(void)
                     usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                     break;
 #endif
+                case 58:  // FAT_ENABLE_FLUSHING
+                    dbgasyncsendbuf[0] = 1;
+                    fat_enable_flushing((bool)(dbgasyncsendbuf[1]));
+                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                    break;
                 }
                 break;
 #endif
