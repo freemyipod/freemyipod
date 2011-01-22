@@ -1178,6 +1178,23 @@ class Commandline(object):
         self.emcore.dir_close(handle)
     
     @command
+    def find(self, path = "/"):
+        """
+            Lists all files in the specified path, recursively
+            [path]: the path which is listed
+        """
+        handle = self.emcore.dir_open(path)
+        self.logger.info(path + "/\n")
+        while True:
+            try:
+                entry = self.emcore.dir_read(handle)
+                if entry.name == "." or entry.name == "..": continue
+                elif entry.attributes & 0x10: self.find(path + "/" + entry.name)
+                else: self.logger.info(path + "/" + entry.name + "\n")
+            except: break
+        self.emcore.dir_close(handle)
+    
+    @command
     def malloc(self, size):
         """ Allocates <size> bytes and returns a pointer to the allocated memory """
         size = self._hexint(size)
