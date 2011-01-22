@@ -618,7 +618,7 @@ class Emcore(object):
         return result
     
     @command(timeout = 50000)
-    def storage_read_sectors_md(self, volume, sector, count, size = 100000, addr = None):
+    def storage_read_sectors_md(self, volume, sector, count, size = 0x100000, addr = None):
         """ Read sectors from as storage device. If addr is not given it allocates a buffer itself. """
         if addr is None:
             addr = self.malloc(size)
@@ -633,7 +633,7 @@ class Emcore(object):
         if result.rc > 0x80000000:
             raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
     
-    def storage_write_sectors_md(self, volume, sector, count, size = 100000, addr = None):
+    def storage_write_sectors_md(self, volume, sector, count, size = 0x100000, addr = None):
         """ Read sectors from as storage device. If addr is not given it allocates a buffer itself. """
         if addr is None:
             addr = self.malloc(size)
@@ -665,7 +665,7 @@ class Emcore(object):
         return result.size
     
     @command(timeout = 30000)
-    def file_read(self, fd, size = 100000, addr = None):
+    def file_read(self, fd, size = 0x100000, addr = None):
         """ Reads data from a file referenced by a handle. If addr is not given it allocates a buffer itself. """
         if addr is None:
             addr = self.malloc(size)
@@ -682,7 +682,7 @@ class Emcore(object):
         return result.rc
     
     @command(timeout = 30000)
-    def file_write(self, fd, size = 100000, addr = None):
+    def file_write(self, fd, size = 0x100000, addr = None):
         """ Writes data from a file referenced by a handle. If addr is not given it allocates a buffer itself. """
         if addr is None:
             addr = self.malloc(size)

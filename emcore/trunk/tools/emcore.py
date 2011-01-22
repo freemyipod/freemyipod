@@ -877,7 +877,7 @@ class Commandline(object):
         self.logger.info("done\n")
 
     @command
-    def readrawstoragefile(self, volume, sector, count, file, buffsize = 100000, buffer = None):
+    def readrawstoragefile(self, volume, sector, count, file, buffsize = 0x100000, buffer = None):
         """
             Reads <count> sectors starting at <sector> from storage <volume> to file <file>,
             buffering them in memory at [buffer] in chunks of [buffsize] bytes (both optional).
@@ -912,7 +912,7 @@ class Commandline(object):
         self.logger.info("done\n")
 
     @command
-    def writerawstoragefile(self, volume, sector, count, file, buffsize = 100000, buffer = None):
+    def writerawstoragefile(self, volume, sector, count, file, buffsize = 0x100000, buffer = None):
         """
             Writes contents of <file> to <count> sectors starting at <sector> on storage <volume>,
             buffering them in memory at [buffer] in chunks of [buffsize] bytes (both optional).
@@ -1005,7 +1005,7 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
-    def get(self, remotename, localname, buffsize = 10000, buffer = None):
+    def get(self, remotename, localname, buffsize = 0x10000, buffer = None):
         """
             Downloads a file
             <remotename>: filename on the device
@@ -1040,7 +1040,7 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
-    def gettree(self, remotepath, localpath, buffsize = 10000, buffer = None):
+    def gettree(self, remotepath, localpath, buffsize = 0x10000, buffer = None):
         """
             Downloads a directory tree
             <remotepath>: path on the device
@@ -1074,7 +1074,7 @@ class Commandline(object):
                 self.emcore.free(buffer)
 
     @command
-    def put(self, localname, remotename, buffsize = 10000, buffer = None):
+    def put(self, localname, remotename, buffsize = 0x10000, buffer = None):
         """
             Uploads a file
             <localname>: filename on the computer
@@ -1111,7 +1111,7 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
-    def puttree(self, localpath, remotepath, buffsize = 10000, buffer = None):
+    def puttree(self, localpath, remotepath, buffsize = 0x10000, buffer = None):
         """
             Uploads a directory tree
             <localpath>: path on the computer
