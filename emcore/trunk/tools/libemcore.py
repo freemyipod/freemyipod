@@ -618,16 +618,33 @@ class Emcore(object):
         return result
     
     @command(timeout = 50000)
-    def storage_read_sectors_md(self, volume, sector, count, addr):
-        """ Read sectors from as storage device """
-        result = self.lib.monitorcommand(struct.pack("IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
+    def storage_read_sectors_md(self, volume, sector, count, size = 100000, addr = None):
+        """ Read sectors from as storage device. If addr is not given it allocates a buffer itself. """
+        if addr is None:
+            addr = self.malloc(size)
+            malloc = True
+        else:
+            malloc = False
+        try:
+            result = self.lib.monitorcommand(struct.pack("IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
+        finally:
+            if malloc == True:
+                self.free(addr)
         if result.rc > 0x80000000:
             raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
     
-    @command(timeout = 50000)
-    def storage_write_sectors_md(self, volume, sector, count, addr):
-        """ Read sectors from as storage device """
-        result = self.lib.monitorcommand(struct.pack("IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
+    def storage_write_sectors_md(self, volume, sector, count, size = 100000, addr = None):
+        """ Read sectors from as storage device. If addr is not given it allocates a buffer itself. """
+        if addr is None:
+            addr = self.malloc(size)
+            malloc = True
+        else:
+            malloc = False
+        try:
+            result = self.lib.monitorcommand(struct.pack("IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
+        finally:
+            if malloc == True:
+                self.free(addr)
         if result.rc > 0x80000000:
             raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
     
@@ -648,17 +665,35 @@ class Emcore(object):
         return result.size
     
     @command(timeout = 30000)
-    def file_read(self, fd, addr, size):
-        """ Reads data from a file referenced by a handle """
-        result = self.lib.monitorcommand(struct.pack("IIII", 32, fd, addr, size), "III", ("rc", None, None))
+    def file_read(self, fd, size = 100000, addr = None):
+        """ Reads data from a file referenced by a handle. If addr is not given it allocates a buffer itself. """
+        if addr is None:
+            addr = self.malloc(size)
+            malloc = True
+        else:
+            malloc = False
+        try:
+            result = self.lib.monitorcommand(struct.pack("IIII", 32, fd, addr, size), "III", ("rc", None, None))
+        finally:
+            if malloc == True:
+                self.free(addr)
         if result.rc > 0x80000000:
             raise DeviceError("file_read(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
         return result.rc
     
     @command(timeout = 30000)
-    def file_write(self, fd, addr, size):
-        """ Writes data from a file referenced by a handle """
-        result = self.lib.monitorcommand(struct.pack("IIII", 33, fd, addr, size), "III", ("rc", None, None))
+    def file_write(self, fd, size = 100000, addr = None):
+        """ Writes data from a file referenced by a handle. If addr is not given it allocates a buffer itself. """
+        if addr is None:
+            addr = self.malloc(size)
+            malloc = True
+        else:
+            malloc = False
+        try:
+            result = self.lib.monitorcommand(struct.pack("IIII", 33, fd, addr, size), "III", ("rc", None, None))
+        finally:
+            if malloc == True:
+                self.free(addr)
         if result.rc > 0x80000000:
             raise DeviceError("file_write(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
         return result.rc

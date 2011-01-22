@@ -877,7 +877,7 @@ class Commandline(object):
         self.logger.info("done\n")
 
     @command
-    def readrawstoragefile(self, volume, sector, count, file, buffer = False, buffsize = "100000"):
+    def readrawstoragefile(self, volume, sector, count, file, buffsize = 100000, buffer = None):
         """
             Reads <count> sectors starting at <sector> from storage <volume> to file <file>,
             buffering them in memory at [buffer] in chunks of [buffsize] bytes (both optional).
@@ -885,26 +885,34 @@ class Commandline(object):
         volume = self._hexint(volume)
         sector = self._hexint(sector)
         count = self._hexint(count)
-        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
-        else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
+        if buffer is None:
+            buffer = self.emcore.malloc(buffsize)
+            malloc = True
+        else:
+            buffer = self._hexint(buffer)
+            malloc = False
         try:
-            f = open(file, 'wb')
-        except IOError:
-            raise ArgumentError("Could not open local file for writing.")
-        self.logger.info("Reading volume %s sectors %X - %X to %s..." % (volume, sector, sector + count - 1, file))
-        storageinfo = self.emcore.storage_get_info(volume)
-        while count > 0:
-            sectors = min(count, int(buffsize / storageinfo.sectorsize))
-            self.emcore.storage_read_sectors_md(volume, sector, sectors, buffer)
-            f.write(self.emcore.read(buffer, storageinfo.sectorsize * sectors))
-            sector = sector + sectors
-            count = count - sectors
-        f.close()
+            try:
+                f = open(file, 'wb')
+            except IOError:
+                raise ArgumentError("Could not open local file for writing.")
+            self.logger.info("Reading volume %s sectors %X - %X to %s..." % (volume, sector, sector + count - 1, file))
+            storageinfo = self.emcore.storage_get_info(volume)
+            while count > 0:
+                sectors = min(count, int(buffsize / storageinfo.sectorsize))
+                self.emcore.storage_read_sectors_md(volume, sector, sectors, buffsize, buffer)
+                f.write(self.emcore.read(buffer, storageinfo.sectorsize * sectors))
+                sector = sector + sectors
+                count = count - sectors
+            f.close()
+        finally:
+            if malloc == True:
+                self.emcore.free(buffer)
         self.logger.info("done\n")
 
     @command
-    def writerawstoragefile(self, volume, sector, count, file, buffer = False, buffsize = "100000"):
+    def writerawstoragefile(self, volume, sector, count, file, buffsize = 100000, buffer = None):
         """
             Writes contents of <file> to <count> sectors starting at <sector> on storage <volume>,
             buffering them in memory at [buffer] in chunks of [buffsize] bytes (both optional).
@@ -912,26 +920,34 @@ class Commandline(object):
         volume = self._hexint(volume)
         sector = self._hexint(sector)
         count = self._hexint(count)
-        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
-        else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
+        if buffer is None:
+            buffer = self.emcore.malloc(buffsize)
+            malloc = True
+        else:
+            buffer = self._hexint(buffer)
+            malloc = False
         try:
-            f = open(file, 'rb')
-        except IOError:
-            raise ArgumentError("Could not open local file for reading.")
-        self.logger.info("Writing %s to volume %s sectors %X - %X..." % (file, volume, sector, sector + count - 1))
-        storageinfo = self.emcore.storage_get_info(volume)
-        while count > 0:
-            sectors = min(count, int(buffsize / storageinfo.sectorsize))
-            bytes = storageinfo.sectorsize * sectors
-            data = f.read(bytes)
-            if len(data) == 0: break
-            while len(data) < bytes: data = data + f.read(bytes - len(data))
-            self.emcore.write(buffer, data)
-            self.emcore.storage_write_sectors_md(volume, sector, sectors, buffer)
-            sector = sector + sectors
-            count = count - sectors
-        f.close()
+            try:
+                f = open(file, 'rb')
+            except IOError:
+                raise ArgumentError("Could not open local file for reading.")
+            self.logger.info("Writing %s to volume %s sectors %X - %X..." % (file, volume, sector, sector + count - 1))
+            storageinfo = self.emcore.storage_get_info(volume)
+            while count > 0:
+                sectors = min(count, int(buffsize / storageinfo.sectorsize))
+                bytes = storageinfo.sectorsize * sectors
+                data = f.read(bytes)
+                if len(data) == 0: break
+                while len(data) < bytes: data = data + f.read(bytes - len(data))
+                self.emcore.write(buffer, data)
+                self.emcore.storage_write_sectors_md(volume, sector, sectors, buffsize, buffer)
+                sector = sector + sectors
+                count = count - sectors
+            f.close()
+        finally:
+            if malloc == True:
+                self.emcore.free(buffer)
         self.logger.info("done\n")
 
     @command
@@ -989,111 +1005,143 @@ class Commandline(object):
         self.logger.info(" done\n")
 
     @command
-    def get(self, remotename, localname, buffer = False, buffsize = "10000"):
+    def get(self, remotename, localname, buffsize = 10000, buffer = None):
         """
             Downloads a file
             <remotename>: filename on the device
             <localname>: filename on the computer
-            [buffer]: buffer address (optional)
             [buffsize]: buffer size (optional)
+            [buffer]: buffer address (optional)
         """
-        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
-        else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
+        if buffer is None:
+            buffer = self.emcore.malloc(buffsize)
+            malloc = True
+        else:
+            buffer = self._hexint(buffer)
+            malloc = False
         try:
-            f = open(localname, 'wb')
-        except IOError:
-            raise ArgumentError("Could not open local file for writing.")
-        self.logger.info("Downloading file " + remotename + " to " + localname + "...")
-        fd = self.emcore.file_open(remotename, 0)
-        size = self.emcore.file_size(fd)
-        while size > 0:
-            bytes = self.emcore.file_read(fd, buffer, buffsize)
-            f.write(self.emcore.read(buffer, bytes))
-            size = size - bytes
-        self.emcore.file_close(fd)
-        f.close()
+            try:
+                f = open(localname, 'wb')
+            except IOError:
+                raise ArgumentError("Could not open local file for writing.")
+            self.logger.info("Downloading file " + remotename + " to " + localname + "...")
+            fd = self.emcore.file_open(remotename, 0)
+            size = self.emcore.file_size(fd)
+            while size > 0:
+                bytes = self.emcore.file_read(fd, buffer, buffsize)
+                f.write(self.emcore.read(buffer, bytes))
+                size = size - bytes
+            self.emcore.file_close(fd)
+            f.close()
+        finally:
+            if malloc == True:
+                self.emcore.free(buffer)
         self.logger.info(" done\n")
 
     @command
-    def gettree(self, remotepath, localpath, buffer = False, buffsize = "10000"):
+    def gettree(self, remotepath, localpath, buffsize = 10000, buffer = None):
         """
             Downloads a directory tree
             <remotepath>: path on the device
             <localpath>: path on the computer
-            [buffer]: buffer address (optional)
             [buffsize]: buffer size (optional)
+            [buffer]: buffer address (optional)
         """
-        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
-        else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
-        try: os.mkdir(localpath)
-        except: pass
+        if buffer is None:
+            buffer = self.emcore.malloc(buffsize)
+            malloc = True
+        else:
+            buffer = self._hexint(buffer)
+            malloc = False
+        try:
+            try: os.mkdir(localpath)
+            except: pass
 
-        handle = self.emcore.dir_open(remotepath)
-        while True:
-            try:
-                entry = self.emcore.dir_read(handle)
-                if entry.name == "." or entry.name == "..": continue
-                elif entry.attributes & 0x10:
-                    self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
-                else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
-            except: break
-        self.emcore.dir_close(handle)
+            handle = self.emcore.dir_open(remotepath)
+            while True:
+                try:
+                    entry = self.emcore.dir_read(handle)
+                    if entry.name == "." or entry.name == "..": continue
+                    elif entry.attributes & 0x10:
+                        self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
+                    else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
+                except: break
+            self.emcore.dir_close(handle)
+        finally:
+            if malloc == True:
+                self.emcore.free(buffer)
 
     @command
-    def put(self, localname, remotename, buffer = False, buffsize = "10000"):
+    def put(self, localname, remotename, buffsize = 10000, buffer = None):
         """
             Uploads a file
             <localname>: filename on the computer
             <remotename>: filename on the device
-            [buffer]: buffer address (optional)
             [buffsize]: buffer size (optional)
+            [buffer]: buffer address (optional)
         """
-        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
-        else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
+        if buffer is None:
+            buffer = self.emcore.malloc(buffsize)
+            malloc = True
+        else:
+            buffer = self._hexint(buffer)
+            malloc = False
         try:
-            f = open(localname, 'rb')
-        except IOError:
-            raise ArgumentError("Could not open local file for reading.")
-        self.logger.info("Uploading file " + localname + " to " + remotename + "...")
-        fd = self.emcore.file_open(remotename, 0x15)
-        while True:
-            data = f.read(buffsize)
-            if len(data) == 0: break
-            self.emcore.write(buffer, data)
-            bytes = 0
-            while bytes < len(data):
-                bytes = bytes + self.emcore.file_write(fd, buffer + bytes, len(data) - bytes)
-        self.emcore.file_close(fd)
-        f.close()
+            try:
+                f = open(localname, 'rb')
+            except IOError:
+                raise ArgumentError("Could not open local file for reading.")
+            self.logger.info("Uploading file " + localname + " to " + remotename + "...")
+            fd = self.emcore.file_open(remotename, 0x15)
+            while True:
+                data = f.read(buffsize)
+                if len(data) == 0: break
+                self.emcore.write(buffer, data)
+                bytes = 0
+                while bytes < len(data):
+                    bytes = bytes + self.emcore.file_write(fd, buffer + bytes, len(data) - bytes)
+            self.emcore.file_close(fd)
+            f.close()
+        finally:
+            if malloc == True:
+                self.emcore.free(buffer)
         self.logger.info(" done\n")
 
     @command
-    def puttree(self, localpath, remotepath, buffer = False, buffsize = "10000"):
+    def puttree(self, localpath, remotepath, buffsize = 10000, buffer = None):
         """
             Uploads a directory tree
             <localpath>: path on the computer
             <remotepath>: path on the device
-            [buffer]: buffer address (optional)
             [buffsize]: buffer size (optional)
+            [buffer]: buffer address (optional)
         """
-        if buffer == False: buffer = self.emcore.lib.dev.usermem.lower
-        else: buffer = self._hexint(buffer)
         buffsize = self._hexint(buffsize)
-        try: self.mkdir(remotepath)
-        except: self.logger.info(" failed\n")
-        pathlen = len(localpath)
-        for d in os.walk(localpath):
-            prefix = remotepath + "/" + d[0].replace("\\", "/")[pathlen:] + "/"
-            for dir in d[1]:
-                if dir != ".svn":
-                    try: self.mkdir(prefix + dir)
-                    except: self.logger.info(" failed\n")
-            for f in d[2]:
-                if not prefix.find("/.svn/") > -1:
-                    self.put(d[0] + "/" + f, prefix + f, buffer, buffsize)
+        if buffer is None:
+            buffer = self.emcore.malloc(buffsize)
+            malloc = True
+        else:
+            buffer = self._hexint(buffer)
+            malloc = False
+        try:
+            try: self.mkdir(remotepath)
+            except: self.logger.info(" failed\n")
+            pathlen = len(localpath)
+            for d in os.walk(localpath):
+                prefix = remotepath + "/" + d[0].replace("\\", "/")[pathlen:] + "/"
+                for dir in d[1]:
+                    if dir != ".svn":
+                        try: self.mkdir(prefix + dir)
+                        except: self.logger.info(" failed\n")
+                for f in d[2]:
+                    if not prefix.find("/.svn/") > -1:
+                        self.put(d[0] + "/" + f, prefix + f, buffer, buffsize)
+        finally:
+            if malloc == True:
+                self.emcore.free(buffer)
 
     @command
     def ls(self, path = "/"):
