@@ -1074,11 +1074,11 @@ class Commandline(object):
                 while True:
                     try:
                         entry = self.emcore.dir_read(handle)
-                        if entry.name == "." or entry.name == "..": continue
-                        elif entry.attributes & 0x10:
-                            self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
-                        else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
                     except: break
+                    if entry.name == "." or entry.name == "..": continue
+                    elif entry.attributes & 0x10:
+                        self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
+                    else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
             finally:
                 if malloc == True:
                     self.emcore.free(buffer)
@@ -1171,10 +1171,10 @@ class Commandline(object):
         while True:
             try:
                 entry = self.emcore.dir_read(handle)
-                if entry.attributes & 0x10: size = "DIR"
-                else: size = locale.format("%d", entry.size, True).rjust(13)
-                self.logger.info(entry.name.ljust(50) + " - " + size + "\n")
             except: break
+            if entry.attributes & 0x10: size = "DIR"
+            else: size = locale.format("%d", entry.size, True).rjust(13)
+            self.logger.info(entry.name.ljust(50) + " - " + size + "\n")
         self.emcore.dir_close(handle)
     
     @command
@@ -1188,10 +1188,10 @@ class Commandline(object):
         while True:
             try:
                 entry = self.emcore.dir_read(handle)
-                if entry.name == "." or entry.name == "..": continue
-                elif entry.attributes & 0x10: self.find(path + "/" + entry.name)
-                else: self.logger.info(path + "/" + entry.name + "\n")
             except: break
+            if entry.name == "." or entry.name == "..": continue
+            elif entry.attributes & 0x10: self.find(path + "/" + entry.name)
+            else: self.logger.info(path + "/" + entry.name + "\n")
         self.emcore.dir_close(handle)
     
     @command
