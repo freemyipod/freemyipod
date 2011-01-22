@@ -654,7 +654,7 @@ class Emcore(object):
         return result.size
     
     @command(timeout = 30000)
-    def file_read(self, fd, size = 0x10000, addr = None):
+    def file_read(self, fd, size, addr = None):
         """ Reads data from a file referenced by a handle. If addr is not given it allocates a buffer itself. """
         if addr is None:
             addr = self.malloc(size)
