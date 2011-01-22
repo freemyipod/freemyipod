@@ -901,7 +901,7 @@ class Commandline(object):
             storageinfo = self.emcore.storage_get_info(volume)
             while count > 0:
                 sectors = min(count, int(buffsize / storageinfo.sectorsize))
-                self.emcore.storage_read_sectors_md(volume, sector, sectors, buffsize, buffer)
+                self.emcore.storage_read_sectors_md(volume, sector, sectors, buffer, buffsize)
                 f.write(self.emcore.read(buffer, storageinfo.sectorsize * sectors))
                 sector = sector + sectors
                 count = count - sectors
@@ -941,7 +941,7 @@ class Commandline(object):
                 if len(data) == 0: break
                 while len(data) < bytes: data = data + f.read(bytes - len(data))
                 self.emcore.write(buffer, data)
-                self.emcore.storage_write_sectors_md(volume, sector, sectors, buffsize, buffer)
+                self.emcore.storage_write_sectors_md(volume, sector, sectors, buffer, buffsize)
                 sector = sector + sectors
                 count = count - sectors
             f.close()
