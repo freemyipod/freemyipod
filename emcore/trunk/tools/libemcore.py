@@ -876,7 +876,7 @@ class Emcore(object):
     @command()
     def reownalloc(self, ptr, owner):
         """ Changes the owner of the memory allocation 'ptr' to the thread struct at addr 'owner' """
-        self.logger.debug("Changing owner of the memory region 0x%x to 0x%x" % (ptr, owner))
+        self.logger.debug("Changing owner of the memory region 0x%x to 0x%x\n" % (ptr, owner))
         return self.lib.monitorcommand(struct.pack("IIII", 55, ptr, owner, 0), "III", (None, None, None))
     
     @command()

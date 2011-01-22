@@ -131,7 +131,7 @@ class Commandline(object):
         try:
             self.emcore = libemcore.Emcore(loglevel = 2)
         except libemcore.DeviceNotFoundError:
-            self.logger.error("No emCORE device found!")
+            self.logger.error("No emCORE device found!\n")
             exit(1)
         self.getinfo("version")
         
@@ -149,17 +149,17 @@ class Commandline(object):
             except ArgumentTypeError, e:
                 usage(e, specific=func)
             except NotImplementedError:
-                self.logger.error("This function is not implemented yet!")
+                self.logger.error("This function is not implemented yet!\n")
             except libemcore.DeviceError, e:
-                self.logger.error(str(e))
+                self.logger.error(str(e) + "\n")
             except TypeError, e:
                 # Only act on TypeErrors for the function we called, not on TypeErrors raised by another function.
                 if str(e).split(" ", 1)[0] == func + "()":
-                    self.logger.error(usage("Argument Error in '" + func + "': Wrong argument count", specific=func))
+                    self.logger.error(usage("Argument Error in '" + func + "': Wrong argument count", specific=func) + "\n")
                 else:
                     raise
             except libemcore.usb.core.USBError:
-                self.logger.error("There is a problem with the USB connection.")
+                self.logger.error("There is a problem with the USB connection.\n")
         else:
             usage("No such command")
     
@@ -231,14 +231,14 @@ class Commandline(object):
             self.logger.info("Maximum packet sizes: \n command out: " + str(self.emcore.lib.dev.packetsizelimit.cout) + \
                              "\n command in: " + str(self.emcore.lib.dev.packetsizelimit.cin) + \
                              "\n data in: " + str(self.emcore.lib.dev.packetsizelimit.din) + \
-                             "\n data out: " + str(self.emcore.lib.dev.packetsizelimit.dout))
+                             "\n data out: " + str(self.emcore.lib.dev.packetsizelimit.dout)+ "\n")
         
         elif infotype == "usermemrange":
             resp = self.emcore.getusermemrange()
             self.logger.info("The user memory range is " + \
                              self._hex(self.emcore.lib.dev.usermem.lower) + \
                              " - " + \
-                             self._hex(self.emcore.lib.dev.usermem.upper - 1))
+                             self._hex(self.emcore.lib.dev.usermem.upper - 1) + "\n")
         
         else:
             raise ArgumentTypeError("one out of 'version', 'packetsize', 'usermemrange'", infotype)
@@ -564,7 +564,7 @@ class Commandline(object):
             raise ArgumentError("File not readable. Does it exist?")
         with f:
             data = self.emcore.run(f.read())
-        self.logger.info("Executed emCORE application as thread " + self._hex(data.thread))
+        self.logger.info("Executed emCORE application as thread " + self._hex(data.thread) + "\n")
 
     @command
     def execimage(self, addr):
@@ -686,7 +686,7 @@ class Commandline(object):
         self.logger.info("done\n")
         data = self.emcore.read(destination, sha1size)
         hash = ord(data)
-        self.logger.info("The generated hash is "+self._hex(hash))
+        self.logger.info("The generated hash is "+self._hex(hash)+"\n")
 
     @command
     def ipodnano2g_getnandinfo(self):
@@ -699,7 +699,7 @@ class Commandline(object):
         self.logger.info("Number of banks: "        + str(data["banks"])+"\n")
         self.logger.info("Number of blocks: "       + str(data["blocks"])+"\n")
         self.logger.info("Number of user blocks: "  + str(data["userblocks"])+"\n")
-        self.logger.info("Pages per block: "        + str(data["pagesperblock"]))
+        self.logger.info("Pages per block: "        + str(data["pagesperblock"])+"\n")
 
     @command
     def ipodnano2g_nandread(self, addr, start, count, doecc=True, checkempty=True):
@@ -848,7 +848,7 @@ class Commandline(object):
         self.logger.info("Number of sectors: "+str(data["numsectors"])+"\n")
         self.logger.info("Vendor: "+data["vendor"]+"\n")
         self.logger.info("Product: "+data["product"]+"\n")
-        self.logger.info("Revision: "+data["revision"])
+        self.logger.info("Revision: "+data["revision"]+"\n")
 
     @command
     def readrawstorage(self, volume, sector, count, addr):
@@ -1094,7 +1094,7 @@ class Commandline(object):
                 f = open(localname, 'rb')
             except IOError:
                 raise ArgumentError("Could not open local file for reading.")
-            self.logger.info("Uploading file " + localname + " to " + remotename + "...")
+            self.logger.info("Uploading file " + localname + " to " + remotename + "...\n")
             fd = self.emcore.file_open(remotename, 0x15)
             while True:
                 data = f.read(buffsize)
@@ -1194,9 +1194,9 @@ class Commandline(object):
         """ Changes the owner of the memory allocation <ptr> to the thread struct at addr <owner> """
         ptr = self._hexint(ptr)
         owner = self._hexint(owner)
-        self.logger.info("Changing owner of the memory region 0x%x to 0x%x" % (ptr, owner))
+        self.logger.info("Changing owner of the memory region 0x%x to 0x%x\n" % (ptr, owner))
         self.emcore.reownalloc(ptr, owner)
-        self.logger.info("Successfully changed owner of 0x%x to 0x%x" % (ptr, owner))
+        self.logger.info("Successfully changed owner of 0x%x to 0x%x\n" % (ptr, owner))
     
     @command
     def free(self, ptr):
