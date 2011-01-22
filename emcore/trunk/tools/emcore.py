@@ -901,7 +901,7 @@ class Commandline(object):
             storageinfo = self.emcore.storage_get_info(volume)
             while count > 0:
                 sectors = min(count, int(buffsize / storageinfo.sectorsize))
-                self.emcore.storage_read_sectors_md(volume, sector, sectors, buffer, buffsize)
+                self.emcore.storage_read_sectors_md(volume, sector, sectors, buffsize, buffer)
                 f.write(self.emcore.read(buffer, storageinfo.sectorsize * sectors))
                 sector = sector + sectors
                 count = count - sectors
@@ -941,7 +941,7 @@ class Commandline(object):
                 if len(data) == 0: break
                 while len(data) < bytes: data = data + f.read(bytes - len(data))
                 self.emcore.write(buffer, data)
-                self.emcore.storage_write_sectors_md(volume, sector, sectors, buffer, buffsize)
+                self.emcore.storage_write_sectors_md(volume, sector, sectors, buffsize, buffer)
                 sector = sector + sectors
                 count = count - sectors
             f.close()
@@ -1029,7 +1029,7 @@ class Commandline(object):
             fd = self.emcore.file_open(remotename, 0)
             size = self.emcore.file_size(fd)
             while size > 0:
-                bytes = self.emcore.file_read(fd, buffer, buffsize)
+                bytes = self.emcore.file_read(fd, buffsize, buffer)
                 f.write(self.emcore.read(buffer, bytes))
                 size = size - bytes
             self.emcore.file_close(fd)
@@ -1065,8 +1065,8 @@ class Commandline(object):
                     entry = self.emcore.dir_read(handle)
                     if entry.name == "." or entry.name == "..": continue
                     elif entry.attributes & 0x10:
-                        self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
-                    else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffer, buffsize)
+                        self.gettree(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
+                    else: self.get(remotepath + "/" + entry.name, localpath + "/" + entry.name, buffsize, buffer)
                 except: break
             self.emcore.dir_close(handle)
         finally:
@@ -1102,7 +1102,7 @@ class Commandline(object):
                 self.emcore.write(buffer, data)
                 bytes = 0
                 while bytes < len(data):
-                    bytes = bytes + self.emcore.file_write(fd, buffer + bytes, len(data) - bytes)
+                    bytes = bytes + self.emcore.file_write(fd, len(data) - bytes, buffer + bytes)
             self.emcore.file_close(fd)
             f.close()
         finally:
@@ -1138,7 +1138,7 @@ class Commandline(object):
                         except: self.logger.info(" failed\n")
                 for f in d[2]:
                     if not prefix.find("/.svn/") > -1:
-                        self.put(d[0] + "/" + f, prefix + f, buffer, buffsize)
+                        self.put(d[0] + "/" + f, prefix + f, buffsize, buffer)
         finally:
             if malloc == True:
                 self.emcore.free(buffer)
