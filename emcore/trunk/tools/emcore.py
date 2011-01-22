@@ -1159,6 +1159,60 @@ class Commandline(object):
                 self.logger.info(entry.name.ljust(50) + " - " + size + "\n")
             except: break
         self.emcore.dir_close(handle)
+    
+    @command
+    def malloc(self, size):
+        """ Allocates <size> bytes and returns a pointer to the allocated memory """
+        size = self._hexint(size)
+        self.logger.info("Allocating %d bytes of memory\n" % size)
+        addr = self.emcore.malloc(size)
+        self.logger.info("Allocated %d bytes of memory at 0x%x\n" % (size, addr))
+    
+    @command
+    def memalign(self, align, size):
+        """ Allocates <size> bytes aligned to <align> and returns a pointer to the allocated memory """
+        align = self._hexint(align)
+        size = self._hexint(size)
+        self.logger.info("Allocating %d bytes of memory aligned to 0x%x\n" % (size, align))
+        addr = self.emcore.memalign(align, size)
+        self.logger.info("Allocated %d bytes of memory at 0x%x\n" % (size, addr))
+    
+    @command
+    def realloc(self, ptr, size):
+        """ The size of the memory block pointed to by <ptr> is changed to the <size> bytes,
+            expanding or reducing the amount of memory available in the block.
+            Returns a pointer to the reallocated memory.
+        """
+        ptr = self._hexint(ptr)
+        size = self._hexint(size)
+        self.logger.info("Reallocating 0x%x to have the new size %d\n" % (ptr, size))
+        addr = self.emcore.realloc(ptr, size)
+        self.logger.info("Reallocated memory at 0x%x to 0x%x with the new size %d\n" % (ptr, addr, size))
+    
+    @command
+    def reownalloc(self, ptr, owner):
+        """ Changes the owner of the memory allocation <ptr> to the thread struct at addr <owner> """
+        ptr = self._hexint(ptr)
+        owner = self._hexint(owner)
+        self.logger.info("Changing owner of the memory region 0x%x to 0x%x" % (ptr, owner))
+        self.emcore.reownalloc(ptr, owner)
+        self.logger.info("Successfully changed owner of 0x%x to 0x%x" % (ptr, owner))
+    
+    @command
+    def free(self, ptr):
+        """ Frees the memory space pointed to by 'ptr' """
+        ptr = self._hexint(ptr)
+        self.logger.info("Freeing the memory region at 0x%x\n" % ptr)
+        self.emcore.free(ptr)
+        self.logger.info("Successfully freed the memory region at 0x%x\n" % ptr)
+    
+    @command
+    def free_all(self):
+        """ Frees all memory allocations created by the monitor thread """
+        self.logger.info("Freeing all memory allocations created by the monitor thread\n")
+        self.emcore.free_all()
+        self.logger.info("Successfully freed all memory allocations created by the monitor thread\n")
+        
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
