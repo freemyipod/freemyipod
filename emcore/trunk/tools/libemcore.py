@@ -655,7 +655,7 @@ class Emcore(object):
     @command(timeout = 30000)
     def file_open(self, filename, mode):
         """ Opens a file and returns the handle """
-        self.logger.debug("Opening remote file %s with mode %s\n" % (filename, mode))
+        self.logger.debug("Opening remote file %s with mode %d\n" % (filename, mode))
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(filename), 30, mode, 0, 0, filename, 0), "III", ("fd", None, None))
         if result.fd > 0x80000000:
             raise DeviceError("file_open(filename=\"%s\", mode=0x%X) failed with RC=0x%08X, errno=%d" % (filename, mode, result.fd, self.errno()))
