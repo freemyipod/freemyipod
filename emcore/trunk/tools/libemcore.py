@@ -610,47 +610,66 @@ class Emcore(object):
     @command()
     def storage_get_info(self, volume):
         """ Get information about a storage device """
+        self.logger.debug("Getting storage information\n")
         result = self.lib.monitorcommand(struct.pack("IIII", 27, volume, 0, 0), "IIIIIIII", ("version", None, None, "sectorsize", "numsectors", "vendorptr", "productptr", "revisionptr"))
         if result.version != 1:
             raise ValueError("Unknown version of storage_info struct: %d" % result.version)
         result.vendor = self.readstring(result.vendorptr)
         result.product = self.readstring(result.productptr)
         result.revision = self.readstring(result.revisionptr)
+        self.logger.debug("Got storage information:\n")
+        self.logger.debug("Vendor: %s\n" % result.vendor)
+        self.logger.debug("Product: %s\n" % result.product)
+        self.logger.debug("Revision: %s\n" % result.revision)
+        self.logger.debug("Sector size: %d\n" % result.sectorsize)
+        self.logger.debug("Number of sectors: %d\n" % result.numsectors)
         return result
     
     @command(timeout = 50000)
     def storage_read_sectors_md(self, volume, sector, count, addr):
         """ Read sectors from as storage device """
+        self.logger.debug("Reading %d sectors from disk at volume %d, sector %d to memory at 0x%x\n" % (count, volume, sector, addr)
         result = self.lib.monitorcommand(struct.pack("IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
+        self.logger.debug("Read sectors, result: 0x%x\n" % result.rc)
         if result.rc > 0x80000000:
             raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
 
     @command(timeout = 50000)
     def storage_write_sectors_md(self, volume, sector, count, addr):
         """ Read sectors from as storage device """
+        self.logger.debug("Writing %d sectors from memory at 0x%x to disk at volume %d, sector %d\n" % (count, addr, volume, sector)
         result = self.lib.monitorcommand(struct.pack("IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
+        self.logger.debug("Wrote sectors, result: 0x%x\n" % result.rc)
         if result.rc > 0x80000000:
             raise DeviceError("storage_write_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
     
     @command(timeout = 30000)
     def fat_enable_flushing(self, state):
         """ Enables/disables flushing the FAT cache after every transaction """
+        if state != 0: self.logger.debug("Enabling FAT flushing\n")
+        else: self.logger.debug("Disabling FAT flushing\n")
         self.lib.monitorcommand(struct.pack("IIII", 58, state, 0, 0), "III", (None, None, None))
+        if state != 0: self.logger.debug("Enabled FAT flushing\n")
+        else: self.logger.debug("Disabled FAT flushing\n")
 
     @command(timeout = 30000)
     def file_open(self, filename, mode):
         """ Opens a file and returns the handle """
+        self.logger.debug("Opening remote file %s with mode %s\n" % (filename, mode))
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(filename), 30, mode, 0, 0, filename, 0), "III", ("fd", None, None))
         if result.fd > 0x80000000:
             raise DeviceError("file_open(filename=\"%s\", mode=0x%X) failed with RC=0x%08X, errno=%d" % (filename, mode, result.fd, self.errno()))
+        self.logger.debug("Opened file as handle 0x%x\n" % result.fd)
         return result.fd
     
     @command(timeout = 30000)
     def file_size(self, fd):
         """ Gets the size of a file referenced by a handle """
+        self.logger.debug("Getting file size of handle 0x%x\n" % fd)
         result = self.lib.monitorcommand(struct.pack("IIII", 31, fd, 0, 0), "III", ("size", None, None))
         if result.size > 0x80000000:
             raise DeviceError("file_size(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.size, self.errno()))
+        self.logger.debug("Got file size: %d bytes\n" % result.size)
         return result.size
     
     @command(timeout = 30000)
@@ -661,6 +680,7 @@ class Emcore(object):
             malloc = True
         else:
             malloc = False
+        self.logger.debug("Reading %d bytes from file handle 0x%x to 0x%x\n" % (size, fd, addr))
         try:
             result = self.lib.monitorcommand(struct.pack("IIII", 32, fd, addr, size), "III", ("rc", None, None))
             if result.rc > 0x80000000:
@@ -669,91 +689,113 @@ class Emcore(object):
             if malloc == True:
                 self.free(addr)
             raise
+        self.logger.debug("File read result: 0x%x\n" % result.rc)
         return Bunch(rc = result.rc, addr = addr)
     
     @command(timeout = 30000)
     def file_write(self, fd, size, addr):
         """ Writes data from a file referenced by a handle. """
+        self.logger.debug("Writing %d bytes from 0x%x to file handle 0x%x\n" % (size, addr, fd))
         result = self.lib.monitorcommand(struct.pack("IIII", 33, fd, addr, size), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_write(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
+        self.logger.debug("File write result: 0x%x\n" % result.rc)
         return result.rc
     
     @command(timeout = 30000)
     def file_seek(self, fd, offset, whence):
         """ Seeks the file handle to the specified position in the file """
+        self.logger.debug("Seeking file handle 0x%x to whence=%d, offset=0x%x\n" % (fd, whence, offset))
         result = self.lib.monitorcommand(struct.pack("IIII", 34, fd, offset, whence), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_seek(fd=%d, offset=0x%08X, whence=%d) failed with RC=0x%08X, errno=%d" % (fd, offset, whence, result.rc, self.errno()))
+        self.logger.debug("File seek result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def file_truncate(self, fd, length):
         """ Truncates a file referenced by a handle to a specified length """
+        self.logger.debug("Truncating file with handle 0x%x to 0x%x bytes\n" % (fd, length))
         result = self.lib.monitorcommand(struct.pack("IIII", 35, fd, offset, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_truncate(fd=%d, length=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, length, result.rc, self.errno()))
+        self.logger.debug("File truncate result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def file_sync(self, fd):
         """ Flushes a file handles' buffers """
+        self.logger.debug("Flushing buffers of file with handle 0x%x\n" % (fd))
         result = self.lib.monitorcommand(struct.pack("IIII", 36, fd, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_sync(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.rc, self.errno()))
+        self.logger.debug("File flush result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def file_close(self, fd):
         """ Closes a file handle """
+        self.logger.debug("Closing file handle 0x%x\n" % (fd))
         result = self.lib.monitorcommand(struct.pack("IIII", 37, fd, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_close(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.rc, self.errno()))
+        self.logger.debug("File close result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def file_close_all(self):
         """ Closes all file handles opened through the debugger """
+        self.logger.debug("Closing all files that were opened via USB\n")
         result = self.lib.monitorcommand(struct.pack("IIII", 38, 0, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_close_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
+        self.logger.debug("Closed %d files\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
-    def file_kill_all(self):
-        """ Kills all file handles (in the whole system) """
-        result = self.lib.monitorcommand(struct.pack("IIII", 39, 0, 0, 0), "III", ("rc", None, None))
+    def file_kill_all(self, volume):
+        """ Kills all file handles of a volume (in the whole system) """
+        self.logger.debug("Killing all file handles of volume %d\n" % (volume))
+        result = self.lib.monitorcommand(struct.pack("IIII", 39, volume, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_kill_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
+        self.logger.debug("Closed %d files\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def file_unlink(self, filename):
         """ Removes a file """
+        self.logger.debug("Deleting file %s\n" % (filename))
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(filename), 40, 0, 0, 0, filename, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_unlink(filename=\"%s\") failed with RC=0x%08X, errno=%d" % (filename, result.rc, self.errno()))
+        self.logger.debug("Delete file result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def file_rename(self, oldname, newname):
         """ Renames a file """
+        self.logger.debug("Renaming file %s to %s\n" % (oldname, newname))
         result = self.lib.monitorcommand(struct.pack("IIII248s%dsB" % min(247, len(newname)), 41, 0, 0, 0, oldname, newname, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_rename(oldname=\"%s\", newname=\"%s\") failed with RC=0x%08X, errno=%d" % (oldname, newname, result.rc, self.errno()))
+        self.logger.debug("Rename file result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def dir_open(self, dirname):
         """ Opens a directory and returns the handle """
+        self.logger.debug("Opening directory %s\n" % (dirname))
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 42, 0, 0, 0, dirname, 0), "III", ("handle", None, None))
         if result.handle == 0:
             raise DeviceError("dir_open(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.handle, self.errno()))
+        self.logger.debug("Opened directory as handle 0x%x\n" % (result.handle))
         return result.handle
     
     @command(timeout = 30000)
     def dir_read(self, handle):
         """ Reads the next entry from a directory """
+        self.logger.debug("Reading next entry of directory handle 0x%x\n" % (handle))
         result = self.lib.monitorcommand(struct.pack("IIII", 43, handle, 0, 0), "III", ("version", "maxpath", "ptr"))
         if result.ptr == 0:
             raise DeviceError("dir_read(handle=0x%08X) failed with RC=0x%08X, errno=%d" % (handle, result.ptr, self.errno()))
@@ -763,68 +805,91 @@ class Emcore(object):
         ret = Bunch()
         (ret.name, ret.attributes, ret.size, ret.startcluster, ret.wrtdate, ret.wrttime) = struct.unpack("%dsIIIHH" % result.maxpath, dirent)
         ret.name = ret.name[:ret.name.index('\x00')]
+        self.logger.debug("Read directory entry:\n")
+        self.logger.debug("Name: %s\n" % ret.name)
+        self.logger.debug("Attributes: 0x%x\n" % ret.attributes)
+        self.logger.debug("Size: %d\n" % ret.size)
+        self.logger.debug("Start cluster: %d\n" % ret.startcluster)
+        self.logger.debug("Last written date: 0x%x\n" % ret.wrtdate)
+        self.logger.debug("Last written time: 0x%x\n" % ret.wrttime)
         return ret
     
     @command(timeout = 30000)
     def dir_close(self, handle):
         """ Closes a directory handle """
+        self.logger.debug("Closing directory handle 0x%x\n" % (handle))
         result = self.lib.monitorcommand(struct.pack("IIII", 44, handle, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_close(handle=0x%08X) failed with RC=0x%08X, errno=%d" % (handle, result.rc, self.errno()))
+        self.logger.debug("Close directory result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def dir_close_all(self):
         """ Closes all directory handles opened through the debugger """
+        self.logger.debug("Closing all directories that were opened via USB\n")
         result = self.lib.monitorcommand(struct.pack("IIII", 45, 0, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_close_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
+        self.logger.debug("Closed %d directories\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
-    def dir_kill_all(self):
-        """ Kills all directory handles (in the whole system) """
-        result = self.lib.monitorcommand(struct.pack("IIII", 46, 0, 0, 0), "III", ("rc", None, None))
+    def dir_kill_all(self, volume):
+        """ Kills all directory handles of a volume (in the whole system) """
+        self.logger.debug("Closing all directories of volume %d\n" % (volume))
+        result = self.lib.monitorcommand(struct.pack("IIII", 46, volume, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_kill_all() failed with RC=0x%08X, errno=%d" % (result.rc, self.errno()))
+        self.logger.debug("Closed %d directories\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def dir_create(self, dirname):
         """ Creates a directory """
+        self.logger.debug("Creating directory %s\n" % (dirname))
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 47, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_create(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
+        self.logger.debug("Create directory result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def dir_remove(self, dirname):
         """ Removes an (empty) directory """
+        self.logger.debug("Removing directory %s\n" % (dirname))
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 48, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_remove(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
+        self.logger.debug("Remove directory result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command()
     def errno(self):
         """ Returns the number of the last error that happened """
+        self.logger.debug("Getting last error number\n")
         result = self.lib.monitorcommand(struct.pack("IIII", 49, 0, 0, 0), "III", ("errno", None, None))
+        self.logger.debug("Last error: 0x%x\n" % (result.errno))
         return result.errno
     
     @command()
     def disk_mount(self, volume):
         """ Mounts a volume """
+        self.logger.debug("Mounting volume %d\n" % (volume))
         result = self.lib.monitorcommand(struct.pack("IIII", 50, volume, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("disk_mount(volume=%d) failed with RC=0x%08X, errno=%d" % (volume, result.rc, self.errno()))
+        self.logger.debug("Mount volume result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command()
     def disk_unmount(self, volume):
         """ Unmounts a volume """
+        self.logger.debug("Unmounting volume %d\n" % (volume))
         result = self.lib.monitorcommand(struct.pack("IIII", 51, volume, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("disk_unmount(volume=%d) failed with RC=0x%08X, errno=%d" % (volume, result.rc, self.errno()))
+        self.logger.debug("Unmount volume result: 0x%x\n" % (result.rc))
         return result.rc
     
     @command()
