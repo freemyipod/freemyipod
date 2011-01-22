@@ -86,7 +86,8 @@ enum dbgaction_t
     DBGACTION_MEMALIGN,
     DBGACTION_REALLOC,
     DBGACTION_REOWNALLOC,
-    DBGACTION_FREE
+    DBGACTION_FREE,
+    DBGACTION_FREEMONITOR
 };
 
 static struct scheduler_thread dbgthread_handle IBSS_ATTR;
@@ -654,6 +655,9 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             if (set_dbgaction(DBGACTION_FREE, 0)) break;
             dbgactionaddr = dbgrecvbuf[1];
             break;
+        case 57:  // FREE MONITOR ALLOCATIONS
+            if (set_dbgaction(DBGACTION_FREEMONITOR, 0)) break;
+            break;
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -969,6 +973,11 @@ void dbgthread(void)
             case DBGACTION_FREE:
                 dbgasyncsendbuf[0] = 1;
                 free((void*)dbgactionaddr);
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_FREEMONITOR:
+                dbgasyncsendbuf[0] = 1;
+                dbgasyncsendbuf[1] = (uint32_t)free_all_of_thread(current_thread);
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             }
