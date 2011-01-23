@@ -70,14 +70,15 @@ struct library_handle* library_register(void* image, struct emcorelib_header* he
     return handle;
 }
 
-int library_unload(struct library_handle* lib)
+int library_unload(struct emcorelib_header* lib)
 {
     mutex_lock(&library_mutex, TIMEOUT_BLOCK);
     int i;
     bool found = false;
     struct library_handle* h;
+    struct library_handle* prev;
     for (h = library_list_head; h; h = h->next)
-        if (h == lib)
+        if (h->lib == lib)
         {
             found = true;
             break;
@@ -87,41 +88,42 @@ int library_unload(struct library_handle* lib)
         mutex_unlock(&library_mutex);
         return -1;
     }
-    for (i = 0; i < ARRAYLEN(lib->users); i++)
-        if (lib->users[i])
+    for (i = 0; i < ARRAYLEN(h->users); i++)
+        if (h->users[i])
         {
             mutex_unlock(&library_mutex);
             return -2;
         }
-    if (lib->moreusers)
-        for (i = 0; i < lib->moreusers_size / 4; i++)
-            if (lib->moreusers[i])
+    if (h->moreusers)
+        for (i = 0; i < h->moreusers_size / 4; i++)
+            if (h->moreusers[i])
             {
                 mutex_unlock(&library_mutex);
                 return -2;
             }
-    if (lib->lib->shutdownfunc && lib->lib->shutdownfunc() < 0)
+    if (lib->shutdownfunc && lib->shutdownfunc() < 0)
     {
         mutex_unlock(&library_mutex);
         return -3;
     }
-    if (library_list_head == lib) library_list_head = lib->next;
+    if (library_list_head == h) library_list_head = h->next;
     else
         for (h = library_list_head; h; h = h->next)
-            if (h == lib)
+            if (h->lib == lib)
             {
-                h->next = lib->next;
+                prev = h->next;
+                h->next = h->next->next;
                 break;
             }
-    library_release_all_of_thread((struct scheduler_thread*)lib);
+    library_release_all_of_thread((struct scheduler_thread*)prev);
 #ifdef HAVE_STORAGE
-    close_all_of_process((struct scheduler_thread*)lib);
-    closedir_all_of_process((struct scheduler_thread*)lib);
+    close_all_of_process((struct scheduler_thread*)prev);
+    closedir_all_of_process((struct scheduler_thread*)prev);
 #endif
 #ifdef HAVE_BUTTON
-    button_unregister_all_of_thread((struct scheduler_thread*)lib);
+    button_unregister_all_of_thread((struct scheduler_thread*)prev);
 #endif
-    free_all_of_thread((struct scheduler_thread*)lib);
+    free_all_of_thread((struct scheduler_thread*)prev);
     mutex_unlock(&library_mutex);
     return 0;
 }
@@ -203,8 +205,8 @@ struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t version,
         }
 #endif
         }
-        if (h->lib->identifier != identifier ||
-            h->lib->minversion > version && h->lib->version < version)
+        if (lib && (lib->lib->identifier != identifier
+                 || lib->lib->minversion > version && lib->lib->version < version))
             lib = NULL;
         if (!lib)
         {

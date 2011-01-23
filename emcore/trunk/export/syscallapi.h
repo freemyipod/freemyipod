@@ -245,6 +245,7 @@ struct emcore_syscall_table
     typeof(release_library) *release_library;
     typeof(release_library_ext) *release_library_ext;
     typeof(fat_enable_flushing) *fat_enable_flushing;
+    typeof(lcd_get_format) *lcd_get_format;
 };
 
 

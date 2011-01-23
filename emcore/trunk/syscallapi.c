@@ -210,6 +210,7 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .release_library = release_library,
     .release_library_ext = release_library_ext,
 #ifdef HAVE_STORAGE
-    .fat_enable_flushing = fat_enable_flushing
+    .fat_enable_flushing = fat_enable_flushing,
 #endif
+    .lcd_get_format = lcd_get_format
 };

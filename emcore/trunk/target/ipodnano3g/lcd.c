@@ -52,6 +52,11 @@ int lcd_get_bytes_per_pixel()
     return LCD_BYTESPERPIXEL;
 }
 
+int lcd_get_format()
+{
+    return LCD_FORMAT;
+}
+
 static void lcd_send_cmd(uint16_t cmd)
 {
     while (LCDSTATUS & 0x10);

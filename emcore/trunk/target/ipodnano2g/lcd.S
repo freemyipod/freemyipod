@@ -129,6 +129,16 @@ lcd_get_bytes_per_pixel:
 	mov	pc, lr
 .size lcd_get_bytes_per_pixel, .-lcd_get_bytes_per_pixel
 
+.section .text.lcd_get_format, "ax", %progbits
+.align 2
+.global lcd_get_format
+.type lcd_get_format, %function
+lcd_get_format:
+	ldr	r0, =0x004154b1
+	mov	pc, lr
+	.ltorg
+.size lcd_get_format, .-lcd_get_format
+
 .section .icode.displaylcd, "ax", %progbits
 .align 2
 .global displaylcd

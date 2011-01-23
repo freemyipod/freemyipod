@@ -36,6 +36,7 @@ void lcd_shutdown();
 int lcd_get_width() ICODE_ATTR;
 int lcd_get_height() ICODE_ATTR;
 int lcd_get_bytes_per_pixel() ICODE_ATTR;
+int lcd_get_format() ICODE_ATTR;
 int lcd_translate_color(uint8_t alpha, uint8_t red, uint8_t green, uint8_t blue) ICODE_ATTR;
 void displaylcd(unsigned int startx, unsigned int endx,
                 unsigned int starty, unsigned int endy, void* data, int color) ICODE_ATTR;

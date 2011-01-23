@@ -361,8 +361,8 @@ struct scheduler_thread* thread_create(struct scheduler_thread* thread, const ch
     thread->stack = stack;
 
     uint32_t mode = enter_critical_section();
-    thread->thread_next = head_thread;
-    head_thread = thread;
+    thread->thread_next = head_thread->thread_next;
+    head_thread->thread_next = thread;
     leave_critical_section(mode);
 
     return thread;

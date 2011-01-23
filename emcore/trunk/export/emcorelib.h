@@ -23,3 +23,6 @@
         .shutdownfunc = shutdown_func,                                                            \
         .api = &api_pointer                                                                       \
     };
+
+
+extern struct emcore_syscall_table* __emcore_syscall;

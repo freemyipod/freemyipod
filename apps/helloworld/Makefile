@@ -1,8 +1,9 @@
 NAME := helloworld
 STACKSIZE := 4096
-COMPRESS := false
+COMPRESS := true
 
 EMCOREDIR ?= ../../emcore/trunk/
+LIBUIDIR ?= ../../libs/ui/
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -17,7 +18,9 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 ELF2ECA := $(CROSS)elf2emcoreapp
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export -ffunction-sections -fdata-sections -mcpu=arm940t
+LIBINCLUDES := -I$(LIBUIDIR)/export 
+
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" -d -r --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
@@ -39,7 +42,7 @@ all: $(NAME)
 $(NAME): build/$(NAME).emcoreapp
 
 build/$(NAME).emcoreapp: build/$(NAME).elf
-	@echo "[EMCAPP] $<"
+	@echo [EMCAPP] $<
 ifeq ($(COMPRESS),true)
 	@$(ELF2ECA) -z -s $(STACKSIZE) -o $@ $^
 else

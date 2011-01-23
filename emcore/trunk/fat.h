@@ -19,9 +19,10 @@
  *
  ****************************************************************************/
 
-#ifndef IN_APPLICATION_CODE
 #ifndef FAT_H
 #define FAT_H
+
+#ifndef IN_APPLICATION_CODE
 
 #include "global.h"
 #include "util.h"
@@ -132,7 +133,9 @@ extern unsigned int fat_get_cluster_size(IF_MV_NONVOID(int volume)); /* public f
 extern bool fat_ismounted(int volume);
 extern void* fat_get_sector_buffer(void);
 extern void fat_release_sector_buffer(void);
-extern void fat_enable_flushing(bool state);
 
 #endif
+
+extern void fat_enable_flushing(bool state);
+
 #endif

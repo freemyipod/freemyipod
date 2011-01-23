@@ -16,3 +16,6 @@
     struct emcore_syscall_table* __emcore_syscall;                                                \
     const uint32_t __emcore_required_version = EMCORE_API_VERSION;                                \
     const char __emcore_incompatible_api_str[] = "Incompatible API version!\nGot %d, need %d";
+
+
+extern struct emcore_syscall_table* __emcore_syscall;
