@@ -101,6 +101,7 @@ strlcpy.c
 strlcat.c
 execimage.c
 syscallapi.c
+crc32.c
 
 libc/strstr.c
 libc/strtok.c

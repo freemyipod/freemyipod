@@ -29,6 +29,11 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
 {
     .table_version = EMCORE_API_VERSION,
     .table_minversion = EMCORE_MIN_API_VERSION,
+#ifdef ARM_ARCH
+    .__clzsi2 = __clzsi2,
+    .__aeabi_idivmod = __aeabi_idivmod,
+    .__aeabi_uidivmod = __aeabi_uidivmod,
+#endif
 	.panic = panic,
     .panicf = panicf,
     .cprintf = cprintf,
@@ -212,5 +217,6 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
 #ifdef HAVE_STORAGE
     .fat_enable_flushing = fat_enable_flushing,
 #endif
-    .lcd_get_format = lcd_get_format
+    .lcd_get_format = lcd_get_format,
+    .crc32 = crc32
 };

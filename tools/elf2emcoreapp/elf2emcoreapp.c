@@ -122,6 +122,9 @@ const char *elf2flt_progname;
 #ifndef R_ARM_JUMP24
 #define R_ARM_JUMP24 29
 #endif
+#ifndef R_ARM_CALL
+#define R_ARM_CALL 28
+#endif
 
 #if defined(TARGET_m68k) || defined(TARGET_h8300) || defined(TARGET_bfin)
 /*
@@ -826,6 +829,7 @@ dump_symbols(symbols, number_of_symbols);
 							*(uint32_t *)r_mem);
 				case R_ARM_PC24:
                 case R_ARM_JUMP24:
+                case R_ARM_CALL:
 					sym_vma = 0;
 					sym_addr = (sym_addr-q->address)>>(*p)->howto->rightshift;
 					break;
@@ -1372,7 +1376,8 @@ DIS29_RELOCATION:
 					 bfd_section_vma(abs_bfd, sym_section));
 
 
-			/*
+#if 0			
+            /*
 			 * for full elf relocation we have to write back the
 			 * start_code relative value to use.
 			 */
@@ -1509,6 +1514,7 @@ DIS29_RELOCATION:
 				}
 #endif /* !TARGET_arm */
 			}
+#endif
 
 			if (verbose)
 				printf("  RELOC[%d]: offset=0x%x symbol=%s%s "

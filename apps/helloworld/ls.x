@@ -17,7 +17,7 @@ SECTIONS
         *(.text*)
         *(.glue_7)
         *(.glue_7t)
-        . = ALIGN(0x4);
+        . = ALIGN(0x10);
     } > VIRTUAL
 
     .data :

@@ -16,8 +16,8 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 ELF2ECA := $(CROSS)elf2emcoreapp
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export -ffunction-sections -fdata-sections -mcpu=arm940t
-LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" -d -r --gc-sections
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4
+LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
 preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
@@ -82,6 +82,15 @@ else
 	@sed -e 's/.*://' -e 's/\\$$//' < $@.dep.tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $@.dep
 endif
 	@rm -f $@.dep.tmp
+
+build/__emcore_%.o: $(EMCOREDIR)/export/%.c
+	@echo [CC]     $<
+ifeq ($(shell uname),WindowsNT)
+	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
+else
+	@-mkdir -p $(dir $@)
+endif
+	@$(CC) -c $(CFLAGS) -o $@ $<
 
 build/__emcore_%.o: $(EMCOREDIR)/export/%.S
 	@echo [CC]     $<

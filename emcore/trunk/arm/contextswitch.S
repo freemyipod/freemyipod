@@ -59,9 +59,6 @@ syscall_handler:
 swilist_start:
 	b	panicf
 	b	get_syscall_table
-	b	__clzsi2
-	b	__aeabi_uidivmod
-	b	__aeabi_idivmod
 swilist_end:
 
 syscall_breakpoint:

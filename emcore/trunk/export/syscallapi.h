@@ -25,8 +25,6 @@
 #define __SYSCALLAPI_H__
 
 
-#include "../libc/include/assert.h"
-
 #include "../global.h"
 #include "../panic.h"
 #include "../console.h"
@@ -60,10 +58,16 @@
 #include "../hmacsha1.h"
 #include "../malloc.h"
 #include "../library.h"
+#include "../crc32.h"
+#include "../libc/include/assert.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
 #include "../libc/include/stdio.h"
 #include "../libc/tlsf/tlsf.h"
+
+#ifdef ARM_ARCH
+#include "../arm/arm-support.h"
+#endif
 
 /* increase this every time the api struct changes */
 #define EMCORE_API_VERSION 1
@@ -82,6 +86,12 @@ struct emcore_syscall_table
 {
     uint32_t table_version;
     uint32_t table_minversion;
+#ifdef ARM_ARCH
+    /* DON'T MOVE THESE! If you absolutely need to, adjust export/armhelpers.c */
+	typeof(__clzsi2) *__clzsi2;
+	typeof(__aeabi_idivmod) *__aeabi_idivmod;
+	typeof(__aeabi_uidivmod) *__aeabi_uidivmod;
+#endif
     typeof(panic) *panic;
     typeof(panicf) *panicf;
     typeof(cprintf) *cprintf;
@@ -246,6 +256,7 @@ struct emcore_syscall_table
     typeof(release_library_ext) *release_library_ext;
     typeof(fat_enable_flushing) *fat_enable_flushing;
     typeof(lcd_get_format) *lcd_get_format;
+    typeof(crc32) *crc32;
 };
 
 
