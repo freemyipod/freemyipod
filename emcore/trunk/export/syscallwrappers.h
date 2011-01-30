@@ -48,10 +48,8 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define readdir __emcore_syscall->readdir
 #define mkdir __emcore_syscall->mkdir
 #define rmdir __emcore_syscall->rmdir
-#define renderbmp __emcore_syscall->renderbmp
 #define renderchar __emcore_syscall->renderchar
 #define rendertext __emcore_syscall->rendertext
-#define renderfillrect __emcore_syscall->renderfillrect
 #define get_font_width __emcore_syscall->get_font_width
 #define get_font_height __emcore_syscall->get_font_height
 #define execimage __emcore_syscall->execimage

@@ -34,8 +34,6 @@
 
 void renderchar(void* buffer, int fgcol, int bgcol, char text, int stride);
 void rendertext(void* buffer, int fgcol, int bgcol, char* text, int stride);
-void renderbmp(void* buffer, void* bitmap, int stride);
-void renderfillrect(uint16_t* buffer, int x, int y, int width, int height, int color, int stride);
 int get_font_width(void);
 int get_font_height(void);
 

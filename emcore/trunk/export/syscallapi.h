@@ -108,10 +108,8 @@ struct emcore_syscall_table
     typeof(readdir) *readdir;
     typeof(mkdir) *mkdir;
     typeof(rmdir) *rmdir;
-    typeof(renderbmp) *renderbmp;
     typeof(renderchar) *renderchar;
     typeof(rendertext) *rendertext;
-    typeof(renderfillrect) *renderfillrect;
     typeof(get_font_width) *get_font_width;
     typeof(get_font_height) *get_font_height;
     typeof(execimage) *execimage;
