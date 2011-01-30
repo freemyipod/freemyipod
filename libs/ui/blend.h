@@ -21,14 +21,16 @@
 //
 
 
-#ifndef __DITHER_H__
-#define __DITHER_H__
+#ifndef __BLEND_H__
+#define __BLEND_H__
 
 #include "emcorelib.h"
 
 
-void dither(int width, int height, void* inbuf, int inx, int iny, int instride,
-            void* outbuf, int outx, int outy, int outstride);
+void blend(int width, int height, int opacity,
+           void* outbuf, int outx, int outy, int outstride,
+           void* in1buf, int in1x, int in1y, int in1stride,
+           void* in2buf, int in2x, int in2y, int in2stride);
 
 
 #endif

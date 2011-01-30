@@ -27,7 +27,7 @@
 
 struct libui_api apitable =
 {
-    .dither = dither
+    .blend = blend
 };
 
 EMCORE_LIB_HEADER(0x49554365, LIBUI_API_VERSION, LIBUI_MIN_API_VERSION, NULL, NULL, apitable)

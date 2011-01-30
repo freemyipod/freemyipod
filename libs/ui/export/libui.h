@@ -27,7 +27,7 @@
 #include "emcorelib.h"
 
 
-#include "../dither.h"
+#include "../blend.h"
 
 
 /* increase this every time the api struct changes */
@@ -45,7 +45,7 @@
 
 struct libui_api
 {
-    typeof(dither)* dither;
+    typeof(blend)* blend;
 };
 
 #endif
