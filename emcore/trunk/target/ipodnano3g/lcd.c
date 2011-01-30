@@ -32,6 +32,8 @@ static struct dma_lli lcd_lli[(LCD_WIDTH * LCD_HEIGHT - 1) / 0xfff]
 
 static uint16_t lcd_color IDATA_ATTR;
 
+static struct mutex lcd_mutex;
+
 
 void lcd_init()
 {
@@ -57,23 +59,27 @@ int lcd_get_format()
     return LCD_FORMAT;
 }
 
+static void lcd_send_cmd(uint16_t cmd) ICODE_ATTR __attribute__((noinline));
 static void lcd_send_cmd(uint16_t cmd)
 {
     while (LCDSTATUS & 0x10);
     LCDWCMD = cmd;
 }
 
+static void lcd_send_data(uint16_t data) ICODE_ATTR __attribute__((noinline));
 static void lcd_send_data(uint16_t data)
 {
     while (LCDSTATUS & 0x10);
     LCDWDATA = (data & 0xff) | ((data & 0x7f00) << 1);
 }
 
+static uint32_t lcd_detect() ICODE_ATTR;
 static uint32_t lcd_detect()
 {
     return (PDAT6 & 0x30) >> 4;
 }
 
+bool displaylcd_busy() ICODE_ATTR;
 bool displaylcd_busy()
 {
     return DMAC0C4CONFIG & 1;
@@ -84,14 +90,20 @@ bool displaylcd_safe()
     return !(DMAC0C4CONFIG & 1);
 }
 
+void displaylcd_sync() ICODE_ATTR;
 void displaylcd_sync()
 {
+    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
     while (displaylcd_busy()) sleep(100);
+    mutex_unlock(&lcd_mutex);
 }
 
-void displaylcd(unsigned int startx, unsigned int endx,
-                unsigned int starty, unsigned int endy, void* data, int color)
+void displaylcd_setup(unsigned int startx, unsigned int endx,
+                      unsigned int starty, unsigned int endy) ICODE_ATTR;
+void displaylcd_setup(unsigned int startx, unsigned int endx,
+                      unsigned int starty, unsigned int endy)
 {
+    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
     displaylcd_sync();
     if (lcd_detect() & 2)
     {
@@ -123,16 +135,17 @@ void displaylcd(unsigned int startx, unsigned int endx,
         lcd_send_data(endy & 0xff);
         lcd_send_cmd(0x2c);
     }
-    int pixels = (endx - startx + 1) * (endy - starty + 1);
-    if (pixels <= 0) return;
+}
+
+static void displaylcd_dma(void* data, int pixels, bool solid) ICODE_ATTR;
+static void displaylcd_dma(void* data, int pixels, bool solid)
+{
     int i;
-    bool solid = (int)data == -1;
-    if (solid) lcd_color = color;
     for (i = -1; i < (int)ARRAYLEN(lcd_lli) && pixels > 0; i++, pixels -= 0xfff)
     {
         bool last = i + 1 >= ARRAYLEN(lcd_lli) || pixels <= 0xfff;
         struct dma_lli* lli = i < 0 ? (struct dma_lli*)((int)&DMAC0C4LLI) : &lcd_lli[i];
-        lli->srcaddr = solid ? &lcd_color : data;
+        lli->srcaddr = data;
         lli->dstaddr = (void*)((int)&LCDWDATA);
         lli->nextlli = last ? NULL : &lcd_lli[i + 1];
         lli->control = 0x70240000 | (last ? pixels : 0xfff)
@@ -141,6 +154,102 @@ void displaylcd(unsigned int startx, unsigned int endx,
     }
     clean_dcache();
     DMAC0C4CONFIG = 0x88c1;
+}
+
+void displaylcd_native(unsigned int startx, unsigned int endx,
+                       unsigned int starty, unsigned int endy, void* data)
+{
+    int pixels = (endx - startx + 1) * (endy - starty + 1);
+    if (pixels <= 0) return;
+    displaylcd_setup(startx, endx, starty, endy);
+    displaylcd_dma(data, pixels, false);
+    mutex_unlock(&lcd_mutex);
+}
+
+void filllcd_native(unsigned int startx, unsigned int endx,
+                    unsigned int starty, unsigned int endy, int color)
+{
+    int pixels = (endx - startx + 1) * (endy - starty + 1);
+    if (pixels <= 0) return;
+    displaylcd_setup(startx, endx, starty, endy);
+    lcd_color = color;
+    displaylcd_dma(&lcd_color, pixels, true);
+    mutex_unlock(&lcd_mutex);
+}
+
+void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
+                       unsigned int height, void* data, unsigned int datax,
+                       unsigned int datay, unsigned int stride, bool solid) ICODE_ATTR;
+void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
+                       unsigned int height, void* data, unsigned int datax,
+                       unsigned int datay, unsigned int stride, bool solid)
+{
+    int pixels = width * height;
+    if (pixels <= 0) return;
+    displaylcd_setup(x, x + width - 1, y, y + height - 1);
+    int corrsize = width * 3;
+    signed char* corr = (signed char*)malloc(corrsize);
+    if (!corr)
+    {
+        mutex_unlock(&lcd_mutex);
+        return;
+    }
+    memset(corr, 0, corrsize);
+    unsigned char* in = (unsigned char*)data + (stride * datay + datax) * 3;
+    for (y = 0; y < height; y++)
+    {
+        int i;
+        signed char* corrptr = corr;
+        signed char lastcorr[3] = {0};
+        for (x = 0; x < width; x++)
+        {
+            unsigned int pixel = 0;
+            signed char* lastcorrptr = lastcorr;
+            int orig = *in++ + *corrptr + *lastcorrptr;
+            orig = MAX(0, MIN(255, orig));
+            unsigned int real = orig >> 3;
+            pixel |= real << 11;
+            int err = orig - ((real << 3) | (real >> 2));
+            *corrptr++ = (*lastcorrptr >> 1) + err >> 2;
+            *lastcorrptr++ = err >> 1;
+            orig = *in++ + *corrptr + *lastcorrptr;
+            orig = MAX(0, MIN(255, orig));
+            real = orig >> 2;
+            pixel |= real << 5;
+            err = orig - ((real << 2) | (real >> 4));
+            *corrptr++ = (*lastcorrptr >> 1) + err >> 2;
+            *lastcorrptr++ = err >> 1;
+            orig = *in++ + *corrptr + *lastcorrptr;
+            orig = MAX(0, MIN(255, orig));
+            real = orig >> 3;
+            pixel |= real;
+            err = orig - ((real << 3) | (real >> 2));
+            *corrptr++ = (*lastcorrptr >> 1) + err >> 2;
+            *lastcorrptr++ = err >> 1;
+            while (LCDSTATUS & 0x10);
+            LCDWDATA = pixel;
+            if (solid) in -= 3;
+        }
+        if (solid) in += stride * 3;
+        else in += (stride - width) * 3;
+    }
+    free(corr);
+    mutex_unlock(&lcd_mutex);
+}
+
+void displaylcd(unsigned int x, unsigned int y, unsigned int width, unsigned int height,
+                void* data, unsigned int datax, unsigned int datay, unsigned int stride)
+{
+    displaylcd_dither(x, y, width, height, data, datax, datay, stride, false);
+}
+
+void filllcd(unsigned int x, unsigned int y, unsigned int width, unsigned int height, int color)
+{
+    if (width * height <= 0) return;
+    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
+    lcd_color = color;
+    displaylcd_dither(x, y, width, height, &lcd_color, 0, 0, 0, true);
+    mutex_unlock(&lcd_mutex);
 }
 
 void lcd_shutdown()

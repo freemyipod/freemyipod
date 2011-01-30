@@ -79,6 +79,8 @@
 #define PDAT10       (*((uint32_t volatile*)(0x3CF000A4)))
 #define PCON11       (*((uint32_t volatile*)(0x3CF000B0)))
 #define PDAT11       (*((uint32_t volatile*)(0x3CF000B4)))
+#define PCON13       (*((uint32_t volatile*)(0x3CF000D0)))
+#define PDAT13       (*((uint32_t volatile*)(0x3CF000D4)))
 #define PCON14       (*((uint32_t volatile*)(0x3CF000E0)))
 #define PDAT14       (*((uint32_t volatile*)(0x3CF000E4)))
 #define PCON15       (*((uint32_t volatile*)(0x3CF000F0)))
@@ -284,6 +286,14 @@
 #define IICSTAT      (*((uint32_t volatile*)(0x3C900004)))
 #define IICADD       (*((uint32_t volatile*)(0x3C900008)))
 #define IICDS        (*((uint32_t volatile*)(0x3C90000C)))
+
+
+/////LCD/////
+#define LCDCON    (*((uint32_t volatile*)(0x38600040)))
+#define LCDWCMD   (*((uint32_t volatile*)(0x38600004)))
+#define LCDPHTIME (*((uint32_t volatile*)(0x38600010)))
+#define LCDSTATUS (*((uint32_t volatile*)(0x3860001c)))
+#define LCDWDATA  (*((uint32_t volatile*)(0x38600040)))
 
 
 /////CLOCK GATES/////

@@ -23,20 +23,18 @@
 
 #include "global.h"
 #include "thread.h"
-#include "s5l8720.h"
+#include "s5l8701.h"
 #include "util.h"
 
-
-static struct dma_lli lcd_lli[(LCD_WIDTH * LCD_HEIGHT - 1) / 0xfff]
-    IDATA_ATTR __attribute__((aligned(16)));
-
-static uint16_t lcd_color IDATA_ATTR;
 
 static struct mutex lcd_mutex;
 
 
 void lcd_init()
 {
+    DMACON8 = 0x20590000;
+    LCDCON = 0xd01;
+    LCDPHTIME = 0;
 }
 
 int lcd_get_width()
@@ -70,21 +68,24 @@ static void lcd_send_data(uint16_t data) ICODE_ATTR __attribute__((noinline));
 static void lcd_send_data(uint16_t data)
 {
     while (LCDSTATUS & 0x10);
-    LCDWDATA = (data & 0xff) | ((data & 0x7f00) << 1);
+    LCDWDATA = data;
 }
 
-void lcd_shutdown()
+static uint32_t lcd_detect() ICODE_ATTR;
+static uint32_t lcd_detect()
 {
+    return (PDAT13 & 1) | (PDAT14 & 2);
 }
 
+bool displaylcd_busy() ICODE_ATTR;
 bool displaylcd_busy()
 {
-    return DMAC0C4CONFIG & 1;
+    return DMAALLST2 & 0x70000;
 }
 
 bool displaylcd_safe()
 {
-    return !(DMAC0C4CONFIG & 1);
+    return !(DMAALLST2 & 0x70000);
 }
 
 void displaylcd_sync() ICODE_ATTR;
@@ -102,32 +103,69 @@ void displaylcd_setup(unsigned int startx, unsigned int endx,
 {
     mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
     displaylcd_sync();
-    lcd_send_cmd(0x2a);
-    lcd_send_data(startx);
-    lcd_send_data(endx);
-    lcd_send_cmd(0x2b);
-    lcd_send_data(starty);
-    lcd_send_data(endy);
-    lcd_send_cmd(0x2c);
+    if (lcd_detect() == 2)
+    {
+        lcd_send_cmd(0x50);
+        lcd_send_data(startx);
+        lcd_send_cmd(0x51);
+        lcd_send_data(endx);
+        lcd_send_cmd(0x52);
+        lcd_send_data(starty);
+        lcd_send_cmd(0x53);
+        lcd_send_data(endy);
+        lcd_send_cmd(0x20);
+        lcd_send_data(startx);
+        lcd_send_cmd(0x21);
+        lcd_send_data(starty);
+        lcd_send_cmd(0x22);
+    }
+    else
+    {
+        lcd_send_cmd(0x2a);
+        lcd_send_data(startx);
+        lcd_send_data(endx);
+        lcd_send_cmd(0x2b);
+        lcd_send_data(starty);
+        lcd_send_data(endy);
+        lcd_send_cmd(0x2c);
+    }
 }
 
-static void displaylcd_dma(void* data, int pixels, bool solid) ICODE_ATTR;
-static void displaylcd_dma(void* data, int pixels, bool solid)
+static void displaylcd_dma(void* data, int pixels) ICODE_ATTR;
+static void displaylcd_dma(void* data, int pixels)
 {
-    int i;
-    for (i = -1; i < (int)ARRAYLEN(lcd_lli) && pixels > 0; i++, pixels -= 0xfff)
-    {
-        bool last = i + 1 >= ARRAYLEN(lcd_lli) || pixels <= 0xfff;
-        struct dma_lli* lli = i < 0 ? (struct dma_lli*)((int)&DMAC0C4LLI) : &lcd_lli[i];
-        lli->srcaddr = data;
-        lli->dstaddr = (void*)((int)&LCDWDATA);
-        lli->nextlli = last ? NULL : &lcd_lli[i + 1];
-        lli->control = 0x70240000 | (last ? pixels : 0xfff)
-                     | (last ? 0x80000000 : 0) | (solid ? 0 : 0x4000000);
-        data = (void*)(((uint32_t)data) + 0x1ffe);
-    }
+    uint16_t* in = (uint16_t*)data;
+    while (LCDSTATUS & 8);
+    while (pixels & 3)
+	{
+        LCDWDATA = *in++;
+        pixels--;
+	}
+    DMABASE8 = in;
+    DMACON8 = 0x20590000;
+    DMATCNT8 = pixels / 4;
     clean_dcache();
-    DMAC0C4CONFIG = 0x88c1;
+    DMACOM8 = 4;
+}
+
+static void displaylcd_solid(uint16_t data, int pixels) ICODE_ATTR;
+static void displaylcd_solid(uint16_t data, int pixels)
+{
+    while (pixels >= 4)
+    {
+        while (LCDSTATUS & 8);
+        LCDWDATA = data;
+        LCDWDATA = data;
+        LCDWDATA = data;
+        LCDWDATA = data;
+        pixels -= 4;
+    }
+    while (LCDSTATUS & 8);
+    while (pixels & 3)
+	{
+        LCDWDATA = data;
+        pixels--;
+	}
 }
 
 void displaylcd_native(unsigned int startx, unsigned int endx,
@@ -136,7 +174,7 @@ void displaylcd_native(unsigned int startx, unsigned int endx,
     int pixels = (endx - startx + 1) * (endy - starty + 1);
     if (pixels <= 0) return;
     displaylcd_setup(startx, endx, starty, endy);
-    displaylcd_dma(data, pixels, false);
+    displaylcd_dma(data, pixels);
     mutex_unlock(&lcd_mutex);
 }
 
@@ -146,8 +184,7 @@ void filllcd_native(unsigned int startx, unsigned int endx,
     int pixels = (endx - startx + 1) * (endy - starty + 1);
     if (pixels <= 0) return;
     displaylcd_setup(startx, endx, starty, endy);
-    lcd_color = color;
-    displaylcd_dma(&lcd_color, pixels, true);
+    displaylcd_solid(color, pixels);
     mutex_unlock(&lcd_mutex);
 }
 
@@ -200,7 +237,6 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
             err = orig - ((real << 3) | (real >> 2));
             *corrptr++ = (*lastcorrptr >> 1) + err >> 2;
             *lastcorrptr++ = err >> 1;
-            while (LCDSTATUS & 0x10);
             LCDWDATA = pixel;
             if (solid) in -= 3;
         }
@@ -221,14 +257,46 @@ void filllcd(unsigned int x, unsigned int y, unsigned int width, unsigned int he
 {
     if (width * height <= 0) return;
     mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
-    lcd_color = color;
-    displaylcd_dither(x, y, width, height, &lcd_color, 0, 0, 0, true);
+    displaylcd_dither(x, y, width, height, &color, 0, 0, 0, true);
     mutex_unlock(&lcd_mutex);
 }
 
-void INT_DMAC0C4()
+void lcd_shutdown()
 {
-    DMAC0INTTCCLR = 0x10;
+    displaylcd_sync();
+    uint32_t type = lcd_detect();
+    if (type == 2)
+    {
+        lcd_send_cmd(0x7);
+        lcd_send_data(0x232);
+        lcd_send_cmd(0x13);
+        lcd_send_data(0x1137);
+        lcd_send_cmd(0x7);
+        lcd_send_data(0x201);
+        lcd_send_cmd(0x13);
+        lcd_send_data(0x137);
+        lcd_send_cmd(0x7);
+        lcd_send_data(0x200);
+        lcd_send_cmd(0x10);
+        lcd_send_data(0x680);
+        lcd_send_cmd(0x12);
+        lcd_send_data(0x160);
+        lcd_send_cmd(0x13);
+        lcd_send_data(0x127);
+        lcd_send_cmd(0x10);
+        lcd_send_data(0x600);
+    }
+    else
+    {
+        lcd_send_cmd(0x28);
+        lcd_send_cmd(0x10);
+    }
+    sleep(5000);
+}
+
+void INT_DMA8()
+{
+    DMACOM8 = 7;
     lcdconsole_callback();
 }
 

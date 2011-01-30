@@ -38,8 +38,15 @@ int lcd_get_height() ICODE_ATTR;
 int lcd_get_bytes_per_pixel() ICODE_ATTR;
 int lcd_get_format() ICODE_ATTR;
 int lcd_translate_color(uint8_t alpha, uint8_t red, uint8_t green, uint8_t blue) ICODE_ATTR;
-void displaylcd(unsigned int startx, unsigned int endx,
-                unsigned int starty, unsigned int endy, void* data, int color) ICODE_ATTR;
+void displaylcd_native(unsigned int startx, unsigned int endx,
+                       unsigned int starty, unsigned int endy, void* data) ICODE_ATTR;
+void filllcd_native(unsigned int startx, unsigned int endx,
+                    unsigned int starty, unsigned int endy, int color) ICODE_ATTR;
+void displaylcd(unsigned int x, unsigned int y, unsigned int width,
+                unsigned int height, void* data, unsigned int datax,
+                unsigned int datay, unsigned int stride) ICODE_ATTR;
+void filllcd(unsigned int x, unsigned int y,
+             unsigned int width, unsigned int height, int color) ICODE_ATTR;
 void displaylcd_sync() ICODE_ATTR;
 bool displaylcd_busy() ICODE_ATTR;
 bool displaylcd_safe() ICODE_ATTR;

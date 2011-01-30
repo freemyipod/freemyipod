@@ -29,16 +29,16 @@
 static void progressbar_drawborderbg(struct progressbar_state* state, int bgstart)
 {
     state->currentx = state->startx;
-    displaylcd(bgstart + 1, state->endx - 1, state->starty + 1, state->endy - 1,
-               (void*)-1, state->bgcolor);
-    displaylcd(state->startx, state->endx, state->starty, state->starty,
-               (void*)-1, state->bordercolor);
-    displaylcd(state->startx, state->endx, state->endy, state->endy,
-               (void*)-1, state->bordercolor);
-    displaylcd(state->startx, state->startx, state->starty + 1, state->endy - 1,
-               (void*)-1, state->bordercolor);
-    displaylcd(state->endx, state->endx, state->starty + 1, state->endy - 1,
-               (void*)-1, state->bordercolor);
+    filllcd_native(bgstart + 1, state->endx - 1, state->starty + 1, state->endy - 1,
+                   state->bgcolor);
+    filllcd_native(state->startx, state->endx, state->starty, state->starty,
+                   state->bordercolor);
+    filllcd_native(state->startx, state->endx, state->endy, state->endy,
+                   state->bordercolor);
+    filllcd_native(state->startx, state->startx, state->starty + 1, state->endy - 1,
+                   state->bordercolor);
+    filllcd_native(state->endx, state->endx, state->starty + 1, state->endy - 1,
+                   state->bordercolor);
 }
 
 void progressbar_init(struct progressbar_state* state, int startx, int endx, int starty, int endy,
@@ -64,7 +64,7 @@ void progressbar_setpos(struct progressbar_state* state, int value, bool redraw)
              / (state->max - state->min) + state->startx;
     if (redraw || newx < state->currentx) progressbar_drawborderbg(state, newx);
     if (newx > state->currentx)
-        displaylcd(state->currentx + 1, newx, state->starty + 1, state->endy - 1,
-                   (void*)-1, state->fgcolor);
+        filllcd_native(state->currentx + 1, newx, state->starty + 1, state->endy - 1,
+                       state->fgcolor);
     state->currentx = newx;
 }

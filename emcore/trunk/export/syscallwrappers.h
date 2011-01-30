@@ -123,6 +123,9 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define interrupt_set_handler __emcore_syscall->interrupt_set_handler
 #define int_timer_set_handler __emcore_syscall->int_timer_set_handler
 #define displaylcd __emcore_syscall->displaylcd
+#define filllcd __emcore_syscall->filllcd
+#define displaylcd_native __emcore_syscall->displaylcd_native
+#define filllcd_native __emcore_syscall->filllcd_native
 #define displaylcd_sync __emcore_syscall->displaylcd_sync
 #define displaylcd_busy __emcore_syscall->displaylcd_busy
 #define displaylcd_safe __emcore_syscall->displaylcd_safe

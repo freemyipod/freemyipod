@@ -48,6 +48,9 @@ void __aeabi_uidivmod(void)
     __asm__ volatile("ldr\tr12, =__emcore_syscall\n\tldr\tr12, [r12]\n\tldr\tpc, [r12,#0x10]\n\t");
 }
 
+extern __attribute__((alias("__aeabi_idivmod"))) void __aeabi_idiv(void);
+extern __attribute__((alias("__aeabi_uidivmod"))) void __aeabi_uidiv(void);
+
 void* memset(void *dst, int c, size_t length)
 {
     return __emcore_syscall->memset(dst, c, length);

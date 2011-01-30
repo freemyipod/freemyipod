@@ -62,9 +62,9 @@ void panic(enum panic_severity severity, const char* string)
     }
     else
     {
-        cputs(1, "\n*PANIC*\n");
-        cputs(1, string);
-        cputc(1, '\n');
+        cputs(CONSOLE_BOOT, "\n*PANIC*\n");
+        cputs(CONSOLE_BOOT, string);
+        cputc(CONSOLE_BOOT, '\n');
         handle_panic(severity);
     }
 }
@@ -92,11 +92,11 @@ void panicf(enum panic_severity severity, const char* string, ...)
     }
     else
     {
-        cputs(1, "\n*PANIC*\n");
+        cputs(CONSOLE_BOOT, "\n*PANIC*\n");
         va_start(ap, string);
-        cvprintf(1, string, ap);
+        cvprintf(CONSOLE_BOOT, string, ap);
         va_end(ap);
-        cputc(1, '\n');
+        cputc(CONSOLE_BOOT, '\n');
         handle_panic(severity);
     }
 }

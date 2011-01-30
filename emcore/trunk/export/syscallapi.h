@@ -183,6 +183,9 @@ struct emcore_syscall_table
     typeof(interrupt_set_handler) *interrupt_set_handler;
     typeof(int_timer_set_handler) *int_timer_set_handler;
     typeof(displaylcd) *displaylcd;
+    typeof(filllcd) *filllcd;
+    typeof(displaylcd_native) *displaylcd_native;
+    typeof(filllcd_native) *filllcd_native;
     typeof(displaylcd_sync) *displaylcd_sync;
     typeof(displaylcd_busy) *displaylcd_busy;
     typeof(displaylcd_safe) *displaylcd_safe;
