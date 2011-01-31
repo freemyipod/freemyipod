@@ -161,7 +161,7 @@ class Commandline(object):
             except libemcore.usb.core.USBError:
                 self.logger.error("There is a problem with the USB connection.\n")
         else:
-            usage("No such command")
+            usage("No such command!", docstring = False)
     
     @staticmethod
     def _bool(something):
@@ -208,8 +208,8 @@ class Commandline(object):
     
     @command
     def help(self):
-        """ Generates a list of functions """
-        usage(None, False, False)
+        """ Displays this help """
+        usage(docstring = True)
     
     @command
     def getinfo(self, infotype):
@@ -1250,7 +1250,7 @@ class Commandline(object):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        usage("No command specified")
+        usage("No command specified", docstring = False)
     try:
         interface = Commandline()
         interface._parsecommand(sys.argv[1], sys.argv[2:])
