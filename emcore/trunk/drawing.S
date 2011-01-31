@@ -50,46 +50,130 @@ get_font_height:
 .global rendertext
 .type rendertext, %function
 rendertext:
-	stmfd	sp!, {r0-r2,r4,r5,lr}
-	ldr	r4, [sp,#0x18]
-	str	r4, [sp,#-4]!
-	mov	r4, r3
-	mov	r5, #6 * LCD_BYTESPERPIXEL
+	stmfd	sp!, {r1-r8,lr}
+	mov	r4, r0
+	ldmfd	sp, {r5-r7}
+	ldr	r0, [sp,#0x24]
+	ldr	r1, [sp,#0x28]
+	ldr	r8, [sp,#0x2c]
+	stmia	sp, {r0,r1}
 rendertext_loop:
-	ldrb	r3, [r4], #1
-	cmp	r3, #0
+	ldrb	r12, [r8], #1
+	mov	r0, r4
+	cmp	r12, #0
+	mov	r1, r5
 	beq	rendertext_done
+	mov	r2, r6
+	str	r12, [sp,#0x8]
+	mov	r3, r7
 	bl	renderchar
-	ldmed	sp, {r0-r2}
-	add	r0, r0, r5
-	str	r0, [sp,#4]
+	add	r5, r5, #6
 	b	rendertext_loop
 rendertext_done:
-	ldmfd	sp!, {r0-r5,pc}
+	ldmfd	sp!, {r1-r8,pc}
 .size rendertext, .-rendertext
 
 
-#if (LCD_BYTESPERPIXEL == 2)
 .section .icode.renderchar, "ax", %progbits
 .align 2
 .global renderchar
 .type renderchar, %function
+.global renderchar_native
+.type renderchar_native, %function
 renderchar:
+	stmfd	sp!, {r4-r9,lr}
+	mla	r1, r2, r3, r1
+	ldr	r2, [sp,#0x24]
+	add	r1, r1, r1,lsl#1
+	sub	r2, r2, #0x20
+	add	r0, r0, r1
+	adr	r7, renderchar_font
+	cmp	r2, #0x5f
+	add	r2, r2, r2,lsl#2
+	mov	r1, #6
+	addcc	r7, r7, r2
+	ldr	r4, [sp,#0x1c]
+	add	r3, r3, r3,lsl#1
+	ldr	r5, [sp,#0x20]
+renderchar_x:
+	cmp	r1, #1
+	mov	r2, #8
+	ldrneb	lr, [r7], #1
+renderchar_y:
+	mov	r12, r5,lsr#24
+	and	r9, r5, #0xff
+	ldrb	r8, [r0]
+	mul	r9, r12, r9
+	rsb	r12, r12, #0xff
+	tst	lr, #1
+	mla	r8, r12, r8, r9
+	movne	r12, r4,lsr#24
+	andne	r9, r4, #0xff
+	mov	r8, r8,lsr#8
+	mulne	r9, r12, r9
+	rsbne	r12, r12, #0xff
+	mov	lr, lr,lsr#1
+	mlane	r8, r12, r8, r9
+	mov	r9, r5,lsr#8
+	movne	r8, r8,lsr#8
+	mov	r12, r5,lsr#24
+	strb	r8, [r0]
+	and	r9, r9, #0xff
+	ldrb	r8, [r0,#1]
+	mul	r9, r12, r9
+	rsb	r12, r12, #0xff
+	mla	r8, r12, r8, r9
+	movne	r9, r4,lsr#8
+	movne	r12, r4,lsr#24
+	andne	r9, r9, #0xff
+	mov	r8, r8,lsr#8
+	mulne	r9, r12, r9
+	rsbne	r12, r12, #0xff
+	mlane	r8, r12, r8, r9
+	mov	r12, r5,lsr#24
+	mov	r9, r5,lsr#16
+	movne	r8, r8,lsr#8
+	and	r9, r9, #0xff
+	strb	r8, [r0,#1]
+	mul	r9, r12, r9
+	ldrb	r8, [r0,#2]
+	rsb	r12, r12, #0xff
+	movne	r9, r4,lsr#16
+	mla	r8, r12, r8, r9
+	andne	r9, r9, #0xff
+	movne	r12, r4,lsr#24
+	mov	r8, r8,lsr#8
+	mulne	r9, r12, r9
+	rsbne	r12, r12, #0xff
+	mlane	r8, r12, r8, r9
+	movne	r8, r8,lsr#8
+	subs	r2, r2, #1
+	strb	r8, [r0,#2]
+	add	r0, r0, r3
+	bne	renderchar_y
+	sub	r0, r0, r3,lsl#3
+	subs	r1, r1, #1
+	add	r0, r0, #3
+	bne	renderchar_x
+	ldmfd	sp!, {r4-r9,pc}
+
+#if (LCD_BYTESPERPIXEL == 2)
+renderchar_native:
 	stmfd	sp!, {r4-r7,lr}
 	ldr	r7, [sp,#0x14]
 	cmn	r2, #1
-	beq	renderchar_nobg
+	beq	renderchar_native_nobg
 	mov	r6, r0
 	mov	r4, #8
 	mov	lr, r2,lsr#16
 	sub	lr, lr, #0xff00
 	subs	lr, lr, #0xff
-	bne	renderchar_opaquerow
+	bne	renderchar_native_opaquerow
 	mov	r12, r2,lsl#16
 	mov	r12, r12,lsr#16
-renderchar_blendrow:
+renderchar_native_blendrow:
 	mov	r5, #6
-renderchar_blendcol:
+renderchar_native_blendcol:
 	ldrh	lr, [r6]
 	movs	lr, lr,lsr#1
 #ifdef LCD_BIGENDIAN
@@ -102,43 +186,46 @@ renderchar_blendcol:
 	add	lr, lr, r12
 	strh	lr, [r6], #2
 	subs	r5, r5, #1
-	bne	renderchar_blendcol
+	bne	renderchar_native_blendcol
 	add	r6, r6, r7,lsl#1
 	sub	r6, r6, #12
 	subs	r4, r4, #1
-	bne	renderchar_blendrow
-	b	renderchar_nobg
-renderchar_opaquerow:
+	bne	renderchar_native_blendrow
+	b	renderchar_native_nobg
+renderchar_native_opaquerow:
 	mov	r5, #6
-renderchar_opaquecol:
+renderchar_native_opaquecol:
 	strh	r2, [r6], #2
 	subs	r5, r5, #1
-	bne	renderchar_opaquecol
+	bne	renderchar_native_opaquecol
 	add	r6, r6, r7,lsl#1
 	sub	r6, r6, #12
 	subs	r4, r4, #1
-	bne	renderchar_opaquerow
-renderchar_nobg:
+	bne	renderchar_native_opaquerow
+renderchar_native_nobg:
 	adr	r5, renderchar_font
 	sub	r3, r3, #0x20
 	cmp	r3, #0x5f
 	addcc	r5, r3,lsl#2
 	addcc	r5, r3
 	mov	r3, #5
-renderchar_col:
+renderchar_native_col:
 	mov	r6, r0
 	ldrb	r4, [r5], #1
-renderchar_row:
+renderchar_native_row:
 	tst	r4, #1
 	strneh	r1, [r6]
 	add	r6, r6, r7,lsl#1
 	movs	r4, r4,lsr#1
-	bne	renderchar_row
+	bne	renderchar_native_row
 	add	r0, r0, #2
 	subs	r3, r3, #1
-	bne	renderchar_col
+	bne	renderchar_native_col
 	add	r0, r0, #2
 	ldmfd	sp!, {r4-r7,pc}
+#else
+#error Unknown number of bytes per pixel!
+#endif
 
 renderchar_font:
 	.byte 0, 0, 0, 0, 0
@@ -237,7 +324,4 @@ renderchar_font:
 	.byte 0, 65, 54, 8, 0
 	.byte 2, 1, 2, 4, 2
 .align 2
-.size renderchar, .-renderchar
-#else
-#error Unknown number of bytes per pixel!
-#endif
+.size renderchar_native, .-renderchar_native

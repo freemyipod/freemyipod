@@ -169,6 +169,7 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .lcd_get_height = lcd_get_height,
     .lcd_get_bytes_per_pixel = lcd_get_bytes_per_pixel,
     .lcd_translate_color = lcd_translate_color,
+    .renderchar_native = renderchar_native,
     .renderchar = renderchar,
     .rendertext = rendertext,
     .get_font_width = get_font_width,
