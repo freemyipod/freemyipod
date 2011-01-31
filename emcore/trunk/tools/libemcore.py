@@ -96,9 +96,12 @@ class Emcore(object):
         It also adds a "timeout" argument to every function to access this
         feature from external. So DON'T EVER use a parameter called 'timeout'
         in your commands. Variables are ok.
+        
+        If you want to enable logging please pass a misc.Logger object to the
+        constructor.
     """
-    def __init__(self, loglevel = 2, logtarget = "stdout", logfile = "tools.log"):
-        self.logger = Logger(loglevel, logtarget, logfile)
+    def __init__(self, logger = Logger(loglevel = -1)):
+        self.logger = logger
         self.logger.debug("Initializing Emcore object\n")
         self.lib = Lib(self.logger)
         

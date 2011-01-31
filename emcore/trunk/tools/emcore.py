@@ -129,7 +129,7 @@ class Commandline(object):
     def __init__(self):
         self.logger = Logger()
         try:
-            self.emcore = libemcore.Emcore(loglevel = 2)
+            self.emcore = libemcore.Emcore(logger = self.logger)
         except libemcore.DeviceNotFoundError:
             self.logger.error("No emCORE device found!\n")
             exit(1)
