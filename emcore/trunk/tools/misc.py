@@ -31,12 +31,12 @@ import libemcoredata
 
 class Logger(object):
     """
-        Simple stdout logger.
+        Simple stdout/stderr/file logger.
         Loglevel 3 is most verbose, Loglevel 0: Only log something if there is an error.
         Loglevel -1 means that nothing is logged.
-        The log function doesn't care about the loglevel and always logs to stdout.
+        The write function doesn't care about the loglevel and always logs everything.
     """
-    def __init__(self, loglevel = 2, target = "stdout", logfile = "tools.log"):
+    def __init__(self, loglevel = 2, target = "stderr", logfile = "tools.log"):
         """
             loglevel: Possible values: 0 (only errors), 1 (warnings), 2 (info,
                       recommended for production use), 3 and more (debug)
@@ -47,13 +47,15 @@ class Logger(object):
         self.logfile = logfile
         self.target = target
         
-    def log(self, text, indent = 0, target = None):
+    def write(self, text, indent = 0, target = None):
         if self.loglevel >= 0:
             if target is None: target = self.target
             text = (indent * " ") + text
             text = text.replace("\n", "\n" + (indent * " "), text.count("\n") - 1)
             if target == "stdout":
-                sys.stdout.write(text)
+                sys.stderr.write(text)
+            if target == "stderr":
+                sys.stderr.write(text)
             elif target == "file":
                 with open(self.logfile, 'a') as f:
                     f.write(text)
@@ -63,19 +65,19 @@ class Logger(object):
     
     def debug(self, text, indent = 0, target = None):
         if self.loglevel >= 3:
-            self.log("DEBUG: " + text, indent, target)
+            self.write("DEBUG: " + text, indent, target)
     
     def info(self, text, indent = 0, target = None):
         if self.loglevel >= 2:
-            self.log(text, indent, target)
+            self.write(text, indent, target)
     
     def warn(self, text, indent = 0, target = None):
         if self.loglevel >= 1:
-            self.log("WARNING: " + text, indent, target)
+            self.write("WARNING: " + text, indent, target)
     
     def error(self, text, indent = 0, target = None):
         if self.loglevel >= 0:
-            self.log("ERROR: " + text, indent, target)
+            self.write("ERROR: " + text, indent, target)
 
 
 class Bunch(dict):

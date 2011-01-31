@@ -65,26 +65,26 @@ def usage(errormsg=None, specific=False, docstring=True):
     cmddict = Commandline.cmddict
     doc = getfuncdoc(cmddict)
     if not specific:
-        logger.log("Please provide a command and (if needed) parameters as command line arguments\n\n")
-        logger.log("Available commands:\n\n")
+        logger.write("Please provide a command and (if needed) parameters as command line arguments\n\n")
+        logger.write("Available commands:\n\n")
     else:
-        logger.log("\n")
+        logger.write("\n")
     for function in sorted(doc.items()):
         function = function[0]
         if specific == False or specific == function:
-            logger.log(function + " ", 2)
+            logger.write(function + " ", 2)
             for arg in doc[function]['args']:
-                logger.log("<" + arg + "> ")
+                logger.write("<" + arg + "> ")
             if doc[function]['kwargs']:
                 for kwarg, kwvalue in doc[function]['kwargs'].iteritems():
-                    logger.log("[" + kwarg + " = " + str(kwvalue) + "] ")
+                    logger.write("[" + kwarg + " = " + str(kwvalue) + "] ")
             if doc[function]['varargs']:
-                logger.log("<db1> ... <dbN>")
+                logger.write("<db1> ... <dbN>")
             if docstring and doc[function]['documentation']:
-                logger.log("\n")
-                logger.log(doc[function]['documentation']+"\n", 4)
-            logger.log("\n")
-    logger.log("\n")
+                logger.write("\n")
+                logger.write(doc[function]['documentation']+"\n", 4)
+            logger.write("\n")
+    logger.write("\n")
 
     if errormsg:
         logger.error(str(errormsg)+"\n")
@@ -390,7 +390,7 @@ class Commandline(object):
         """
         while True:
             resp = self.emcore.usbcread()
-            self.logger.log(resp.data)
+            self.logger.write(resp.data)
             time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
 
     @command
@@ -414,7 +414,7 @@ class Commandline(object):
         bitmask = self._hexint(bitmask)
         while True:
             resp = self.emcore.cread()
-            self.logger.log(resp.data)
+            self.logger.write(resp.data)
             time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
     
     @command

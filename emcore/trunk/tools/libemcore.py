@@ -1109,26 +1109,26 @@ if __name__ == "__main__":
     if sys.argv[1] == "gendoc":
         # Generates Documentation
         from misc import gendoc
-        logger.log("Generating documentation\n")
+        logger.write("Generating documentation\n")
         cmddict = {}
         for attr, value in Emcore.__dict__.iteritems():
             if getattr(value, 'func', False):
                 if getattr(value.func, '_command', False):
                     cmddict[value.func.__name__] = value
-        logger.log(gendoc(cmddict))
+        logger.write(gendoc(cmddict))
     
     elif sys.argv[1] == "malloctest":
         emcore = Emcore()
-        logger.log("Allocating 200 bytes of memory: ")
+        logger.write("Allocating 200 bytes of memory: ")
         addr = emcore.malloc(200)
-        logger.log("0x%x\n" % addr)
-        logger.log("Reallocating to 2000 bytes: ")
+        logger.write("0x%x\n" % addr)
+        logger.write("Reallocating to 2000 bytes: ")
         addr = emcore.realloc(addr, 2000)
-        logger.log("0x%x\n" % addr)
-        logger.log("Freeing 0x%x\n" % addr)
+        logger.write("0x%x\n" % addr)
+        logger.write("Freeing 0x%x\n" % addr)
         emcore.free(addr)
-        logger.log("Allocating 1000 bytes of memory aligned to 100 bytes: ")
+        logger.write("Allocating 1000 bytes of memory aligned to 100 bytes: ")
         addr = emcore.memalign(100, 1000)
-        logger.log("0x%x\n" % addr)
-        logger.log("Freeing 0x%x\n" % addr)
+        logger.write("0x%x\n" % addr)
+        logger.write("Freeing 0x%x\n" % addr)
         emcore.free(addr)
