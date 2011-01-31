@@ -1105,37 +1105,8 @@ class Dev(object):
 if __name__ == "__main__":
     from misc import Logger
     logger = Logger()
-    if sys.argv[1] == "test":
-        # Some tests
-        import sys
-        emcore = Emcore()
-        resp = emcore.getversioninfo()
-        logger.log("Emcore device version information: " + libemcoredata.swtypes[resp.swtypeid] + " v" + str(resp.majorv) + "." + str(resp.minorv) + 
-                         "." + str(resp.patchv) + " r" + str(resp.revision) + " running on " + libemcoredata.hwtypes[resp.hwtypeid] + "\n")
-        resp = emcore.getusermemrange()
-        logger.log("Usermemrange: "+hex(resp.lower)+" - "+hex(resp.upper)+"\n")
-        memaddr = resp.lower
-        maxlen = resp.upper - resp.lower
-        f = open("./emcore.py", "rb")
-        logger.log("Loading test file (emcore.py) to send over USB...\n")
-        datastr = f.read()[:maxlen]
-        logger.log("Sending data...\n")
-        emcore.write(memaddr, datastr)
-        logger.log("Encrypting data with the hardware key...\n")
-        emcore.aesencrypt(memaddr, len(datastr), 0)
-        logger.log("Reading data back and saving it to 'libemcore-test-encrypted.bin'...\n")
-        f = open("./libemcore-test-encrypted.bin", "wb")
-        f.write(emcore.read(memaddr, len(datastr)))
-        logger.log("Decrypting the data again...\n")
-        emcore.aesdecrypt(memaddr, len(datastr), 0)
-        logger.log("Reading data back from device...\n")
-        readdata = emcore.read(memaddr, len(datastr))
-        if readdata == datastr:
-            logger.log("Data matches!")
-        else:
-            logger.log("Data does NOT match. Something went wrong")
     
-    elif sys.argv[1] == "gendoc":
+    if sys.argv[1] == "gendoc":
         # Generates Documentation
         from misc import gendoc
         logger.log("Generating documentation\n")
