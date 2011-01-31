@@ -46,6 +46,8 @@
 struct libui_api
 {
     typeof(blend)* blend;
+    typeof(blendcolor)* blendcolor;
+    typeof(mattecolor)* mattecolor;
 };
 
 #endif

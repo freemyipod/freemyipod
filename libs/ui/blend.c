@@ -54,3 +54,54 @@ void blend(int width, int height, int opacity,
         out += (outstride - width) * 3;
     }
 }
+
+void blendcolor(int width, int height, uint32_t color,
+                void* outbuf, int outx, int outy, int outstride,
+                void* inbuf, int inx, int iny, int instride)
+{
+    char* in = (char*)inbuf + (inx + iny * instride) * 3;
+    char* out = (char*)outbuf + (outx + outy * outstride) * 3;
+    int r = (color >> 0) & 0xff;
+    int g = (color >> 8) & 0xff;
+    int b = (color >> 16) & 0xff;
+    int a = (color >> 24) & 0xff;
+    int x, y;
+    for (y = 0; y < height; y++)
+    {
+        for (x = 0; x < width; x++)
+        {
+            *out++ = (a * r + (255 - a) * *in++) >> 8;
+            *out++ = (a * g + (255 - a) * *in++) >> 8;
+            *out++ = (a * b + (255 - a) * *in++) >> 8;
+        }
+        in += (instride - width) * 3;
+        out += (outstride - width) * 3;
+    }
+}
+
+void mattecolor(int width, int height, uint32_t color,
+                void* outbuf, int outx, int outy, int outstride,
+                void* inbuf, int inx, int iny, int instride)
+{
+    char* in = (char*)inbuf + (inx + iny * instride) * 4;
+    char* out = (char*)outbuf + (outx + outy * outstride) * 3;
+    int mr = (color >> 0) & 0xff;
+    int mg = (color >> 8) & 0xff;
+    int mb = (color >> 16) & 0xff;
+    int x, y;
+    for (y = 0; y < height; y++)
+    {
+        for (x = 0; x < width; x++)
+        {
+            int r = *in++;
+            int g = *in++;
+            int b = *in++;
+            int a = *in++;
+            *out++ = (a * r + (255 - a) * mr) >> 8;
+            *out++ = (a * g + (255 - a) * mg) >> 8;
+            *out++ = (a * b + (255 - a) * mb) >> 8;
+        }
+        in += (instride - width) * 4;
+        out += (outstride - width) * 3;
+    }
+}

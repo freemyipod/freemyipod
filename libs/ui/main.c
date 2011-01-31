@@ -27,7 +27,9 @@
 
 struct libui_api apitable =
 {
-    .blend = blend
+    .blend = blend,
+    .blendcolor = blendcolor,
+    .mattecolor = mattecolor,
 };
 
 EMCORE_LIB_HEADER(0x49554365, LIBUI_API_VERSION, LIBUI_MIN_API_VERSION, NULL, NULL, apitable)
