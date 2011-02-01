@@ -391,6 +391,7 @@ class Emcore(object):
             threads.append(threadstruct)
             id += 1
             structptr = threadstruct.thread_next
+        self.lockscheduler(schedulerstate)
         return threads
     
     @command()
