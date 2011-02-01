@@ -27,6 +27,8 @@
 """
 
 import sys
+from ctypes import *
+from _ctypes import _SimpleCData
 import libemcoredata
 
 class Logger(object):
@@ -95,6 +97,105 @@ class Bunch(dict):
     def __setstate__(self, state):
         self.update(state)
         self.__dict__ = self
+
+
+class c_enum(_SimpleCData):
+    """
+        Resembles the enum datatype from C with an 8 bit size.
+        Returns the associated string of a value with c_enum[i]
+        Returns the current value of the associated value as c_enum.__repr__()
+        Comparison operators work with strings and values at the same time.
+        
+        ATTENTION: You can not really see if this is initialized or not.
+        If it is uninitialized it will return the first entry of the enum.
+        While this may be circumvented by changing the default value to
+        something else this will not work if the enum is placed inside a
+        ctypes structure as the __init__() method will not be called then.
+    """    
+    _type_ = c_uint8._type_
+    
+    def __init__(self, value = 0):
+        if type(value) == str:
+            value = getattr(self, value)
+        _SimpleCData.__init__(self, value)
+        self[value]
+    
+    def __getattr__(self, name):
+        if name == "value":
+            return self.value
+        for key, value in enumerate(self._fields_):
+            if value == name:
+                return key
+    
+    def __getitem__(self, lookupkey):
+        for key, value in enumerate(self._fields_):
+            if key == lookupkey:
+                return value
+        raise IndexError("Value %d not in range of possible enum values for %s!" % (lookupkey, self.__class__.__name__))
+    
+    def __str__(self):
+        return self[self.value]
+    
+    def __repr__(self):
+        return self.__str__()
+    
+    def __eq__(self, other):
+        if type(other) == str:
+            try: return getattr(self, other) == self.value
+            except AttributeError: return False
+        else:
+            return self.value == other
+    
+    def __lt__(self, other):
+        if type(other) == str:
+            try: return self.value < getattr(self, other)
+            except AttributeError: return False
+        else:
+            return self.value < other
+    
+    def __gt__(self, other):
+        if type(other) == str:
+            try: return  self.value > getattr(self, other)
+            except AttributeError: return False
+        else:
+            return self.value > other
+    
+    def __le__(self, other):
+        if self.value == other or self.value < other:
+            return True
+        return False
+    
+    def __ge__(self, other):
+        if self.value == other or self.value > other:
+            return True
+        return False
+    
+    def __ne__(self, other):
+        if self.value == other:
+            return False
+        return True
+
+
+class ExtendedCStruct(LittleEndianStructure):
+    """
+        This is a subclass of the LittleEndianStructure.
+        It implements functions to easily convert
+        structures to/from strings and Bunches.
+    """
+    def _from_bunch(self, bunch):
+        for field, _ in self._fields_:
+            if field in bunch:
+                setattr(self, field, getattr(bunch, field))
+    
+    def _to_bunch(self):
+        return Bunch(**{field: getattr(self, field) for field, _ in self._fields_})
+    
+    def _from_string(self, string):
+        memmove(addressof(self), string, sizeof(self))
+    
+    def _to_string(self):
+        return string_at(addressof(self), sizeof(self))
+
 
 
 class Error(Exception):
