@@ -21,38 +21,62 @@
 #
 #
 
-thread_state = (
-    "THREAD_FREE",
-    "THREAD_SUSPENDED",
-    "THREAD_READY",
-    "THREAD_RUNNING",
-    "THREAD_BLOCKED",
-    "THREAD_DEFUNCT",
-    "THREAD_DEFUNCT_ACK"
-)
+from ctypes import *
+from misc import ExtendedCStruct, c_enum
 
-thread_block = (
-    "THREAD_NOT_BLOCKED",
-    "THREAD_BLOCK_SLEEP",
-    "THREAD_BLOCK_MUTEX",
-    "THREAD_BLOCK_WAKEUP",
-    "THREAD_DEFUNCT_STKOV",
-    "THREAD_DEFUNCT_PANIC"
-)
 
-thread_type = (
-    "USER_THREAD",
-    "OS_THREAD",
-    "CORE_THREAD"
-)
+class thread_type(c_enum):
+    _fields_ = ["USER_THREAD",
+                "OS_THREAD",
+                "CORE_THREAD",
+               ]
 
-hwtypes = {
-    0: "invalid",
-    0x47324e49: "iPod nano 2g",
-    0x47334e49: "iPod nano 3g",
-    0x47344e49: "iPod nano 4g",
-    0x4c435049: "iPod classic"
-}
+class thread_state(c_enum):
+    _fields_ = ["THREAD_FREE",
+                "THREAD_SUSPENDED",
+                "THREAD_READY",
+                "THREAD_RUNNING",
+                "THREAD_BLOCKED",
+                "THREAD_DEFUNCT",
+                "THREAD_DEFUNCT_ACK",
+               ]
+
+class thread_block(c_enum):
+    _fields_ = ["THREAD_NOT_BLOCKED",
+                "THREAD_BLOCK_SLEEP",
+                "THREAD_BLOCK_MUTEX",
+                "THREAD_BLOCK_WAKEUP",
+                "THREAD_DEFUNCT_STKOV",
+                "THREAD_DEFUNCT_PANIC"
+               ]
+
+class responsecode(c_enum):
+    _fields_ = ["INVALID",
+                "OK",
+                "UNSUPPORTED",
+                "BUSY"
+               ]
+
+class scheduler_thread(ExtendedCStruct):
+    _fields_ = [("regs", c_uint32 * 16),
+                ("cpsr", c_uint32),
+                ("state", c_uint32),
+                ("name", c_uint32),
+                ("cputime_current", c_uint32),
+                ("cputime_total", c_uint64),
+                ("startusec", c_uint32),
+                ("thread_next", c_uint32),
+                ("queue_next", c_uint32),
+                ("timeout", c_uint32),
+                ("blocked_since", c_uint32),
+                ("blocked_by", c_uint32),
+                ("stack", c_uint32),
+                ("err_no", c_int32),
+                ("block_type", thread_block),
+                ("thread_type", thread_type),
+                ("priority", c_uint8),
+                ("cpuload", c_uint8),
+               ]
 
 swtypes = {
     0: "invalid",
@@ -60,9 +84,10 @@ swtypes = {
     2: "emCORE Debugger"
 }
 
-responsecodes = {
+hwtypes = {
     0: "invalid",
-    1: "ok",
-    2: "unsupported",
-    3: "busy"
+    0x47324e49: "iPod nano 2g",
+    0x47334e49: "iPod nano 3g",
+    0x47344e49: "iPod nano 4g",
+    0x4c435049: "iPod classic"
 }

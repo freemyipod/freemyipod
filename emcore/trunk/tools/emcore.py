@@ -464,23 +464,23 @@ class Commandline(object):
         self.logger.info("Thread dump:\n")
         for thread in threads:
             self.logger.info(thread.name+":\n", 2)
-            self.logger.info("Thread id: "      + str(thread.id)+"\n", 4)
-            self.logger.info("Thread type: "    + thread.type+"\n", 4)
-            self.logger.info("Thread state: "   + thread.state+"\n", 4)
-            self.logger.info("Block type: "     + thread.block_type+"\n", 4)
-            self.logger.info("Blocked by: "     + self._hex(thread.blocked_by_ptr)+"\n", 4)
+            self.logger.info("Threadstruct address: " + self._hex(thread.addr)+"\n", 4)
+            self.logger.info("Thread type: "    + str(thread.thread_type)+"\n", 4)
+            self.logger.info("Thread state: "   + str(thread.state)+"\n", 4)
+            self.logger.info("Block type: "     + str(thread.block_type)+"\n", 4)
+            self.logger.info("Blocked by: "     + self._hex(thread.blocked_by)+"\n", 4)
             self.logger.info("Priority: "       + str(thread.priority)+"/255\n", 4)
             self.logger.info("Current CPU load: %.1f%%\n" % ((thread.cpuload * 100) / 255.), 4)
             self.logger.info("CPU time (total): "+str(datetime.timedelta(microseconds = thread.cputime_total))+"\n", 4)
-            self.logger.info("Stack address: "  + self._hex(thread.stackaddr)+"\n", 4)
+            self.logger.info("Stack address: "  + self._hex(thread.stack)+"\n", 4)
             self.logger.info("Registers:\n", 4)
             for registerrange in range(4):
                 self.logger.info("      ")
                 for register in range(registerrange, 16, 4):
                     registerrepr = "r"+str(register)
-                    self.logger.info("{0:3s}: 0x{1:08X}   ".format(registerrepr, thread.regs["r"+str(register)]))
+                    self.logger.info("{0:3s}: 0x{1:08X}   ".format(registerrepr, thread.regs[register]))
                 self.logger.info("\n")
-            self.logger.info("cpsr: 0x{0:08X}".format(thread.regs.cpsr), 6)
+            self.logger.info("cpsr: 0x{0:08X}".format(thread.cpsr), 6)
             self.logger.info("\n")
     
     @command

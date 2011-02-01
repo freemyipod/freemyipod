@@ -28,9 +28,10 @@
 
 import sys
 import struct
+import ctypes
 import usb.core
-import libemcoredata
 
+from libemcoredata import *
 from misc import Logger, Bunch, Error, gethwname
 from functools import wraps
 
@@ -369,66 +370,27 @@ class Emcore(object):
     @command()
     def getprocinfo(self):
         """ Gets current state of the scheduler """
-        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
-        # Get the size
         schedulerstate = self.lockscheduler()
-        resp = self.lib.monitorcommand(struct.pack("IIII", 15, 0, 0, 0), "III", ("structver", "tablesize", None))
-        tablesize = resp.tablesize
-        size = tablesize
-        structver = resp.structver
-        offset = 0
-        data = ""
-        while size > 0:
-            if size > cin_maxsize:
-                readsize = cin_maxsize
-            else:
-                readsize = size
-            resp = self.lib.monitorcommand(struct.pack("IIII", 15, offset, readsize, 0), "III%ds" % readsize, ("structver", "tablesize", None, "data"))
-            data += resp.data
-            offset += readsize
-            size -= readsize
-        self.lockscheduler(schedulerstate)
-        threadstructsize = 120
-        registersize = 32
-        if len(data) % threadstructsize != 0:
-            raise DeviceError("The thread struct is not a multiple of "+str(threadsturcsize)+"!")
-        threadcount = len(data) / threadstructsize
+        resp = self.lib.monitorcommand(struct.pack("IIII", 15, 0, 0, 0), "III", ("structver", "structptr", None))
+        if resp.structver != 2:
+            raise DeviceError("Unsupported thread struct version!")
+        
         threads = []
+        structptr = resp.structptr
         id = 0
-        for thread in range(threadcount):
-            offset = threadstructsize * thread
-            threaddata = struct.unpack("<16IIIIIQIIIIIIIBBBB", data[offset:offset+threadstructsize])
-            info = Bunch()
-            info.id = id
-            state = threaddata[17]
-            info.state = libemcoredata.thread_state[state]
-            if info.state == "THREAD_FREE":
-                id += 1
-                continue
-            info.regs = Bunch()
-            for register in range(16):
-                info.regs["r"+str(register)] = threaddata[register]
-            info.regs.cpsr = threaddata[16]
-            info.nameptr = threaddata[18]
-            if info.nameptr == 0:
-                info.name = "Thread %d" % info.id
-            else:
-                info.name = self.readstring(info.nameptr)
-            info.cputime_current = threaddata[19]
-            info.cputime_total = threaddata[20]
-            info.startusec = threaddata[21]
-            info.queue_next_ptr = threaddata[22]
-            info.timeout = threaddata[23]
-            info.blocked_since = threaddata[24]
-            info.blocked_by_ptr = threaddata[25]
-            info.stackaddr = threaddata[26]
-            info.err_no = threaddata[27]
-            info.block_type = libemcoredata.thread_block[threaddata[28]]
-            info.type = libemcoredata.thread_type[threaddata[29]]
-            info.priority = threaddata[30]
-            info.cpuload = threaddata[31]
-            threads.append(info)
+        while structptr != 0:
+            threadstruct = scheduler_thread()
+            self.logger.debug("Reading thread struct of thread at 0x%x\n" % structptr)
+            threaddata = self.read(structptr, ctypes.sizeof(scheduler_thread))
+            threadstruct._from_string(threaddata)
+            threadstruct = threadstruct._to_bunch()
+            threadstruct.id = id # only for the purpose of detecting the idle thread as it is always the first one
+            threadstruct.addr = structptr
+            threadstruct.name = self.readstring(threadstruct.name)
+            threadstruct.state = thread_state(threadstruct.state)
+            threads.append(threadstruct)
             id += 1
+            structptr = threadstruct.thread_next
         return threads
     
     @command()
@@ -963,8 +925,12 @@ class Lib(object):
             rcvdatatypes = "I" + rcvdatatypes # add the response
             data = self.dev.cin(struct.calcsize(rcvdatatypes))
             data = struct.unpack(rcvdatatypes, data)
-            response = data[0]
-            if libemcoredata.responsecodes[response] == "ok":
+            try:
+                response = responsecode(data[0])
+            except IndexError:
+                self.logger.debug("Response: UNKOWN\n")
+                raise DeviceError("Invalid response! This should NOT happen!")
+            if response == "OK":
                 self.logger.debug("Response: OK\n")
                 if rcvstruct:
                     datadict = Bunch()
@@ -976,18 +942,15 @@ class Lib(object):
                     return datadict
                 else:
                     return data
-            elif libemcoredata.responsecodes[response] == "unsupported":
+            elif response == "UNSUPPORTED":
                 self.logger.debug("Response: UNSUPPORTED\n")
                 raise DeviceError("The device does not support this command.")
-            elif libemcoredata.responsecodes[response] == "invalid":
+            elif response == "INVALID":
                 self.logger.debug("Response: INVALID\n")
                 raise DeviceError("Invalid command! This should NOT happen!")
-            elif libemcoredata.responsecodes[response] == "busy":
+            elif response == "BUSY":
                 self.logger.debug("Response: BUSY\n")
                 raise DeviceError("Device busy")
-            else:
-                self.logger.debug("Response: UNKOWN\n")
-                raise DeviceError("Invalid response! This should NOT happen!")
         else:
             return writelen
 
