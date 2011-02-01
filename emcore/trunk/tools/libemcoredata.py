@@ -21,6 +21,10 @@
 #
 #
 
+"""
+    Contains emCORE data structures, enums and dicts
+"""
+
 from ctypes import *
 from misc import ExtendedCStruct, c_enum
 
