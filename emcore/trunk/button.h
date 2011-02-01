@@ -37,6 +37,7 @@ enum button_event
     WHEEL_UNTOUCH,
     WHEEL_POSITION,
     WHEEL_MOVED,
+    WHEEL_MOVED_ACCEL,
     WHEEL_FORWARD,
     WHEEL_BACKWARD
 };
@@ -45,13 +46,16 @@ struct button_hook_entry
 {
     struct button_hook_entry* next;
     struct scheduler_thread* owner;
-    void (*handler)(enum button_event, int which, int value);
+    void (*handler)(void*, enum button_event, int, int);
+    void* user;
 };
 
 
 void button_init() INITCODE_ATTR;
-int button_register_handler(void (*handler)(enum button_event, int which, int value));
-int button_unregister_handler(void (*handler)(enum button_event, int which, int value));
+struct button_hook_entry* button_register_handler(void (*handler)(void*, enum button_event,
+                                                                  int, int),
+                                                  void* user);
+int button_unregister_handler(struct button_hook_entry* hook);
 void button_send_event(enum button_event eventtype, int which, int value) ICODE_ATTR;
 void button_unregister_all_of_thread(struct scheduler_thread* process);
 

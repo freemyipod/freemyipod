@@ -36,45 +36,45 @@ void button_init()
     mutex_init(&button_mutex);
 }
 
-int button_register_handler(void (*handler)(enum button_event, int which, int value))
+struct button_hook_entry* button_register_handler(void (*handler)(void*, enum button_event,
+                                                                  int, int),
+                                                  void* user)
 {
     struct button_hook_entry* hook;
     hook = (struct button_hook_entry*)malloc(sizeof(struct button_hook_entry));
+    if (!hook) return NULL;
     hook->owner = current_thread;
     hook->handler = handler;
+    hook->user = user;
     mutex_lock(&button_mutex, TIMEOUT_BLOCK);
     hook->next = head_button_hook;
     head_button_hook = hook;
     mutex_unlock(&button_mutex);
-    return 0;
+    return hook;
 }
 
-int button_unregister_handler(void (*handler)(enum button_event, int which, int value))
+int button_unregister_handler(struct button_hook_entry* hook)
 {
     struct button_hook_entry* h;
-    struct button_hook_entry* handle = NULL;
     int result = -1;
     mutex_lock(&button_mutex, TIMEOUT_BLOCK);
-    if (head_button_hook && head_button_hook->handler == handler)
+    if (head_button_hook == hook)
     {
-        handle = head_button_hook;
         head_button_hook = head_button_hook->next;
-        free(handle);
+        free(hook);
         result = 0;
     }
     else
     {
         for (h = head_button_hook; h && h->next; h = h->next);
-            if (h->next->handler != handler)
+            if (h->next == hook)
             {
-                handle = h->next;
                 h->next = h->next->next;
-                free(handle);
+                free(hook);
                 result = 0;
             }
     }
     mutex_unlock(&button_mutex);
-    if (handle) free(handle);
     return result;
 }
 
@@ -84,7 +84,7 @@ void button_send_event(enum button_event eventtype, int which, int value)
     struct button_hook_entry* h;
     mutex_lock(&button_mutex, TIMEOUT_BLOCK);
     for (h = head_button_hook; h; h = h->next)
-        h->handler(eventtype, which, value);
+        h->handler(h->user, eventtype, which, value);
     mutex_unlock(&button_mutex);
 }
 
