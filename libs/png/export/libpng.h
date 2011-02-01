@@ -21,8 +21,8 @@
 //
 
 
-#ifndef __LIBPNG_H__
-#define __LIBPNG_H__
+#ifndef __EXPORT_LIBPNG_H__
+#define __EXPORT_LIBPNG_H__
 
 
 #include "emcorelib.h"

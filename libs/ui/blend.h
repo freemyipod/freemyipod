@@ -25,6 +25,7 @@
 #define __BLEND_H__
 
 #include "emcorelib.h"
+#include "libui.h"
 
 
 void blend(int width, int height, int opacity,
@@ -37,6 +38,11 @@ void blendcolor(int width, int height, uint32_t color,
 void mattecolor(int width, int height, uint32_t color,
                 void* outbuf, int outx, int outy, int outstride,
                 void* inbuf, int inx, int iny, int instride);
+void blit(int width, int height, int pixelbytes,
+          void* outbuf, int outx, int outy, int outstride,
+          void* inbuf, int inx, int iny, int instride);
+void fill(int width, int height, uint32_t color,
+          void* buf, int x, int y, int stride);
 
 
 #endif

@@ -105,3 +105,39 @@ void mattecolor(int width, int height, uint32_t color,
         out += (outstride - width) * 3;
     }
 }
+
+void blit(int width, int height, int pixelbytes,
+          void* outbuf, int outx, int outy, int outstride,
+          void* inbuf, int inx, int iny, int instride)
+{
+    int i;
+    char* in = (char*)inbuf + (inx + iny * instride) * pixelbytes;
+    char* out = (char*)outbuf + (outx + outy * outstride) * pixelbytes;
+    int rowsize = width * pixelbytes;
+    while (height--)
+    {
+        memcpy(out, in, rowsize);
+        in += (instride - width) * pixelbytes;
+        out += (outstride - width) * pixelbytes;
+    }
+}
+
+void fill(int width, int height, uint32_t color,
+          void* buf, int outx, int outy, int stride)
+{
+    char* out = (char*)buf + (outx + outy * stride) * 3;
+    int r = (color >> 0) & 0xff;
+    int g = (color >> 8) & 0xff;
+    int b = (color >> 16) & 0xff;
+    int x, y;
+    for (y = 0; y < height; y++)
+    {
+        for (x = 0; x < width; x++)
+        {
+            *out++ = r;
+            *out++ = g;
+            *out++ = b;
+        }
+        out += (stride - width) * 3;
+    }
+}

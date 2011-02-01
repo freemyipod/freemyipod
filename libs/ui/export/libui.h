@@ -21,13 +21,15 @@
 //
 
 
-#ifndef __LIBUI_H__
-#define __LIBUI_H__
+#ifndef __EXPORT_LIBUI_H__
+#define __EXPORT_LIBUI_H__
 
 #include "emcorelib.h"
-
-
+#include "../libui.h"
 #include "../blend.h"
+#include "../chooser.h"
+#include "../chooser_action_handler_wheel.h"
+#include "../chooser_renderer_list.h"
 
 
 /* increase this every time the api struct changes */
@@ -48,6 +50,9 @@ struct libui_api
     typeof(blend)* blend;
     typeof(blendcolor)* blendcolor;
     typeof(mattecolor)* mattecolor;
+    typeof(chooser_run)* chooser_run;
+    typeof(chooser_action_handler_wheel)* chooser_action_handler_wheel;
+    typeof(chooser_renderer_list)* chooser_renderer_list;
 };
 
 #endif

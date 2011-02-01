@@ -21,18 +21,38 @@
 //
 
 
-#include "emcorelib.h"
-#include "export/libui.h"
+#ifndef __LIBUI_H__
+#define __LIBUI_H__
 
 
-struct libui_api apitable =
+struct libui_buffer
 {
-    .blend = blend,
-    .blendcolor = blendcolor,
-    .mattecolor = mattecolor,
-    .chooser_run = chooser_run,
-    .chooser_action_handler_wheel = &chooser_action_handler_wheel,
-    .chooser_renderer_list = &chooser_renderer_list
+    void* addr;
+    int stride;
 };
 
-EMCORE_LIB_HEADER(0x49554365, LIBUI_API_VERSION, LIBUI_MIN_API_VERSION, NULL, NULL, apitable)
+struct libui_point
+{
+    int x;
+    int y;
+};
+
+struct libui_box
+{
+    struct libui_point pos;
+    struct libui_point size;
+};
+
+struct libui_location
+{
+    struct libui_buffer buf;
+    struct libui_point pos;
+};
+
+struct libui_surface
+{
+    struct libui_location loc;
+    struct libui_point size;
+};
+
+#endif

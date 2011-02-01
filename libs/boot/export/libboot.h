@@ -21,8 +21,8 @@
 //
 
 
-#ifndef __LIBBOOT_H__
-#define __LIBBOOT_H__
+#ifndef __EXPORT_LIBBOOT_H__
+#define __EXPORT_LIBBOOT_H__
 
 #include "emcorelib.h"
 
