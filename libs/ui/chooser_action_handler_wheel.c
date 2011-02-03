@@ -71,7 +71,7 @@ static enum chooser_result chooser_action_handler_wheel_handleevent(struct choos
             }
     case WHEEL_MOVED_ACCEL:
         mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
-        data->position = MIN((data->info->itemcount - 1) * spi, MAX(0, data->position + value));
+        data->position = MIN(data->info->itemcount * spi - 1, MAX(0, data->position + value));
         data->selected = &data->info->items[data->position / spi];
         mutex_unlock(&data->statemutex);
         return CHOOSER_RESULT_REDRAW;

@@ -3,3 +3,4 @@ blend.c
 chooser.c
 chooser_action_handler_wheel.c
 chooser_renderer_list.c
+chooser_renderer_iconflow.c

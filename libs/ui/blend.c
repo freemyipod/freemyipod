@@ -117,8 +117,8 @@ void blit(int width, int height, int pixelbytes,
     while (height--)
     {
         memcpy(out, in, rowsize);
-        in += (instride - width) * pixelbytes;
-        out += (outstride - width) * pixelbytes;
+        in += instride * pixelbytes;
+        out += outstride * pixelbytes;
     }
 }
 

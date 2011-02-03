@@ -30,29 +30,54 @@ struct libui_buffer
     void* addr;
     int stride;
 };
+#define LIBUI_BUFFER(a, b) \
+{                          \
+    .addr = a,             \
+    .stride = b            \
+}
 
 struct libui_point
 {
     int x;
     int y;
 };
+#define LIBUI_POINT(a, b) \
+{                         \
+    .x = a,               \
+    .y = b                \
+}
 
 struct libui_box
 {
     struct libui_point pos;
     struct libui_point size;
 };
+#define LIBUI_BOX(a, b) \
+{                       \
+    .pos = a,           \
+    .size = b           \
+}
 
 struct libui_location
 {
     struct libui_buffer buf;
     struct libui_point pos;
 };
+#define LIBUI_LOCATION(a, b) \
+{                            \
+    .buf = a,                \
+    .pos = b                 \
+}
 
 struct libui_surface
 {
     struct libui_location loc;
     struct libui_point size;
 };
+#define LIBUI_SURFACE(a, b) \
+{                           \
+    .loc = a,               \
+    .size = b               \
+}
 
 #endif

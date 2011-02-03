@@ -32,7 +32,8 @@ struct libui_api apitable =
     .mattecolor = mattecolor,
     .chooser_run = chooser_run,
     .chooser_action_handler_wheel = &chooser_action_handler_wheel,
-    .chooser_renderer_list = &chooser_renderer_list
+    .chooser_renderer_list = &chooser_renderer_list,
+    .chooser_renderer_iconflow = &chooser_renderer_iconflow
 };
 
 EMCORE_LIB_HEADER(0x49554365, LIBUI_API_VERSION, LIBUI_MIN_API_VERSION, NULL, NULL, apitable)

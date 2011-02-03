@@ -76,7 +76,8 @@ const struct chooser_item* chooser_run(const struct chooser_info* info)
         if (info->actionhandler->init(&data) < 0)
             goto done;
     data.selected = &info->items[info->defaultitem];
-    data.position = info->defaultitem * info->actionhandler->stepsperitem(&data);
+    int spi = info->actionhandler->stepsperitem(&data);
+    data.position = info->defaultitem * spi + spi / 2;
     if (info->renderer->init)
         if (info->renderer->init(&data) < 0)
             goto destroy_actionhandler;
@@ -109,7 +110,7 @@ const struct chooser_item* chooser_run(const struct chooser_info* info)
                 }
             lasttick = USEC_TIMER;
         }
-        redrawneeded = info->renderer->render(&data) == CHOOSER_RESULT_REDRAW;
+        if (redrawneeded) redrawneeded = info->renderer->render(&data) == CHOOSER_RESULT_REDRAW;
     }
 cancel:
     data.selected = NULL;
