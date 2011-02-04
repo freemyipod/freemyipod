@@ -438,9 +438,9 @@ class Emcore(object):
             state = 1
         else:
             raise ArgumentError("State must be either 'ready' or 'suspended'")
-        resp = self.lib.monitorcommand(struct.pack("IIIIIIII", 19, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state), "III", (id, None, None))
-        if resp.id < 0:
-            raise DeviceError("The device returned the error code "+str(resp.id))
+        resp = self.lib.monitorcommand(struct.pack("IIIIIIII", 19, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state), "III", ("threadptr", None, None))
+        if resp.threadptr < 0:
+            raise DeviceError("The device returned the error code "+str(resp.threadptr))
         return resp
     
     @command()

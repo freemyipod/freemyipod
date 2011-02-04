@@ -51,9 +51,9 @@ class ArgumentTypeError(Error):
         self.seen = seen
     def __str__(self):
         if self.seen:
-            return "Expected " + str(self.expected) + " but saw " + str(self.seen)
+            return "Expected %s but got %s" % (self.expected, self.seen)
         else:
-            return "Expected " + str(self.expected) + ", but saw something else"
+            return "Expected %s, but saw something else" % self.expected
 
 
 def usage(errormsg=None, specific=False, docstring=True):
@@ -155,7 +155,7 @@ class Commandline(object):
             except TypeError, e:
                 # Only act on TypeErrors for the function we called, not on TypeErrors raised by another function.
                 if str(e).split(" ", 1)[0] == func + "()":
-                    self.logger.error(usage("Argument Error in '" + func + "': Wrong argument count", specific=func) + "\n")
+                    self.logger.error(usage("Argument Error in '%s': Wrong argument count" % func, specific=func))
                 else:
                     raise
             except libemcore.usb.core.USBError:
@@ -181,7 +181,7 @@ class Commandline(object):
                 return True
             elif something.lower() in falselist:
                 return False
-        raise ArgumentTypeError("bool", "'"+str(something)+"'")
+        raise ArgumentTypeError("bool", "'%s'" % something)
 
     @staticmethod
     def _hexint(something):
@@ -196,15 +196,11 @@ class Commandline(object):
             try:
                 return int(something, 16)
             except ValueError:
-                raise ArgumentTypeError("hexadecimal coded integer", "'"+str(something)+"'")
+                raise ArgumentTypeError("hexadecimal coded integer", "'%s'" % something)
         elif something is None:
             return None
         else:
-            raise ArgumentTypeError("hexadecimal coded integer", "'"+str(something)+"'")
-    
-    @staticmethod
-    def _hex(integer):
-        return "0x%x" % integer
+            raise ArgumentTypeError("hexadecimal coded integer", "'%s'" % something)
     
     @command
     def help(self):
@@ -219,26 +215,26 @@ class Commandline(object):
         """
         if infotype == "version":
             hwtype = gethwname(self.emcore.lib.dev.hwtypeid)
-            self.logger.info("Connected to " + \
-                             libemcoredata.swtypes[self.emcore.lib.dev.swtypeid] + \
-                             " v" + str(self.emcore.lib.dev.version.majorv) + \
-                             "." + str(self.emcore.lib.dev.version.minorv) + \
-                             "." + str(self.emcore.lib.dev.version.patchv) + \
-                             " r" + str(self.emcore.lib.dev.version.revision) + \
-                             " running on " + hwtype + "\n")
+            self.logger.info("Connected to %s v%d.%d.%d r%d running on %s\n" % (
+                             libemcoredata.swtypes[self.emcore.lib.dev.swtypeid],
+                             self.emcore.lib.dev.version.majorv,
+                             self.emcore.lib.dev.version.minorv,
+                             self.emcore.lib.dev.version.patchv,
+                             self.emcore.lib.dev.version.revision,
+                             hwtype))
         
         elif infotype == "packetsize":
-            self.logger.info("Maximum packet sizes: \n command out: " + str(self.emcore.lib.dev.packetsizelimit.cout) + \
-                             "\n command in: " + str(self.emcore.lib.dev.packetsizelimit.cin) + \
-                             "\n data in: " + str(self.emcore.lib.dev.packetsizelimit.din) + \
-                             "\n data out: " + str(self.emcore.lib.dev.packetsizelimit.dout)+ "\n")
+            self.logger.info("Maximum packet sizes:\n")
+            self.logger.info("command out: %d\n" % self.emcore.lib.dev.packetsizelimit.cout, 4)
+            self.logger.info("command in: %d\n" % self.emcore.lib.dev.packetsizelimit.cin, 4)
+            self.logger.info("data out: %d\n" % self.emcore.lib.dev.packetsizelimit.dout, 4)
+            self.logger.info("data in: %d\n" % self.emcore.lib.dev.packetsizelimit.din, 4)
         
         elif infotype == "usermemrange":
             resp = self.emcore.getusermemrange()
-            self.logger.info("The user memory range is " + \
-                             self._hex(self.emcore.lib.dev.usermem.lower) + \
-                             " - " + \
-                             self._hex(self.emcore.lib.dev.usermem.upper - 1) + "\n")
+            self.logger.info("The user memory range is 0x%X - 0x%X" % (
+                             self.emcore.lib.dev.usermem.lower,
+                             self.emcore.lib.dev.usermem.upper - 1))
         
         else:
             raise ArgumentTypeError("one out of 'version', 'packetsize', 'usermemrange'", infotype)
@@ -280,10 +276,9 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("File not readable. Does it exist?")
         if addr is not None:
-            self.logger.info("Writing file '" + filename + \
-                            "' to memory at " + self._hex(addr) + "...\n")
+            self.logger.info("Writing file '%s' to memory at 0x%X...\n" % (filename, addr))
         else:
-            self.logger.info("Writing file '" + filename + " to an allocated memory region...\n")
+            self.logger.info("Writing file '%s' to an allocated memory region...\n" % filename)
         with f:
             if addr is not None:
                 self.emcore.write(addr, f.read())
@@ -291,7 +286,7 @@ class Commandline(object):
                 addr = self.emcore.upload(f.read())
             size = f.tell()
         f.close()
-        self.logger.info("Done uploading " + str(size) + " bytes to 0x" + self._hex(addr) + "\n")
+        self.logger.info("Done uploading %d bytes to 0x%X\n" % (size, addr))
         return addr, size
     
     @command
@@ -308,9 +303,8 @@ class Commandline(object):
             f = open(filename, 'wb')
         except IOError:
             raise ArgumentError("Can not open file for write!")
-        self.logger.info("Reading data from address " + self._hex(addr) + \
-                         " with the size " + self._hex(size) + \
-                         " to '"+filename+"'...")
+        self.logger.info("Reading data from address 0x%X with the size 0x%X to '%s'..." %
+                        (addr, size, filename))
         with f:
             f.write(self.emcore.read(addr, size))
         f.close()
@@ -329,8 +323,7 @@ class Commandline(object):
             raise ArgumentError("Specified integer too long")
         data = struct.pack("I", integer)
         self.emcore.write(addr, data)
-        self.logger.info("Integer '" + self._hex(integer) + \
-                         "' written successfully to " + self._hex(addr) + "\n")
+        self.logger.info("Integer '0x%X' written successfully to 0x%X\n" % (integer, addr))
 
     @command
     def downloadint(self, addr):
@@ -341,8 +334,7 @@ class Commandline(object):
         addr = self._hexint(addr)
         data = self.emcore.read(addr, 4)
         integer = struct.unpack("I", data)[0]
-        self.logger.info("Integer '" + self._hex(integer) + \
-                         "' read from address " + self._hex(addr) + "\n")
+        self.logger.info("Read '0x%X' from address 0x%X\n" % (integer, addr))
 
     @command
     def i2cread(self, bus, slave, addr, size):
@@ -402,7 +394,7 @@ class Commandline(object):
         for word in args:
             text += word + " "
         text = text[:-1]
-        self.logger.info("Writing '"+ text +"' to the usb console\n")
+        self.logger.info("Writing '%s' to the usb console\n" % text)
         self.emcore.usbcwrite(text)
 
     @command
@@ -428,8 +420,7 @@ class Commandline(object):
         for word in args:
             text += word + " "
         text = text[:-1]
-        self.logger.info("Writing '" + text + \
-                         "' to the device consoles identified with " + self._hex(bitmask) + "\n")
+        self.logger.info("Writing '%s' to the device consoles identified with 0x%X\n" % (text, bitmask))
         self.emcore.cwrite(text, bitmask)
 
     @command
@@ -439,8 +430,7 @@ class Commandline(object):
             <bitmask>: the bitmask of the consoles to be flushed
         """
         bitmask = self._hexint(bitmask)
-        self.logger.info("Flushing consoles identified with the bitmask " + \
-                         self._hex(bitmask) + "\n")
+        self.logger.info("Flushing consoles identified with the bitmask 0x%X\n" % bitmask)
         self.emcore.cflush(bitmask)
 
     @command
@@ -463,16 +453,16 @@ class Commandline(object):
                          % (len(threads), cpuload * 100, coreload * 100, threadload * 100))
         self.logger.info("Thread dump:\n")
         for thread in threads:
-            self.logger.info(thread.name+":\n", 2)
-            self.logger.info("Threadstruct address: " + self._hex(thread.addr)+"\n", 4)
-            self.logger.info("Thread type: "    + str(thread.thread_type)+"\n", 4)
-            self.logger.info("Thread state: "   + str(thread.state)+"\n", 4)
-            self.logger.info("Block type: "     + str(thread.block_type)+"\n", 4)
-            self.logger.info("Blocked by: "     + self._hex(thread.blocked_by)+"\n", 4)
-            self.logger.info("Priority: "       + str(thread.priority)+"/255\n", 4)
+            self.logger.info("%s:\n" % thread.name, 2)
+            self.logger.info("Threadstruct address: 0x%X\n" % thread.addr, 4)
+            self.logger.info("Thread type: %s\n" % thread.thread_type, 4)
+            self.logger.info("Thread state: %s\n" % thread.state, 4)
+            self.logger.info("Block type: %s\n" % thread.block_type, 4)
+            self.logger.info("Blocked by: 0x%X\n" % thread.blocked_by, 4)
+            self.logger.info("Priority: %d/255\n" % thread.priority, 4)
             self.logger.info("Current CPU load: %.1f%%\n" % ((thread.cpuload * 100) / 255.), 4)
-            self.logger.info("CPU time (total): "+str(datetime.timedelta(microseconds = thread.cputime_total))+"\n", 4)
-            self.logger.info("Stack address: "  + self._hex(thread.stack)+"\n", 4)
+            self.logger.info("CPU time (total): %s\n" % datetime.timedelta(microseconds = thread.cputime_total), 4)
+            self.logger.info("Stack address: 0x%X\n" % thread.stack, 4)
             self.logger.info("Registers:\n", 4)
             for registerrange in range(4):
                 self.logger.info("      ")
@@ -500,57 +490,54 @@ class Commandline(object):
         self.emcore.unlockscheduler()
     
     @command
-    def suspendthread(self, threadid):
+    def suspendthread(self, threadaddr):
         """
-            Suspends/resumes the thread with thread ID <threadid>
+            Suspends the thread with the thread address <threadaddr>
         """
-        threadid = self._hexint(threadid)
-        self.logger.info("Suspending the thread with the threadid "+self._hex(threadid)+"\n")
-        self.emcore.suspendthread(threadid)
+        threadaddr = self._hexint(threadaddr)
+        self.logger.info("Suspending the thread with the threadaddr 0x%X\n" % threadaddr)
+        self.emcore.suspendthread(threadaddr)
 
     @command
-    def resumethread(self, threadid):
+    def resumethread(self, threadaddr):
         """
-            Resumes the thread with thread ID <threadid>
+            Resumes the thread with the thread address <threadaddr>
         """
-        threadid = self._hexint(threadid)
-        self.logger.info("Resuming the thread with the threadid "+self._hex(threadid)+"\n")
-        self.emcore.resumethread(threadid)
+        threadaddr = self._hexint(threadaddr)
+        self.logger.info("Resuming the thread with the threadaddr 0x%X\n" % threadaddr)
+        self.emcore.resumethread(threadaddr)
 
     @command
-    def killthread(self, threadid):
+    def killthread(self, threadaddr):
         """
-            Kills the thread with thread ID <threadid>
+            Kills the thread with the thread address <threadaddr>
         """
-        threadid = self._hexint(threadid)
-        self.logger.info("Killing the thread with the threadid " + self._hex(threadid) + "\n")
-        self.emcore.killthread(threadid)
+        threadaddr = self._hexint(threadaddr)
+        self.logger.info("Killing the thread with the threadaddr 0x%X\n" % threadaddr)
+        self.emcore.killthread(threadaddr)
 
     @command
     def createthread(self, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state):
         """
-            Creates a new thread and returns its thread ID
+            Creates a new thread and returns its thread pointer
             <namepointer>: a pointer to the thread's name
             <entrypoint>: a pointer to the entrypoint of the thread
             <stackpointer>: a pointer to the stack of the thread
             <stacksize>: the size of the thread's stack
-            <type>: the thread type, vaild are: 0 => user thread, 1 => system thread
+            <threadtype>: the thread type, vaild are: 0 => user thread, 1 => system thread
             <priority>: the priority of the thread, from 1 to 255
             <state>: the thread's initial state, valid are: 1 => ready, 0 => suspended
         """
         nameptr = self._hexint(nameptr)
         entrypoint = self._hexint(entrypoint)
-        stackpointer = self._hexint(stackpointer)
+        stackptr = self._hexint(stackptr)
         stacksize = self._hexint(stacksize)
         priority = self._hexint(priority)
-        data = self.emcore.createthread(nameptr, entrypoint, stackptr, stacksize, type, priority, state)
+        data = self.emcore.createthread(nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state)
         name = self.emcore.readstring(nameptr)
-        self.logger.info("Created a thread with the threadid " + data.id + \
-                         ", the name \"" + name + "\"" + \
-                         ", the entrypoint at " + self._hex(entrypoint) + \
-                         ", the stack at " + self._hex(stackpointer) + \
-                         " with a size of " + self._hex(stacksize) + \
-                         " and a priority of " + self._hex(priority) + "\n")
+        self.logger.info("Created a thread with the thread pointer 0x%X, the name \"%s\", the entrypoint at 0x%X," \
+                         "the stack at 0x%X with a size of 0x%X and a priority of %d/255\n" %
+                        (data.threadptr, name, entrypoint, stackptr, stacksize, priority))
     
     @command
     def run(self, filename):
@@ -564,7 +551,7 @@ class Commandline(object):
             raise ArgumentError("File not readable. Does it exist?")
         with f:
             data = self.emcore.run(f.read())
-        self.logger.info("Executed emCORE application as thread " + self._hex(data.thread) + "\n")
+        self.logger.info("Executed emCORE application as thread 0x%X\n" % data.thread)
 
     @command
     def execimage(self, addr):
@@ -572,7 +559,7 @@ class Commandline(object):
             Executes the emCORE application at <addr>.
         """
         addr = self._hexint(addr)
-        self.logger.info("Starting emCORE app at "+self._hex(addr)+"\n")
+        self.logger.info("Starting emCORE app at 0x%X\n" % addr)
         self.emcore.execimage(addr)
     
     @command
@@ -594,8 +581,8 @@ class Commandline(object):
         addr_flash = self._hexint(addr_flash)
         addr_mem = self._hexint(addr_mem)
         size = self._hexint(size)
-        self.logger.info("Dumping boot flash addresses "+self._hex(addr_flash)+" - "+
-                         hex(addr_flash+size)+" to "+self._hex(addr_mem)+" - "+self._hex(addr_mem+size)+"\n")
+        self.logger.info("Dumping boot flash from 0x%X - 0x%X to 0x%X - 0x%X\n" %
+                        (addr_flash, addr_flash + size, addr_mem, addr_mem + size))
         self.emcore.bootflashread(addr_mem, addr_flash, size)
     
     @command
@@ -612,8 +599,8 @@ class Commandline(object):
         addr_mem = self._hexint(addr_mem)
         size = self._hexint(size)
         force = self._bool(force)
-        self.logger.warn("Writing boot flash from the memory in "+self._hex(addr_mem)+" - "+
-                         hex(addr_mem+size)+" to "+self._hex(addr_flash)+" - "+self._hex(addr_flash+size)+"\n")
+        self.logger.warn("Writing boot flash from the memory in 0x%X - 0x%X to 0x%X - 0x%X\n" %
+                        (addr_mem, addr_mem + size, addr_flash, addr_flash + size))
         if force == False:
             self.logger.warn("If this was not what you intended press Ctrl-C NOW")
             for i in range(10):
@@ -637,8 +624,9 @@ class Commandline(object):
         """
             Moves the firmware at <addr> with <size> to <targetaddr> and executes it
         """
+        targetaddr = self._hexint(targetaddr)
         addr = self._hexint(addr)
-        self.logger.info("Running firmware at "+self._hex(targetaddr)+". Bye.\n")
+        self.logger.info("Running firmware at 0x%X. Bye.\n" % targetaddr)
         self.emcore.execfirmware(targetaddr, addr, size)
     
     @command
@@ -679,14 +667,13 @@ class Commandline(object):
         size = self._hexint(size)
         destination = self._hexint(destination)
         sha1size = 0x14
-        self.logger.info("Generating hmac-sha1 hash from the buffer at " + self._hex(addr) + \
-                         " with the size " + self._hex(size) + " and saving it to " + \
-                         self._hex(destination) + " - " + self._hex(destination+sha1size) + "...")
+        self.logger.info("Generating hmac-sha1 hash from the buffer at 0x%X with the size 0x%X and saving it to 0x%X - 0x%X\n" %
+                        (addr, size, destination, destination + sha1size))
         self.emcore.hmac_sha1(addr, size, destination)
         self.logger.info("done\n")
         data = self.emcore.read(destination, sha1size)
         hash = ord(data)
-        self.logger.info("The generated hash is "+self._hex(hash)+"\n")
+        self.logger.info("The generated hash is 0x%X\n" % hash)
 
     @command
     def ipodnano2g_getnandinfo(self):
@@ -695,11 +682,11 @@ class Commandline(object):
             Gathers some information about the NAND chip used
         """
         data = self.emcore.ipodnano2g_getnandinfo()
-        self.logger.info("NAND chip type: "         + self._hex(data["type"])+"\n")
-        self.logger.info("Number of banks: "        + str(data["banks"])+"\n")
-        self.logger.info("Number of blocks: "       + str(data["blocks"])+"\n")
-        self.logger.info("Number of user blocks: "  + str(data["userblocks"])+"\n")
-        self.logger.info("Pages per block: "        + str(data["pagesperblock"])+"\n")
+        self.logger.info("NAND chip type: 0x%X\n" % data["type"])
+        self.logger.info("Number of banks: %d\n" % data["banks"])
+        self.logger.info("Number of blocks: %d\n" % data["blocks"])
+        self.logger.info("Number of user blocks: %d\n" % data["userblocks"])
+        self.logger.info("Pages per block: %d\n" % data["pagesperblock"])
 
     @command
     def ipodnano2g_nandread(self, addr, start, count, doecc=True, checkempty=True):
@@ -717,8 +704,8 @@ class Commandline(object):
         count = self._hexint(count)
         doecc = self._bool(doecc)
         checkempty = self._bool(checkempty)
-        self.logger.info("Reading " + self._hex(count) + " NAND pages starting at " + \
-                         self._hex(start) + " to " + self._hex(addr) + "...")
+        self.logger.info("Reading 0x%X NAND pages starting at 0x%X to memory at 0x%X..." %
+                        (count, start, addr))
         self.emcore.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
         self.logger.info("done\n")
 
@@ -736,8 +723,8 @@ class Commandline(object):
         start = self._hexint(start)
         count = self._hexint(count)
         doecc = self._bool(doecc)
-        self.logger.info("Writing " + self._hex(count) + " NAND pages starting at " + \
-                         self._hex(start) + " from " + self._hex(addr) + "...")
+        self.logger.info("Writing 0x%X NAND pages starting at 0x%X from memory at 0x%X..." %
+                        (count, start, addr))
         self.emcore.ipodnano2g_nandwrite(addr, start, count, doecc)
         self.logger.info("done\n")
 
@@ -753,8 +740,8 @@ class Commandline(object):
         addr = self._hexint(addr)
         start = self._hexint(start)
         count = self._hexint(count)
-        self.logger.info("Erasing " + self._hex(count) + " NAND blocks starting at " + \
-                         self._hex(start) + " and logging to " + self._hex(addr) + "...")
+        self.logger.info("Erasing 0x%X NAND pages starting at 0x%X and logging to 0x%X..." %
+                        (count, start, addr))
         self.emcore.ipodnano2g_nanderase(addr, start, count)
         self.logger.info("done\n")
 
@@ -774,11 +761,11 @@ class Commandline(object):
             statusfile = open(filenameprefix+"_status.bin", 'wb')
         except IOError:
             raise ArgumentError("Can not open file for writing!")
-        infofile.write("NAND chip type: "       + self._hex(info["type"]) + "\r\n")
-        infofile.write("Number of banks: "      + str(info["banks"]) + "\r\n")
-        infofile.write("Number of blocks: "     + str(info["blocks"]) + "\r\n")
-        infofile.write("Number of user blocks: "+ str(info["userblocks"]) + "\r\n")
-        infofile.write("Pages per block: "      + str(info["pagesperblock"]) + "\r\n")
+        infofile.write("NAND chip type: 0x%X\r\n" % info["type"])
+        infofile.write("Number of banks: %d\r\n" % info["banks"])
+        infofile.write("Number of blocks: %d\r\n" % info["blocks"])
+        infofile.write("Number of user blocks: %d\r\n" % info["userblocks"])
+        infofile.write("Pages per block: %d\r\n" % info["pagesperblock"])
         for i in range(info["banks"] * info["blocks"] * info["pagesperblock"] / 8192):
             self.logger.info(".")
             self.emcore.ipodnano2g_nandread(0x08000000, i * 8192, 8192, 1, 1)
@@ -844,11 +831,11 @@ class Commandline(object):
         """
         volume = self._hexint(volume)
         data = self.emcore.storage_get_info(volume)
-        self.logger.info("Sector size: "+str(data["sectorsize"])+"\n")
-        self.logger.info("Number of sectors: "+str(data["numsectors"])+"\n")
-        self.logger.info("Vendor: "+data["vendor"]+"\n")
-        self.logger.info("Product: "+data["product"]+"\n")
-        self.logger.info("Revision: "+data["revision"]+"\n")
+        self.logger.info("Sector size: %d\n" % data["sectorsize"])
+        self.logger.info("Number of sectors: %d\n" % data["numsectors"])
+        self.logger.info("Vendor: %s\n" % data["vendor"])
+        self.logger.info("Product: %s\n" % data["product"])
+        self.logger.info("Revision: %s\n" % data["revision"])
 
     @command
     def readrawstorage(self, volume, sector, count, addr):
@@ -961,7 +948,7 @@ class Commandline(object):
         """
             Creates a directory with the name <dirname>
         """
-        self.logger.info("Creating directory " + dirname + "...")
+        self.logger.info("Creating directory %s..." % dirname)
         self.emcore.dir_create(dirname)
         self.logger.info(" done\n")
 
@@ -970,7 +957,7 @@ class Commandline(object):
         """
             Removes an empty directory with the name <dirname>
         """
-        self.logger.info("Removing directory " + dirname + "...")
+        self.logger.info("Removing directory %s..." % dirname)
         self.emcore.dir_remove(dirname)
         self.logger.info(" done\n")
 
@@ -979,7 +966,7 @@ class Commandline(object):
         """
             Removes a file with the name <filename>
         """
-        self.logger.info("Removing file " + filename + "...")
+        self.logger.info("Removing file %s..." % filename)
         self.emcore.file_unlink(filename)
         self.logger.info(" done\n")
 
@@ -1006,7 +993,7 @@ class Commandline(object):
         """
             Renames or moves file or directory <oldname> to <newname>
         """
-        self.logger.info("Renaming " + oldname + " to " + newname + "...")
+        self.logger.info("Renaming %s to %s..." % (oldname, newname))
         self.emcore.file_rename(oldname, newname)
         self.logger.info(" done\n")
 
@@ -1036,7 +1023,7 @@ class Commandline(object):
                     buffer = self._hexint(buffer)
                     malloc = False
                 try:
-                    self.logger.info("Downloading file " + remotename + " to " + localname + "...")
+                    self.logger.info("Downloading file %s to %s..." % (remotename, localname))
                     while size > 0:
                         bytes = self.emcore.file_read(fd, buffsize, buffer).rc
                         f.write(self.emcore.read(buffer, bytes))
@@ -1108,7 +1095,7 @@ class Commandline(object):
                 buffer = self._hexint(buffer)
                 malloc = False
             try:
-                self.logger.info("Uploading file " + localname + " to " + remotename + "...")
+                self.logger.info("Uploading file %s to %s..." % (localname, remotename))
                 fd = self.emcore.file_open(remotename, 0x15)
                 try:
                     while True:
@@ -1167,7 +1154,7 @@ class Commandline(object):
             [path]: the path which is listed
         """
         handle = self.emcore.dir_open(path)
-        self.logger.info("Directory listing of " + path + ":\n")
+        self.logger.info("Directory listing of %s:\n" % path)
         while True:
             try:
                 entry = self.emcore.dir_read(handle)
