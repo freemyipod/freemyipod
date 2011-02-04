@@ -67,7 +67,8 @@ def command(timeout = None, target = None):
             # precommand stuff
             if target is not None:
                 if self.lib.dev.hwtypeid != target:
-                    raise DeviceError("Wrong device for target-specific command. Expected \'" + gethwname(target) + "\' but got \'" + gethwname(self.lib.dev.hwtypeid) + "\'")
+                    raise DeviceError("Wrong device for target-specific command. Expected \'%s\' but got \'%s\'" %
+                                     (gethwname(target), gethwname(self.lib.dev.hwtypeid)))
             timeout = None
             if "timeout" in kwargs.keys():
                 timeout = kwargs['timeout']
@@ -169,9 +170,9 @@ class Emcore(object):
         self.lib.dev.version.majorv = resp.majorv
         self.lib.dev.version.minorv = resp.minorv
         self.lib.dev.version.patchv = resp.patchv
-        self.logger.debug("Device Software Type ID = " + str(resp.swtypeid) + "\n")
+        self.logger.debug("Device Software Type ID = 0x%X\n" % resp.swtypeid)
         self.lib.dev.swtypeid = resp.swtypeid
-        self.logger.debug("Device Hardware Type ID = " + str(resp.hwtypeid) + "\n")
+        self.logger.debug("Device Hardware Type ID = 0x%X\n" % resp.hwtypeid)
         self.lib.dev.hwtypeid = resp.hwtypeid
         return resp
     
@@ -181,13 +182,13 @@ class Emcore(object):
             It also sets the properties of the device object accordingly.
         """
         resp = self.lib.monitorcommand(struct.pack("IIII", 1, 1, 0, 0), "HHII", ("coutmax", "cinmax", "doutmax", "dinmax"))
-        self.logger.debug("Device cout packet size limit = " + str(resp.coutmax) + "\n")
+        self.logger.debug("Device cout packet size limit = %d\n" % resp.coutmax)
         self.lib.dev.packetsizelimit.cout = resp.coutmax
-        self.logger.debug("Device cin packet size limit = " + str(resp.cinmax) + "\n")
+        self.logger.debug("Device cin packet size limit = %d\n" % resp.cinmax)
         self.lib.dev.packetsizelimit.cin = resp.cinmax
-        self.logger.debug("Device din packet size limit = " + str(resp.doutmax) + "\n")
+        self.logger.debug("Device din packet size limit = %d\n" % resp.doutmax)
         self.lib.dev.packetsizelimit.din = resp.dinmax
-        self.logger.debug("Device dout packet size limit = " + str(resp.dinmax) + "\n")
+        self.logger.debug("Device dout packet size limit = %d\n" % resp.dinmax)
         self.lib.dev.packetsizelimit.dout = resp.doutmax
         return resp
     
@@ -195,7 +196,7 @@ class Emcore(object):
     def getusermemrange(self):
         """ This returns the memory range the user has access to. """
         resp = self.lib.monitorcommand(struct.pack("IIII", 1, 2, 0, 0), "III", ("lower", "upper", None))
-        self.logger.debug("Device user memory = 0x%x - 0x%x\n" % (resp.lower, resp.upper))
+        self.logger.debug("Device user memory = 0x%X - 0x%X\n" % (resp.lower, resp.upper))
         self.lib.dev.usermem.lower = resp.lower
         self.lib.dev.usermem.upper = resp.upper
         return resp
@@ -226,7 +227,7 @@ class Emcore(object):
         din_maxsize = self.lib.dev.packetsizelimit.din
         data = ""
         (headsize, bodysize, tailsize) = self._alignsplit(addr, size, cin_maxsize, 16)
-        self.logger.debug("Downloading %d bytes from 0x%x, split as (%d/%d/%d)\n" % (size, addr, headsize, bodysize, tailsize))
+        self.logger.debug("Downloading %d bytes from 0x%X, split as (%d/%d/%d)\n" % (size, addr, headsize, bodysize, tailsize))
         if headsize != 0:
             data += self._readmem(addr, headsize)
             addr += headsize
@@ -252,7 +253,7 @@ class Emcore(object):
         cout_maxsize = self.lib.dev.packetsizelimit.cout - self.lib.headersize
         dout_maxsize = self.lib.dev.packetsizelimit.dout
         (headsize, bodysize, tailsize) = self._alignsplit(addr, len(data), cout_maxsize, 16)
-        self.logger.debug("Uploading %d bytes to 0x%x, split as (%d/%d/%d)\n" % (len(data), addr, headsize, bodysize, tailsize))
+        self.logger.debug("Uploading %d bytes to 0x%X, split as (%d/%d/%d)\n" % (len(data), addr, headsize, bodysize, tailsize))
         offset = 0
         if headsize != 0:
             self._writemem(addr, data[offset:offset+headsize])
@@ -380,7 +381,7 @@ class Emcore(object):
         id = 0
         while structptr != 0:
             threadstruct = scheduler_thread()
-            self.logger.debug("Reading thread struct of thread at 0x%x\n" % structptr)
+            self.logger.debug("Reading thread struct of thread at 0x%X\n" % structptr)
             threaddata = self.read(structptr, ctypes.sizeof(scheduler_thread))
             threadstruct._from_string(threaddata)
             threadstruct = threadstruct._to_bunch()
@@ -440,7 +441,7 @@ class Emcore(object):
             raise ArgumentError("State must be either 'ready' or 'suspended'")
         resp = self.lib.monitorcommand(struct.pack("IIIIIIII", 19, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state), "III", ("threadptr", None, None))
         if resp.threadptr < 0:
-            raise DeviceError("The device returned the error code "+str(resp.threadptr))
+            raise DeviceError("The device returned the error code %d" % resp.threadptr)
         return resp
     
     @command()
@@ -480,7 +481,7 @@ class Emcore(object):
     @command()
     def execfirmware(self, targetaddr, addr, size):
         """ Moves the firmware at 'addr' with size 'size' to 'targetaddr' and passes all control to it. """
-        self.logger.debug("Moving firmware at 0x%x with the size %d to 0x%x and executing it\n" % (addr, size, targetaddr))
+        self.logger.debug("Moving firmware at 0x%X with the size %d to 0x%X and executing it\n" % (addr, size, targetaddr))
         return self.lib.monitorcommand(struct.pack("IIII", 24, targetaddr, addr, size))
     
     @command(timeout = 30000)
@@ -594,18 +595,18 @@ class Emcore(object):
     @command(timeout = 50000)
     def storage_read_sectors_md(self, volume, sector, count, addr):
         """ Read sectors from as storage device """
-        self.logger.debug("Reading %d sectors from disk at volume %d, sector %d to memory at 0x%x\n" % (count, volume, sector, addr))
+        self.logger.debug("Reading %d sectors from disk at volume %d, sector %d to memory at 0x%X\n" % (count, volume, sector, addr))
         result = self.lib.monitorcommand(struct.pack("IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
-        self.logger.debug("Read sectors, result: 0x%x\n" % result.rc)
+        self.logger.debug("Read sectors, result: 0x%X\n" % result.rc)
         if result.rc > 0x80000000:
             raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
 
     @command(timeout = 50000)
     def storage_write_sectors_md(self, volume, sector, count, addr):
         """ Read sectors from as storage device """
-        self.logger.debug("Writing %d sectors from memory at 0x%x to disk at volume %d, sector %d\n" % (count, addr, volume, sector))
+        self.logger.debug("Writing %d sectors from memory at 0x%X to disk at volume %d, sector %d\n" % (count, addr, volume, sector))
         result = self.lib.monitorcommand(struct.pack("IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
-        self.logger.debug("Wrote sectors, result: 0x%x\n" % result.rc)
+        self.logger.debug("Wrote sectors, result: 0x%X\n" % result.rc)
         if result.rc > 0x80000000:
             raise DeviceError("storage_write_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
     
@@ -625,13 +626,13 @@ class Emcore(object):
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(filename), 30, mode, 0, 0, filename, 0), "III", ("fd", None, None))
         if result.fd > 0x80000000:
             raise DeviceError("file_open(filename=\"%s\", mode=0x%X) failed with RC=0x%08X, errno=%d" % (filename, mode, result.fd, self.errno()))
-        self.logger.debug("Opened file as handle 0x%x\n" % result.fd)
+        self.logger.debug("Opened file as handle 0x%X\n" % result.fd)
         return result.fd
     
     @command(timeout = 30000)
     def file_size(self, fd):
         """ Gets the size of a file referenced by a handle """
-        self.logger.debug("Getting file size of handle 0x%x\n" % fd)
+        self.logger.debug("Getting file size of handle 0x%X\n" % fd)
         result = self.lib.monitorcommand(struct.pack("IIII", 31, fd, 0, 0), "III", ("size", None, None))
         if result.size > 0x80000000:
             raise DeviceError("file_size(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.size, self.errno()))
@@ -646,7 +647,7 @@ class Emcore(object):
             malloc = True
         else:
             malloc = False
-        self.logger.debug("Reading %d bytes from file handle 0x%x to 0x%x\n" % (size, fd, addr))
+        self.logger.debug("Reading %d bytes from file handle 0x%X to 0x%X\n" % (size, fd, addr))
         try:
             result = self.lib.monitorcommand(struct.pack("IIII", 32, fd, addr, size), "III", ("rc", None, None))
             if result.rc > 0x80000000:
@@ -655,57 +656,57 @@ class Emcore(object):
             if malloc == True:
                 self.free(addr)
             raise
-        self.logger.debug("File read result: 0x%x\n" % result.rc)
+        self.logger.debug("File read result: 0x%X\n" % result.rc)
         return Bunch(rc = result.rc, addr = addr)
     
     @command(timeout = 30000)
     def file_write(self, fd, size, addr):
         """ Writes data from a file referenced by a handle. """
-        self.logger.debug("Writing %d bytes from 0x%x to file handle 0x%x\n" % (size, addr, fd))
+        self.logger.debug("Writing %d bytes from 0x%X to file handle 0x%X\n" % (size, addr, fd))
         result = self.lib.monitorcommand(struct.pack("IIII", 33, fd, addr, size), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_write(fd=%d, addr=0x%08X, size=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, addr, size, result.rc, self.errno()))
-        self.logger.debug("File write result: 0x%x\n" % result.rc)
+        self.logger.debug("File write result: 0x%X\n" % result.rc)
         return result.rc
     
     @command(timeout = 30000)
     def file_seek(self, fd, offset, whence):
         """ Seeks the file handle to the specified position in the file """
-        self.logger.debug("Seeking file handle 0x%x to whence=%d, offset=0x%x\n" % (fd, whence, offset))
+        self.logger.debug("Seeking file handle 0x%X to whence=%d, offset=0x%X\n" % (fd, whence, offset))
         result = self.lib.monitorcommand(struct.pack("IIII", 34, fd, offset, whence), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_seek(fd=%d, offset=0x%08X, whence=%d) failed with RC=0x%08X, errno=%d" % (fd, offset, whence, result.rc, self.errno()))
-        self.logger.debug("File seek result: 0x%x\n" % (result.rc))
+        self.logger.debug("File seek result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def file_truncate(self, fd, length):
         """ Truncates a file referenced by a handle to a specified length """
-        self.logger.debug("Truncating file with handle 0x%x to 0x%x bytes\n" % (fd, length))
+        self.logger.debug("Truncating file with handle 0x%X to 0x%X bytes\n" % (fd, length))
         result = self.lib.monitorcommand(struct.pack("IIII", 35, fd, offset, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_truncate(fd=%d, length=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, length, result.rc, self.errno()))
-        self.logger.debug("File truncate result: 0x%x\n" % (result.rc))
+        self.logger.debug("File truncate result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def file_sync(self, fd):
         """ Flushes a file handles' buffers """
-        self.logger.debug("Flushing buffers of file with handle 0x%x\n" % (fd))
+        self.logger.debug("Flushing buffers of file with handle 0x%X\n" % (fd))
         result = self.lib.monitorcommand(struct.pack("IIII", 36, fd, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_sync(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.rc, self.errno()))
-        self.logger.debug("File flush result: 0x%x\n" % (result.rc))
+        self.logger.debug("File flush result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
     def file_close(self, fd):
         """ Closes a file handle """
-        self.logger.debug("Closing file handle 0x%x\n" % (fd))
+        self.logger.debug("Closing file handle 0x%X\n" % (fd))
         result = self.lib.monitorcommand(struct.pack("IIII", 37, fd, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_close(fd=%d) failed with RC=0x%08X, errno=%d" % (fd, result.rc, self.errno()))
-        self.logger.debug("File close result: 0x%x\n" % (result.rc))
+        self.logger.debug("File close result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
@@ -735,7 +736,7 @@ class Emcore(object):
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(filename), 40, 0, 0, 0, filename, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_unlink(filename=\"%s\") failed with RC=0x%08X, errno=%d" % (filename, result.rc, self.errno()))
-        self.logger.debug("Delete file result: 0x%x\n" % (result.rc))
+        self.logger.debug("Delete file result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
@@ -745,7 +746,7 @@ class Emcore(object):
         result = self.lib.monitorcommand(struct.pack("IIII248s%dsB" % min(247, len(newname)), 41, 0, 0, 0, oldname, newname, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_rename(oldname=\"%s\", newname=\"%s\") failed with RC=0x%08X, errno=%d" % (oldname, newname, result.rc, self.errno()))
-        self.logger.debug("Rename file result: 0x%x\n" % (result.rc))
+        self.logger.debug("Rename file result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
@@ -755,13 +756,13 @@ class Emcore(object):
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 42, 0, 0, 0, dirname, 0), "III", ("handle", None, None))
         if result.handle == 0:
             raise DeviceError("dir_open(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.handle, self.errno()))
-        self.logger.debug("Opened directory as handle 0x%x\n" % (result.handle))
+        self.logger.debug("Opened directory as handle 0x%X\n" % (result.handle))
         return result.handle
     
     @command(timeout = 30000)
     def dir_read(self, handle):
         """ Reads the next entry from a directory """
-        self.logger.debug("Reading next entry of directory handle 0x%x\n" % (handle))
+        self.logger.debug("Reading next entry of directory handle 0x%X\n" % (handle))
         result = self.lib.monitorcommand(struct.pack("IIII", 43, handle, 0, 0), "III", ("version", "maxpath", "ptr"))
         if result.ptr == 0:
             raise DeviceError("dir_read(handle=0x%08X) failed with RC=0x%08X, errno=%d" % (handle, result.ptr, self.errno()))
@@ -773,21 +774,21 @@ class Emcore(object):
         ret.name = ret.name[:ret.name.index('\x00')]
         self.logger.debug("Read directory entry:\n")
         self.logger.debug("Name: %s\n" % ret.name)
-        self.logger.debug("Attributes: 0x%x\n" % ret.attributes)
+        self.logger.debug("Attributes: 0x%X\n" % ret.attributes)
         self.logger.debug("Size: %d\n" % ret.size)
         self.logger.debug("Start cluster: %d\n" % ret.startcluster)
-        self.logger.debug("Last written date: 0x%x\n" % ret.wrtdate)
-        self.logger.debug("Last written time: 0x%x\n" % ret.wrttime)
+        self.logger.debug("Last written date: 0x%X\n" % ret.wrtdate)
+        self.logger.debug("Last written time: 0x%X\n" % ret.wrttime)
         return ret
     
     @command(timeout = 30000)
     def dir_close(self, handle):
         """ Closes a directory handle """
-        self.logger.debug("Closing directory handle 0x%x\n" % (handle))
+        self.logger.debug("Closing directory handle 0x%X\n" % (handle))
         result = self.lib.monitorcommand(struct.pack("IIII", 44, handle, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_close(handle=0x%08X) failed with RC=0x%08X, errno=%d" % (handle, result.rc, self.errno()))
-        self.logger.debug("Close directory result: 0x%x\n" % (result.rc))
+        self.logger.debug("Close directory result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
@@ -817,7 +818,7 @@ class Emcore(object):
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 47, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_create(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
-        self.logger.debug("Create directory result: 0x%x\n" % (result.rc))
+        self.logger.debug("Create directory result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command(timeout = 30000)
@@ -827,7 +828,7 @@ class Emcore(object):
         result = self.lib.monitorcommand(struct.pack("IIII%dsB" % len(dirname), 48, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_remove(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
-        self.logger.debug("Remove directory result: 0x%x\n" % (result.rc))
+        self.logger.debug("Remove directory result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command()
@@ -835,7 +836,7 @@ class Emcore(object):
         """ Returns the number of the last error that happened """
         self.logger.debug("Getting last error number\n")
         result = self.lib.monitorcommand(struct.pack("IIII", 49, 0, 0, 0), "III", ("errno", None, None))
-        self.logger.debug("Last error: 0x%x\n" % (result.errno))
+        self.logger.debug("Last error: 0x%X\n" % (result.errno))
         return result.errno
     
     @command()
@@ -845,7 +846,7 @@ class Emcore(object):
         result = self.lib.monitorcommand(struct.pack("IIII", 50, volume, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("disk_mount(volume=%d) failed with RC=0x%08X, errno=%d" % (volume, result.rc, self.errno()))
-        self.logger.debug("Mount volume result: 0x%x\n" % (result.rc))
+        self.logger.debug("Mount volume result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command()
@@ -855,7 +856,7 @@ class Emcore(object):
         result = self.lib.monitorcommand(struct.pack("IIII", 51, volume, 0, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("disk_unmount(volume=%d) failed with RC=0x%08X, errno=%d" % (volume, result.rc, self.errno()))
-        self.logger.debug("Unmount volume result: 0x%x\n" % (result.rc))
+        self.logger.debug("Unmount volume result: 0x%X\n" % (result.rc))
         return result.rc
     
     @command()
@@ -863,15 +864,15 @@ class Emcore(object):
         """ Allocates 'size' bytes and returns a pointer to the allocated memory """
         self.logger.debug("Allocating %d bytes of memory\n" % size)
         result = self.lib.monitorcommand(struct.pack("IIII", 52, size, 0, 0), "III", ("ptr", None, None))
-        self.logger.debug("Allocated %d bytes of memory at 0x%x\n" % (size, result.ptr))
+        self.logger.debug("Allocated %d bytes of memory at 0x%X\n" % (size, result.ptr))
         return result.ptr
     
     @command()
     def memalign(self, align, size):
         """ Allocates 'size' bytes aligned to 'align' and returns a pointer to the allocated memory """
-        self.logger.debug("Allocating %d bytes of memory aligned to 0x%x\n" % (size, align))
+        self.logger.debug("Allocating %d bytes of memory aligned to 0x%X\n" % (size, align))
         result = self.lib.monitorcommand(struct.pack("IIII", 53, align, size, 0), "III", ("ptr", None, None))
-        self.logger.debug("Allocated %d bytes of memory at 0x%x\n" % (size, result.ptr))
+        self.logger.debug("Allocated %d bytes of memory at 0x%X\n" % (size, result.ptr))
         return result.ptr
     
     @command()
@@ -880,21 +881,21 @@ class Emcore(object):
             expanding or reducing the amount of memory available in the block.
             Returns a pointer to the reallocated memory.
         """
-        self.logger.debug("Reallocating 0x%x to have the new size %d\n" % (ptr, size))
+        self.logger.debug("Reallocating 0x%X to have the new size %d\n" % (ptr, size))
         result = self.lib.monitorcommand(struct.pack("IIII", 54, ptr, size, 0), "III", ("ptr", None, None))
-        self.logger.debug("Reallocated memory at 0x%x to 0x%x with the new size %d\n" % (ptr, result.ptr, size))
+        self.logger.debug("Reallocated memory at 0x%X to 0x%X with the new size %d\n" % (ptr, result.ptr, size))
         return result.ptr
     
     @command()
     def reownalloc(self, ptr, owner):
         """ Changes the owner of the memory allocation 'ptr' to the thread struct at addr 'owner' """
-        self.logger.debug("Changing owner of the memory region 0x%x to 0x%x\n" % (ptr, owner))
+        self.logger.debug("Changing owner of the memory region 0x%X to 0x%X\n" % (ptr, owner))
         return self.lib.monitorcommand(struct.pack("IIII", 55, ptr, owner, 0), "III", (None, None, None))
     
     @command()
     def free(self, ptr):
         """ Frees the memory space pointed to by 'ptr' """
-        self.logger.debug("Freeing the memory region at 0x%x\n" % ptr)
+        self.logger.debug("Freeing the memory region at 0x%X\n" % ptr)
         return self.lib.monitorcommand(struct.pack("IIII", 56, ptr, 0, 0), "III", (None, None, None))
     
     @command()
@@ -1002,20 +1003,20 @@ class Dev(object):
             for intf in cfg:
                 for ep in intf:
                     if epcounter == 0:
-                        self.logger.debug("Found cout endpoint at 0x%x\n" % ep.bEndpointAddress)
+                        self.logger.debug("Found cout endpoint at 0x%X\n" % ep.bEndpointAddress)
                         self.endpoint.cout = ep.bEndpointAddress
                     elif epcounter == 1:
-                        self.logger.debug("Found cin endpoint at 0x%x\n" % ep.bEndpointAddress)
+                        self.logger.debug("Found cin endpoint at 0x%X\n" % ep.bEndpointAddress)
                         self.endpoint.cin = ep.bEndpointAddress
                     elif epcounter == 2:
-                        self.logger.debug("Found dout endpoint at 0x%x\n" % ep.bEndpointAddress)
+                        self.logger.debug("Found dout endpoint at 0x%X\n" % ep.bEndpointAddress)
                         self.endpoint.dout = ep.bEndpointAddress
                     elif epcounter == 3:
-                        self.logger.debug("Found din endpoint at 0x%x\n" % ep.bEndpointAddress)
+                        self.logger.debug("Found din endpoint at 0x%X\n" % ep.bEndpointAddress)
                         self.endpoint.din = ep.bEndpointAddress
                     epcounter += 1
         if epcounter <= 3:
-            raise DeviceError("Not all endpoints found in the descriptor. Only "+str(epcounter)+" found, we need 4")
+            raise DeviceError("Not all endpoints found in the descriptor. Only %d endpoints found, at least 4 endpoints were expeceted" % epcounter)
     
     def connect(self):
         self.logger.debug("Looking for emCORE device\n")
@@ -1042,25 +1043,25 @@ class Dev(object):
         return read
     
     def cout(self, data):
-        self.logger.debug("Sending data to cout endpoint with the size " + str(len(data)) + "\n")
+        self.logger.debug("Sending data to cout endpoint with the size %d\n" % len(data))
         if self.packetsizelimit.cout and len(data) > self.packetsizelimit.cout:
             raise SendError("Packet too big")
         return self.send(self.endpoint.cout, data)
     
     def cin(self, size):
-        self.logger.debug("Receiving data on the cin endpoint with the size " + str(size) + "\n")
+        self.logger.debug("Receiving data on the cin endpoint with the size %d\n" % size)
         if self.packetsizelimit.cin and size > self.packetsizelimit.cin:
             raise ReceiveError("Packet too big")
         return self.receive(self.endpoint.cin, size)
     
     def dout(self, data):
-        self.logger.debug("Sending data to cout endpoint with the size " + str(len(data)) + "\n")
+        self.logger.debug("Sending data to cout endpoint with the size %d\n" % len(data))
         if self.packetsizelimit.dout and len(data) > self.packetsizelimit.dout:
             raise SendError("Packet too big")
         return self.send(self.endpoint.dout, data)
     
     def din(self, size):
-        self.logger.debug("Receiving data on the din endpoint with the size " + str(size) + "\n")
+        self.logger.debug("Receiving data on the din endpoint with the size %d\n" % size)
         if self.packetsizelimit.din and size > self.packetsizelimit.din:
             raise ReceiveError("Packet too big")
         return self.receive(self.endpoint.din, size)
@@ -1085,14 +1086,14 @@ if __name__ == "__main__":
         emcore = Emcore()
         logger.write("Allocating 200 bytes of memory: ")
         addr = emcore.malloc(200)
-        logger.write("0x%x\n" % addr)
+        logger.write("0x%X\n" % addr)
         logger.write("Reallocating to 2000 bytes: ")
         addr = emcore.realloc(addr, 2000)
-        logger.write("0x%x\n" % addr)
-        logger.write("Freeing 0x%x\n" % addr)
+        logger.write("0x%X\n" % addr)
+        logger.write("Freeing 0x%X\n" % addr)
         emcore.free(addr)
         logger.write("Allocating 1000 bytes of memory aligned to 100 bytes: ")
         addr = emcore.memalign(100, 1000)
-        logger.write("0x%x\n" % addr)
-        logger.write("Freeing 0x%x\n" % addr)
+        logger.write("0x%X\n" % addr)
+        logger.write("Freeing 0x%X\n" % addr)
         emcore.free(addr)
