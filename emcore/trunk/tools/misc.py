@@ -188,7 +188,10 @@ class ExtendedCStruct(LittleEndianStructure):
                 setattr(self, field, getattr(bunch, field))
     
     def _to_bunch(self):
-        return Bunch(**{field: getattr(self, field) for field, _ in self._fields_})
+        bunch = Bunch()
+        for field, _ in self._fields_:
+            setattr(bunch, field, getattr(self, field))
+        return bunch
     
     def _from_string(self, string):
         memmove(addressof(self), string, sizeof(self))
