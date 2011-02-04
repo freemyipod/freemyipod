@@ -25,26 +25,6 @@
 #include "global.h"
 
 
-.section .icode.get_font_width, "ax", %progbits
-.align 2
-.global get_font_width
-.type get_font_width, %function
-get_font_width:
-	mov	r0, #6
-	mov	pc, lr
-.size get_font_width, .-get_font_width
-
-
-.section .icode.get_font_height, "ax", %progbits
-.align 2
-.global get_font_height
-.type get_font_height, %function
-get_font_height:
-	mov	r0, #8
-	mov	pc, lr
-.size get_font_height, .-get_font_height
-
-
 .section .icode.rendertext, "ax", %progbits
 .align 2
 .global rendertext
@@ -69,88 +49,7 @@ rendertext_done:
 .size rendertext, .-rendertext
 
 
-.section .icode.renderfillrect, "ax", %progbits
-.align 2
-.global renderfillrect
-.type renderfillrect, %function
-renderfillrect:
-	ldr	r12, [sp,#8]
-	mla	r1, r12, r2, r1
-#if (LCD_BYTESPERPIXEL == 1)
-	add	r0, r0, r1
-#elif (LCD_BYTESPERPIXEL == 2)
-	add	r0, r0, r1,lsl#1
-#elif (LCD_BYTESPERPIXEL == 4)
-	add	r0, r0, r1,lsl#2
-#else
-#error Unknown number of bytes per pixel!
-#endif
-	ldmfd	sp, {r1,r2}
-renderfillrect_y:
-	cmp	r1, #0
-	moveq	pc, lr
-	sub	r1, r1, #1
-	mov	r12, r3
-renderfillrect_x:
-	cmp	r12, #0
-	beq	renderfillrect_y
-	sub	r12, r12, #1
-#if (LCD_BYTESPERPIXEL == 1)
-	strb	r2, [r0], #1
-#elif (LCD_BYTESPERPIXEL == 2)
-	strh	r2, [r0], #2
-#elif (LCD_BYTESPERPIXEL == 4)
-	str	r2, [r0], #4
-#else
-#error Unknown number of bytes per pixel!
-#endif
-	b	renderfillrect_x
-.size renderfillrect, .-renderfillrect
-
-
 #if (LCD_BYTESPERPIXEL == 2)
-.section .icode.renderbmp, "ax", %progbits
-.align 2
-.global renderbmp
-.type renderbmp, %function
-renderbmp:
-	mov	r2, r2,lsl#1
-	ldrh	r3, [r1]
-	sub	r3, r3, #0x4d00
-	subs	r3, r3, #0x42
-	movne	pc, lr
-	stmfd	sp!, {r4,lr}
-	ldrh	r4, [r1,#18]
-	ldrh	r12, [r1,#20]
-	orr	r4, r4, r12,lsl#16
-	ldrh	r3, [r1,#22]
-	ldrh	r12, [r1,#24]
-	orr	r3, r3, r12,lsl#16
-	ldrh	lr, [r1,#10]
-	ldrh	r12, [r1,#12]
-	orr	lr, lr, r12,lsl#16
-	add	r1, r1, lr
-	mul	lr, r2, r3
-	add	r0, r0, lr
-renderbmp_row:
-	mov	r12, r4
-	sub	r0, r0, r2
-renderbmp_pixel:
-	ldrb	lr, [r1,#1]
-	strb	lr, [r0], #1
-	ldrb	lr, [r1], #2
-	strb	lr, [r0], #1
-	subs	r12, r12, #1
-	bne	renderbmp_pixel
-	tst	r4, #1
-	addne	r1, r1, #2
-	sub	r0, r0, r4,lsl#1
-	subs	r3, r3, #1
-	bne	renderbmp_row
-	ldmfd	sp!, {r4,pc}
-.size renderbmp, .-renderbmp
-
-
 .section .icode.renderchar, "ax", %progbits
 .align 2
 .global renderchar

@@ -88,11 +88,6 @@ void lcdconsole_puts_noblit(const char* string, int fgcolor, int bgcolor)
     while (*string) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
 }
 
-void lcdconsole_write_noblit(const char* string, size_t length, int fgcolor, int bgcolor)
-{
-    while (length--) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
-}
-
 void lcdconsole_update()
 {
     uint32_t mode = enter_critical_section();
@@ -110,21 +105,9 @@ void lcdconsole_update()
                framebuf, 0);
 }
 
-void lcdconsole_putc(char string, int fgcolor, int bgcolor)
-{
-    lcdconsole_putc_noblit(string, fgcolor, bgcolor);
-    lcdconsole_update();
-}
-    
 void lcdconsole_puts(const char* string, int fgcolor, int bgcolor)
 {
     while (*string) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
-    lcdconsole_update();
-}
-
-void lcdconsole_write(const char* string, size_t length, int fgcolor, int bgcolor)
-{
-    while (length--) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
     lcdconsole_update();
 }
 
@@ -139,24 +122,4 @@ void lcdconsole_callback()
                    framebuf, 0);
         lcdconsole_needs_update = false;
     }
-}
-
-int lcdconsole_get_current_x()
-{
-    return (current_col + 1) * FONT_WIDTH + OFFSETX;
-}
-
-int lcdconsole_get_current_y()
-{
-    return current_row * FONT_HEIGHT + OFFSETY;
-}
-
-int lcdconsole_get_lineend_x()
-{
-    return LCDCONSOLE_COLS * FONT_WIDTH + OFFSETX - 1;
-}
-
-int lcdconsole_get_lineend_y()
-{
-    return (current_row + 1) * FONT_HEIGHT + OFFSETY - 1;
 }
