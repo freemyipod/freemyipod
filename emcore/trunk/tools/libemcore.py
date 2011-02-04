@@ -617,7 +617,7 @@ class Emcore(object):
         self.lib.monitorcommand(struct.pack("IIII", 58, state, 0, 0), "III", (None, None, None))
         if state != 0: self.logger.debug("Enabled FAT flushing\n")
         else: self.logger.debug("Disabled FAT flushing\n")
-
+    
     @command(timeout = 30000)
     def file_open(self, filename, mode):
         """ Opens a file and returns the handle """
@@ -902,7 +902,7 @@ class Emcore(object):
         """ Frees all memory allocations created by the monitor thread """
         self.logger.debug("Freeing all memory allocations created by the monitor thread\n")
         return self.lib.monitorcommand(struct.pack("IIII", 57, 0, 0, 0), "III", (None, None, None))
-    
+
 
 class Lib(object):
     def __init__(self, logger):
@@ -966,7 +966,7 @@ class Dev(object):
         
         self.interface = 0
         self.timeout = 100
-
+        
         self.connect()
         self.findEndpoints()
         

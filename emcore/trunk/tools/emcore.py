@@ -85,7 +85,7 @@ def usage(errormsg=None, specific=False, docstring=True):
                 logger.write(doc[function]['documentation']+"\n", 4)
             logger.write("\n")
     logger.write("\n")
-
+    
     if errormsg:
         logger.error(str(errormsg)+"\n")
     exit(2)
@@ -134,7 +134,7 @@ class Commandline(object):
             self.logger.error("No emCORE device found!\n")
             exit(1)
         self.getinfo("version")
-        
+    
     def _parsecommand(self, func, args):
         # adds self to the commandline args.
         # this is needed because the functions need access to their class.
@@ -182,7 +182,7 @@ class Commandline(object):
             elif something.lower() in falselist:
                 return False
         raise ArgumentTypeError("bool", "'%s'" % something)
-
+    
     @staticmethod
     def _hexint(something):
         """
@@ -309,7 +309,7 @@ class Commandline(object):
             f.write(self.emcore.read(addr, size))
         f.close()
         self.logger.info("done\n")
-
+    
     @command
     def uploadint(self, addr, integer):
         """
@@ -324,7 +324,7 @@ class Commandline(object):
         data = struct.pack("I", integer)
         self.emcore.write(addr, data)
         self.logger.info("Integer '0x%X' written successfully to 0x%X\n" % (integer, addr))
-
+    
     @command
     def downloadint(self, addr):
         """
@@ -335,7 +335,7 @@ class Commandline(object):
         data = self.emcore.read(addr, 4)
         integer = struct.unpack("I", data)[0]
         self.logger.info("Read '0x%X' from address 0x%X\n" % (integer, addr))
-
+    
     @command
     def i2cread(self, bus, slave, addr, size):
         """
@@ -354,7 +354,7 @@ class Commandline(object):
         self.logger.info("Data read from I2C:\n")
         for index, byte in enumerate(bytes):
             self.logger.info("%02X: %02X\n" % (index, byte))
-
+    
     @command
     def i2cwrite(self, bus, slave, addr, *args):
         """
@@ -374,7 +374,7 @@ class Commandline(object):
         self.logger.info("Writing data to I2C...\n")
         self.emcore.i2cwrite(bus, slave, addr, data)
         self.logger.info("done\n")
-
+    
     @command
     def console(self):
         """
@@ -384,7 +384,7 @@ class Commandline(object):
             resp = self.emcore.usbcread()
             self.logger.write(resp.data)
             time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
-
+    
     @command
     def writeusbconsole(self, *args):
         """
@@ -396,7 +396,7 @@ class Commandline(object):
         text = text[:-1]
         self.logger.info("Writing '%s' to the usb console\n" % text)
         self.emcore.usbcwrite(text)
-
+    
     @command
     def readdevconsole(self, bitmask):
         """
@@ -422,7 +422,7 @@ class Commandline(object):
         text = text[:-1]
         self.logger.info("Writing '%s' to the device consoles identified with 0x%X\n" % (text, bitmask))
         self.emcore.cwrite(text, bitmask)
-
+    
     @command
     def flushconsolebuffers(self, bitmask):
         """
@@ -432,7 +432,7 @@ class Commandline(object):
         bitmask = self._hexint(bitmask)
         self.logger.info("Flushing consoles identified with the bitmask 0x%X\n" % bitmask)
         self.emcore.cflush(bitmask)
-
+    
     @command
     def getprocinfo(self):
         """
@@ -497,7 +497,7 @@ class Commandline(object):
         threadaddr = self._hexint(threadaddr)
         self.logger.info("Suspending the thread with the threadaddr 0x%X\n" % threadaddr)
         self.emcore.suspendthread(threadaddr)
-
+    
     @command
     def resumethread(self, threadaddr):
         """
@@ -506,7 +506,7 @@ class Commandline(object):
         threadaddr = self._hexint(threadaddr)
         self.logger.info("Resuming the thread with the threadaddr 0x%X\n" % threadaddr)
         self.emcore.resumethread(threadaddr)
-
+    
     @command
     def killthread(self, threadaddr):
         """
@@ -515,7 +515,7 @@ class Commandline(object):
         threadaddr = self._hexint(threadaddr)
         self.logger.info("Killing the thread with the threadaddr 0x%X\n" % threadaddr)
         self.emcore.killthread(threadaddr)
-
+    
     @command
     def createthread(self, nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state):
         """
@@ -552,7 +552,7 @@ class Commandline(object):
         with f:
             data = self.emcore.run(f.read())
         self.logger.info("Executed emCORE application as thread 0x%X\n" % data.thread)
-
+    
     @command
     def execimage(self, addr):
         """
@@ -674,7 +674,7 @@ class Commandline(object):
         data = self.emcore.read(destination, sha1size)
         hash = ord(data)
         self.logger.info("The generated hash is 0x%X\n" % hash)
-
+    
     @command
     def ipodnano2g_getnandinfo(self):
         """
@@ -687,7 +687,7 @@ class Commandline(object):
         self.logger.info("Number of blocks: %d\n" % data["blocks"])
         self.logger.info("Number of user blocks: %d\n" % data["userblocks"])
         self.logger.info("Pages per block: %d\n" % data["pagesperblock"])
-
+    
     @command
     def ipodnano2g_nandread(self, addr, start, count, doecc=True, checkempty=True):
         """
@@ -708,7 +708,7 @@ class Commandline(object):
                         (count, start, addr))
         self.emcore.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
         self.logger.info("done\n")
-
+    
     @command
     def ipodnano2g_nandwrite(self, addr, start, count, doecc=True):
         """
@@ -727,7 +727,7 @@ class Commandline(object):
                         (count, start, addr))
         self.emcore.ipodnano2g_nandwrite(addr, start, count, doecc)
         self.logger.info("done\n")
-
+    
     @command
     def ipodnano2g_nanderase(self, addr, start, count):
         """
@@ -744,7 +744,7 @@ class Commandline(object):
                         (count, start, addr))
         self.emcore.ipodnano2g_nanderase(addr, start, count)
         self.logger.info("done\n")
-
+    
     @command
     def ipodnano2g_dumpnand(self, filenameprefix):
         """
@@ -777,7 +777,7 @@ class Commandline(object):
         sparefile.close()
         statusfile.close()
         self.logger.info("done\n")
-
+    
     @command
     def ipodnano2g_wipenand(self, filename, force=False):
         """
@@ -805,7 +805,7 @@ class Commandline(object):
             statusfile.write(self.emcore.read(0x08000000, 0x00000100))
         statusfile.close()
         self.logger.info("done\n")
-
+    
     @command
     def ipodclassic_writebbt(self, tempaddr, filename):
         """
@@ -822,7 +822,7 @@ class Commandline(object):
         data = self.emcore.ipodclassic_writebbt(f.read(), tempaddr)
         f.close()
         self.logger.info(" done\n")
-
+    
     @command
     def getvolumeinfo(self, volume):
         """
@@ -836,7 +836,7 @@ class Commandline(object):
         self.logger.info("Vendor: %s\n" % data["vendor"])
         self.logger.info("Product: %s\n" % data["product"])
         self.logger.info("Revision: %s\n" % data["revision"])
-
+    
     @command
     def readrawstorage(self, volume, sector, count, addr):
         """
@@ -849,7 +849,7 @@ class Commandline(object):
         self.logger.info("Reading volume %s sectors %X - %X to %08X..." % (volume, sector, sector + count - 1, addr))
         self.emcore.storage_read_sectors_md(volume, sector, count, addr)
         self.logger.info("done\n")
-
+    
     @command
     def writerawstorage(self, volume, sector, count, addr):
         """
@@ -862,7 +862,7 @@ class Commandline(object):
         self.logger.info("Writing %08X to volume %s sectors %X - %X..." % (addr, volume, sector, sector + count - 1))
         self.emcore.storage_write_sectors_md(volume, sector, count, addr)
         self.logger.info("done\n")
-
+    
     @command
     def readrawstoragefile(self, volume, sector, count, file, buffsize = 0x100000, buffer = None):
         """
@@ -900,7 +900,7 @@ class Commandline(object):
         finally:
             f.close()
         self.logger.info("done\n")
-
+    
     @command
     def writerawstoragefile(self, volume, sector, count, file, buffsize = 0x100000, buffer = None):
         """
@@ -942,7 +942,7 @@ class Commandline(object):
         finally:
             f.close()
         self.logger.info("done\n")
-
+    
     @command
     def mkdir(self, dirname):
         """
@@ -951,7 +951,7 @@ class Commandline(object):
         self.logger.info("Creating directory %s..." % dirname)
         self.emcore.dir_create(dirname)
         self.logger.info(" done\n")
-
+    
     @command
     def rmdir(self, dirname):
         """
@@ -960,7 +960,7 @@ class Commandline(object):
         self.logger.info("Removing directory %s..." % dirname)
         self.emcore.dir_remove(dirname)
         self.logger.info(" done\n")
-
+    
     @command
     def rm(self, filename):
         """
@@ -969,7 +969,7 @@ class Commandline(object):
         self.logger.info("Removing file %s..." % filename)
         self.emcore.file_unlink(filename)
         self.logger.info(" done\n")
-
+    
     @command
     def rmtree(self, path):
         """
@@ -987,7 +987,7 @@ class Commandline(object):
             except: break
         self.emcore.dir_close(handle)
         self.rmdir(path)
-
+    
     @command
     def mv(self, oldname, newname):
         """
@@ -996,7 +996,7 @@ class Commandline(object):
         self.logger.info("Renaming %s to %s..." % (oldname, newname))
         self.emcore.file_rename(oldname, newname)
         self.logger.info(" done\n")
-
+    
     @command
     def get(self, remotename, localname, buffsize = 0x10000, buffer = None):
         """
@@ -1036,7 +1036,7 @@ class Commandline(object):
         finally:
             f.close()
         self.logger.info(" done\n")
-
+    
     @command
     def gettree(self, remotepath, localpath, buffsize = 0x10000, buffer = None):
         """
@@ -1071,7 +1071,7 @@ class Commandline(object):
                     self.emcore.free(buffer)
         finally:
             self.emcore.dir_close(handle)
-
+    
     @command
     def put(self, localname, remotename, buffsize = 0x10000, buffer = None):
         """
@@ -1113,7 +1113,7 @@ class Commandline(object):
         finally:
             f.close()
         self.logger.info(" done\n")
-
+    
     @command
     def puttree(self, localpath, remotepath, buffsize = 0x10000, buffer = None):
         """
@@ -1146,7 +1146,7 @@ class Commandline(object):
         finally:
             if malloc == True:
                 self.emcore.free(buffer)
-
+    
     @command
     def ls(self, path = "/"):
         """
