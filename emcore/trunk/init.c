@@ -70,7 +70,7 @@ struct bootoption
 {
     struct bootoption* success_next;
     struct bootoption* fail_next;
-    enum boottype type;
+    int type;
     char* source;
 };
 
