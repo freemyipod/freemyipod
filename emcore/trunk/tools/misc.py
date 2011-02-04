@@ -139,6 +139,9 @@ class c_enum(_SimpleCData):
     def __repr__(self):
         return self.__str__()
     
+    def __int__(self):
+        return self.value
+    
     def __eq__(self, other):
         if type(other) == str:
             try: return getattr(self, other) == self.value
