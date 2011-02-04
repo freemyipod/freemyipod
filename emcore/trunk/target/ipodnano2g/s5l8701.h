@@ -289,7 +289,7 @@
 
 
 /////LCD/////
-#define LCDCON    (*((uint32_t volatile*)(0x38600040)))
+#define LCDCON    (*((uint32_t volatile*)(0x38600000)))
 #define LCDWCMD   (*((uint32_t volatile*)(0x38600004)))
 #define LCDPHTIME (*((uint32_t volatile*)(0x38600010)))
 #define LCDSTATUS (*((uint32_t volatile*)(0x3860001c)))
