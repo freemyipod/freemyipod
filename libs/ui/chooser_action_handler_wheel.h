@@ -38,6 +38,9 @@ enum chooser_action_handler_wheel_action
     CHOOSER_ACTION_HANDLER_WHEEL_ACTION_CANCEL
 };
 
+#define CHOOSER_ACTION_HANDLER_WHEEL_TIMEOUT_ITEM_NULL -1
+#define CHOOSER_ACTION_HANDLER_WHEEL_TIMEOUT_ITEM_KEEP -2
+
 #define CHOOSER_ACTION_HANDLER_WHEEL_PARAMS_VERSION 1
 
 struct chooser_action_handler_wheel_params
@@ -45,8 +48,18 @@ struct chooser_action_handler_wheel_params
     int version;
     int stepsperitem;
     bool (*eventfilter)(struct chooser_data* data, enum button_event event, int which, int value);
+    long timeout_initial;
+    long timeout_idle;
+    int timeout_item;
+    bool tick_force_redraw;
     int buttoncount;
     enum chooser_action_handler_wheel_action buttonmap[];
+};
+
+struct chooser_action_handler_wheel_data
+{
+    long timeout_remaining;
+    long lasttick;
 };
 
 

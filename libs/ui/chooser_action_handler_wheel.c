@@ -32,6 +32,12 @@ static int chooser_action_handler_wheel_init(struct chooser_data* data)
     const struct chooser_action_handler_wheel_params* params;
     params = (const struct chooser_action_handler_wheel_params*)(data->info->actionhandlerparams);
     if (params->version != CHOOSER_ACTION_HANDLER_WHEEL_PARAMS_VERSION) return -1;
+    data->actionhandlerdata = malloc(sizeof(struct chooser_action_handler_wheel_data));
+    if (!data->actionhandlerdata) return -2;
+    struct chooser_action_handler_wheel_data* adata;
+    adata = (struct chooser_action_handler_wheel_data*)(data->actionhandlerdata);
+    adata->timeout_remaining = params->timeout_initial;
+    adata->lasttick = USEC_TIMER;
     return 0;
 }
 
@@ -41,8 +47,11 @@ static enum chooser_result chooser_action_handler_wheel_handleevent(struct choos
 {
     const struct chooser_action_handler_wheel_params* params;
     params = (const struct chooser_action_handler_wheel_params*)(data->info->actionhandlerparams);
+    struct chooser_action_handler_wheel_data* adata;
+    adata = (struct chooser_action_handler_wheel_data*)(data->actionhandlerdata);
     if (params->eventfilter && params->eventfilter(data, event, which, value))
         return CHOOSER_RESULT_OK;
+    adata->timeout_remaining = params->timeout_idle;
     int spi = params->stepsperitem;
     switch (event)
     {
@@ -79,11 +88,38 @@ static enum chooser_result chooser_action_handler_wheel_handleevent(struct choos
     return CHOOSER_RESULT_OK;
 }
 
+static enum chooser_result chooser_action_handler_wheel_handletick(struct chooser_data* data)
+{
+    const struct chooser_action_handler_wheel_params* params;
+    params = (const struct chooser_action_handler_wheel_params*)(data->info->actionhandlerparams);
+    struct chooser_action_handler_wheel_data* adata;
+    adata = (struct chooser_action_handler_wheel_data*)(data->actionhandlerdata);
+    if (adata->timeout_remaining == TIMEOUT_BLOCK) return CHOOSER_RESULT_OK;
+    long time = USEC_TIMER;
+    adata->timeout_remaining -= time - adata->lasttick;
+    adata->lasttick = time;
+    if (adata->timeout_remaining < 0)
+    {
+        if (params->timeout_item == CHOOSER_ACTION_HANDLER_WHEEL_TIMEOUT_ITEM_NULL)
+            return CHOOSER_RESULT_CANCEL;
+        else if (params->timeout_item != CHOOSER_ACTION_HANDLER_WHEEL_TIMEOUT_ITEM_KEEP)
+            data->selected = &data->info->items[params->timeout_item];
+        return CHOOSER_RESULT_FINISHED;
+    }
+    if (params->tick_force_redraw) return CHOOSER_RESULT_REDRAW;
+    return CHOOSER_RESULT_OK;
+}
+
 static int chooser_action_handler_wheel_stepsperitem(struct chooser_data* data)
 {
     const struct chooser_action_handler_wheel_params* params;
     params = (const struct chooser_action_handler_wheel_params*)(data->info->actionhandlerparams);
     return params->stepsperitem;
+}
+
+static void chooser_ction_handler_wheel_destroy(struct chooser_data* data)
+{
+    free(data->actionhandlerdata);
 }
 
 
@@ -92,7 +128,7 @@ const struct chooser_action_handler chooser_action_handler_wheel =
     .version = CHOOSER_ACTION_HANDLER_VERSION,
     .init = chooser_action_handler_wheel_init,
     .handleevent = chooser_action_handler_wheel_handleevent,
-    .handletick = NULL,
+    .handletick = chooser_action_handler_wheel_handletick,
     .stepsperitem = chooser_action_handler_wheel_stepsperitem,
-    .destroy = NULL
+    .destroy = chooser_ction_handler_wheel_destroy
 };
