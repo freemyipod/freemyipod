@@ -93,9 +93,7 @@ bool displaylcd_safe()
 void displaylcd_sync() ICODE_ATTR;
 void displaylcd_sync()
 {
-    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
     while (displaylcd_busy()) sleep(100);
-    mutex_unlock(&lcd_mutex);
 }
 
 void displaylcd_setup(unsigned int startx, unsigned int endx,
@@ -103,8 +101,8 @@ void displaylcd_setup(unsigned int startx, unsigned int endx,
 void displaylcd_setup(unsigned int startx, unsigned int endx,
                       unsigned int starty, unsigned int endy)
 {
-    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
     displaylcd_sync();
+    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
     if (lcd_detect() & 2)
     {
         lcd_send_cmd(0x210);
@@ -150,7 +148,7 @@ static void displaylcd_dma(void* data, int pixels, bool solid)
         lli->nextlli = last ? NULL : &lcd_lli[i + 1];
         lli->control = 0x70240000 | (last ? pixels : 0xfff)
                      | (last ? 0x80000000 : 0) | (solid ? 0 : 0x4000000);
-        data = (void*)(((uint32_t)data) + 0x1ffe);
+        if (!solid) data = (void*)(((uint32_t)data) + 0x1ffe);
     }
     clean_dcache();
     DMAC0C4CONFIG = 0x88c1;
@@ -301,6 +299,7 @@ void displaylcd(unsigned int x, unsigned int y, unsigned int width, unsigned int
 void filllcd(unsigned int x, unsigned int y, unsigned int width, unsigned int height, int color)
 {
     if (width * height <= 0) return;
+    displaylcd_sync();
     mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
     lcd_color = color;
     displaylcd_dither(x, y, width, height, &lcd_color, 0, 0, 0, true);
