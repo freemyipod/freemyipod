@@ -1,9 +1,8 @@
 NAME := helloworld
 STACKSIZE := 4096
-COMPRESS := false
+COMPRESS := true
 
 EMCOREDIR ?= ../../emcore/trunk/
-LIBPNGDIR ?= ../../libs/png/
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -18,7 +17,7 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 ELF2ECA := $(CROSS)elf2emcoreapp
 
-LIBINCLUDES := -I$(LIBPNGDIR)/export 
+LIBINCLUDES := 
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
@@ -105,18 +104,17 @@ else
 endif
 	@$(CC) -c $(CFLAGS) -o $@ $<
 
-build/version.h: version.h .svn/entries build
+build/version.h: version.h .svn/entries
 	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
+	@-if not exist build md build
 	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
 else
+	@-mkdir -p build
 	@sed -e 's/\$$REVISION\$$/$(REVISION)/' -e 's/\$$REVISIONINT\$$/$(REVISIONINT)/' < $< > $@
 endif
 
-build:
-	@mkdir $@
-
 clean:
-	rm -rf build
+	@rm -rf build
 
 .PHONY: all clean $(NAME)
