@@ -14,7 +14,6 @@ AS      := $(CROSS)as
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
-CRYPTNOR := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8702-cryptnor
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -mcpu=arm926ej-s
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
@@ -33,11 +32,7 @@ all: $(NAME)
 
 -include $(OBJ:%=%.dep)
 
-$(NAME): build/$(NAME).8702
-
-build/$(NAME).8702: build/$(NAME).bin
-	@echo [CNOR]   $<
-	@$(CRYPTNOR) $^ $@
+$(NAME): build/$(NAME).bin
 
 build/$(NAME).bin: build/$(NAME).elf
 	@echo [OC]     $<
