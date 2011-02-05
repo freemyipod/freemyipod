@@ -34,57 +34,76 @@ import libemcoredata
 
 def s5l8701cryptdfu(data):
     data = data.ljust((len(data) + 0x3f) & ~0x3f, "\0")
-    header = "87011.0\0\0\x08\0\0" + struct.pack("<I", len(data))
+    header = "87011.0\0\0\0x8\0\0" + struct.pack("<I", len(data))
     emcore = libemcore.Emcore()
-    emcore.write(0x08000000, header.ljust(0x800, "\0") + data)
-    emcore.hmac_sha1(0x08000800, len(data), 0x08000010)
-    emcore.hmac_sha1(0x08000000, 0x40, 0x08000040)
-    emcore.aesencrypt(0x08000000, len(data) + 0x800, 1)
-    return emcore.read(0x08000000, len(data) + 0x800)
+    addr = emcore.memalign(0x10, len(data) + 0x800)
+    emcore.write(addr, header.ljust(0x800, "\0") + data)
+    emcore.hmac_sha1(addr + 0x800, len(data), addr + 0x10)
+    emcore.hmac_sha1(addr, 0x40, addr + 0x40)
+    emcore.aesencrypt(addr, len(data) + 0x800, 1)
+    data = emcore.read(addr, len(data) + 0x800)
+    emcore.free(addr)
+    return data
 
 
 def s5l8701decryptdfu(data):
+    headersize = struct.unpack("<I", data[8:12])[0]
     emcore = libemcore.Emcore()
-    emcore.write(0x08000000, data)
-    emcore.aesdecrypt(0x08000000, len(data), 1)
-    return emcore.read(0x08000800, len(data) - 0x800)
+    addr = emcore.memalign(0x10, len(data))
+    emcore.write(addr, data)
+    emcore.aesdecrypt(addr, len(data), 1)
+    data = emcore.read(addr + headersize, len(data) - headersize)
+    emcore.free(addr)
+    return data
 
 
 def s5l8701cryptfirmware(data):
     data = data.ljust((len(data) + 0x3f) & ~0x3f, "\0")
     header = "\0\0\0\0\x02\0\0\0\x01\0\0\0\x40\0\0\0\0\0\0\0" + struct.pack("<I", len(data))
     emcore = libemcore.Emcore()
-    emcore.write(0x08000000, header.ljust(0x800, "\0") + data)
-    emcore.hmac_sha1(0x08000800, len(data), 0x0800001c)
-    emcore.hmac_sha1(0x08000000, 0x200, 0x080001d4)
-    emcore.aesencrypt(0x08000800, len(data), 1)
-    return emcore.read(0x08000000, len(data) + 0x800)
+    addr = emcore.memalign(0x10, len(data) + 0x800)
+    emcore.write(addr, header.ljust(0x800, "\0") + data)
+    emcore.hmac_sha1(addr + 0x800, len(data), addr + 0x1c)
+    emcore.hmac_sha1(addr, 0x200, addr + 0x1d4)
+    emcore.aesencrypt(addr + 0x800, len(data), 1)
+    data = emcore.read(addr, len(data) + 0x800)
+    emcore.free(addr)
+    return data
 
 
 def s5l8701decryptfirmware(data):
     emcore = libemcore.Emcore()
-    emcore.write(0x08000000, data)
-    emcore.aesdecrypt(0x08000800, len(data) - 0x800, 1)
-    return emcore.read(0x08000800, len(data) - 0x800)
+    addr = emcore.memalign(0x10, len(data))
+    emcore.write(addr, data)
+    emcore.aesdecrypt(addr + 0x800, len(data) - 0x800, 1)
+    data = emcore.read(addr + 0x800, len(data) - 0x800)
+    emcore.free(addr)
+    return data
 
 
 def s5l8702cryptnor(data):
     data = data.ljust((len(data) + 0xf) & ~0xf, "\0")
     header = "87021.0\x01\0\0\0\0" + struct.pack("<I", len(data)) + hashlib.sha1(data).digest()[:0x10]
     emcore = libemcore.Emcore()
-    emcore.write(0x08000000, header.ljust(0x800, "\0") + data)
-    emcore.aesencrypt(0x08000800, len(data), 2)
-    emcore.aesencrypt(0x08000010, 0x10, 2)
-    emcore.write(0x08000040, hashlib.sha1(emcore.read(0x08000000, 0x40)).digest()[:0x10])
-    emcore.aesencrypt(0x08000040, 0x10, 2)
-    return emcore.read(0x08000000, len(data) + 0x800)
+    addr = emcore.memalign(0x10, len(data))
+    emcore.write(addr, header.ljust(0x800, "\0") + data)
+    emcore.aesencrypt(addr + 0x800, len(data), 2)
+    emcore.aesencrypt(addr + 0x10, 0x10, 2)
+    emcore.write(addr + 0x40, hashlib.sha1(emcore.read(addr, 0x40)).digest()[:0x10])
+    emcore.aesencrypt(addr + 0x40, 0x10, 2)
+    data = emcore.read(addr, len(data) + 0x800)
+    emcore.free(addr)
+    return data
 
 
 def s5l8702decryptnor(data):
     emcore = libemcore.Emcore()
-    emcore.write(0x08000000, data[0x800:])
-    emcore.aesdecrypt(0x08000000, len(data) - 0x800, 1)
-    return emcore.read(0x08000000, len(data) - 0x800)
+    addr = emcore.memalign(0x10, len(data))
+    emcore.write(addr, data[0x800:])
+    emcore.aesdecrypt(addr, len(data) - 0x800, 1)
+    data = emcore.read(addr, len(data) - 0x800)
+    emcore.free(addr)
+    return data
 
 
 def s5l8702genpwnage(data):
@@ -92,9 +111,12 @@ def s5l8702genpwnage(data):
     data = data.ljust(max(0x840, (len(data) + 0xf) & ~0xf), "\0")
     header = ("87021.0\x03\0\0\0\0" + struct.pack("<IIII", len(data) - 0x830, len(data) - 0x4f6, len(data) - 0x7b0, 0x2ba)).ljust(0x40, "\0")
     emcore = libemcore.Emcore()
-    emcore.write(0x08000000, header + hashlib.sha1(header).digest()[:0x10])
-    emcore.aesencrypt(0x08000040, 0x10, 1)
-    return emcore.read(0x08000000, 0x50) + data + cert.ljust((len(cert) + 0xf) & ~0xf, "\0")
+    addr = emcore.memalign(0x10, len(data))
+    emcore.write(addr, header + hashlib.sha1(header).digest()[:0x10])
+    emcore.aesencrypt(addr + 0x40, 0x10, 1)
+    data = emcore.read(addr, 0x50) + data + cert.ljust((len(cert) + 0xf) & ~0xf, "\0")
+    emcore.free(addr)
+    return data
 
 
 def s5l8701cryptdfufile(infile, outfile):
