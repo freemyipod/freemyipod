@@ -28,21 +28,25 @@
 #include "libui.h"
 
 
-void blend(int width, int height, int opacity,
-           void* outbuf, int outx, int outy, int outstride,
-           void* in1buf, int in1x, int in1y, int in1stride,
-           void* in2buf, int in2x, int in2y, int in2stride);
+void fill(int width, int height, uint32_t color,
+          void* buf, int x, int y, int stride);
+void blit(int width, int height, int pixelbytes,
+          void* outbuf, int outx, int outy, int outstride,
+          void* inbuf, int inx, int iny, int instride);
 void blendcolor(int width, int height, uint32_t color,
                 void* outbuf, int outx, int outy, int outstride,
                 void* inbuf, int inx, int iny, int instride);
 void mattecolor(int width, int height, uint32_t color,
                 void* outbuf, int outx, int outy, int outstride,
                 void* inbuf, int inx, int iny, int instride);
-void blit(int width, int height, int pixelbytes,
-          void* outbuf, int outx, int outy, int outstride,
-          void* inbuf, int inx, int iny, int instride);
-void fill(int width, int height, uint32_t color,
-          void* buf, int x, int y, int stride);
+void blend(int width, int height, int opacity,
+           void* outbuf, int outx, int outy, int outstride,
+           void* in1buf, int in1x, int in1y, int in1stride,
+           void* in2buf, int in2x, int in2y, int in2stride);
+void blenda(int width, int height, int opacity,
+            void* outbuf, int outx, int outy, int outstride,
+            void* in1buf, int in1x, int in1y, int in1stride,
+            void* in2buf, int in2x, int in2y, int in2stride);
 
 
 #endif

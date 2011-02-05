@@ -80,7 +80,7 @@ struct chooser_info
     const struct chooser_renderer* renderer;
     const void* rendererparams;
     const void* userparams;
-    int tickinterval;
+    long tickinterval;
     int itemcount;
     int defaultitem;
     const struct chooser_item items[];

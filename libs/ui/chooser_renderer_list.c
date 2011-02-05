@@ -99,13 +99,13 @@ static enum chooser_result chooser_renderer_list_render(struct chooser_data* dat
                    params->copy_src.loc.buf.addr, params->copy_src.loc.pos.x,
                    params->copy_src.loc.pos.y, params->copy_src.loc.buf.stride);
         if (params->bg_opacity && params->bg_dest.buf.addr && params->bg_src.loc.buf.addr)
-            blend(params->bg_src.size.x, params->bg_src.size.y, params->bg_opacity,
-                  params->bg_dest.buf.addr, params->bg_dest.pos.x,
-                  params->bg_dest.pos.y, params->bg_dest.buf.stride,
-                  params->bg_dest.buf.addr, params->bg_dest.pos.x,
-                  params->bg_dest.pos.y, params->bg_dest.buf.stride,
-                  params->bg_src.loc.buf.addr, params->bg_src.loc.pos.x,
-                  params->bg_src.loc.pos.y, params->bg_src.loc.buf.stride);
+            blenda(params->bg_src.size.x, params->bg_src.size.y, params->bg_opacity,
+                   params->bg_dest.buf.addr, params->bg_dest.pos.x,
+                   params->bg_dest.pos.y, params->bg_dest.buf.stride,
+                   params->bg_dest.buf.addr, params->bg_dest.pos.x,
+                   params->bg_dest.pos.y, params->bg_dest.buf.stride,
+                   params->bg_src.loc.buf.addr, params->bg_src.loc.pos.x,
+                   params->bg_src.loc.pos.y, params->bg_src.loc.buf.stride);
     }
     else if (params->copy_dest.buf.stride == params->bg_dest.buf.stride
      && params->bg_src.loc.buf.addr && params->copy_dest.buf.addr == params->bg_dest.buf.addr
@@ -114,13 +114,13 @@ static enum chooser_result chooser_renderer_list_render(struct chooser_data* dat
      && params->copy_src.size.x == params->bg_src.size.x && params->copy_dest.buf.addr
      && params->copy_src.size.y == params->bg_src.size.y && params->bg_opacity)
     {
-        blend(params->copy_src.size.x, params->copy_src.size.y, params->bg_opacity,
-              params->copy_dest.buf.addr, params->copy_dest.pos.x,
-              params->copy_dest.pos.y, params->copy_dest.buf.stride,
-              params->copy_src.loc.buf.addr, params->copy_src.loc.pos.x,
-              params->copy_src.loc.pos.y, params->copy_src.loc.buf.stride,
-              params->bg_src.loc.buf.addr, params->bg_src.loc.pos.x,
-              params->bg_src.loc.pos.y, params->bg_src.loc.buf.stride);
+        blenda(params->copy_src.size.x, params->copy_src.size.y, params->bg_opacity,
+               params->copy_dest.buf.addr, params->copy_dest.pos.x,
+               params->copy_dest.pos.y, params->copy_dest.buf.stride,
+               params->copy_src.loc.buf.addr, params->copy_src.loc.pos.x,
+               params->copy_src.loc.pos.y, params->copy_src.loc.buf.stride,
+               params->bg_src.loc.buf.addr, params->bg_src.loc.pos.x,
+               params->bg_src.loc.pos.y, params->bg_src.loc.buf.stride);
     }
     else
     {
@@ -137,13 +137,13 @@ static enum chooser_result chooser_renderer_list_render(struct chooser_data* dat
                        params->fill_dest.loc.buf.addr, params->fill_dest.loc.pos.x,
                        params->fill_dest.loc.pos.y, params->fill_dest.loc.buf.stride);
         if (params->bg_opacity && params->bg_src.loc.buf.addr && params->bg_dest.buf.addr)
-            blend(params->bg_src.size.x, params->bg_src.size.y, params->bg_opacity,
-                  params->bg_dest.buf.addr, params->bg_dest.pos.x,
-                  params->bg_dest.pos.y, params->bg_dest.buf.stride,
-                  params->bg_dest.buf.addr, params->bg_dest.pos.x,
-                  params->bg_dest.pos.y, params->bg_dest.buf.stride,
-                  params->bg_src.loc.buf.addr, params->bg_src.loc.pos.x,
-                  params->bg_src.loc.pos.y, params->bg_src.loc.buf.stride);
+            blenda(params->bg_src.size.x, params->bg_src.size.y, params->bg_opacity,
+                   params->bg_dest.buf.addr, params->bg_dest.pos.x,
+                   params->bg_dest.pos.y, params->bg_dest.buf.stride,
+                   params->bg_dest.buf.addr, params->bg_dest.pos.x,
+                   params->bg_dest.pos.y, params->bg_dest.buf.stride,
+                   params->bg_src.loc.buf.addr, params->bg_src.loc.pos.x,
+                   params->bg_src.loc.pos.y, params->bg_src.loc.buf.stride);
     }
     void* buf = params->viewport.loc.buf.addr;
     int stride = params->viewport.loc.buf.stride;
@@ -176,9 +176,9 @@ static enum chooser_result chooser_renderer_list_render(struct chooser_data* dat
                        buf, x + iparams->fill_box.pos.x, y + iparams->fill_box.pos.y, stride,
                        buf, x + iparams->fill_box.pos.x, y + iparams->fill_box.pos.y, stride);
         if (icon->loc.buf.addr && icon_opacity)
-            blend(icon->size.x, icon->size.y, icon_opacity,
-                  buf, x + iparams->icon_pos.x, y + iparams->icon_pos.y, stride,
-                  buf, x + iparams->icon_pos.x, y + iparams->icon_pos.y, stride);
+            blenda(icon->size.x, icon->size.y, icon_opacity,
+                   buf, x + iparams->icon_pos.x, y + iparams->icon_pos.y, stride,
+                   buf, x + iparams->icon_pos.x, y + iparams->icon_pos.y, stride);
         if (iparams->text && iparams->text_color)
             rendertext(buf, x + iparams->text_pos.x, y + iparams->text_pos.y,
                        stride, text_color, 0, iparams->text);

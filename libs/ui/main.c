@@ -27,9 +27,12 @@
 
 struct libui_api apitable =
 {
-    .blend = blend,
+    .fill = fill,
+    .blit = blit,
     .blendcolor = blendcolor,
     .mattecolor = mattecolor,
+    .blend = blend,
+    .blenda = blenda,
     .chooser_run = chooser_run,
     .chooser_action_handler_wheel = &chooser_action_handler_wheel,
     .chooser_renderer_list = &chooser_renderer_list,

@@ -48,9 +48,12 @@
 
 struct libui_api
 {
-    typeof(blend)* blend;
+    typeof(fill)* fill;
+    typeof(blit)* blit;
     typeof(blendcolor)* blendcolor;
     typeof(mattecolor)* mattecolor;
+    typeof(blend)* blend;
+    typeof(blend)* blenda;
     typeof(chooser_run)* chooser_run;
     typeof(chooser_action_handler_wheel)* chooser_action_handler_wheel;
     typeof(chooser_renderer_list)* chooser_renderer_list;
