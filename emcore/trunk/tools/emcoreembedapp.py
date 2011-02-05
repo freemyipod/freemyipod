@@ -26,10 +26,6 @@ import libemcorebootcfg
 from optparse import *
 
 parser = OptionParser("usage: %prog [options] <emcorebin> <emcoreapp> <outfile>")
-parser.add_option("--run-from", type = "int", metavar = "ADDR",
-                  help = "Ensures that the app is executed from memory address ADDR")
-parser.add_option("--compressed", action = "store_true", default = False,
-                  help = "Specify this if the executable is compressed")
 (options, args) = parser.parse_args()
 if len(args) != 3: parser.error("incorrect number of arguments")
 
@@ -41,16 +37,8 @@ file = open(args[1], "rb")
 app = file.read()
 file.close()
 
-config = {"reset": True, "trymmap": True}
-config["mmapaddr"] = 0x08000000 + len(data)
-config["mmapsize"] = len(app)
-if options.compressed: config["mmapcomp"] = True
-if options.run_from:
-    config["mmapcopy"] = True
-    config["mmapdest"] = options.run_from
-
-data = libemcorebootcfg.configure(data, **config)
+data = libemcorebootcfg.configure(data, (1, app, None, None))
 
 file = open(args[2], "wb")
-file.write(data + app)
+file.write(data)
 file.close()
