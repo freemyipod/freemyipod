@@ -196,3 +196,4 @@ int storage_write_sectors_md(int drive, unsigned long start, int count, const vo
 void storage_get_info(int drive, struct storage_info *info);
 #endif
 #endif
+

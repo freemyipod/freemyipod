@@ -78,3 +78,4 @@ extern struct dirent* readdir(DIR* dir);
 extern int release_dirs(int volume);
 
 #endif
+
