@@ -626,7 +626,8 @@ class Commandline(object):
         """
         targetaddr = self._hexint(targetaddr)
         addr = self._hexint(addr)
-        self.logger.info("Running firmware at 0x%X. Bye.\n" % targetaddr)
+        size = self._hexint(size)
+        self.logger.info("Running firmware at "+self._hex(targetaddr)+". Bye.\n")
         self.emcore.execfirmware(targetaddr, addr, size)
     
     @command
