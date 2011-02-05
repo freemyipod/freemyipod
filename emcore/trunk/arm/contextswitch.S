@@ -148,6 +148,7 @@ leave_critical_section:
 .global execfirmware
 .type execfirmware, %function
 execfirmware:
+	ldr	sp, =_abortstackend
 	stmfd	sp!, {r0-r2}
 	bl	interrupt_shutdown
 	mov	r0, sp
