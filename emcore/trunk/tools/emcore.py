@@ -36,24 +36,7 @@ from functools import wraps
 
 import libemcore
 import libemcoredata
-from misc import Error, Logger, getfuncdoc, gethwname
-
-
-class NotImplementedError(Error):
-    pass
-
-class ArgumentError(Error):
-    pass
-
-class ArgumentTypeError(Error):
-    def __init__(self, expected, seen=False):
-        self.expected = expected
-        self.seen = seen
-    def __str__(self):
-        if self.seen:
-            return "Expected %s but got %s" % (self.expected, self.seen)
-        else:
-            return "Expected %s, but saw something else" % self.expected
+from misc import Error, ArgumentError, ArgumentTypeError, Logger, getfuncdoc, gethwname, to_bool, to_int
 
 
 def usage(errormsg=None, specific=False, docstring=True):
@@ -162,45 +145,7 @@ class Commandline(object):
                 self.logger.error("There is a problem with the USB connection.\n")
         else:
             usage("No such command!", docstring = False)
-    
-    @staticmethod
-    def _bool(something):
-        """
-            Converts quite everything into bool.
-        """
-        if type(something) == bool:
-            return something
-        if something is None:
-            return False
-        elif type(something) == int or type(something) == long:
-            return bool(something)
-        elif type(something == str):
-            truelist = ['true', '1', 't', 'y', 'yes']
-            falselist = ['false', '0', 'f', 'n', 'no']
-            if something.lower() in truelist:
-                return True
-            elif something.lower() in falselist:
-                return False
-        raise ArgumentTypeError("bool", "'%s'" % something)
-    
-    @staticmethod
-    def _hexint(something):
-        """
-            Converts quite everything to a hexadecimal represented integer.
-            This works for default arguments too, because it returns
-            None when it found that it got a NoneType object.
-        """
-        if type(something) == int or type(something) == long:
-            return something
-        elif type(something) == str:
-            try:
-                return int(something, 16)
-            except ValueError:
-                raise ArgumentTypeError("hexadecimal coded integer", "'%s'" % something)
-        elif something is None:
-            return None
-        else:
-            raise ArgumentTypeError("hexadecimal coded integer", "'%s'" % something)
+
     
     @command
     def help(self):
@@ -246,7 +191,7 @@ class Commandline(object):
             If [force] is 1, the reset will be forced, otherwise it will be gracefully,
             which may take some time.
         """
-        force = self._bool(force)
+        force = to_bool(force)
         if force: self.logger.info("Resetting forcefully...\n")
         else: self.logger.info("Resetting...\n")
         self.emcore.reset(force)
@@ -258,7 +203,7 @@ class Commandline(object):
             If [force] is 1, the poweroff will be forced, otherwise it will be gracefully,
             which may take some time.
         """
-        force = self._bool(force)
+        force = to_bool(force)
         if force: self.logger.info("Powering off forcefully...\n")
         else: self.logger.info("Powering off...\n")
         self.emcore.poweroff(force)
@@ -270,7 +215,7 @@ class Commandline(object):
             <filename>: The path to the file
             [addr]: The address to upload the file to. Allocates a chunk of memory if not given.
         """
-        addr = self._hexint(addr)
+        addr = to_int(addr)
         try:
             f = open(filename, 'rb')
         except IOError:
@@ -297,8 +242,8 @@ class Commandline(object):
             <size>: the number of bytes to be read
             <filename>: the path to the file
         """
-        addr = self._hexint(addr)
-        size = self._hexint(size)
+        addr = to_int(addr)
+        size = to_int(size)
         try:
             f = open(filename, 'wb')
         except IOError:
@@ -317,8 +262,8 @@ class Commandline(object):
             <addr>: the address to upload the integer to
             <integer>: the integer to upload
         """
-        addr = self._hexint(addr)
-        integer = self._hexint(integer)
+        addr = to_int(addr)
+        integer = to_int(integer)
         if integer > 0xFFFFFFFF:
             raise ArgumentError("Specified integer too long")
         data = struct.pack("I", integer)
@@ -331,7 +276,7 @@ class Commandline(object):
             Downloads a single integer from the device and prints it to the console window
             <addr>: the address to download the integer from
         """
-        addr = self._hexint(addr)
+        addr = to_int(addr)
         data = self.emcore.read(addr, 4)
         integer = struct.unpack("I", data)[0]
         self.logger.info("Read '0x%X' from address 0x%X\n" % (integer, addr))
@@ -345,10 +290,10 @@ class Commandline(object):
             <addr>: the start address on the I2C device
             <size>: the number of bytes to read
         """
-        bus = self._hexint(bus)
-        slave = self._hexint(slave)
-        addr = self._hexint(addr)
-        size = self._hexint(size)
+        bus = to_int(bus)
+        slave = to_int(slave)
+        addr = to_int(addr)
+        size = to_int(size)
         data = self.emcore.i2cread(bus, slave, addr, size)
         bytes = struct.unpack("%dB" % len(data), data)
         self.logger.info("Data read from I2C:\n")
@@ -362,15 +307,15 @@ class Commandline(object):
             <bus>: the bus index
             <slave>: the slave address
             <addr>: the start address on the I2C device
-            <db1> ... <dbN>: the data in single bytes, encoded in hex,
+            <db1> ... <dbN>: the data in single bytes,
                 seperated by whitespaces, eg. 37 5A 4F EB
         """
-        bus = self._hexint(bus)
-        slave = self._hexint(slave)
-        addr = self._hexint(addr)
+        bus = to_int(bus)
+        slave = to_int(slave)
+        addr = to_int(addr)
         data = ""
         for arg in args:
-            data += chr(self._hexint(arg))
+            data += chr(to_int(arg))
         self.logger.info("Writing data to I2C...\n")
         self.emcore.i2cwrite(bus, slave, addr, data)
         self.logger.info("done\n")
@@ -403,7 +348,7 @@ class Commandline(object):
             Reads data continuously from one or more of the device's consoles.
             <bitmask>: the bitmask of the consoles to read from.
         """
-        bitmask = self._hexint(bitmask)
+        bitmask = to_int(bitmask)
         while True:
             resp = self.emcore.cread()
             self.logger.write(resp.data)
@@ -415,7 +360,7 @@ class Commandline(object):
             Writes the string <db1> ... <dbN> to one or more of the device's consoles.
             <bitmask>: the bitmask of the consoles to write to
         """
-        bitmask = self._hexint(bitmask)
+        bitmask = to_int(bitmask)
         text = ""
         for word in args:
             text += word + " "
@@ -429,7 +374,7 @@ class Commandline(object):
             flushes one or more of the device consoles' buffers.
             <bitmask>: the bitmask of the consoles to be flushed
         """
-        bitmask = self._hexint(bitmask)
+        bitmask = to_int(bitmask)
         self.logger.info("Flushing consoles identified with the bitmask 0x%X\n" % bitmask)
         self.emcore.cflush(bitmask)
     
@@ -494,7 +439,7 @@ class Commandline(object):
         """
             Suspends the thread with the thread address <threadaddr>
         """
-        threadaddr = self._hexint(threadaddr)
+        threadaddr = to_int(threadaddr)
         self.logger.info("Suspending the thread with the threadaddr 0x%X\n" % threadaddr)
         self.emcore.suspendthread(threadaddr)
     
@@ -503,7 +448,7 @@ class Commandline(object):
         """
             Resumes the thread with the thread address <threadaddr>
         """
-        threadaddr = self._hexint(threadaddr)
+        threadaddr = to_int(threadaddr)
         self.logger.info("Resuming the thread with the threadaddr 0x%X\n" % threadaddr)
         self.emcore.resumethread(threadaddr)
     
@@ -512,7 +457,7 @@ class Commandline(object):
         """
             Kills the thread with the thread address <threadaddr>
         """
-        threadaddr = self._hexint(threadaddr)
+        threadaddr = to_int(threadaddr)
         self.logger.info("Killing the thread with the threadaddr 0x%X\n" % threadaddr)
         self.emcore.killthread(threadaddr)
     
@@ -528,11 +473,11 @@ class Commandline(object):
             <priority>: the priority of the thread, from 1 to 255
             <state>: the thread's initial state, valid are: 1 => ready, 0 => suspended
         """
-        nameptr = self._hexint(nameptr)
-        entrypoint = self._hexint(entrypoint)
-        stackptr = self._hexint(stackptr)
-        stacksize = self._hexint(stacksize)
-        priority = self._hexint(priority)
+        nameptr = to_int(nameptr)
+        entrypoint = to_int(entrypoint)
+        stackptr = to_int(stackptr)
+        stacksize = to_int(stacksize)
+        priority = to_int(priority)
         data = self.emcore.createthread(nameptr, entrypoint, stackptr, stacksize, threadtype, priority, state)
         name = self.emcore.readstring(nameptr)
         self.logger.info("Created a thread with the thread pointer 0x%X, the name \"%s\", the entrypoint at 0x%X," \
@@ -558,7 +503,7 @@ class Commandline(object):
         """
             Executes the emCORE application at <addr>.
         """
-        addr = self._hexint(addr)
+        addr = to_int(addr)
         self.logger.info("Starting emCORE app at 0x%X\n" % addr)
         self.emcore.execimage(addr)
     
@@ -578,9 +523,9 @@ class Commandline(object):
             <addr_bootflsh>: the address in bootflash to read from
             <addr_mem>: the address in memory to copy the data to
         """
-        addr_flash = self._hexint(addr_flash)
-        addr_mem = self._hexint(addr_mem)
-        size = self._hexint(size)
+        addr_flash = to_int(addr_flash)
+        addr_mem = to_int(addr_mem)
+        size = to_int(size)
         self.logger.info("Dumping boot flash from 0x%X - 0x%X to 0x%X - 0x%X\n" %
                         (addr_flash, addr_flash + size, addr_mem, addr_mem + size))
         self.emcore.bootflashread(addr_mem, addr_flash, size)
@@ -595,10 +540,10 @@ class Commandline(object):
             <addr_bootflsh>: the address in bootflash to write to
             [force]: Use this flag to suppress the 5 seconds delay
         """
-        addr_flash = self._hexint(addr_flash)
-        addr_mem = self._hexint(addr_mem)
-        size = self._hexint(size)
-        force = self._bool(force)
+        addr_flash = to_int(addr_flash)
+        addr_mem = to_int(addr_mem)
+        size = to_int(size)
+        force = to_bool(force)
         self.logger.warn("Writing boot flash from the memory in 0x%X - 0x%X to 0x%X - 0x%X\n" %
                         (addr_mem, addr_mem + size, addr_flash, addr_flash + size))
         if force == False:
@@ -615,7 +560,7 @@ class Commandline(object):
             Uploads the firmware in <filename>
             to an allocated buffer and executes it at <targetaddr>.
         """
-        targetaddr = self._hexint(targetaddr)
+        targetaddr = to_int(targetaddr)
         addr, size = self.uploadfile(filename)
         self.execfirmware(targetaddr, addr, size)
     
@@ -624,8 +569,8 @@ class Commandline(object):
         """
             Moves the firmware at <addr> with <size> to <targetaddr> and executes it
         """
-        targetaddr = self._hexint(targetaddr)
-        addr = self._hexint(addr)
+        targetaddr = to_int(targetaddr)
+        addr = to_int(addr)
         size = self._hexint(size)
         self.logger.info("Running firmware at "+self._hex(targetaddr)+". Bye.\n")
         self.emcore.execfirmware(targetaddr, addr, size)
@@ -638,9 +583,9 @@ class Commandline(object):
             <size>: the size of the buffer
             <keyindex>: the index of the key in the crypto unit
         """
-        addr = self._hexint(addr)
-        size = self._hexint(size)
-        keyindex = self._hexint(keyindex)
+        addr = to_int(addr)
+        size = to_int(size)
+        keyindex = to_int(keyindex)
         self.emcore.aesencrypt(addr, size, keyindex)
     
     @command
@@ -651,9 +596,9 @@ class Commandline(object):
             <size>: the size of the buffer
             <keyindex>: the index of the key in the crypto unit
         """
-        addr = self._hexint(addr)
-        size = self._hexint(size)
-        keyindex = self._hexint(keyindex)
+        addr = to_int(addr)
+        size = to_int(size)
+        keyindex = to_int(keyindex)
         self.emcore.aesdecrypt(addr, size, keyindex)
     
     @command
@@ -664,9 +609,9 @@ class Commandline(object):
             <size>: the size of the buffer
             <destination>: the location where the key will be stored
         """
-        addr = self._hexint(addr)
-        size = self._hexint(size)
-        destination = self._hexint(destination)
+        addr = to_int(addr)
+        size = to_int(size)
+        destination = to_int(destination)
         sha1size = 0x14
         self.logger.info("Generating hmac-sha1 hash from the buffer at 0x%X with the size 0x%X and saving it to 0x%X - 0x%X\n" %
                         (addr, size, destination, destination + sha1size))
@@ -700,11 +645,11 @@ class Commandline(object):
             [doecc]: use ecc error correction data
             [checkempty]: set statusflags if pages are empty
         """
-        addr = self._hexint(addr)
-        start = self._hexint(start)
-        count = self._hexint(count)
-        doecc = self._bool(doecc)
-        checkempty = self._bool(checkempty)
+        addr = to_int(addr)
+        start = to_int(start)
+        count = to_int(count)
+        doecc = to_bool(doecc)
+        checkempty = to_bool(checkempty)
         self.logger.info("Reading 0x%X NAND pages starting at 0x%X to memory at 0x%X..." %
                         (count, start, addr))
         self.emcore.ipodnano2g_nandread(addr, start, count, doecc, checkempty)
@@ -720,10 +665,10 @@ class Commandline(object):
             <count>: block count
             [doecc]: create ecc error correction data
         """
-        addr = self._hexint(addr)
-        start = self._hexint(start)
-        count = self._hexint(count)
-        doecc = self._bool(doecc)
+        addr = to_int(addr)
+        start = to_int(start)
+        count = to_int(count)
+        doecc = to_bool(doecc)
         self.logger.info("Writing 0x%X NAND pages starting at 0x%X from memory at 0x%X..." %
                         (count, start, addr))
         self.emcore.ipodnano2g_nandwrite(addr, start, count, doecc)
@@ -738,9 +683,9 @@ class Commandline(object):
             <start>: start block
             <count>: block count
         """
-        addr = self._hexint(addr)
-        start = self._hexint(start)
-        count = self._hexint(count)
+        addr = to_int(addr)
+        start = to_int(start)
+        count = to_int(count)
         self.logger.info("Erasing 0x%X NAND pages starting at 0x%X and logging to 0x%X..." %
                         (count, start, addr))
         self.emcore.ipodnano2g_nanderase(addr, start, count)
@@ -814,7 +759,7 @@ class Commandline(object):
             Uploads the bad block table <filename> to
             memory at <tempaddr> and writes it to the hard disk
         """
-        tempaddr = self._hexint(tempaddr)
+        tempaddr = to_int(tempaddr)
         try:
             f = open(filename, 'rb')
         except IOError:
@@ -830,7 +775,7 @@ class Commandline(object):
             Gathers some information about a storage volume used
             <volume>: volume id
         """
-        volume = self._hexint(volume)
+        volume = to_int(volume)
         data = self.emcore.storage_get_info(volume)
         self.logger.info("Sector size: %d\n" % data["sectorsize"])
         self.logger.info("Number of sectors: %d\n" % data["numsectors"])
@@ -843,10 +788,10 @@ class Commandline(object):
         """
             Reads <count> sectors starting at <sector> from storage <volume> to memory at <addr>.
         """
-        volume = self._hexint(volume)
-        sector = self._hexint(sector)
-        count = self._hexint(count)
-        addr = self._hexint(addr)
+        volume = to_int(volume)
+        sector = to_int(sector)
+        count = to_int(count)
+        addr = to_int(addr)
         self.logger.info("Reading volume %s sectors %X - %X to %08X..." % (volume, sector, sector + count - 1, addr))
         self.emcore.storage_read_sectors_md(volume, sector, count, addr)
         self.logger.info("done\n")
@@ -856,10 +801,10 @@ class Commandline(object):
         """
             Writes memory contents at <addr> to <count> sectors starting at <sector> on storage <volume>.
         """
-        volume = self._hexint(volume)
-        sector = self._hexint(sector)
-        count = self._hexint(count)
-        addr = self._hexint(addr)
+        volume = to_int(volume)
+        sector = to_int(sector)
+        count = to_int(count)
+        addr = to_int(addr)
         self.logger.info("Writing %08X to volume %s sectors %X - %X..." % (addr, volume, sector, sector + count - 1))
         self.emcore.storage_write_sectors_md(volume, sector, count, addr)
         self.logger.info("done\n")
@@ -870,10 +815,10 @@ class Commandline(object):
             Reads <count> sectors starting at <sector> from storage <volume> to file <file>,
             buffering them in memory at [buffer] in chunks of [buffsize] bytes (both optional).
         """
-        volume = self._hexint(volume)
-        sector = self._hexint(sector)
-        count = self._hexint(count)
-        buffsize = self._hexint(buffsize)
+        volume = to_int(volume)
+        sector = to_int(sector)
+        count = to_int(count)
+        buffsize = to_int(buffsize)
         try:
             f = open(file, 'wb')
         except IOError:
@@ -885,7 +830,7 @@ class Commandline(object):
                 buffer = self.emcore.malloc(buffsize)
                 malloc = True
             else:
-                buffer = self._hexint(buffer)
+                buffer = to_int(buffer)
                 malloc = False
             try:
                 self.logger.info("Reading volume %s sectors %X - %X to %s..." % (volume, sector, sector + count - 1, file))
@@ -908,10 +853,10 @@ class Commandline(object):
             Writes contents of <file> to <count> sectors starting at <sector> on storage <volume>,
             buffering them in memory at [buffer] in chunks of [buffsize] bytes (both optional).
         """
-        volume = self._hexint(volume)
-        sector = self._hexint(sector)
-        count = self._hexint(count)
-        buffsize = self._hexint(buffsize)
+        volume = to_int(volume)
+        sector = to_int(sector)
+        count = to_int(count)
+        buffsize = to_int(buffsize)
         try:
             f = open(file, 'rb')
         except IOError:
@@ -923,7 +868,7 @@ class Commandline(object):
                 buffer = self.emcore.malloc(buffsize)
                 malloc = True
             else:
-                buffer = self._hexint(buffer)
+                buffer = to_int(buffer)
                 malloc = False
             try:
                 self.logger.info("Writing %s to volume %s sectors %X - %X..." % (file, volume, sector, sector + count - 1))
@@ -1007,7 +952,7 @@ class Commandline(object):
             [buffsize]: buffer size (optional)
             [buffer]: buffer address (optional)
         """
-        buffsize = self._hexint(buffsize)
+        buffsize = to_int(buffsize)
         try:
             f = open(localname, 'wb')
         except IOError:
@@ -1021,7 +966,7 @@ class Commandline(object):
                     buffer = self.emcore.malloc(buffsize)
                     malloc = True
                 else:
-                    buffer = self._hexint(buffer)
+                    buffer = to_int(buffer)
                     malloc = False
                 try:
                     self.logger.info("Downloading file %s to %s..." % (remotename, localname))
@@ -1047,14 +992,14 @@ class Commandline(object):
             [buffsize]: buffer size (optional)
             [buffer]: buffer address (optional)
         """
-        buffsize = self._hexint(buffsize)
+        buffsize = to_int(buffsize)
         handle = self.emcore.dir_open(remotepath)
         try:
             if buffer is None:
                 buffer = self.emcore.malloc(buffsize)
                 malloc = True
             else:
-                buffer = self._hexint(buffer)
+                buffer = to_int(buffer)
                 malloc = False
             try:
                 try: os.mkdir(localpath)
@@ -1082,7 +1027,7 @@ class Commandline(object):
             [buffsize]: buffer size (optional)
             [buffer]: buffer address (optional)
         """
-        buffsize = self._hexint(buffsize)
+        buffsize = to_int(buffsize)
         try:
             f = open(localname, 'rb')
         except IOError:
@@ -1093,7 +1038,7 @@ class Commandline(object):
                 buffer = self.emcore.malloc(buffsize)
                 malloc = True
             else:
-                buffer = self._hexint(buffer)
+                buffer = to_int(buffer)
                 malloc = False
             try:
                 self.logger.info("Uploading file %s to %s..." % (localname, remotename))
@@ -1124,12 +1069,12 @@ class Commandline(object):
             [buffsize]: buffer size (optional)
             [buffer]: buffer address (optional)
         """
-        buffsize = self._hexint(buffsize)
+        buffsize = to_int(buffsize)
         if buffer is None:
             buffer = self.emcore.malloc(buffsize)
             malloc = True
         else:
-            buffer = self._hexint(buffer)
+            buffer = to_int(buffer)
             malloc = False
         try:
             try: self.mkdir(remotepath)
@@ -1185,7 +1130,7 @@ class Commandline(object):
     @command
     def malloc(self, size):
         """ Allocates <size> bytes and returns a pointer to the allocated memory """
-        size = self._hexint(size)
+        size = to_int(size)
         self.logger.info("Allocating %d bytes of memory\n" % size)
         addr = self.emcore.malloc(size)
         self.logger.info("Allocated %d bytes of memory at 0x%X\n" % (size, addr))
@@ -1193,8 +1138,8 @@ class Commandline(object):
     @command
     def memalign(self, align, size):
         """ Allocates <size> bytes aligned to <align> and returns a pointer to the allocated memory """
-        align = self._hexint(align)
-        size = self._hexint(size)
+        align = to_int(align)
+        size = to_int(size)
         self.logger.info("Allocating %d bytes of memory aligned to 0x%X\n" % (size, align))
         addr = self.emcore.memalign(align, size)
         self.logger.info("Allocated %d bytes of memory at 0x%X\n" % (size, addr))
@@ -1205,8 +1150,8 @@ class Commandline(object):
             expanding or reducing the amount of memory available in the block.
             Returns a pointer to the reallocated memory.
         """
-        ptr = self._hexint(ptr)
-        size = self._hexint(size)
+        ptr = to_int(ptr)
+        size = to_int(size)
         self.logger.info("Reallocating 0x%X to have the new size %d\n" % (ptr, size))
         addr = self.emcore.realloc(ptr, size)
         self.logger.info("Reallocated memory at 0x%X to 0x%X with the new size %d\n" % (ptr, addr, size))
@@ -1214,8 +1159,8 @@ class Commandline(object):
     @command
     def reownalloc(self, ptr, owner):
         """ Changes the owner of the memory allocation <ptr> to the thread struct at addr <owner> """
-        ptr = self._hexint(ptr)
-        owner = self._hexint(owner)
+        ptr = to_int(ptr)
+        owner = to_int(owner)
         self.logger.info("Changing owner of the memory region 0x%X to 0x%X\n" % (ptr, owner))
         self.emcore.reownalloc(ptr, owner)
         self.logger.info("Successfully changed owner of 0x%X to 0x%X\n" % (ptr, owner))
@@ -1223,7 +1168,7 @@ class Commandline(object):
     @command
     def free(self, ptr):
         """ Frees the memory space pointed to by 'ptr' """
-        ptr = self._hexint(ptr)
+        ptr = to_int(ptr)
         self.logger.info("Freeing the memory region at 0x%X\n" % ptr)
         self.emcore.free(ptr)
         self.logger.info("Successfully freed the memory region at 0x%X\n" % ptr)

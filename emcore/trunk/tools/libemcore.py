@@ -32,11 +32,8 @@ import ctypes
 import usb.core
 
 from libemcoredata import *
-from misc import Logger, Bunch, Error, gethwname
+from misc import Logger, Bunch, Error, ArgumentError, gethwname
 from functools import wraps
-
-class ArgumentError(Error):
-    pass
 
 class DeviceNotFoundError(Error):
     pass

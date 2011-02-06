@@ -26,6 +26,8 @@ import sys
 import time
 import libemcoreldr
 
+from misc import to_int
+
 
 def usage():
   print ""
@@ -50,7 +52,7 @@ def usage():
   print "    Loads the specified file to 0x08000000 (SDRAM) and executes it."
   print "    This is what you usually want to do."
   print ""
-  print "All numbers are hexadecimal!"
+  print "All numbers can be provided as either hex (0x prefix), binary (0b prefix) or decimal (no prefix)"
   exit(2)
 
 
@@ -63,11 +65,11 @@ def parsecommand(dev, argv):
 
   elif argv[1] == "download":
     if len(argv) != 5: usage()
-    dev.download(int(argv[2], 16), int(argv[3], 16), argv[4])
+    dev.download(to_int(argv[2]), to_int(argv[3]), argv[4])
 
   elif argv[1] == "execute":
     if len(argv) != 4: usage()
-    dev.execute(int(argv[2], 16), int(argv[3], 16))
+    dev.execute(to_int(argv[2]), to_int(argv[3]))
 
   elif argv[1] == "run":
     if len(argv) != 3: usage()

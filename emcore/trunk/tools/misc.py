@@ -29,7 +29,28 @@
 import sys
 from ctypes import *
 from _ctypes import _SimpleCData
-import libemcoredata
+
+
+class Error(Exception):
+    def __init__(self, value=None):
+        self.value = value
+    def __str__(self):
+        if self.value != None:
+            return repr(self.value)
+
+class ArgumentError(Error):
+    pass
+
+class ArgumentTypeError(Error):
+    def __init__(self, expected, seen=False):
+        self.expected = expected
+        self.seen = seen
+    def __str__(self):
+        if self.seen:
+            return "Expected %s but got %s" % (self.expected, self.seen)
+        else:
+            return "Expected %s, but saw something else" % self.expected
+
 
 class Logger(object):
     """
@@ -203,20 +224,12 @@ class ExtendedCStruct(LittleEndianStructure):
         return string_at(addressof(self), sizeof(self))
 
 
-
-class Error(Exception):
-    def __init__(self, value=None):
-        self.value = value
-    def __str__(self):
-        if self.value != None:
-            return repr(self.value)
-
-
 def gethwname(id):
     try:
-        hwtype = libemcoredata.hwtypes[id]
+        from libemcoredata import hwtypes
+        hwtype = hwtypes[id]
     except KeyError:
-        hwtype = "UNKNOWN (ID = " + self._hex(id) + ")"
+        hwtype = "UNKNOWN (ID = 0x%X)" % id
     return hwtype
 
 
@@ -316,3 +329,44 @@ def gendoc(funcdict, indentwidth = 4, logtarget = "string"):
             ret += logger.log("\"\"\"\n", indent = indentwidth, target = logtarget)
         ret += logger.log("\n", target = logtarget)
     return ret
+
+
+def to_bool(something):
+    """
+        Converts quite everything into bool.
+    """
+    if type(something) == bool:
+        return something
+    if something is None:
+        return False
+    elif type(something) == int or type(something) == long:
+        return bool(something)
+    elif type(something == str):
+        if something.lower() in ['true', '1', 't', 'y', 'yes']:
+            return True
+        elif something.lower() in ['false', '0', 'f', 'n', 'no']:
+            return False
+    raise ArgumentTypeError("bool", "'%s'" % something)
+
+def to_int(something):
+    """
+        Converts quite everything to a hexadecimal represented integer.
+        This works for default arguments too, because it returns
+        None when it found that it got a NoneType object.
+    """
+    if type(something) == int or type(something) == long:
+        return something
+    elif something is None:
+        return None
+    elif type(something) == str:
+        try:
+            if something[:2] == "0x": # Hexadecimal notation
+                return int(something[2:], 16)
+            elif something[:2] == "0b": # Binary notation
+                return int(something[2:], 2)
+            else: # Decimal notation
+                return int(something, 10)
+        except ValueError:
+            raise ArgumentTypeError("integer", "'%s'" % something)
+    else:
+        raise ArgumentTypeError("integer", "'%s'" % something)
