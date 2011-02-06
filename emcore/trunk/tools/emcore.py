@@ -266,7 +266,7 @@ class Commandline(object):
         integer = to_int(integer)
         if integer > 0xFFFFFFFF:
             raise ArgumentError("Specified integer too long")
-        data = struct.pack("I", integer)
+        data = struct.pack("<I", integer)
         self.emcore.write(addr, data)
         self.logger.info("Integer '0x%X' written successfully to 0x%X\n" % (integer, addr))
     
@@ -278,7 +278,7 @@ class Commandline(object):
         """
         addr = to_int(addr)
         data = self.emcore.read(addr, 4)
-        integer = struct.unpack("I", data)[0]
+        integer = struct.unpack("<I", data)[0]
         self.logger.info("Read '0x%X' from address 0x%X\n" % (integer, addr))
     
     @command
@@ -295,7 +295,7 @@ class Commandline(object):
         addr = to_int(addr)
         size = to_int(size)
         data = self.emcore.i2cread(bus, slave, addr, size)
-        bytes = struct.unpack("%dB" % len(data), data)
+        bytes = struct.unpack("<%dB" % len(data), data)
         self.logger.info("Data read from I2C:\n")
         for index, byte in enumerate(bytes):
             self.logger.info("%02X: %02X\n" % (addr + index, byte))
