@@ -451,11 +451,10 @@ void thread_set_priority(struct scheduler_thread* thread, int priority)
     leave_critical_section(mode);
 }
 
-int thread_terminate(struct scheduler_thread* thread)
+int thread_terminate_internal(struct scheduler_thread* thread, uint32_t mode)
 {
     struct scheduler_thread* t;
     bool needsswitch = false;
-    uint32_t mode = enter_critical_section();
 
     if (!thread) thread = current_thread;
     if (thread->state == THREAD_RUNNING) needsswitch = true;
@@ -486,18 +485,32 @@ int thread_terminate(struct scheduler_thread* thread)
     return THREAD_OK;
 }
 
+int thread_terminate(struct scheduler_thread* thread)
+{
+    uint32_t mode = enter_critical_section();
+    return thread_terminate_internal(thread, mode);
+}
+
 int thread_killlevel(enum thread_type type, bool killself)
 {
     struct scheduler_thread* t;
     int count = 0;
-    uint32_t mode = enter_critical_section();
-    for (t = head_thread; t; t = t->thread_next);
-        if (t->type <= type && (killself || current_thread != t))
-        {
-            thread_terminate(t);
-            count++;
-        }
-    leave_critical_section(mode);
+    while (true)
+    {
+        bool found = false;
+        uint32_t mode = enter_critical_section();
+        for (t = head_thread; t; t = t->thread_next)
+            if (t->type <= type && (killself || current_thread != t))
+            {
+                thread_terminate_internal(t, mode);
+                found = true;
+                count++;
+                break;
+            }
+        if (found) continue;
+        leave_critical_section(mode);
+        break;
+    }
     return count;
 }
 
