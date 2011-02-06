@@ -95,8 +95,9 @@ void clickwheel_thread()
                 if (distance < -48) distance += 96;
                 else if (distance > 48) distance -= 96;
                 DEBUGF("Wheel moved %d units without accel", distance);
-                DEBUGF("Wheel moved %d units with accel", distance * packets);
                 button_send_event(WHEEL_MOVED, 0, distance);
+                DEBUGF("Wheel moved %d units with accel", distance * packets);
+                button_send_event(WHEEL_MOVED_ACCEL, 0, distance * packets);
                 collect += distance * packets;
                 enum button_event e = collect > 0 ? WHEEL_FORWARD : WHEEL_BACKWARD;
                 int data = (collect > 0 ? collect : -collect) / 128;
