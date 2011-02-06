@@ -298,7 +298,7 @@ class Commandline(object):
         bytes = struct.unpack("%dB" % len(data), data)
         self.logger.info("Data read from I2C:\n")
         for index, byte in enumerate(bytes):
-            self.logger.info("%02X: %02X\n" % (index, byte))
+            self.logger.info("%02X: %02X\n" % (addr + index, byte))
     
     @command
     def i2cwrite(self, bus, slave, addr, *args):
