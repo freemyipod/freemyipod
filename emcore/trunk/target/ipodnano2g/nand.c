@@ -797,7 +797,7 @@ int nand_device_init(void)
 
     nand_last_activity_value = USEC_TIMER;
     thread_create(&nand_thread_handle, "NAND idle monitor", nand_thread, nand_stack,
-                  sizeof(nand_stack), USER_THREAD, 1, true);
+                  sizeof(nand_stack), OS_THREAD, 1, true);
 
     return 0;
 }

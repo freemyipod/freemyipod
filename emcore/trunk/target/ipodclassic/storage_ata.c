@@ -561,7 +561,7 @@ int ata_init(void)
     mutex_unlock(&ata_mutex);
 #endif
     thread_create(&ata_thread_handle, "ATA idle monitor", ata_thread, ata_stack,
-                  sizeof(ata_stack), USER_THREAD, 1, true);
+                  sizeof(ata_stack), OS_THREAD, 1, true);
     return 0;
 }
 
