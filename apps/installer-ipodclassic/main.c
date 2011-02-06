@@ -132,7 +132,7 @@ void mkfat32(struct progressbar_state* progressbar)
     }
     uint32_t database = fatsectors + reserved;
     uint32_t clusoffset = 0;
-    uint32_t* buf = memalign(0x20000, 0x10);
+    uint32_t* buf = memalign(0x10, 0x20000);
     memset(buf, 0, 0x800);
     memcpy(buf, "\xeb\x58\x00MSWIN5.0\0\x10", 0xd);
     ((uint8_t*)buf)[0xd] = secperclus;
@@ -220,8 +220,8 @@ void main(void)
     bool updating = disk_mount(0);
     cputc(3, '.');
 
-    norbuf = memalign(0x100000, 0x10);
-    oldnor = memalign(0x100000, 0x10);
+    norbuf = memalign(0x10, 0x100000);
+    oldnor = memalign(0x10, 0x100000);
     memset(norbuf, 0xff, 0x100000);
     cputc(3, '.');
     bootflash_readraw(oldnor, 0, 0x100000);
@@ -442,6 +442,9 @@ void main(void)
         cost += script[sp++];
         progressbar_setpos(&progressbar, cost, false);
     }
+
+    if (oldnor) free(oldnor);
+
     ui->blenda(165, 36, 255, framebuf, 0, 0, 165, bg, 77, 100, 320, actions, 0, 72, 165);
     displaylcd(77, 100, 165, 36, framebuf, 0, 0, 165);
     progressbar_init(&progressbar, 15, 304, 135, 159, 0x77ff, 0xe8, 0x125f, 0, 256);
@@ -450,6 +453,16 @@ void main(void)
         bootflash_writeraw(&norbuf[i << 12], i << 12, 1 << 12);
         progressbar_setpos(&progressbar, i, false);
     }
+
+    free(norbuf);
+    free(framebuf);
+    free(actions);
+    free(bg);
+
+    release_library(libui);
+    release_library(libpng);
+    library_unload(libui);
+    library_unload(libpng);
 
     shutdown(false);
     reset();

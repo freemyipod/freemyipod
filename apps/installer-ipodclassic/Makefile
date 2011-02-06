@@ -210,12 +210,7 @@ $(EMCOREDIR)/build/ipodclassic/emcore.bin: emcore
 
 flashfiles/emcore-ipodclassic.bin: $(EMCOREDIR)/build/ipodclassic/emcore.bin emcore
 	@echo [EMBCFG] $@
-	@$(EMCOREBOOTCFG) $< $@ "(3, '/.emcore/boot.emcoreapp', None, (2, 'bootmenu', None, None))"
-
-$(EMBIOSDIR)/build/ipodclassic/embios.bin: embios
-
-embios:
-	@make -C $(EMBIOSDIR) ipodclassic
+	@$(EMCOREBOOTCFG) $< $@ "(3, '/.boot/init.emcoreapp', None, (2, 'bootmenu', None, None))"
 
 emcore:
 	@make -C $(EMCOREDIR) ipodclassic
