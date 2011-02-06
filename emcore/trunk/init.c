@@ -272,6 +272,6 @@ void init()
     reownalloc(bootalloc, &(ib->initthread));
     ib->bootalloc = bootalloc;
     thread_create(&(ib->initthread), initthreadname, initthread, ib->initstack,
-                  sizeof(ib->initstack), USER_THREAD, 127, true);
+                  sizeof(ib->initstack), OS_THREAD, 127, true);
     interrupt_init();
 }

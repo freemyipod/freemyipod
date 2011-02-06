@@ -233,6 +233,7 @@ void scheduler_init(void)
     memset(&idle_thread, 0, sizeof(idle_thread));
     idle_thread.state = THREAD_RUNNING;
     idle_thread.startusec = last_tick;
+    idle_thread.type = CORE_THREAD;
     idle_thread.name = "idle thread";
     idle_thread.stack = (uint32_t*)-1;
     setup_tick();
@@ -502,11 +503,13 @@ int thread_killlevel(enum thread_type type, bool killself)
         for (t = head_thread; t; t = t->thread_next)
             if (t->type <= type && (killself || current_thread != t))
             {
+                panicf(PANIC_FATAL, "Killing thread %08X: %s (%d)", t, t->name, t->type);
                 thread_terminate_internal(t, mode);
                 found = true;
                 count++;
                 break;
             }
+        panicf(PANIC_FATAL, "Reached end of list");
         if (found) continue;
         leave_critical_section(mode);
         break;
