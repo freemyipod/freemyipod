@@ -393,9 +393,9 @@ void main(void)
         cost = firstinstcost + commoncost;
         script = firstinstscript;
     }
+    progressbar_init(&progressbar, 15, 304, 135, 159, 0x77ff, 0xe8, 0x125f, 0, cost);
     sp = 0;
     cost = 0;
-    progressbar_init(&progressbar, 15, 304, 135, 159, 0x77ff, 0xe8, 0x125f, 0, cost);
     while (script[sp])
     {
         int fd;
