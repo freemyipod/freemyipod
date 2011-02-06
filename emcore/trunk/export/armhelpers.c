@@ -31,21 +31,21 @@
 int __clzsi2(int arg) __attribute__((naked,noinline));
 int __clzsi2(int arg)
 {
-    __asm__ volatile("ldr\tr12, =__emcore_syscall\n\tldr\tr12, [r12]\n\tldr\tpc, [r12,#8]\n\t");
+    __asm__ volatile("ldr\tr12, =__emcore_syscall\n\tldr\tr12, [r12]\n\tldr\tpc, [r12,#8]\n\t.ltorg\n\t");
 }
 
 // This one has a non-standard calling convention, so we just declare it as void
 void __aeabi_idivmod(void) __attribute__((naked,noinline));
 void __aeabi_idivmod(void)
 {
-    __asm__ volatile("ldr\tr12, =__emcore_syscall\n\tldr\tr12, [r12]\n\tldr\tpc, [r12,#0xc]\n\t");
+    __asm__ volatile("ldr\tr12, =__emcore_syscall\n\tldr\tr12, [r12]\n\tldr\tpc, [r12,#0xc]\n\t.ltorg\n\t");
 }
 
 // This one has a non-standard calling convention, so we just declare it as void
 void __aeabi_uidivmod(void) __attribute__((naked,noinline));
 void __aeabi_uidivmod(void)
 {
-    __asm__ volatile("ldr\tr12, =__emcore_syscall\n\tldr\tr12, [r12]\n\tldr\tpc, [r12,#0x10]\n\t");
+    __asm__ volatile("ldr\tr12, =__emcore_syscall\n\tldr\tr12, [r12]\n\tldr\tpc, [r12,#0x10]\n\t.ltorg\n\t");
 }
 
 extern __attribute__((alias("__aeabi_idivmod"))) void __aeabi_idiv(void);

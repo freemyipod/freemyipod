@@ -8,6 +8,7 @@
                      "ldr\tr2, [r0]\n\tcmp\tr3, r2\n\tldrls\tr1, [r0,#4]\n\tcmpls\tr1, r3\n\t"    \
                      "movhi\tr0, #0\n\tldrhi\tr1, =__emcore_incompatible_api_str\n\t"             \
                      "swihi\t1\n\tldr\tr1, =__emcore_syscall\n\tstr\tr0, [r1]\n\t"                \
+                     "b\t__emcore_entrypoint_c\n\t.ltorg\n__emcore_entrypoint_c:\n\t"             \
                  ::: "r0", "r1", "r2", "r3", "r12", "lr", "cc", "memory");                        \
         thread_set_name(NULL, threadnamestr);                                                     \
         thread_set_priority(NULL, threadprio);                                                    \

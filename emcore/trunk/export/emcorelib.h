@@ -7,6 +7,7 @@
     int __emcore_lib_init()                                                                       \
     {                                                                                             \
         asm volatile("swi\t2\n\tldr\tr1, =__emcore_syscall\n\tstr\tr0, [r1]\n\t"                  \
+                     "b\t__emcore_lib_init_c\n\t.ltorg\n__emcore_lib_init_c:\n\t"                 \
                  ::: "r0", "r1", "r2", "r3", "r12", "lr", "cc", "memory");                        \
         if (__emcore_syscall->table_version < EMCORE_API_VERSION                                  \
          || __emcore_syscall->table_minversion > EMCORE_API_VERSION)                              \
