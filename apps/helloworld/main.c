@@ -3,7 +3,7 @@
 
 static void main()
 {
-    cputc(3, "Hello, world!\n");
+    cputs(3, "Hello, world!\n");
 }
 
 
