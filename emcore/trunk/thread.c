@@ -503,13 +503,11 @@ int thread_killlevel(enum thread_type type, bool killself)
         for (t = head_thread; t; t = t->thread_next)
             if (t->type <= type && (killself || current_thread != t))
             {
-                panicf(PANIC_FATAL, "Killing thread %08X: %s (%d)", t, t->name, t->type);
                 thread_terminate_internal(t, mode);
                 found = true;
                 count++;
                 break;
             }
-        panicf(PANIC_FATAL, "Reached end of list");
         if (found) continue;
         leave_critical_section(mode);
         break;
