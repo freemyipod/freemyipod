@@ -227,10 +227,17 @@ class ExtendedCStruct(LittleEndianStructure):
 def gethwname(id):
     try:
         from libemcoredata import hwtypes
-        hwtype = hwtypes[id]
+        hwtype = hwtypes[id][1]
     except KeyError:
         hwtype = "UNKNOWN (ID = 0x%X)" % id
     return hwtype
+
+def gethwid(shortname):
+    from libemcoredata import hwtypes
+    for hwid in hwtypes:
+        if hwtypes[hwid][0] == shortname:
+            return hwid
+    return False
 
 
 def trimdoc(docstring):
