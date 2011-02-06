@@ -109,7 +109,7 @@ int library_unload(struct emcorelib_header* lib)
     if (library_list_head == h) library_list_head = h->next;
     else
         for (h = library_list_head; h; h = h->next)
-            if (h->lib == lib)
+            if (h->next->lib == lib)
             {
                 prev = h->next;
                 h->next = h->next->next;
