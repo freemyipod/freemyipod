@@ -57,7 +57,7 @@ void* realloc(void* ptr, size_t size)
 {
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
     size_t oldsize = tlsf_block_size(ptr);
-    struct scheduler_thread* owner = *((struct scheduler_thread**)(ptr + size - 4));
+    struct scheduler_thread* owner = *((struct scheduler_thread**)(ptr + oldsize - 4));
     ptr = tlsf_realloc(global_mallocpool, ptr, size + 4);
     if (ptr)
     {
