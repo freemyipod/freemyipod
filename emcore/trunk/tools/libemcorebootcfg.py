@@ -29,11 +29,11 @@ def encode(addr, option):
     data1 = encode(addr, option[2])
     if len(data1) == 0: addr1 = 0
     else: addr1 = addr
-    addr = addr + addr1
+    addr = addr + len(data1)
     data2 = encode(addr, option[3])
     if len(data2) == 0: addr2 = 0
     else: addr2 = addr
-    addr = addr + addr2
+    addr = addr + len(data2)
     if type(option[1]).__name__ == "str":
         data = option[1] + '\0'
         data = data.ljust((len(data) + 3) & ~3, '\0')
