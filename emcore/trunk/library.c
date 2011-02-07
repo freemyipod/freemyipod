@@ -83,6 +83,7 @@ int library_unload(struct emcorelib_header* lib)
             found = true;
             break;
         }
+        else prev = h;
     if (!found)
     {
         mutex_unlock(&library_mutex);
@@ -107,23 +108,16 @@ int library_unload(struct emcorelib_header* lib)
         return -3;
     }
     if (library_list_head == h) library_list_head = h->next;
-    else
-        for (h = library_list_head; h; h = h->next)
-            if (h->next->lib == lib)
-            {
-                prev = h->next;
-                h->next = h->next->next;
-                break;
-            }
-    library_release_all_of_thread((struct scheduler_thread*)prev);
+    else prev->next = h->next;
+    library_release_all_of_thread((struct scheduler_thread*)h);
 #ifdef HAVE_STORAGE
-    close_all_of_process((struct scheduler_thread*)prev);
-    closedir_all_of_process((struct scheduler_thread*)prev);
+    close_all_of_process((struct scheduler_thread*)h);
+    closedir_all_of_process((struct scheduler_thread*)h);
 #endif
 #ifdef HAVE_BUTTON
-    button_unregister_all_of_thread((struct scheduler_thread*)prev);
+    button_unregister_all_of_thread((struct scheduler_thread*)h);
 #endif
-    free_all_of_thread((struct scheduler_thread*)prev);
+    free_all_of_thread((struct scheduler_thread*)h);
     mutex_unlock(&library_mutex);
     return 0;
 }
