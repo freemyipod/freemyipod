@@ -59,8 +59,11 @@ void* realloc(void* ptr, size_t size)
     size_t oldsize = tlsf_block_size(ptr);
     struct scheduler_thread* owner = *((struct scheduler_thread**)(ptr + size - 4));
     ptr = tlsf_realloc(global_mallocpool, ptr, size + 4);
-    size = tlsf_block_size(ptr);
-    *((struct scheduler_thread**)(ptr + size - 4)) = owner;
+    if (ptr)
+    {
+        size = tlsf_block_size(ptr);
+        *((struct scheduler_thread**)(ptr + size - 4)) = owner;
+    }
     mutex_unlock(&malloc_mutex);
     return ptr;
 }
