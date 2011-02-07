@@ -263,6 +263,7 @@ static void main()
     mychooser_rparams_5.icon_selected.loc.buf.addr = icons;
     mychooser_rparams_6.icon.loc.buf.addr = icons;
     mychooser_rparams_6.icon_selected.loc.buf.addr = icons;
+    backlight_set_brightness(177);
     void* firmware = NULL;
     while (!firmware)
     {

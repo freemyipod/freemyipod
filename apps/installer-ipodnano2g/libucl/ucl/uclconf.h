@@ -35,7 +35,7 @@
 #ifndef __UCLCONF_H
 #define __UCLCONF_H
 
-#include "embiosapp.h"
+#include "emcoreapp.h"
 
 #define UCL_VERSION             0x010100L
 #define UCL_VERSION_STRING      "1.01"

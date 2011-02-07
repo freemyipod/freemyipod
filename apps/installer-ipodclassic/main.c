@@ -148,7 +148,7 @@ void mkfat32(struct progressbar_state* progressbar)
     memcpy(&((uint8_t*)buf)[0x52], "FAT32   ", 8);
     ((uint16_t*)buf)[0xff] = 0xaa55;
     if (rc = storage_write_sectors_md(0, 0, 1, buf))
-        panicf(PANIC_KILLTHREAD, "\nError writing MBR: %08X", rc);
+        panicf(PANIC_KILLTHREAD, "Error writing MBR: %08X", rc);
     memset(buf, 0, 0x800);
     buf[0] = 0x41615252;
     buf[0x79] = 0x61417272;
@@ -156,7 +156,7 @@ void mkfat32(struct progressbar_state* progressbar)
     buf[0x7b] = 2;
     buf[0x7f] = 0xaa550000;
     if (rc = storage_write_sectors_md(0, 1, 1, buf))
-        panicf(PANIC_KILLTHREAD, "\nError writing FSINFO: %08X", rc);
+        panicf(PANIC_KILLTHREAD, "Error writing FSINFO: %08X", rc);
     progressbar_init(progressbar, 15, 304, 135, 159, 0x77ff, 0xe8, 0x125f, 0, fatsectors);
     uint32_t cursect = 0;
     for (i = 0; i < fatsectors; i += 32)
@@ -164,14 +164,14 @@ void mkfat32(struct progressbar_state* progressbar)
         memset(buf, 0, 0x20000);
         if (!i) memcpy(buf, "\xf8\xff\xff\x0f\xff\xff\xff\xff\xff\xff\xff\x0f", 12);
         if (rc = storage_write_sectors_md(0, reserved + i, MIN(fatsectors - i, 32), buf))
-            panicf(PANIC_KILLTHREAD, "\nError writing FAT sectors %d-%d: %08X",
+            panicf(PANIC_KILLTHREAD, "Error writing FAT sectors %d-%d: %08X",
                    i, MIN(fatsectors - 1, i + 31), rc);
         progressbar_setpos(progressbar, i, false);
     }
     memset(buf, 0, secperclus * 0x1000);
     memcpy(buf, "iPodClassic\x08", 12);
     if (rc = storage_write_sectors_md(0, database, secperclus, buf))
-        panicf(PANIC_KILLTHREAD, "\nError writing root directory sectors: %08X", i, rc);
+        panicf(PANIC_KILLTHREAD, "Error writing root directory sectors: %08X", i, rc);
     free(buf);
     disk_mount(0);
 }
@@ -190,30 +190,30 @@ void main(void)
 
     cputc(3, '.');
     struct emcorelib_header* libpng = get_library(0x64474e50, LIBPNG_API_VERSION, LIBSOURCE_RAM_NEEDCOPY, f_png_emcorelib);
-    if (!libpng) panicf(PANIC_KILLTHREAD, "\nCould not load PNG decoder library!");
+    if (!libpng) panicf(PANIC_KILLTHREAD, "Could not load PNG decoder library!");
     struct libpng_api* png = (struct libpng_api*)libpng->api;
     cputc(3, '.');
     struct emcorelib_header* libui = get_library(0x49554365, LIBUI_API_VERSION, LIBSOURCE_RAM_NEEDCOPY, f_ui_emcorelib);
-    if (!libui) panicf(PANIC_KILLTHREAD, "\nCould not load user interface library!");
+    if (!libui) panicf(PANIC_KILLTHREAD, "Could not load user interface library!");
     struct libui_api* ui = (struct libui_api*)libui->api;
     cputc(3, '.');
 
     struct png_info* handle = png->png_open(background_png, background_png_size);
-    if (!handle) panicf(PANIC_KILLTHREAD, "\nCould not parse background image!");
+    if (!handle) panicf(PANIC_KILLTHREAD, "Could not parse background image!");
     cputc(3, '.');
     struct png_rgb* bg = png->png_decode_rgb(handle);
-    if (!bg) panicf(PANIC_KILLTHREAD, "\nCould not decode background image!");
+    if (!bg) panicf(PANIC_KILLTHREAD, "Could not decode background image!");
     png->png_destroy(handle);
     cputc(3, '.');
     handle = png->png_open(actions_png, actions_png_size);
-    if (!handle) panicf(PANIC_KILLTHREAD, "\nCould not parse actions image!");
+    if (!handle) panicf(PANIC_KILLTHREAD, "Could not parse actions image!");
     cputc(3, '.');
     struct png_rgba* actions = png->png_decode_rgba(handle);
-    if (!actions) panicf(PANIC_KILLTHREAD, "\nCould not decode actions image!");
+    if (!actions) panicf(PANIC_KILLTHREAD, "Could not decode actions image!");
     png->png_destroy(handle);
     cputc(3, '.');
     void* framebuf = malloc(290 * 165 * 3);
-    if (!framebuf) panicf(PANIC_KILLTHREAD, "\nCould not allocate frame buffer!");
+    if (!framebuf) panicf(PANIC_KILLTHREAD, "Could not allocate frame buffer!");
     cputc(3, '.');
 
     disk_unmount(0);
@@ -231,7 +231,7 @@ void main(void)
     {
         updating = false;
         if (oldnorword[0] == 0x53436667) appleflash = true;
-        else panic(PANIC_KILLTHREAD, "\nBoot flash contents are damaged! "
+        else panic(PANIC_KILLTHREAD, "Boot flash contents are damaged! "
                                      "(No SYSCFG found)\n\nPlease ask for help.\n");
     }
     memcpy(&norbuf[0x1000], &oldnor[appleflash ? 0 : 0x1000], 0x1000);
@@ -261,11 +261,11 @@ void main(void)
             if (align && !(flags & 1))
             {
                 if ((align << 12) < beginptr)
-                    panicf(PANIC_KILLTHREAD, "\nError: Align failed! (%02X)", align);
+                    panicf(PANIC_KILLTHREAD, "Error: Align failed! (%02X)", align);
                 beginptr = align << 12;
             }
             if (endptr - beginptr < size)
-                panicf(PANIC_KILLTHREAD, "\nError: Flash is full!");
+                panicf(PANIC_KILLTHREAD, "Error: Flash is full!");
             uint32_t storesize = size;
             if (flags & 2) storesize |= 0x80000000;
             int offs = 0;
@@ -289,7 +289,7 @@ void main(void)
             if (!(flags & 4))
             {
                 if (dirptr >= 0x1000)
-                    panicf(PANIC_KILLTHREAD, "\nError: Directory is full!");
+                    panicf(PANIC_KILLTHREAD, "Error: Directory is full!");
                 memcpy(&norbuf[dirptr], &script[sp], 8);
                 norbufword[(dirptr >> 2) + 2] = file;
                 norbufword[(dirptr >> 2) + 3] = storesize;
@@ -318,30 +318,30 @@ void main(void)
     if (!updating)
     {
         void* darkened = malloc(320 * 240 * 3);
-        if (!darkened) panicf(PANIC_KILLTHREAD, "\nCould not allocate darkened image!");
+        if (!darkened) panicf(PANIC_KILLTHREAD, "Could not allocate darkened image!");
         cputc(3, '.');
         handle = png->png_open(darkener_png, darkener_png_size);
-        if (!handle) panicf(PANIC_KILLTHREAD, "\nCould not parse darkener image!");
+        if (!handle) panicf(PANIC_KILLTHREAD, "Could not parse darkener image!");
         cputc(3, '.');
         struct png_rgba* darkener = png->png_decode_rgba(handle);
-        if (!darkener) panicf(PANIC_KILLTHREAD, "\nCould not decode darkener image!");
+        if (!darkener) panicf(PANIC_KILLTHREAD, "Could not decode darkener image!");
         png->png_destroy(handle);
         cputc(3, '.');
         ui->blenda(320, 240, 255, darkened, 0, 0, 320, bg, 0, 0, 320, darkener, 0, 0, 320);
         free(darkener);
         cputc(3, '.');
         handle = png->png_open(disclaimer_png, disclaimer_png_size);
-        if (!handle) panicf(PANIC_KILLTHREAD, "\nCould not parse disclaimer image!");
+        if (!handle) panicf(PANIC_KILLTHREAD, "Could not parse disclaimer image!");
         cputc(3, '.');
         struct png_rgba* disclaimer = png->png_decode_rgba(handle);
-        if (!disclaimer) panicf(PANIC_KILLTHREAD, "\nCould not decode disclaimer image!");
+        if (!disclaimer) panicf(PANIC_KILLTHREAD, "Could not decode disclaimer image!");
         png->png_destroy(handle);
         cputc(3, '.');
 
         button = 0;
         wakeup_init(&eventwakeup);
         struct button_hook_entry* hook = button_register_handler(handler, NULL);
-        if (!hook) panicf(PANIC_KILLTHREAD, "\nCould not register button hook!");
+        if (!hook) panicf(PANIC_KILLTHREAD, "Could not register button hook!");
 
         displaylcd(0, 0, 320, 240, darkened, 0, 0, 320);
         backlight_set_fade(32);
@@ -382,6 +382,7 @@ void main(void)
     backlight_set_fade(32);
     backlight_set_brightness(177);
     backlight_on(true);
+
     int cost;
     if (updating)
     {
@@ -437,7 +438,7 @@ void main(void)
                 sp += 4;
                 break;
             default:
-                panic(PANIC_KILLTHREAD, "\nBad installation script!");
+                panic(PANIC_KILLTHREAD, "Bad installation script!");
         }
         cost += script[sp++];
         progressbar_setpos(&progressbar, cost, false);

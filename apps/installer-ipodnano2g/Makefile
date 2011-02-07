@@ -1,19 +1,21 @@
-NAME := installer-nano2g
+NAME := installer-ipodnano2g
+STACKSIZE := 4096
+COMPRESS := false
 BASENAME ?= $(NAME)
 FATNAME ?= INSTAL~1BOO
 
-EMBIOSDIR ?= ../../embios/trunk/
-ILOADERDIR ?= ../iloader/
-UNINSTDIR ?= ../uninstaller-nano2g/
+EMCOREDIR ?= ../../emcore/trunk/
+BOOTMENUDIR ?= ../bootmenu-ipodnano2g/
+LIBBOOTDIR ?= ../../libs/boot/
+LIBPNGDIR ?= ../../libs/png/
+LIBUIDIR ?= ../../libs/ui/
 UMSBOOTDIR ?= ../../umsboot/
 NOTEBOOTDIR ?= ../../noteboot/
 TOOLSDIR ?= ../../tools/
 
-BITMAPS = build/backdrop.ucl build/welcome.ucl build/repartition.ucl build/installing.ucl build/badpartition.ucl \
-          build/cancelled.ucl build/repartitioning.ucl build/preparing.ucl build/installfiles.ucl build/flashing.ucl
-
-FLASHFILES = flashfiles/uninstaller-nano2g.embiosapp.ucl flashfiles/iloader.cfg.ucl flashfiles/iloader.embiosapp.ucl \
-             flashfiles/embiosldr-ipodnano2g.dfu flashfiles/embios-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
+FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib flashfiles/crapple.png \
+             flashfiles/bootmenu-ipodnano2g.emcoreapp flashfiles/background.png flashfiles/icons.png flashfiles/rockbox.png \
+             flashfiles/emcoreldr-ipodnano2g.dfu flashfiles/emcore-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -26,18 +28,19 @@ CC      := $(CCACHE) $(CROSS)gcc
 AS      := $(CROSS)as
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
+ELF2ECA := $(CROSS)elf2emcoreapp
 UCLPACK := ucl2e10singleblk
-GENINSTALLER := python tools/geninstaller.py
 STUBEMBED := python tools/stubembed.py
-COMPILECONFIG := python $(ILOADERDIR)/tools/compileconfig.py
-EMBIOSBOOTCFG := python $(EMBIOSDIR)/tools/embiosbootcfg.py
-EMBIOSEMBEDAPP := python $(EMBIOSDIR)/tools/embiosembedapp.py
-CRYPTFW := python $(EMBIOSDIR)/tools/ipodcrypt.py s5l8701-cryptfirmware
+EMCOREBOOTCFG := python $(EMCOREDIR)/tools/emcorebootcfg.py
+EMCOREEMBEDAPP := python $(EMCOREDIR)/tools/emcoreembedapp.py
+CRYPTFW := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8701-cryptfirmware
 GENNOTE := python $(NOTEBOOTDIR)/gennote.py
 SCRAMBLE := python $(TOOLSDIR)/scramble.py
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMBIOSDIR)/export -ffunction-sections -fdata-sections -mcpu=arm940t
-LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
+LIBINCLUDES := -I$(LIBBOOTDIR)/export -I$(LIBPNGDIR)/export -I$(LIBUIDIR)/export
+
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4 -DBASENAME=$(BASENAME)
+LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
 preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
@@ -45,7 +48,7 @@ preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#"
 REVISION := $(shell svnversion .)
 REVISIONINT := $(shell echo $(REVISION) | sed -e "s/[^0-9].*$$//")
 
-HELPERS := build/__embios_armhelpers.o
+HELPERS := build/__emcore_armhelpers.o
 LIBS := build/libucl.a
 
 SRC := $(call preprocesspaths,SOURCES,-I. -I..)
@@ -70,21 +73,13 @@ build/$(BASENAME).bootnote: build/$(NAME).bin
 	@echo [GENNOT] $<
 	@$(GENNOTE) $< "$(FATNAME)" $@
 
-build/$(NAME).bin: build/bootstub.bin build/$(NAME).integrated.bin
+build/$(NAME).bin: build/bootstub.bin build/$(NAME).ubi
 	@echo [STUBEM] $@
 	@$(STUBEMBED) $^ $@
 
-build/$(NAME).integrated.bin: $(EMBIOSDIR)/build/ipodnano2g/embios.bin build/$(NAME).embiosapp.ucl
+build/$(NAME).ubi: $(EMCOREDIR)/build/ipodnano2g/emcore.bin build/$(NAME).emcoreapp
 	@echo [EMBAPP] $@
-	@$(EMBIOSEMBEDAPP) $^ $@ --run-from=0x08f00000 --compressed
-
-build/$(NAME).embiosapp.ucl: build/$(NAME).embiosapp
-	@echo [UCL]    $<
-	@$(UCLPACK) $< $@
-
-build/$(NAME).embiosapp: build/$(NAME).plain.embiosapp $(BITMAPS) flashfiles.built
-	@echo [GENINS] $<
-	@$(GENINSTALLER) $< $@ /notes/$(BASENAME).bootnote fsfiles
+	@$(EMCOREEMBEDAPP) $^ $@
 
 build/bootstub.bin: build/bootstub.elf
 	@echo [OC]     $<
@@ -94,18 +89,15 @@ build/bootstub.elf: bootstub/ls.x build/bootstub/bootstub.o
 	@echo [LD]     $@
 	@$(LD) $(LDFLAGS) -o $@ -T bootstub/ls.x build/bootstub/bootstub.o
 
-build/%.ucl: oobe/%.bmp
-	@echo [UCL]    $<
-ifeq ($(shell uname),WindowsNT)
-	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
+build/$(NAME).emcoreapp: build/$(NAME).elf
+	@echo [EMCAPP] $<
+ifeq ($(COMPRESS),true)
+	@$(ELF2ECA) -z -s $(STACKSIZE) -o $@ $^
 else
-	@-mkdir -p $(dir $@)
+	@$(ELF2ECA) -s $(STACKSIZE) -o $@ $^
 endif
-	@$(UCLPACK) $< $@
 
-build/$(NAME).plain.embiosapp: build/$(NAME).elf
-	@echo [OC]     $<
-	@$(OBJCOPY) -O binary $^ $@
+build/resources.o: flashfiles.built
 
 build/$(NAME).elf: ls.x $(OBJ) $(LIBS)
 	@echo [LD]     $@
@@ -145,7 +137,16 @@ else
 endif
 	@rm -f $@.dep.tmp
 
-build/__embios_%.o: $(EMBIOSDIR)/export/%.S
+build/__emcore_%.o: $(EMCOREDIR)/export/%.c
+	@echo [CC]     $<
+ifeq ($(shell uname),WindowsNT)
+	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
+else
+	@-mkdir -p $(dir $@)
+endif
+	@$(CC) -c $(CFLAGS) -o $@ $<
+
+build/__emcore_%.o: $(EMCOREDIR)/export/%.S
 	@echo [CC]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
@@ -157,7 +158,7 @@ endif
 build/libucl.a: libucl
 
 libucl:
-	@make -C libucl CFLAGS="$(CFLAGS) -I../$(EMBIOSDIR)/export"
+	@make -C libucl CFLAGS="$(CFLAGS) -I../$(EMCOREDIR)/export"
 
 build/version.h: version.h .svn/entries
 	@echo [PP]     $<
@@ -172,9 +173,21 @@ endif
 flashfiles: $(FLASHFILES)
 	@touch flashfiles.built
 
-$(UNINSTDIR)/build/uninstaller-nano2g.embiosapp.ucl: uninstaller-nano2g
+$(LIBBOOTDIR)/build/boot.emcorelib: libboot
 
-flashfiles/uninstaller-nano2g.embiosapp.ucl: $(UNINSTDIR)/build/uninstaller-nano2g.embiosapp.ucl uninstaller-nano2g
+flashfiles/boot.emcorelib: $(LIBBOOTDIR)/build/boot.emcorelib libboot
+	@echo [CP]     $@
+	@cp $< $@
+
+$(LIBPNGDIR)/build/png.emcorelib: libpng
+
+flashfiles/png.emcorelib: $(LIBPNGDIR)/build/png.emcorelib libpng
+	@echo [CP]     $@
+	@cp $< $@
+
+$(LIBUIDIR)/build/ui.emcorelib: libui
+
+flashfiles/ui.emcorelib: $(LIBUIDIR)/build/ui.emcorelib libui
 	@echo [CP]     $@
 	@cp $< $@
 
@@ -184,48 +197,61 @@ flashfiles/umsboot-ipodnano2g.ucl: $(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodna
 	@echo [CP]     $@
 	@cp $< $@
 
-flashfiles/iloader.cfg: flashfiles/iloader.conf
-	@echo [COMCFG] $@
-	@$(COMPILECONFIG) $< $@
+$(BOOTMENUDIR)/build/bootmenu-ipodnano2g.emcoreapp: bootmenu-ipodnano2g
 
-flashfiles/iloader.cfg.ucl: flashfiles/iloader.cfg
-	@echo [UCL]    $<
-	@$(UCLPACK) $< $@
-
-$(ILOADERDIR)/build/iloader.embiosapp.ucl: iloader
-
-flashfiles/iloader.embiosapp.ucl: $(ILOADERDIR)/build/iloader.embiosapp.ucl iloader
+flashfiles/bootmenu-ipodnano2g.emcoreapp: $(BOOTMENUDIR)/build/bootmenu-ipodnano2g.emcoreapp bootmenu-ipodnano2g
 	@echo [CP]     $@
 	@cp $< $@
 
-$(EMBIOSDIR)/loader/ipodnano2g/build/embiosldr-ipodnano2g.dfu: embiosldr-ipodnano2g
-
-flashfiles/embiosldr-ipodnano2g.dfu: $(EMBIOSDIR)/loader/ipodnano2g/build/embiosldr-ipodnano2g.dfu embiosldr-ipodnano2g
+flashfiles/background.png: $(BOOTMENUDIR)/images/background.png
 	@echo [CP]     $@
 	@cp $< $@
 
-flashfiles/embios-ipodnano2g.ucl: flashfiles/embios-ipodnano2g.bin
+flashfiles/icons.png: $(BOOTMENUDIR)/images/icons.png
+	@echo [CP]     $@
+	@cp $< $@
+
+flashfiles/rockbox.png: $(BOOTMENUDIR)/images/rockbox.png
+	@echo [CP]     $@
+	@cp $< $@
+
+flashfiles/crapple.png: $(BOOTMENUDIR)/images/crapple.png
+	@echo [CP]     $@
+	@cp $< $@
+
+$(EMCOREDIR)/loader/ipodnano2g/build/emcoreldr-ipodnano2g.dfu: emcoreldr-ipodnano2g
+
+flashfiles/emcoreldr-ipodnano2g.dfu: $(EMCOREDIR)/loader/ipodnano2g/build/emcoreldr-ipodnano2g.dfu emcoreldr-ipodnano2g
+	@echo [CP]     $@
+	@cp $< $@
+
+flashfiles/emcore-ipodnano2g.ucl: flashfiles/emcore-ipodnano2g.bin
 	@echo [UCL]    $<
 	@$(UCLPACK) $< $@
 
-$(EMBIOSDIR)/build/ipodnano2g/embios.bin: embios
+$(EMCOREDIR)/build/ipodnano2g/emcore.bin: emcore
 
-flashfiles/embios-ipodnano2g.bin: $(EMBIOSDIR)/build/ipodnano2g/embios.bin embios
+flashfiles/emcore-ipodnano2g.bin: $(EMCOREDIR)/build/ipodnano2g/emcore.bin emcore
 	@echo [EMBCFG] $@
-	@$(EMBIOSBOOTCFG) $< $@ --file=/iLoader/boot.embiosapp --file-compressed --file-run-from=0x08000000 \
-	                        --flash=iloader --flash-compressed --flash-run-from=0x09e00000
+	@$(EMCOREBOOTCFG) $< $@ "(3, '/.boot/init.emcoreapp', None, (2, 'bootmenu', None, None))"
 
-embios:
-	@make -C $(EMBIOSDIR) ipodnano2g
+emcore:
+	@make -C $(EMCOREDIR) ipodnano2g
 
-embiosldr-ipodnano2g:
-	@make -C $(EMBIOSDIR)/loader/ipodnano2g
+emcoreldr-ipodnano2g:
+	@make -C $(EMCOREDIR)/loader/ipodnano2g
 
-iloader:
-	@make -C $(ILOADERDIR)
+bootmenu-ipodnano2g:
+	@make -C $(BOOTMENUDIR)
 
-uninstaller-nano2g:
-	@make -C $(UNINSTDIR)
+libboot:
+	@make -C $(LIBBOOTDIR)
+
+libpng:
+	@make -C $(LIBPNGDIR)
+
+libui:
+	@make -C $(LIBUIDIR)
 
 umsboot:
 	@make -C $(UMSBOOTDIR) ipodnano2g
@@ -233,4 +259,4 @@ umsboot:
 clean:
 	@rm -rf build
 
-.PHONY: all clean uninstaller-nano2g iloader embios embiosldr-ipodnano2g umsboot libucl flashfiles $(NAME)
+.PHONY: all clean emcore emcoreldr-ipodnano2g bootmenu-ipodnano2g libboot libpng libui umsboot libucl flashfiles $(NAME)

@@ -478,11 +478,18 @@ ucl_nrv_99_compress        ( const ucl_bytep in, ucl_uint in_len,
     r = find_match(c,swd,0,0);
     if (r != UCL_E_OK)
         return r;
+    int last_op = ((int)c->bb_op) >> 11;
     while (c->look > 0)
     {
         ucl_uint ahead;
         ucl_uint max_ahead;
         int l1, l2;
+
+	if (((int)c->bb_op) >> 11 != last_op)
+	{
+            last_op = ((int)c->bb_op) >> 11;
+	    cputc(3, '.');
+	}
 
         c->codesize = c->bb_op - out;
 

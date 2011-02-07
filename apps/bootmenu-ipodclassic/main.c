@@ -212,13 +212,14 @@ static void main()
         case 1:
         {
             int i;
-            for (i = 0; i <= 300; i += 60)
+            for (i = 1; i <= 96; i += 19)
             {
-                if (i < 300)
+                if (i < 96)
                     ui->blend(320, 240, 50, framebuf, 0, 0, 320,
                               framebuf, 0, 0, 320, bg, 0, 0, 320);
                 else memcpy(framebuf, bg, 320 * 240 * 3);
-                ui->blit(MIN(280, i), 86, 3, framebuf, 320 - i, 10, 320, rbxlogo, 0, 0, 280);
+                ui->blit(280, MIN(86, i), 3, framebuf, 20, MAX(0, i - 86), 320,
+                         rbxlogo, 0, MAX(0, 86 - i), 280);
                 displaylcd(0, 0, 320, 240, framebuf, 0, 0, 320);
             }
             int fd = file_open("/.rockbox/rockbox.ipod", O_RDONLY);
@@ -341,10 +342,10 @@ leave:
     free(icons);
     free(bg);
     release_library(libui);
-    library_unload(libui);
     release_library(libpng);
-    library_unload(libpng);
     release_library(libboot);
+    library_unload(libui);
+    library_unload(libpng);
     library_unload(libboot);
     if (firmware)
     {
