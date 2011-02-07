@@ -178,8 +178,8 @@ values1:
 	.word 0x2203C000 @ R11 - First level page table
 	.word 0x00000C1E @ R12 - Default segment flags
 	.word 0x3C500000 @ R0 - SYSCON base
-	.word 0x2007CE65 @ R1 - PWRCON(0)
-	.word 0x0003EFC9 @ R2 - PWRCON(1)
+	.word 0xFDFFFFE5 @ R1 - PWRCON(0)
+	.word 0xFFFFEFCD @ R2 - PWRCON(1)
 	.word 0x01002401 @ R3
 	.word 0x00007E90 @ R4
 	.word 0x00404101 @ R5
