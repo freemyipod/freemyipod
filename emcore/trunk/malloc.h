@@ -35,6 +35,7 @@ void* realloc(void* ptr, size_t size) ICODE_ATTR;
 void reownalloc(void* ptr, struct scheduler_thread* owner);
 void free(void* ptr) ICODE_ATTR;
 void free_all_of_thread(struct scheduler_thread* owner);
+void malloc_walk(void (*walker), void* user);
 void malloc_init() INITCODE_ATTR;
 
 

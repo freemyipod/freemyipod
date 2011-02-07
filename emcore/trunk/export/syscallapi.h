@@ -260,6 +260,7 @@ struct emcore_syscall_table
     typeof(lcd_get_format) *lcd_get_format;
     typeof(crc32) *crc32;
     typeof(clockgate_get_state) *clockgate_get_state;
+    typeof(malloc_walk) *malloc_walk;
 };
 
 

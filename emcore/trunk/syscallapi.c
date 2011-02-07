@@ -221,5 +221,6 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
 #endif
     .lcd_get_format = lcd_get_format,
     .crc32 = crc32,
-    .clockgate_get_state = clockgate_get_state
+    .clockgate_get_state = clockgate_get_state,
+    .malloc_walk = malloc_walk
 };

@@ -26,8 +26,8 @@
 #include "libc/tlsf/tlsf.h"
 
 
-extern int _poolstart;   // These aren't ints at all, but gcc complains about void types being
-extern int _poolend;     // used here, and we only need the address, so just make it happy...
+extern char _poolstart;   // These aren't ints at all, but gcc complains about void types being
+extern char _poolend;     // used here, and we only need the address, so just make it happy...
 
 struct mutex malloc_mutex;
 tlsf_pool global_mallocpool;
@@ -90,6 +90,13 @@ void free_all_of_thread(struct scheduler_thread* owner)
 {
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
     tlsf_walk_heap(global_mallocpool, free_if_thread, owner);
+    mutex_unlock(&malloc_mutex);
+}
+
+void malloc_walk(void (*walker), void* user)
+{
+    mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
+    tlsf_walk_heap(global_mallocpool, walker, user);
     mutex_unlock(&malloc_mutex);
 }
 

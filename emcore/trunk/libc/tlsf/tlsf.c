@@ -714,8 +714,9 @@ int tlsf_check_heap(tlsf_pool tlsf)
 
 static void default_walker(void* ptr, size_t size, int used, void* user)
 {
-	(void)user;
-	cprintf(CONSOLE_BOOT, "\t%p %s size: %x\n", ptr, used ? "used" : "free", size);
+    if (used) cprintf((int)user, "%08X: %08X+8 bytes owned by %08X\n", ptr,
+                      size - 4, *((uint32_t*)(ptr + size - 4)));
+    else cprintf((int)user, "%08X: %08X bytes free\n", ptr, size + 4);
 }
 
 void tlsf_walk_heap(tlsf_pool pool, tlsf_walker walker, void* user)

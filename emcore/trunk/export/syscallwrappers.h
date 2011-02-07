@@ -203,6 +203,7 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define lcd_get_format __emcore_syscall->lcd_get_format
 #define crc32 __emcore_syscall->crc32
 #define clockgate_get_state __emcore_syscall->clockgate_get_state
+#define malloc_walk __emcore_syscall->malloc_walk
 
 
 #endif
