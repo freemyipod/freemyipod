@@ -23,6 +23,7 @@
 
 #include "global.h"
 #include "clickwheel.h"
+#include "s5l8701.h"
 
 
 #define nor ((uint8_t*)0x24000000)
@@ -121,4 +122,10 @@ void targetinit_late()
         sysiword[0x4a] = 0x53797349;
         sysiword[0x4b] = 0x2202bdf0;
     }
+}
+
+void targetinit_execfirmware()
+{
+    PWRCON(0) &= ~(1 << 5);
+    IICSTAT = (1 << 4);
 }

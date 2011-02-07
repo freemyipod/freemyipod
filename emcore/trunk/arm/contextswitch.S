@@ -20,6 +20,8 @@
 @
 @
 
+#define ASM_FILE
+#include "global.h"
 
 .section .icode.contextswitch, "ax", %progbits
 .align 2
@@ -157,6 +159,9 @@ execfirmware:
 	ldmfd	sp, {r0-r2}
 	bl	memmove
 	bl	clean_dcache
+#ifdef HAVE_TARGETINIT_EXECFIRMWARE
+	bl	targetinit_execfirmware
+#endif
 	ldr	r1, [sp]
 	mrc	p15, 0, r0,c1,c0
 	bic	r0, r0, #5
