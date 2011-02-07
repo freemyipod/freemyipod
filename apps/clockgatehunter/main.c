@@ -3,7 +3,7 @@
 
 struct wakeup eventwakeup;
 int pos = 64;
-int state[65];
+bool toggle[65];
 
 void handler(void* user, enum button_event eventtype, int which, int value)
 {
@@ -14,7 +14,7 @@ void handler(void* user, enum button_event eventtype, int which, int value)
         switch (which)
         {
         case 0:
-            state[pos] = !state[pos];
+            toggle[pos] = true;
             action = true;
             break;
         case 1:
@@ -41,7 +41,8 @@ void handler(void* user, enum button_event eventtype, int which, int value)
     if (action) wakeup_signal(&eventwakeup);
 }
 
-static void renderline(void* framebuf, int width, int fontwidth, int fontheight, int line)
+static void renderline(void* framebuf, int width, int fontwidth,
+                       int fontheight, int* state, int line)
 {
     int i;
     for (i = 0; i < 16; i++)
@@ -55,8 +56,9 @@ static void main()
 {
     int i, j;
     char buf[9];
+    int state[64];
+    for (i = 0; i < 65; i++) toggle[i] = false;
     for (i = 0; i < 64; i++) state[i] = clockgate_get_state(i);
-    state[i] = false;
     uint32_t orig[2] = {0xffffffff, 0xffffffff};
     uint32_t now[2];
     for (i = 0; i < 2; i++)
@@ -85,21 +87,26 @@ static void main()
     wakeup_signal(&eventwakeup);
     struct button_hook_entry* hook = button_register_handler(handler, NULL);
     if (!hook) panicf(PANIC_KILLTHREAD, "Could not register button hook!");
-    while (true)
+    while (!toggle[64])
     {
-        wakeup_wait(&eventwakeup, TIMEOUT_BLOCK);
+        wakeup_wait(&eventwakeup, 500000);
         now[0] = 0xffffffff;
         now[1] = 0xffffffff;
         for (i = 0; i < 2; i++)
             for (j = 0; j < 32; j++)
             {
-                bool oldstate = state[i * 32 + j];
-                clockgate_enable(i * 32 + j, oldstate);
                 state[i * 32 + j] = clockgate_get_state(i * 32 + j);
-                if (state[i * 32 + j] != oldstate) state[i * 32 + j] = 2;
+                if (toggle[i * 32 + j])
+                {
+                    toggle[i * 32 + j] = false;
+                    bool newstate = !state[i * 32 + j];
+                    clockgate_enable(i * 32 + j, newstate);
+                    state[i * 32 + j] = clockgate_get_state(i * 32 + j);
+                    if (state[i * 32 + j] != newstate) state[i * 32 + j] = 2;
+                }
                 if (state[i * 32 + j]) now[i] &= ~(1 << j);
             }
-        for (i = 0; i < 4; i++) renderline(framebuf, width, fontwidth, fontheight, i);
+        for (i = 0; i < 4; i++) renderline(framebuf, width, fontwidth, fontheight, state, i);
         renderchar(framebuf, 2 + fontwidth * 18, 2, width, pos == 64 ? 0xffffffff : 0xff000000,
                    pos == 64 ? 0xff000000 : 0xffffffff, 'X');
         snprintf(buf, sizeof(buf), "%08X", orig[0]);
@@ -112,7 +119,6 @@ static void main()
         rendertext(framebuf, 2 + 9 * fontwidth, 2 + fontheight, width,
                    0xff000000, 0xffffffff, buf);
         displaylcd(xoffs, yoffs, width, height, framebuf, 0, 0, width);
-        if (state[64]) break;
     }
     button_unregister_handler(hook);
     cprintf(3, "Final state: %08X %08X\n", now[0], now[1]);
