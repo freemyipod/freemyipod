@@ -25,6 +25,11 @@
 #include "s5l8702.h"
 
 
+bool clockgate_get_state(int gate)
+{
+    return !(PWRCON(gate >> 5) & (1 << (gate & 0x1f)));
+}
+
 void clockgate_enable(int gate, bool enable)
 {
     uint32_t mode = enter_critical_section();

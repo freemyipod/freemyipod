@@ -28,6 +28,7 @@
 #include "global.h"
 
 
+bool clockgate_get_state(int gate);
 void clockgate_enable(int gate, bool enable);
 
 

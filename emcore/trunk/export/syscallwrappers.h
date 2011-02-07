@@ -202,6 +202,7 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define fat_enable_flushing __emcore_syscall->fat_enable_flushing
 #define lcd_get_format __emcore_syscall->lcd_get_format
 #define crc32 __emcore_syscall->crc32
+#define clockgate_get_state __emcore_syscall->clockgate_get_state
 
 
 #endif

@@ -259,6 +259,7 @@ struct emcore_syscall_table
     typeof(fat_enable_flushing) *fat_enable_flushing;
     typeof(lcd_get_format) *lcd_get_format;
     typeof(crc32) *crc32;
+    typeof(clockgate_get_state) *clockgate_get_state;
 };
 
 
