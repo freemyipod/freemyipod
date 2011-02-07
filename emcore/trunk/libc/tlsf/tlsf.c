@@ -6,6 +6,7 @@
 #include "../include/stdlib.h"
 #include "../include/string.h"
 #include "../../console.h"
+#include "../../thread.h"
 
 #include "tlsf.h"
 #include "tlsfbits.h"
@@ -714,8 +715,12 @@ int tlsf_check_heap(tlsf_pool tlsf)
 
 static void default_walker(void* ptr, size_t size, int used, void* user)
 {
-    if (used) cprintf((int)user, "%08X: %08X+8 bytes owned by %08X\n", ptr,
-                      size - 4, *((uint32_t*)(ptr + size - 4)));
+    if (used)
+    {
+        struct scheduler_thread* owner = *((struct scheduler_thread**)(ptr + size - 4));
+        cprintf((int)user, "%08X: %08X+8 bytes owned by %08X%s\n", ptr,
+                size - 4, owner, owner == current_thread ? " (self)" : "");
+    }
     else cprintf((int)user, "%08X: %08X bytes free\n", ptr, size + 4);
 }
 
