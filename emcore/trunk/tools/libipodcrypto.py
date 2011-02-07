@@ -34,7 +34,7 @@ import libemcoredata
 
 def s5l8701cryptdfu(data):
     data = data.ljust((len(data) + 0x3f) & ~0x3f, "\0")
-    header = "87011.0\0\0\0x8\0\0" + struct.pack("<I", len(data))
+    header = "87011.0\0\0\x08\0\0" + struct.pack("<I", len(data))
     emcore = libemcore.Emcore()
     addr = emcore.memalign(0x10, len(data) + 0x800)
     emcore.write(addr, header.ljust(0x800, "\0") + data)
