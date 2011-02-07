@@ -38,12 +38,12 @@ struct emcoreapp_header
 {
 	char signature[8];
 	uint32_t version;
-    off_t textstart;
-    size_t textsize;
-    size_t bsssize;
-    size_t stacksize;
-	off_t entrypoint;
-	off_t relocstart;
+    uint32_t textstart;
+    uint32_t textsize;
+    uint32_t bsssize;
+    uint32_t stacksize;
+	uint32_t entrypoint;
+	uint32_t relocstart;
 	uint32_t reloccount;
 	uint32_t flags;
     uint32_t creationtime;
