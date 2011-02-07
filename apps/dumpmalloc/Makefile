@@ -1,6 +1,6 @@
 NAME := dumpmalloc
-STACKSIZE := 4096
-COMPRESS := true
+STACKSIZE := 256
+COMPRESS := false
 
 EMCOREDIR ?= ../../emcore/trunk/
 
