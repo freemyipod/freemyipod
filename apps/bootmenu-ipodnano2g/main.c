@@ -447,7 +447,7 @@ static void main()
                     bootflash_read("diagmode", buf, 0, size);
                     if (bootflash_attributes("diagmode") & 0x800)
                     {
-                        void* buf2 = malloc(0x10000);
+                        void* buf2 = malloc(0x80000);
                         if (buf2)
                         {
                             if (!ucl_decompress(buf, size, buf2, (uint32_t*)&size))
@@ -487,7 +487,7 @@ static void main()
                     bootflash_read("diskmode", buf, 0, size);
                     if (bootflash_attributes("diskmode") & 0x800)
                     {
-                        void* buf2 = malloc(0x10000);
+                        void* buf2 = malloc(0x80000);
                         if (buf2)
                         {
                             if (!ucl_decompress(buf, size, buf2, (uint32_t*)&size))
