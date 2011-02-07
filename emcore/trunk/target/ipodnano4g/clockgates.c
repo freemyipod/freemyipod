@@ -25,6 +25,8 @@
 #include "s5l8720.h"
 
 
+uint32_t clockgates_dma[2];
+
 bool clockgate_get_state(int gate)
 {
     return !(PWRCON(gate >> 5) & (1 << (gate & 0x1f)));
@@ -35,5 +37,17 @@ void clockgate_enable(int gate, bool enable)
     uint32_t mode = enter_critical_section();
     if (enable) PWRCON(gate >> 5) &= ~(1 << (gate & 0x1f));
     else PWRCON(gate >> 5) |= 1 << (gate & 0x1f);
+    leave_critical_section(mode);
+}
+
+void clockgate_dma(int dmac, int chan, bool enable)
+{
+    uint32_t mode = enter_critical_section();
+    uint32_t old = clockgates_dma[dmac];
+    if (enable) clockgates_dma[dmac] |= 1 << chan;
+    else clockgates_dma[dmac] &= ~(1 << chan);
+//TODO: Figure out DMAC clock gates	
+//    if (clockgates_dma[dmac] != old)
+//        clockgate_enable(CLOCKGATE_DMA(dmac), true);
     leave_critical_section(mode);
 }

@@ -31,20 +31,11 @@ static struct mutex i2cmutex;
 static struct wakeup i2cwakeup;
 
 
-void i2c_init()
+static void i2c_on()
 {
-    mutex_init(&i2cmutex);
-    wakeup_init(&i2cwakeup);
-
-    /* enable I2C pins */
-    PCON10 = (2 << 2) |
-             (2 << 0);
-
     /* enable I2C clock */
     PWRCON(0) &= ~(1 << 5);
 
-    /* initial config */
-    IICADD = 0;
     IICCON = (1 << 7) | /* ACK_GEN */
              (0 << 6) | /* CLKSEL = PCLK/16 */
              (1 << 5) | /* INT_EN */
@@ -53,13 +44,33 @@ void i2c_init()
 
     /* serial output on */
     IICSTAT = (1 << 4);
+}
 
+static void i2c_off()
+{
+    /* serial output off */
+    IICSTAT = 0;
+
+    /* disable I2C clock */
+    PWRCON(0) |= (1 << 5);
+}
+
+void i2c_init()
+{
+    mutex_init(&i2cmutex);
+    wakeup_init(&i2cwakeup);
+
+    /* enable I2C pins */
+    PCON10 = (2 << 2) |
+             (2 << 0);
+			 
     interrupt_enable(IRQ_IIC, true);
 }
 
 void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* data, uint32_t length)
 {
     mutex_lock(&i2cmutex, TIMEOUT_BLOCK);
+	i2c_on();
     IICDS = device & ~1;
     IICSTAT = 0xF0;
     IICCON = 0xB7;
@@ -82,12 +93,14 @@ void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* da
     IICSTAT = 0xD0;
     IICCON = 0xB7;
     while ((IICSTAT & (1 << 5)) != 0) yield();
+	i2c_off();
     mutex_unlock(&i2cmutex);
 }
 
 void i2c_recv(uint32_t bus, uint32_t device, uint32_t address, uint8_t* data, uint32_t length)
 {
     mutex_lock(&i2cmutex, TIMEOUT_BLOCK);
+	i2c_on();
     if (address >= 0)
     {
         /* START */
@@ -115,6 +128,7 @@ void i2c_recv(uint32_t bus, uint32_t device, uint32_t address, uint8_t* data, ui
     IICSTAT = 0x90;
     IICCON = 0xB7;
     while ((IICSTAT & (1 << 5)) != 0) yield();
+	i2c_off();
     mutex_unlock(&i2cmutex);
 }
 

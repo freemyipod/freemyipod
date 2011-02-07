@@ -26,6 +26,7 @@
 #include "s5l8702.h"
 #include "thread.h"
 #include "clockgates.h"
+#include "clockgates-target.h"
 
 
 static struct mutex spimutex[3];
@@ -79,6 +80,7 @@ void spi_read(int port, uint32_t size, void* buf)
     void* addr = (void*)((uint32_t)buf + size);
     struct dma_lli* lli = (struct dma_lli*)(((uint32_t)addr - 0x10) & ~0xf);
     struct dma_lli* nextlli = NULL;
+    clockgate_dma(0, port + 5, true);
     while (addr > buf)
     {
         size = (uint32_t)addr - (uint32_t)buf;
@@ -95,6 +97,7 @@ void spi_read(int port, uint32_t size, void* buf)
     clean_dcache();
     DMAC0CCONFIG(port + 5) = 0x9001 | (SPIDMA(port) << 1);
     wakeup_wait(&spiwakeup[port], TIMEOUT_BLOCK);
+    clockgate_dma(0, port + 5, false);
     invalidate_dcache();
     SPISETUP(port) &= ~0x41;
 }

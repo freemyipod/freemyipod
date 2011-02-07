@@ -199,8 +199,8 @@ values1:
 	.word 0x2203C000 @ R11 - First level page table
 	.word 0x00000C1E @ R12 - Default segment flags
 	.word 0x3C500000 @ R0 - SYSCON base
-	.word 0x2007CE65 @ R1 - PWRCON(0)
-	.word 0x0003EFC9 @ R2 - PWRCON(1)
+	.word 0xFDFFFFE5 @ R1 - PWRCON(0)
+	.word 0xFFFFEFC9 @ R2 - PWRCON(1)
 	.word 0x01002401 @ R3
 	.word 0x00007E90 @ R4
 	.word 0x00404101 @ R5
@@ -780,11 +780,19 @@ foundfile:
 	bne	compressed
     	mov	r1, #0x08000000
 	bl	bootflash_read
+	bic	r12, r3, #0xa00000
+	ldr	r1, [r12,#0x4c]
+	orr	r1, r1, #4
+	str	r1, [r12,#0x4c]
 	mov	lr, #0x08000000
 	b	flushcache
 compressed:
     	mov	r1, #0x09000000
 	bl	bootflash_read
+	bic	r12, r3, #0xa00000
+	ldr	r1, [r12,#0x4c]
+	orr	r1, r1, #4
+	str	r1, [r12,#0x4c]
 	mov	r0, #0x09000000
 	mov	r2, #0x08000000
 	blx	thumb_nrv2e_d8

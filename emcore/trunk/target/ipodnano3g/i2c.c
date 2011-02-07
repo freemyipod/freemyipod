@@ -30,6 +30,30 @@
 static struct mutex i2cmutex;
 
 
+static void i2c_on(int bus)
+{
+    /* enable I2C clock */
+    clockgate_enable(CLOCKGATE_I2C(bus), true);
+
+    IICCON(bus) = (1 << 7) | /* ACK_GEN */
+                  (0 << 6) | /* CLKSEL = PCLK/16 */
+                  (1 << 5) | /* INT_EN */
+                  (1 << 4) | /* IRQ clear */
+                  (7 << 0);  /* CK_REG */
+
+    /* serial output on */
+    IICSTAT(bus) = (1 << 4);
+}
+
+static void i2c_off(int bus)
+{
+    /* serial output off */
+    IICSTAT(bus) = 0;
+
+    /* disable I2C clock */
+    clockgate_enable(CLOCKGATE_I2C(bus), false);
+}
+
 void i2c_init()
 {
     mutex_init(&i2cmutex);
@@ -38,6 +62,7 @@ void i2c_init()
 void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* data, uint32_t length)
 {
     mutex_lock(&i2cmutex, TIMEOUT_BLOCK);
+	i2c_on(bus);
     while (IIC10(bus));
     IICDS(bus) = device & ~1;
     while (IIC10(bus));
@@ -69,12 +94,14 @@ void i2c_send(uint32_t bus, uint32_t device, uint32_t address, const uint8_t* da
     while (IIC10(bus));
     IICCON(bus) = 0xB7;
     while ((IICSTAT(bus) & (1 << 5)) != 0) yield();
+	i2c_off(bus);
     mutex_unlock(&i2cmutex);
 }
 
 void i2c_recv(uint32_t bus, uint32_t device, uint32_t address, uint8_t* data, uint32_t length)
 {
     mutex_lock(&i2cmutex, TIMEOUT_BLOCK);
+	i2c_on(bus);
     if (address >= 0)
     {
         /* START */
@@ -113,6 +140,7 @@ void i2c_recv(uint32_t bus, uint32_t device, uint32_t address, uint8_t* data, ui
     while (IIC10(bus));
     IICCON(bus) = 0xB7;
     while ((IICSTAT(bus) & (1 << 5)) != 0) yield();
+	i2c_off(bus);
     mutex_unlock(&i2cmutex);
 }
 

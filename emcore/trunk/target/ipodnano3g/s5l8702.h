@@ -584,8 +584,17 @@ struct dma_lli
 
 
 /////CLOCK GATES/////
+#define CLOCKGATE_LCD 1
 #define CLOCKGATE_USB_1 2
+#define CLOCKGATE_DMA(x) 25
+#define CLOCKGATE_DMA_0 25
 #define CLOCKGATE_USB_2 35
+#define CLOCKGATE_I2C(x) 36
+#define CLOCKGATE_I2C_0 36
+#define CLOCKGATE_SPI(x) ((i) == 2 ? 47 : (i) == 1 ? 43 : 34)
+#define CLOCKGATE_SPI_0 34
+#define CLOCKGATE_SPI_1 43
+#define CLOCKGATE_SPI_2 47
 
 
 /////INTERRUPTS/////

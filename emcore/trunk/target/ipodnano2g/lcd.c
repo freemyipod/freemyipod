@@ -27,14 +27,22 @@
 #include "util.h"
 
 
-static struct mutex lcd_mutex;
+static struct mutex lcd_mutex IDATA_ATTR;
+static struct wakeup lcd_wakeup IDATA_ATTR;
+
+static bool lcd_dma_busy IDATA_ATTR;
+static bool lcd_in_irq IDATA_ATTR;
 
 
 void lcd_init()
 {
+    mutex_init(&lcd_mutex);
+    wakeup_init(&lcd_wakeup);
     DMACON8 = 0x20590000;
     LCDCON = 0xd01;
     LCDPHTIME = 0;
+    lcd_in_irq = false;
+    lcd_dma_busy = false;
 }
 
 int lcd_get_width()
@@ -80,18 +88,22 @@ static uint32_t lcd_detect()
 bool displaylcd_busy() ICODE_ATTR;
 bool displaylcd_busy()
 {
-    return DMAALLST2 & 0x70000;
+    return lcd_dma_busy;
 }
 
 bool displaylcd_safe()
 {
+    lcd_in_irq = true;
+    if (!lcd_dma_busy) return true;
     return !(DMAALLST2 & 0x70000);
 }
 
 void displaylcd_sync() ICODE_ATTR;
 void displaylcd_sync()
 {
-    while (displaylcd_busy()) sleep(100);
+    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
+    while (displaylcd_busy()) wakeup_wait(&lcd_wakeup, TIMEOUT_BLOCK);
+    mutex_unlock(&lcd_mutex);
 }
 
 void displaylcd_setup(unsigned int startx, unsigned int endx,
@@ -99,8 +111,11 @@ void displaylcd_setup(unsigned int startx, unsigned int endx,
 void displaylcd_setup(unsigned int startx, unsigned int endx,
                       unsigned int starty, unsigned int endy)
 {
-    displaylcd_sync();
-    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
+    if (!lcd_in_irq)
+    {
+        mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
+        displaylcd_sync();
+    }
     if (lcd_detect() == 2)
     {
         lcd_send_cmd(0x50);
@@ -139,6 +154,7 @@ static void displaylcd_dma(void* data, int pixels)
         LCDWDATA = *in++;
         pixels--;
 	}
+    lcd_dma_busy = true;
     DMABASE8 = in;
     DMACON8 = 0x20590000;
     DMATCNT8 = pixels / 4;
@@ -173,7 +189,7 @@ void displaylcd_native(unsigned int startx, unsigned int endx,
     if (pixels <= 0) return;
     displaylcd_setup(startx, endx, starty, endy);
     displaylcd_dma(data, pixels);
-    mutex_unlock(&lcd_mutex);
+    if (!lcd_in_irq) mutex_unlock(&lcd_mutex);
 }
 
 void filllcd_native(unsigned int startx, unsigned int endx,
@@ -183,7 +199,7 @@ void filllcd_native(unsigned int startx, unsigned int endx,
     if (pixels <= 0) return;
     displaylcd_setup(startx, endx, starty, endy);
     displaylcd_solid(color, pixels);
-    mutex_unlock(&lcd_mutex);
+    if (!lcd_in_irq) mutex_unlock(&lcd_mutex);
 }
 
 void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
@@ -314,8 +330,8 @@ void displaylcd(unsigned int x, unsigned int y, unsigned int width, unsigned int
 void filllcd(unsigned int x, unsigned int y, unsigned int width, unsigned int height, int color)
 {
     if (width * height <= 0) return;
-    displaylcd_sync();
     mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
+    displaylcd_sync();
     displaylcd_dither(x, y, width, height, &color, 0, 0, 0, true);
     mutex_unlock(&lcd_mutex);
 }
@@ -356,7 +372,11 @@ void lcd_shutdown()
 void INT_DMA8()
 {
     DMACOM8 = 7;
+    lcd_in_irq = true;
+    lcd_dma_busy = false;
     lcdconsole_callback();
+    wakeup_signal(&lcd_wakeup);
+    lcd_in_irq = false;
 }
 
 int lcd_translate_color(uint8_t alpha, uint8_t red, uint8_t green, uint8_t blue)

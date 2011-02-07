@@ -24,6 +24,7 @@
 #include "global.h"
 #include "panic.h"
 #include "s5l8702.h"
+#include "clockgates-target.h"
 
 
 #define default_interrupt(name) extern __attribute__((weak,alias("unhandled_irq"))) void name(void)
@@ -149,6 +150,7 @@ static void (* dmavector[])(void) IDATA_ATTR =
 void INT_DMAC0(void) ICODE_ATTR;
 void INT_DMAC0()
 {
+    clockgate_dma(0, 8, true);
     uint32_t intsts = DMAC0INTSTS;
     if (intsts & 1) dmavector[0]();
     if (intsts & 2) dmavector[1]();
@@ -158,11 +160,13 @@ void INT_DMAC0()
     if (intsts & 0x20) dmavector[5]();
     if (intsts & 0x40) dmavector[6]();
     if (intsts & 0x80) dmavector[7]();
+    clockgate_dma(0, 8, false);
 }
 
 void INT_DMAC1(void) ICODE_ATTR;
 void INT_DMAC1()
 {
+    clockgate_dma(1, 8, true);
     uint32_t intsts = DMAC1INTSTS;
     if (intsts & 1) dmavector[8]();
     if (intsts & 2) dmavector[9]();
@@ -172,6 +176,7 @@ void INT_DMAC1()
     if (intsts & 0x20) dmavector[13]();
     if (intsts & 0x40) dmavector[14]();
     if (intsts & 0x80) dmavector[15]();
+    clockgate_dma(1, 8, false);
 }
 
 static void (* irqvector[])(void) IDATA_ATTR =

@@ -1,3 +1,4 @@
+
 //
 //
 //    Copyright 2010 TheSeven
@@ -25,6 +26,7 @@
 #include "thread.h"
 #include "s5l8702.h"
 #include "util.h"
+#include "clockgates-target.h"
 
 
 static struct dma_lli lcd_lli[(LCD_WIDTH * LCD_HEIGHT - 1) / 0xfff]
@@ -32,11 +34,25 @@ static struct dma_lli lcd_lli[(LCD_WIDTH * LCD_HEIGHT - 1) / 0xfff]
 
 static uint16_t lcd_color IDATA_ATTR;
 
-static struct mutex lcd_mutex;
+static struct mutex lcd_mutex IDATA_ATTR;
+static struct wakeup lcd_wakeup IDATA_ATTR;
+
+static bool lcd_dma_busy IDATA_ATTR;
+static bool lcd_in_irq IDATA_ATTR;
 
 
 void lcd_init()
 {
+    mutex_init(&lcd_mutex);
+    wakeup_init(&lcd_wakeup);
+    lcd_in_irq = false;
+    lcd_dma_busy = true;
+    clockgate_dma(0, 4, true);
+    if (!(DMAC0C4CONFIG & 1))
+    {
+        lcd_dma_busy = false;
+        clockgate_dma(0, 4, false);
+    }
 }
 
 int lcd_get_width()
@@ -82,18 +98,22 @@ static uint32_t lcd_detect()
 bool displaylcd_busy() ICODE_ATTR;
 bool displaylcd_busy()
 {
-    return DMAC0C4CONFIG & 1;
+    return lcd_dma_busy;
 }
 
 bool displaylcd_safe()
 {
+    lcd_in_irq = true;
+    if (!lcd_dma_busy) return true;
     return !(DMAC0C4CONFIG & 1);
 }
 
 void displaylcd_sync() ICODE_ATTR;
 void displaylcd_sync()
 {
-    while (displaylcd_busy()) sleep(100);
+    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
+    while (displaylcd_busy()) wakeup_wait(&lcd_wakeup, TIMEOUT_BLOCK);
+    mutex_unlock(&lcd_mutex);
 }
 
 void displaylcd_setup(unsigned int startx, unsigned int endx,
@@ -101,8 +121,11 @@ void displaylcd_setup(unsigned int startx, unsigned int endx,
 void displaylcd_setup(unsigned int startx, unsigned int endx,
                       unsigned int starty, unsigned int endy)
 {
-    displaylcd_sync();
-    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
+    if (!lcd_in_irq)
+    {
+        mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
+        displaylcd_sync();
+    }
     if (lcd_detect() & 2)
     {
         lcd_send_cmd(0x210);
@@ -139,6 +162,8 @@ static void displaylcd_dma(void* data, int pixels, bool solid) ICODE_ATTR;
 static void displaylcd_dma(void* data, int pixels, bool solid)
 {
     int i;
+    lcd_dma_busy = true;
+    clockgate_dma(0, 4, true);
     for (i = -1; i < (int)ARRAYLEN(lcd_lli) && pixels > 0; i++, pixels -= 0xfff)
     {
         bool last = i + 1 >= ARRAYLEN(lcd_lli) || pixels <= 0xfff;
@@ -161,7 +186,7 @@ void displaylcd_native(unsigned int startx, unsigned int endx,
     if (pixels <= 0) return;
     displaylcd_setup(startx, endx, starty, endy);
     displaylcd_dma(data, pixels, false);
-    mutex_unlock(&lcd_mutex);
+    if (!lcd_in_irq) mutex_unlock(&lcd_mutex);
 }
 
 void filllcd_native(unsigned int startx, unsigned int endx,
@@ -172,7 +197,7 @@ void filllcd_native(unsigned int startx, unsigned int endx,
     displaylcd_setup(startx, endx, starty, endy);
     lcd_color = color;
     displaylcd_dma(&lcd_color, pixels, true);
-    mutex_unlock(&lcd_mutex);
+    if (!lcd_in_irq) mutex_unlock(&lcd_mutex);
 }
 
 void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
@@ -299,8 +324,8 @@ void displaylcd(unsigned int x, unsigned int y, unsigned int width, unsigned int
 void filllcd(unsigned int x, unsigned int y, unsigned int width, unsigned int height, int color)
 {
     if (width * height <= 0) return;
-    displaylcd_sync();
     mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
+    displaylcd_sync();
     lcd_color = color;
     displaylcd_dither(x, y, width, height, &lcd_color, 0, 0, 0, true);
     mutex_unlock(&lcd_mutex);
@@ -353,7 +378,12 @@ void lcd_shutdown()
 void INT_DMAC0C4()
 {
     DMAC0INTTCCLR = 0x10;
+    lcd_in_irq = true;
+    lcd_dma_busy = false;
+    clockgate_dma(0, 4, false);
     lcdconsole_callback();
+    wakeup_signal(&lcd_wakeup);
+    lcd_in_irq = false;
 }
 
 int lcd_translate_color(uint8_t alpha, uint8_t red, uint8_t green, uint8_t blue)
