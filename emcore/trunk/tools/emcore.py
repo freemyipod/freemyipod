@@ -256,8 +256,8 @@ class Commandline(object):
         self.logger.info("done\n")
     
     @command
-    def hexdump(self, addr, size, width = 16, wordsize = 1, separate = 4, \
-                align = False, relative = False, ascii = True, asciisep = 8):
+    def hexdump(self, addr, size, width = 16, wordsize = 1, separate = 4, align = False, \
+                relative = False, ascii = True, asciisep = 8, asciirep = ".", zeropad = True):
         """
             Downloads a region of memory from the device and hexdumps it
             <addr>: the address to download the data from
@@ -269,6 +269,8 @@ class Commandline(object):
             [relative]: if true, the addresses displayed are relative to the <addr>, not zero
             [ascii]: add ASCII representations of the bytes to the output
             [asciisep]: add an additional space character every [asciisep] ASCII characters
+            [asciirep]: replacement character for non-printable ASCII characters
+            [zeropad]: pad hex values with zero instead of space characters
         """
         addr = to_int(addr)
         size = to_int(size)
@@ -279,6 +281,7 @@ class Commandline(object):
         relative = to_bool(relative)
         ascii = to_bool(ascii)
         asciisep = to_int(asciisep)
+        zeropad = to_bool(zeropad)
         if addr % wordsize != 0: raise ArgumentError("Address is not word aligned!")
         if size % wordsize != 0: raise ArgumentError("Size is not word aligned!")
         if align: skip = addr % (wordsize * width)
@@ -294,7 +297,7 @@ class Commandline(object):
                     w = 0
                     for b in range(wordsize):
                         w = w | (struct.unpack("B", data[i + b])[0] << (8 * b))
-                    sys.stdout.write((" %%0%dX" % (wordsize * 2)) % w)
+                    sys.stdout.write(((" %%0%dX" if zeropad else " %%%dX") % (wordsize * 2)) % w)
                 else: sys.stdout.write(" " * (wordsize * 2 + 1))
             if ascii:
                 sys.stdout.write(" |")
@@ -302,7 +305,7 @@ class Commandline(object):
                     if i - r > 0 and (i - r) % asciisep == 0: sys.stdout.write(" ")
                     if i >= 0 and i < size:
                         if ord(data[i]) > 0x1f: sys.stdout.write(data[i])
-                        else: sys.stdout.write(".")
+                        else: sys.stdout.write(asciirep)
                     else: sys.stdout.write(" ")
                 sys.stdout.write("|")
             sys.stdout.write("\n")
