@@ -237,8 +237,8 @@ class Commandline(object):
     @command
     def downloadfile(self, addr, size, filename):
         """
-            Uploads a file to the device
-            <offset>: the address to upload the file to
+            Downloads a region of memory from the device to a file
+            <addr>: the address to download the data from
             <size>: the number of bytes to be read
             <filename>: the path to the file
         """
