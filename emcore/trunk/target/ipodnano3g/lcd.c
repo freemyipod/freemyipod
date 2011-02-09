@@ -41,20 +41,6 @@ static bool lcd_dma_busy IDATA_ATTR;
 static bool lcd_in_irq IDATA_ATTR;
 
 
-void lcd_init()
-{
-    mutex_init(&lcd_mutex);
-    wakeup_init(&lcd_wakeup);
-    lcd_in_irq = false;
-    lcd_dma_busy = true;
-    clockgate_dma(0, 4, true);
-    if (!(DMAC0C4CONFIG & 1))
-    {
-        lcd_dma_busy = false;
-        clockgate_dma(0, 4, false);
-    }
-}
-
 int lcd_get_width()
 {
     return LCD_WIDTH;
@@ -93,6 +79,31 @@ static uint32_t lcd_detect() ICODE_ATTR;
 static uint32_t lcd_detect()
 {
     return (PDAT6 & 0x30) >> 4;
+}
+
+void lcd_init()
+{
+    mutex_init(&lcd_mutex);
+    wakeup_init(&lcd_wakeup);
+    lcd_in_irq = false;
+    lcd_dma_busy = true;
+    clockgate_dma(0, 4, true);
+    if (!(DMAC0C4CONFIG & 1))
+    {
+        lcd_dma_busy = false;
+        clockgate_dma(0, 4, false);
+    }
+    switch (lcd_detect())
+    {
+    case 1:
+        pmu_write(0x31, 0x0e);  // Vlcd @ 2.400V
+        break;
+    case 2:
+        pmu_write(0x31, 0x12);  // Vlcd @ 2.700V
+        break;
+    default:
+        pmu_write(0x31, 0x0b);  // Vlcd @ 2.000V
+    }
 }
 
 bool displaylcd_busy() ICODE_ATTR;
