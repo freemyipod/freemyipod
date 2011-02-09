@@ -77,15 +77,10 @@ dmaloop:
 	mov	r2, #0               @ R2 = 0
 	str	r2, [r0]
 	str	r2, [r0,#0x4]
-	mov	r1, #7
-	str	r1, [r0,#0x44]
-	mov	r1, #0x30
-	str	r1, [r0,#0x44]
 	str	r2, [r0,#0x60]
 	str	r3, [r0,#0x28]
 	str	r4, [r0,#0x38]
 	mov	r1, #0x34
-	str	r1, [r0,#0x44]
 	orr	r1, r1, #0x40000
 	str	r1, [r0,#0x44]
 waitpll:
