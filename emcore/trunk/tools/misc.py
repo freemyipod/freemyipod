@@ -281,17 +281,18 @@ def getfuncdoc(funcdict):
         function = funcdict[function].func
         docinfo = Bunch()
         name = function.__name__
-        args = inspect.getargspec(function)[0]
+        argspec = inspect.getargspec(function)
+        args = argspec[0]
         docinfo['varargs'] = False
-        if inspect.getargspec(function)[1]:
+        if argspec[1]:
             docinfo['varargs'] = True
-        kwargvalues = inspect.getargspec(function)[3]
-        kwargs = Bunch()
+        kwargvalues = argspec[3]
+        kwargs = []
         if args:
             if kwargvalues:
                 argnum = len(args) - len(kwargvalues)
                 kwargnum = len(kwargvalues)
-                kwargs = dict(zip(args[argnum:], kwargvalues))
+                kwargs = list(zip(args[argnum:], kwargvalues))
             else:
                 argnum = len(args)
         else:

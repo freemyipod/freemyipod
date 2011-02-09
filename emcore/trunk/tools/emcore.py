@@ -59,7 +59,7 @@ def usage(errormsg=None, specific=False, docstring=True):
             for arg in doc[function]['args']:
                 logger.write("<" + arg + "> ")
             if doc[function]['kwargs']:
-                for kwarg, kwvalue in doc[function]['kwargs'].iteritems():
+                for kwarg, kwvalue in doc[function]['kwargs']:
                     logger.write("[" + kwarg + " = " + str(kwvalue) + "] ")
             if doc[function]['varargs']:
                 logger.write("<db1> ... <dbN>")
