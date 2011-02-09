@@ -256,6 +256,58 @@ class Commandline(object):
         self.logger.info("done\n")
     
     @command
+    def hexdump(self, addr, size, width = 16, wordsize = 1, separate = 4, \
+                align = False, relative = False, ascii = True, asciisep = 8):
+        """
+            Downloads a region of memory from the device and hexdumps it
+            <addr>: the address to download the data from
+            <size>: the number of bytes to be dumped
+            [width]: the number of words per output line
+            [wordsize]: the number of bytes per word (little endian)
+            [separate]: add an additional space character every [separate] words
+            [align]: if true, output lines are aligned to the line size
+            [relative]: if true, the addresses displayed are relative to the <addr>, not zero
+            [ascii]: add ASCII representations of the bytes to the output
+            [asciisep]: add an additional space character every [asciisep] ASCII characters
+        """
+        addr = to_int(addr)
+        size = to_int(size)
+        width = to_int(width)
+        wordsize = to_int(wordsize)
+        separate = to_int(separate)
+        align = to_bool(align)
+        relative = to_bool(relative)
+        ascii = to_bool(ascii)
+        asciisep = to_int(asciisep)
+        if addr % wordsize != 0: raise ArgumentError("Address is not word aligned!")
+        if size % wordsize != 0: raise ArgumentError("Size is not word aligned!")
+        if align: skip = addr % (wordsize * width)
+        else: skip = 0
+        if relative: base = 0
+        else: base = addr
+        data = self.emcore.read(addr, size)
+        for r in range(-skip, size, wordsize * width):
+            sys.stdout.write("%08X:" % (base + r))
+            for i in range(r, r + wordsize * width, wordsize):
+                if i - r > 0 and (i - r) % (separate * wordsize) == 0: sys.stdout.write(" ")
+                if i >= 0 and i < size:
+                    w = 0
+                    for b in range(wordsize):
+                        w = (w << 8) | struct.unpack("B", data[i + b])[0]
+                    sys.stdout.write((" %%%dX" % (wordsize * 2)) % w)
+                else: sys.stdout.write(" " * (wordsize * 2 + 1))
+            if ascii:
+                sys.stdout.write(" |")
+                for i in range(r, r + wordsize * width):
+                    if i - r > 0 and (i - r) % asciisep == 0: sys.stdout.write(" ")
+                    if i >= 0 and i < size:
+                        if ord(data[i]) > 0x1f: sys.stdout.write(data[i])
+                        else: sys.stdout.write(".")
+                    else: sys.stdout.write(" ")
+                sys.stdout.write("|")
+            sys.stdout.write("\n")
+    
+    @command
     def uploadint(self, addr, integer):
         """
             Uploads a single integer to the device
