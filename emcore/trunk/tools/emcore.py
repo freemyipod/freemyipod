@@ -293,7 +293,7 @@ class Commandline(object):
                 if i >= 0 and i < size:
                     w = 0
                     for b in range(wordsize):
-                        w = (w << 8) | struct.unpack("B", data[i + b])[0]
+                        w = w | (struct.unpack("B", data[i + b])[0] << (8 * b))
                     sys.stdout.write((" %%0%dX" % (wordsize * 2)) % w)
                 else: sys.stdout.write(" " * (wordsize * 2 + 1))
             if ascii:
