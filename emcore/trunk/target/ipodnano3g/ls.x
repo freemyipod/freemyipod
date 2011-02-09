@@ -73,12 +73,12 @@ SECTIONS
         _ibssstart = .;
         *(.ibss*)
         . = ALIGN(0x4);
-        _irqstackstart = .;
-        . += 0x400;
-        _irqstackend = .;
         _abortstackstart = .;
         . += 0x400;
         _abortstackend = .;
+        _irqstackstart = .;
+        . += 0x400;
+        _irqstackend = .;
         *(.stack*)
         . = ALIGN(0x4);
         _ibssend = .;
