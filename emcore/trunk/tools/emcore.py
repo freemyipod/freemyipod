@@ -294,7 +294,7 @@ class Commandline(object):
                     w = 0
                     for b in range(wordsize):
                         w = (w << 8) | struct.unpack("B", data[i + b])[0]
-                    sys.stdout.write((" %%%dX" % (wordsize * 2)) % w)
+                    sys.stdout.write((" %%0%dX" % (wordsize * 2)) % w)
                 else: sys.stdout.write(" " * (wordsize * 2 + 1))
             if ascii:
                 sys.stdout.write(" |")
