@@ -250,14 +250,16 @@ def trimdoc(docstring):
     # and split into a list of lines:
     lines = docstring.expandtabs().splitlines()
     # Determine minimum indentation (first line doesn't count):
-    indent = sys.maxint
+    try: maxsize = sys.maxint
+    except AttributeError: maxsize = sys.maxsize
+    indent = maxsize
     for line in lines[1:]:
         stripped = line.lstrip()
         if stripped:
             indent = min(indent, len(line) - len(stripped))
     # Remove indentation (first line is special):
     trimmed = [lines[0].strip()]
-    if indent < sys.maxint:
+    if indent < maxsize:
         for line in lines[1:]:
             trimmed.append(line[indent:].rstrip())
     # Strip off trailing and leading blank lines:
@@ -343,6 +345,8 @@ def to_bool(something):
     """
         Converts quite everything into bool.
     """
+    try: long
+    except NameError: long = int
     if type(something) == bool:
         return something
     if something is None:
@@ -362,6 +366,8 @@ def to_int(something):
         This works for default arguments too, because it returns
         None when it found that it got a NoneType object.
     """
+    try: long
+    except NameError: long = int
     if type(something) == int or type(something) == long:
         return something
     elif something is None:
@@ -378,3 +384,11 @@ def to_int(something):
             raise ArgumentTypeError("integer", "'%s'" % something)
     else:
         raise ArgumentTypeError("integer", "'%s'" % something)
+
+
+def majorver():
+    """
+        Returns the major version of python
+    """
+    import sys
+    return sys.hexversion // 0x1000000

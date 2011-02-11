@@ -30,6 +30,7 @@ import sys
 import struct
 import ctypes
 import usb.core
+import base64
 
 from libemcoredata import *
 from misc import Logger, Bunch, Error, ArgumentError, gethwname
@@ -222,7 +223,7 @@ class Emcore(object):
         """
         cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         din_maxsize = self.lib.dev.packetsizelimit.din
-        data = ""
+        data = b""
         (headsize, bodysize, tailsize) = self._alignsplit(addr, size, cin_maxsize, 16)
         self.logger.debug("Downloading %d bytes from 0x%X, split as (%d/%d/%d)\n" % (size, addr, headsize, bodysize, tailsize))
         if headsize != 0:
@@ -288,19 +289,19 @@ class Emcore(object):
         string = ""
         while (len(string) < maxlength or maxlength < 0):
             data = self._readmem(addr, min(maxlength - len(string), cin_maxsize))
-            length = data.find("\0")
+            length = data.find(b"\0")
             if length >= 0:
-                string += data[:length]
+                string += data[:length].decode("latin_1")
                 break
             else:
-                string += data
+                string += data.decode("latin_1")
             addr += cin_maxsize
         return string
     
     @command()
     def i2cread(self, index, slaveaddr, startaddr, size):
         """ Reads data from an i2c slave """
-        data = ""
+        data = b""
         for i in range(size):
             resp = self.lib.monitorcommand(struct.pack("<IBBBBII", 8, index, slaveaddr, startaddr + i, 1, 0, 0), "III1s", (None, None, None, "data"))
             data += resp.data
@@ -318,10 +319,10 @@ class Emcore(object):
     
     @command()
     def usbcread(self):
-        """ Reads one packet with the maximal cin size """
+        """ Reads one packet with the maximal cin size from the console """
         cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         resp = self.lib.monitorcommand(struct.pack("<IIII", 10, cin_maxsize, 0, 0), "III%ds" % cin_maxsize, ("validsize", "buffersize", "queuesize", "data"))
-        resp.data = resp.data[:resp.validsize]
+        resp.data = resp.data[:resp.validsize].decode("latin_1")
         resp.maxsize = cin_maxsize
         return resp
     
@@ -918,7 +919,7 @@ class Lib(object):
         self.connected = True
     
     def monitorcommand(self, cmd, rcvdatatypes=None, rcvstruct=None):
-        self.logger.debug("Sending monitorcommand [0x%s]\n" % cmd[3::-1].encode("hex"))
+        self.logger.debug("Sending monitorcommand [0x%s]\n" % base64.b16encode(cmd[3::-1]).decode("ascii"))
         writelen = self.dev.cout(cmd)
         if rcvdatatypes:
             rcvdatatypes = "I" + rcvdatatypes # add the response
@@ -1073,7 +1074,7 @@ if __name__ == "__main__":
         from misc import gendoc
         logger.write("Generating documentation\n")
         cmddict = {}
-        for attr, value in Emcore.__dict__.iteritems():
+        for attr, value in Emcore.__dict__.items():
             if getattr(value, 'func', False):
                 if getattr(value.func, '_command', False):
                     cmddict[value.func.__name__] = value

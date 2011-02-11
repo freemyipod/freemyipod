@@ -93,7 +93,7 @@ def commandClass(cls):
         to all functions decorated with @command
     """
     cls.cmddict = {}
-    for attr, value in cls.__dict__.iteritems():
+    for attr, value in cls.__dict__.items():
         if getattr(value, 'func', False):
             if getattr(value.func, '_command', False):
                 cls.cmddict[value.func.__name__] = value
@@ -125,17 +125,17 @@ class Commandline(object):
         if func in self.cmddict:
             try:
                 self.cmddict[func](*args)
-            except (ArgumentError, libemcore.ArgumentError), e:
+            except (ArgumentError, libemcore.ArgumentError) as e:
                 usage(e, specific=func)
             except (ArgumentError, libemcore.ArgumentError):
                 usage("Syntax Error in function '" + func + "'", specific=func)
-            except ArgumentTypeError, e:
+            except ArgumentTypeError as e:
                 usage(e, specific=func)
             except NotImplementedError:
                 self.logger.error("This function is not implemented yet!\n")
-            except libemcore.DeviceError, e:
+            except libemcore.DeviceError as e:
                 self.logger.error(str(e) + "\n")
-            except TypeError, e:
+            except TypeError as e:
                 # Only act on TypeErrors for the function we called, not on TypeErrors raised by another function.
                 if str(e).split(" ", 1)[0] == func + "()":
                     self.logger.error(usage("Argument Error in '%s': Wrong argument count" % func, specific=func))
