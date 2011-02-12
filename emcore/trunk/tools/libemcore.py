@@ -563,7 +563,7 @@ class Emcore(object):
         if bbtheader[0] != "emBIbbth":
             raise ArgumentError("The specified file is not an emCORE hard disk BBT")
         virtualsectors = bbtheader[2]
-        bbtsectors = bbtheader[3]
+        bbtsectors = bbtheader[4]
         if tempaddr is None:
             tempaddr = self.malloc(len(bbt))
             malloc = True
@@ -575,18 +575,17 @@ class Emcore(object):
             count = 1
             offset = 0
             for i in range(bbtsectors):
-                if bbtheader[4][i] == sector + count:
+                if bbtheader[5 + i] == sector + count:
                     count = count + 1
                 else:
                     self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
                     offset = offset + count * 4096
-                    sector = bbtheader[4][i]
+                    sector = bbtheader[5 +i]
                     count = 1
             self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
-        except:
+        finally:
             if malloc == True:
                 self.free(tempaddr)
-            raise
     
     @command()
     def storage_get_info(self, volume):

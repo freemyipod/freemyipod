@@ -814,8 +814,7 @@ class Commandline(object):
             Uploads the bad block table <filename> to memory at <tempaddr>
             (or an allocated block if not given) and writes it to the hard disk
         """
-	if tempaddr != None:
-            tempaddr = to_int(tempaddr)
+        tempaddr = to_int(tempaddr)
         try:
             f = open(filename, 'rb')
         except IOError:
