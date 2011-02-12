@@ -382,7 +382,7 @@ class Commandline(object):
         """
         while True:
             resp = self.emcore.usbcread()
-            self.logger.write(resp.data, target = stdout)
+            self.logger.write(resp.data, target = "stdout")
             time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
     
     @command
