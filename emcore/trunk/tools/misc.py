@@ -345,8 +345,6 @@ def to_bool(something):
     """
         Converts quite everything into bool.
     """
-    try: long
-    except NameError: long = int
     if type(something).__name__ in ("bool", "NoneType"):
         return something
     elif type(something).__name__ in ("int", "long"):
