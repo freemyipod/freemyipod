@@ -204,6 +204,8 @@ int wakeup_signal(struct wakeup* obj)
         obj->waiter->blocked_by = NULL;
         obj->waiter->timeout = 0;
         ret = THREAD_FOUND;
+        if (current_thread == &idle_thread)
+            scheduler_switch(obj->waiter, NULL);
     }
 
     leave_critical_section(mode);
