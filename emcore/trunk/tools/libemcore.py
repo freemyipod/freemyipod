@@ -385,7 +385,9 @@ class Emcore(object):
             threadstruct = threadstruct._to_bunch()
             threadstruct.id = id # only for the purpose of detecting the idle thread as it is always the first one
             threadstruct.addr = structptr
-            threadstruct.name = self.readstring(threadstruct.name)
+	    if threadstruct.name != 0:
+	        threadstruct.name = self.readstring(threadstruct.name)
+            else: threadstruct.name = "[Thread %08X]" % structptr
             threadstruct.state = thread_state(threadstruct.state)
             threads.append(threadstruct)
             id += 1
