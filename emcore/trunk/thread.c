@@ -258,7 +258,7 @@ void scheduler_resume_accounting()
     current_thread->startusec = USEC_TIMER;
 }
 
-void scheduler_switch(struct scheduler_thread* thread)
+void scheduler_switch(struct scheduler_thread* thread, struct scheduler_thread* block)
 {
     struct scheduler_thread* t;
     uint32_t score, best;
@@ -273,7 +273,6 @@ void scheduler_switch(struct scheduler_thread* thread)
         current_thread->block_type = THREAD_DEFUNCT_STKOV;
         wakeup_signal(&dbgwakeup);
     }
-
     if (usec - last_tick > SCHEDULER_TICK)
     {
         uint32_t diff = usec - last_tick;
@@ -300,15 +299,15 @@ void scheduler_switch(struct scheduler_thread* thread)
                 t->timeout = 0;
             }
 
-        if (thread && thread->state == THREAD_READY) current_thread = thread;
-        else
+        if (!thread || thread->state != THREAD_READY)
         {
             thread = &idle_thread;
             best = 0xffffffff;
             for (t = head_thread; t; t = t->thread_next)
                 if (t->state == THREAD_READY && t->priority)
                 {
-                    score = t->cputime_current / t->priority;
+                    if (t == block) score = 0xfffffffe;
+                    else score = t->cputime_current / t->priority;
                     if (score < best)
                     {
                         best = score;

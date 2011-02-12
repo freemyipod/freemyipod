@@ -113,7 +113,7 @@ extern struct scheduler_thread* current_thread IBSS_ATTR;
 void scheduler_init() INITCODE_ATTR;
 void scheduler_pause_accounting() ICODE_ATTR;
 void scheduler_resume_accounting() ICODE_ATTR;
-void scheduler_switch(struct scheduler_thread* thread) ICODE_ATTR;
+void scheduler_switch(struct scheduler_thread* thread, struct scheduler_thread* block) ICODE_ATTR;
 bool scheduler_freeze(bool value);
 struct scheduler_thread* thread_create(struct scheduler_thread* thread, const char* name,
                                        const void* code, void* stack, int stacksize,

@@ -32,13 +32,15 @@ yield:
 	msr	cpsr_c, #0xdf
 	ldr	r0, =current_thread
 	ldr	r0, [r0]
-	stmia	r0!, {r0-r14}
-	str	lr, [r0], #4
-	str	r1, [r0]
+	stmia	r0, {r0-r14}
+	str	lr, [r0,#0x3c]
+	str	r1, [r0,#0x40]
 	msr	cpsr_c, #0xd2
+	mov	r4, r0
 	bl	scheduler_pause_accounting
 	adr	lr, resume_thread
-	mov	r0, #-1
+	mov	r0, #0
+	mov	r1, r4
 	b	scheduler_switch
 .size yield, .-yield
 
@@ -80,7 +82,8 @@ syscall_breakpoint:
 	stmia	r5, {r0-r4}
 	bl	scheduler_pause_accounting
 	adr	lr, resume_thread
-	mov	r0, #-1
+	mov	r0, #0
+	mov	r1, #0
 	b	scheduler_switch
 .size syscall_handler, .-syscall_handler
 
