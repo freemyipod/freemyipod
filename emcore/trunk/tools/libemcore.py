@@ -461,7 +461,7 @@ class Emcore(object):
     @command()
     def run(self, app):
         """ Uploads and runs the emCORE app in the string 'app' """
-        if app[:8].decode("ascii") != "emCOexec":
+        if app[:8].decode("latin_1") != "emCOexec":
             raise ArgumentError("The specified app is not an emCORE application")
         baseaddr = self.malloc(len(app))
         self.write(baseaddr, app)
