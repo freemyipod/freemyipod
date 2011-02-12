@@ -285,19 +285,19 @@ class Emcore(object):
         """ Reads a zero terminated string from memory 
             Reads only a maximum of 'maxlength' chars.
         """
-	if addr == 0: return "<NULL>"
+        if addr == 0: return "<NULL>"
         cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         string = ""
-	done = False
+        done = False
         while not done and (len(string) < maxlength or maxlength < 0):
             data = self._readmem(addr, min(maxlength - len(string), cin_maxsize))
             length = data.find(b"\0")
             if length >= 0:
-	        data = data[:length]
-		done = True
-	    for i in range(len(data)):
-	        byte = ord(data[i : i + 1])
-	        if byte < 0x20: string = string + replacement
+                data = data[:length]
+                done = True
+            for i in range(len(data)):
+                byte = ord(data[i : i + 1])
+                if byte < 0x20: string = string + replacement
                 else: string = string + chr(byte)
             addr += cin_maxsize
         return string
@@ -389,8 +389,8 @@ class Emcore(object):
             threadstruct = threadstruct._to_bunch()
             threadstruct.id = id # only for the purpose of detecting the idle thread as it is always the first one
             threadstruct.addr = structptr
-	    if threadstruct.name != 0:
-	        threadstruct.name = self.readstring(threadstruct.name)
+            if threadstruct.name != 0:
+                threadstruct.name = self.readstring(threadstruct.name)
             else: threadstruct.name = "[Thread %08X]" % structptr
             threadstruct.state = thread_state(threadstruct.state)
             threads.append(threadstruct)
