@@ -281,20 +281,24 @@ class Emcore(object):
         return addr
     
     @command()
-    def readstring(self, addr, maxlength = 256):
+    def readstring(self, addr, maxlength = 256, replacement = "."):
         """ Reads a zero terminated string from memory 
             Reads only a maximum of 'maxlength' chars.
         """
+	if addr == 0: return "<NULL>"
         cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
         string = ""
-        while (len(string) < maxlength or maxlength < 0):
+	done = False
+        while not done and (len(string) < maxlength or maxlength < 0):
             data = self._readmem(addr, min(maxlength - len(string), cin_maxsize))
             length = data.find(b"\0")
             if length >= 0:
-                string += data[:length].decode("latin_1")
-                break
-            else:
-                string += data.decode("latin_1")
+	        data = data[:length]
+		done = True
+	    for i in range(len(data)):
+	        byte = ord(data[i : i + 1])
+	        if byte < 0x20: string = string + replacement
+                else: string = string + chr(byte)
             addr += cin_maxsize
         return string
     
