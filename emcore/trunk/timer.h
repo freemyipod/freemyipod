@@ -45,7 +45,9 @@ uint32_t read_usec_timer();
 }
 
 
-void setup_tick() INITCODE_ATTR;
+void timer_init() INITCODE_ATTR;
+void timer_schedule_wakeup(uint32_t usecs) ICODE_ATTR;
+void timer_kill_wakeup() ICODE_ATTR;
 void INT_TIMERB() ICODE_ATTR;
 
 

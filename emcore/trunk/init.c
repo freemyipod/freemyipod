@@ -273,5 +273,6 @@ void init()
     ib->bootalloc = bootalloc;
     thread_create(&(ib->initthread), initthreadname, initthread, ib->initstack,
                   sizeof(ib->initstack), OS_THREAD, 127, true);
+    timer_init();
     interrupt_init();
 }

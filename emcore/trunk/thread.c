@@ -238,7 +238,6 @@ void scheduler_init(void)
     idle_thread.type = CORE_THREAD;
     idle_thread.name = "idle thread";
     idle_thread.stack = (uint32_t*)-1;
-    setup_tick();
 }
 
 bool scheduler_freeze(bool value)
@@ -275,6 +274,9 @@ void scheduler_switch(struct scheduler_thread* thread, struct scheduler_thread* 
         current_thread->block_type = THREAD_DEFUNCT_STKOV;
         wakeup_signal(&dbgwakeup);
     }
+
+    timer_kill_wakeup();
+
     if (usec - last_tick > SCHEDULER_TICK)
     {
         uint32_t diff = usec - last_tick;
@@ -286,10 +288,12 @@ void scheduler_switch(struct scheduler_thread* thread, struct scheduler_thread* 
         }
     }
 
+    uint32_t next_unblock = 0xffffffff;
     if (scheduler_frozen) thread = &idle_thread;
     else
     {
         for (t = head_thread; t; t = t->thread_next)
+        {
             if (t->state == THREAD_BLOCKED && t->timeout != -1
              && TIME_AFTER(usec, t->blocked_since + t->timeout))
             {
@@ -300,6 +304,12 @@ void scheduler_switch(struct scheduler_thread* thread, struct scheduler_thread* 
                 t->blocked_by = NULL;
                 t->timeout = 0;
             }
+            else if (t->state == THREAD_BLOCKED && t->timeout != -1)
+            {
+                uint32_t left = t->blocked_since + t->timeout - usec;
+                if (left < next_unblock) next_unblock = left;
+            }
+        }
 
         if (!thread || thread->state != THREAD_READY)
         {
@@ -317,6 +327,9 @@ void scheduler_switch(struct scheduler_thread* thread, struct scheduler_thread* 
                     }
                 }
         }
+
+        if (thread == &idle_thread) timer_schedule_wakeup(next_unblock);
+        else timer_schedule_wakeup(SYSTEM_TICK);
     }
 
     current_thread = thread;

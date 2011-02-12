@@ -27,10 +27,8 @@
 #include "s5l8720.h"
 
 
-void setup_tick()
+void timer_init()
 {
-    int cycles = SYSTEM_TICK / 100;
-    
     TACMD = (1 << 1);   /* TA_CLR */
     TBCMD = (1 << 1);   /* TB_CLR */
     TCCMD = (1 << 1);   /* TC_CLR */
@@ -38,16 +36,38 @@ void setup_tick()
     TFCMD = (1 << 1);   /* TF_CLR */
     TGCMD = (1 << 1);   /* TG_CLR */
     THCMD = (1 << 1);   /* TH_CLR */
+}
 
-    /* configure timer for 10 kHz */
-    TBPRE = 208 - 1;    /* prescaler */
-    TBCON = (0 << 13) | /* TB_INT1_EN */
-            (1 << 12) | /* TB_INT0_EN */
+void timer_schedule_wakeup(uint32_t usecs)
+{
+    if (usecs > 16146247)
+    {
+        TBPRE = 511;
+        TBDATA1 = 65535;
+    }
+    else if (usecs > 31535)
+    {
+        TBPRE = 511;
+        TBDATA1 = (usecs * 133) >> 15;
+    }
+    else
+    {
+        TBPRE = 0;
+        TBDATA1 = (usecs * 133) >> 6;
+    }
+    TBCON = (1 << 13) | /* TB_INT1_EN */
+            (0 << 12) | /* TB_INT0_EN */
             (0 << 11) | /* TB_START */
             (3 << 8) |  /* TB_CS = PCLK / 64 */
-            (0 << 4);   /* TB_MODE_SEL = interval mode */
-    TBDATA0 = cycles;   /* set interval period */
+            (2 << 4);   /* TB_MODE_SEL = one-shot mode */
+    TBCMD = (1 << 1);   /* TB_CLR */
     TBCMD = (1 << 0);   /* TB_EN */
+}
+
+void timer_kill_wakeup()
+{
+    TBCMD = (1 << 1);   /* TB_CLR */
+    TBCON = TBCON;
 }
 
 void INT_TIMERB(void)
