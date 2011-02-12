@@ -29,6 +29,7 @@
 
 extern uint16_t ata_identify_data[0x100];
 extern uint64_t ata_total_sectors;
+extern struct mutex ata_mutex;
 
 #ifdef ATA_HAVE_BBT
 extern uint16_t (*ata_bbt)[0x20];

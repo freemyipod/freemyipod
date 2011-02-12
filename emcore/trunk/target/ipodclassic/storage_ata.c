@@ -31,7 +31,7 @@ uint16_t ata_identify_data[0x100];
 bool ata_lba48;
 bool ata_dma;
 uint64_t ata_total_sectors;
-static struct mutex ata_mutex;
+struct mutex ata_mutex;
 static struct wakeup ata_wakeup;
 static uint32_t ata_dma_flags;
 static long ata_last_activity_value = -1;
