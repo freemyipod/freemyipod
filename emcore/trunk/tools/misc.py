@@ -76,7 +76,7 @@ class Logger(object):
             text = (indent * " ") + text
             text = text.replace("\n", "\n" + (indent * " "), text.count("\n") - 1)
             if target == "stdout":
-                sys.stderr.write(text)
+                sys.stdout.write(text)
             if target == "stderr":
                 sys.stderr.write(text)
             elif target == "file":
