@@ -808,13 +808,14 @@ class Commandline(object):
         self.logger.info("done\n")
     
     @command
-    def ipodclassic_writebbt(self, tempaddr, filename):
+    def ipodclassic_writebbt(self, filename, tempaddr = None):
         """
             Target-specific function: ipodclassic
-            Uploads the bad block table <filename> to
-            memory at <tempaddr> and writes it to the hard disk
+            Uploads the bad block table <filename> to memory at <tempaddr>
+            (or an allocated block if not given) and writes it to the hard disk
         """
-        tempaddr = to_int(tempaddr)
+	if tempaddr != None:
+            tempaddr = to_int(tempaddr)
         try:
             f = open(filename, 'rb')
         except IOError:

@@ -542,11 +542,11 @@ class Emcore(object):
             Access the hard disk, type = 0 (read) / 1 (write)
         """
         rc = self.lib.monitorcommand(struct.pack("<IIQIIII", 0xffff0002, type, sector, count, addr, 0, 0), "III", ("rc", None, None))
-        if (rc > 0x80000000):
-            raise DeviceError("HDD access (type=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (type, sector, count, addr, rc))
+        if (rc.rc > 0x80000000):
+            raise DeviceError("HDD access (type=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (type, sector, count, addr, rc.rc))
     
     @command(target = 0x4c435049)
-    def ipodclassic_writebbt(self, bbt, tempaddr):
+    def ipodclassic_writebbt(self, bbt, tempaddr = None):
         """ Target-specific function: ipodclassic
             Write hard drive bad block table
         """
@@ -558,19 +558,29 @@ class Emcore(object):
             raise ArgumentError("The specified file is not an emCORE hard disk BBT")
         virtualsectors = bbtheader[2]
         bbtsectors = bbtheader[3]
-        self.write(tempaddr, bbt)
-        sector = 0
-        count = 1
-        offset = 0
-        for i in range(bbtsectors):
-            if bbtheader[4][i] == sector + count:
-                count = count + 1
-            else:
-                self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
-                offset = offset + count * 4096
-                sector = bbtheader[4][i]
-                count = 1
-        self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
+        if tempaddr is None:
+            tempaddr = self.malloc(len(bbt))
+            malloc = True
+        else:
+            malloc = False
+        try:
+            self.write(tempaddr, bbt)
+            sector = 0
+            count = 1
+            offset = 0
+            for i in range(bbtsectors):
+                if bbtheader[4][i] == sector + count:
+                    count = count + 1
+                else:
+                    self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
+                    offset = offset + count * 4096
+                    sector = bbtheader[4][i]
+                    count = 1
+            self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
+        except:
+            if malloc == True:
+                self.free(tempaddr)
+            raise
     
     @command()
     def storage_get_info(self, volume):
