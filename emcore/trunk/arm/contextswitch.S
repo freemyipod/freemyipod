@@ -36,6 +36,7 @@ yield:
 	str	lr, [r0], #4
 	str	r1, [r0]
 	msr	cpsr_c, #0xd2
+	bl	scheduler_pause_accounting
 	adr	lr, resume_thread
 	mov	r0, #-1
 	b	scheduler_switch
