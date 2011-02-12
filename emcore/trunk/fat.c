@@ -685,7 +685,6 @@ static void *cache_fat_sector(IF_MV2(struct bpb* fat_bpb,)
 #endif
     ))
     {
-        while (fce->locked) sleep(1000);
         /* Write back if it is dirty */
         if(fce->dirty)
         {
