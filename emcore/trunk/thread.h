@@ -134,9 +134,4 @@ int wakeup_wait(struct wakeup* obj, int timeout) ICODE_ATTR;
 int wakeup_signal(struct wakeup* obj) ICODE_ATTR;
 void sleep(int usecs) ICODE_ATTR;
 
-static inline void yield()
-{
-    context_switch();
-}
-
 #endif

@@ -115,7 +115,7 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .tlsf_overhead = tlsf_overhead,
     .execfirmware = execfirmware,
     .clockgate_enable = clockgate_enable,
-    .context_switch = context_switch,
+    .yield = yield,
     .reset = reset,
     .execimage = execimage,
 #ifdef HAVE_STORAGE

@@ -38,6 +38,7 @@
 #include "../storage.h"
 #include "../shutdown.h"
 #include "../thread.h"
+#include "../contextswitch.h"
 #include "../ucl.h"
 #include "../bootflash.h"
 #include "../timer.h"
@@ -237,7 +238,7 @@ struct emcore_syscall_table
     typeof(button_unregister_handler) *button_unregister_handler;
     typeof(clickwheel_get_state) *clickwheel_get_state;
     typeof(clockgate_enable) *clockgate_enable;
-    typeof(context_switch) *context_switch;
+    typeof(yield) *yield;
     typeof(disk_mount) *disk_mount;
     typeof(disk_unmount) *disk_unmount;
     typeof(hwkeyaes) *hwkeyaes;

@@ -112,7 +112,7 @@ _start:
 	msr	cpsr_c, #0x1f
 	ldr	sp, =_abortstackend
 	bl	init
-	bl	context_switch
+	bl	yield
 	mov	r0, #0
 	ldr	pc, =idleloop
 .ltorg

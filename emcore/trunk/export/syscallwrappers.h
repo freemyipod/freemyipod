@@ -180,7 +180,7 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define button_unregister_handler __emcore_syscall->button_unregister_handler
 #define clickwheel_get_state __emcore_syscall->clickwheel_get_state
 #define clockgate_enable __emcore_syscall->clockgate_enable
-#define context_switch __emcore_syscall->context_switch
+#define yield __emcore_syscall->yield
 #define disk_mount __emcore_syscall->disk_mount
 #define disk_unmount __emcore_syscall->disk_unmount
 #define hwkeyaes __emcore_syscall->hwkeyaes

@@ -106,7 +106,7 @@ int mutex_lock(struct mutex* obj, int timeout)
             current_thread->blocked_since = USEC_TIMER;
             mutex_add_to_queue(obj, current_thread);
             leave_critical_section(mode);
-            context_switch();
+            yield();
             if (obj->owner != current_thread) return THREAD_TIMEOUT;
             return THREAD_OK;
         }
@@ -178,7 +178,7 @@ int wakeup_wait(struct wakeup* obj, int timeout)
             current_thread->blocked_since = USEC_TIMER;
             obj->waiter = current_thread;
             leave_critical_section(mode);
-            context_switch();
+            yield();
             obj->waiter = NULL;
             if (!obj->signalled) return THREAD_TIMEOUT;
             obj->signalled = false;
@@ -221,7 +221,7 @@ void sleep(int usecs)
         current_thread->blocked_since = USEC_TIMER;
         leave_critical_section(mode);
     }
-    context_switch();
+    yield();
 }
 
 void scheduler_init(void)
@@ -401,7 +401,7 @@ int thread_suspend(struct scheduler_thread* thread)
 
     leave_critical_section(mode);
 
-    if (needsswitch) context_switch();
+    if (needsswitch) yield();
 
     return ret;
 }
@@ -481,7 +481,7 @@ int thread_terminate_internal(struct scheduler_thread* thread, uint32_t mode)
 #endif
     free_all_of_thread(thread);
 
-    if (needsswitch) context_switch();
+    if (needsswitch) yield();
 
     return THREAD_OK;
 }

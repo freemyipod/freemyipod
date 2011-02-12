@@ -45,7 +45,7 @@ void handle_panic(enum panic_severity severity)
     current_thread->state = THREAD_DEFUNCT_ACK;
     current_thread->block_type = THREAD_DEFUNCT_PANIC;
     leave_critical_section(mode);
-    context_switch();
+    yield();
 }
 
 void panic(enum panic_severity severity, const char* string)

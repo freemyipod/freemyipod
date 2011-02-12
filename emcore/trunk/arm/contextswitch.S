@@ -23,11 +23,11 @@
 #define ASM_FILE
 #include "global.h"
 
-.section .icode.contextswitch, "ax", %progbits
+.section .icode.yield, "ax", %progbits
 .align 2
-.global context_switch
-.type context_switch, %function
-context_switch:
+.global yield
+.type yield, %function
+yield:
 	mrs	r1, cpsr
 	msr	cpsr_c, #0xdf
 	ldr	r0, =current_thread
@@ -39,7 +39,7 @@ context_switch:
 	adr	lr, resume_thread
 	mov	r0, #-1
 	b	scheduler_switch
-.size context_switch, .-context_switch
+.size yield, .-yield
 
 .global syscall_handler
 .type syscall_handler, %function
