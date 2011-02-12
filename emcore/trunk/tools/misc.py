@@ -347,18 +347,16 @@ def to_bool(something):
     """
     try: long
     except NameError: long = int
-    if type(something) == bool:
+    if type(something).__name__ in ("bool", "NoneType"):
         return something
-    if something is None:
-        return False
-    elif type(something) == int or type(something) == long:
-        return bool(something)
-    elif type(something == str):
+    elif type(something).__name__ in ("int", "long"):
+        return something != 0
+    elif type(something) == str:
         if something.lower() in ['true', '1', 't', 'y', 'yes']:
             return True
         elif something.lower() in ['false', '0', 'f', 'n', 'no']:
             return False
-    raise ArgumentTypeError("bool", "'%s'" % something)
+    raise ArgumentTypeError("bool", "'%s' (%s)" % (something, type(something).__name__))
 
 def to_int(something):
     """
@@ -366,12 +364,8 @@ def to_int(something):
         This works for default arguments too, because it returns
         None when it found that it got a NoneType object.
     """
-    try: long
-    except NameError: long = int
-    if type(something) == int or type(something) == long:
+    if type(something).__name__ in ("int", "long", "NoneType"):
         return something
-    elif something is None:
-        return None
     elif type(something) == str:
         try:
             if something[:2] == "0x": # Hexadecimal notation
@@ -381,9 +375,9 @@ def to_int(something):
             else: # Decimal notation
                 return int(something, 10)
         except ValueError:
-            raise ArgumentTypeError("integer", "'%s'" % something)
+            raise ArgumentTypeError("integer", "'%s' (%s)" % (something, type(something).__name__))
     else:
-        raise ArgumentTypeError("integer", "'%s'" % something)
+        raise ArgumentTypeError("integer", "'%s' (%s)" % (something, type(something).__name__))
 
 
 def majorver():
