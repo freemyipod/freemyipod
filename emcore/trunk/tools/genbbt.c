@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         if (sscanf(line, "%i", &sector) == 1 && sector) mark_bad(bitmap, sector);
     }
     fclose(in);
-    int l0count = (sectors + 0xfffff) >> 19;
+    int l0count = (sectors + 0x7ffff) >> 19;
     int bbtpages = 64 + ((l0count + 0x3f) & ~0x3f);
     int bbtsize;
     uint16_t (*bbt)[0x20];
