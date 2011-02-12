@@ -61,7 +61,7 @@ int pmu_read_adc(unsigned int adc)
     pmu_write(0x54, 5 | (adc << 4));
     while ((data & 0x80) == 0)
     {
-        yield();
+        sleep(1000);
         data = pmu_read(0x57);
     }
     int value = (pmu_read(0x55) << 2) | (data & 3);
