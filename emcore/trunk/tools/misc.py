@@ -76,9 +76,15 @@ class Logger(object):
             text = (indent * " ") + text
             text = text.replace("\n", "\n" + (indent * " "), text.count("\n") - 1)
             if target == "stdout":
-                sys.stdout.write(text)
+                if majorver() > 2:
+                    sys.stdout.write(text)
+                else:
+                    sys.stdout.write(text.encode(sys.stdout.encoding))
             if target == "stderr":
-                sys.stderr.write(text)
+                if majorver() > 2:
+                    sys.stdout.write(text)
+                else:
+                    sys.stderr.write(text.encode(sys.stderr.encoding))
             elif target == "file":
                 with open(self.logfile, 'a') as f:
                     f.write(text)
