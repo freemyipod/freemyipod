@@ -82,6 +82,18 @@ class scheduler_thread(ExtendedCStruct):
                 ("cpuload", c_uint8),
                ]
 
+class mutex(ExtendedCStruct):
+    _fields_ = [("owner", c_uint32),
+                ("waiters", c_uint32),
+                ("count", c_int32),
+                ]
+
+class wakeup(ExtendedCStruct):
+    _fields_ = [("waiter", c_uint32),
+                ("signalled", c_uint32),
+               ]
+
+
 swtypes = {
     0: "invalid",
     1: "emBIOS Debugger",
