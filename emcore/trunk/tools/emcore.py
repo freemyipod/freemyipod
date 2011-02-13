@@ -458,9 +458,12 @@ class Commandline(object):
             self.logger.info("Thread type: %s\n" % thread.thread_type, 4)
             self.logger.info("Thread state: %s\n" % thread.state, 4)
             if thread.block_type != "THREAD_NOT_BLOCKED":
-                self.logger.info("Block type: %s\n" % thread.block_type, 6)
-                if thread.blocked_by != 0:
-                    self.logger.info("Blocked by: 0x%X\n" % thread.blocked_by, 6)
+                self.logger.info("Block type: %s\n" % thread.block_type, 4)
+                if thread.block_type == "THREAD_BLOCK_MUTEX":
+                    self.logger.info("Blocked by mutex: 0x%X\n" % thread.blocked_by, 6)
+                    self.logger.info("Owner: %s (0x%X)\n" % (thread.blocked_by.owner.name, thread.blocked_by.owner), 8)
+                elif thread.block_type == "THREAD_BLOCK_WAKEUP":
+                    self.logger.info("Blocked by wakeup: 0x%X\n" % thread.blocked_by, 6)
             self.logger.info("Priority: %d/255\n" % thread.priority, 4)
             self.logger.info("Current CPU load: %.1f%%\n" % ((thread.cpuload * 100) / 255.), 4)
             self.logger.info("CPU time (total): %s\n" % datetime.timedelta(microseconds = thread.cputime_total), 4)

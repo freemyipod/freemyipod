@@ -33,7 +33,7 @@ import usb.core
 import base64
 
 from libemcoredata import *
-from misc import Logger, Bunch, Error, ArgumentError, gethwname
+from misc import Logger, Bunch, remote_pointer, Error, ArgumentError, getthread, gethwname
 from functools import wraps
 
 class DeviceNotFoundError(Error):
@@ -393,10 +393,29 @@ class Emcore(object):
                 threadstruct.name = self.readstring(threadstruct.name)
             else: threadstruct.name = "[Thread %08X]" % structptr
             threadstruct.state = thread_state(threadstruct.state)
+            if threadstruct.block_type == "THREAD_BLOCK_MUTEX":
+                blocked_by_struct = mutex
+            elif threadstruct.block_type == "THREAD_BLOCK_WAKEUP":
+                blocked_by_struct = wakeup
+            else:
+                blocked_by_struct = None
+            if blocked_by_struct != None:
+                blocked_by_data = self.read(threadstruct.blocked_by, ctypes.sizeof(blocked_by_struct))
+                blocked_by = blocked_by_struct()
+                blocked_by._from_string(blocked_by_data)
+                threadstruct.blocked_by = remote_pointer(threadstruct.blocked_by, blocked_by._to_bunch())
+            else:
+                threadstruct.blocked_by = 0
             threads.append(threadstruct)
             id += 1
             structptr = threadstruct.thread_next
         self.lockscheduler(schedulerstate)
+        
+        for thread in threads:
+            if thread.block_type == "THREAD_BLOCK_MUTEX":
+                thread.blocked_by.owner = remote_pointer(thread.blocked_by.owner, getthread(thread.blocked_by.owner, threads))
+            if thread.block_type == "THREAD_BLOCK_WAKEUP":
+                thread.blocked_by.waiter = remote_pointer(thread.blocked_by.waiter, getthread(thread.blocked_by.waiter, threads))
         return threads
     
     @command()
