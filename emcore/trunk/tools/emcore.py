@@ -467,10 +467,9 @@ class Commandline(object):
             self.logger.info("Stack address: 0x%X\n" % thread.stack, 4)
             self.logger.info("Registers:\n", 4)
             for registerrange in range(4):
-                self.logger.info("      ")
                 for register in range(registerrange, 16, 4):
                     registerrepr = "r"+str(register)
-                    self.logger.info("{0:3s}: 0x{1:08X}   ".format(registerrepr, thread.regs[register]))
+                    self.logger.info("{0:>3s}: 0x{1:08X}   ".format(registerrepr, thread.regs[register]), 5)
                 self.logger.info("\n")
             self.logger.info("cpsr: 0x{0:08X}".format(thread.cpsr), 6)
             self.logger.info("\n")
