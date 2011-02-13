@@ -120,6 +120,34 @@ class Bunch(dict):
         self.__dict__ = self
 
 
+class remote_pointer(dict):
+    """
+        This points to a (remote) location.
+        Otherwise it behaves like a Bunch.
+        The second argument must be a Bunch object
+    """
+    def __init__(self, address, bunch):
+        dict.__init__(self, bunch.__dict__)
+        self.__dict__ = self
+        self._address_ = address
+    
+    def __getstate__(self):
+        return self
+    
+    def __setstate__(self, state):
+        self.update(state)
+        self.__dict__ = self
+    
+    def __str__(self):
+        return "<remote_pointer object with address 0x%X>" % (self._address_)
+    
+    def __int__(self):
+        return self._address_
+    
+    def __repr__(self):
+        return self.__str__()
+
+
 class c_enum(_SimpleCData):
     """
         Resembles the enum datatype from C with an 8 bit size.
@@ -224,6 +252,19 @@ class ExtendedCStruct(LittleEndianStructure):
     
     def _to_string(self):
         return string_at(addressof(self), sizeof(self))
+
+
+def getthread(address, threads):
+    """
+        Returns the thread at <address> from the list of threads <threads>.
+        Returns an empty thread if not found
+    """
+    for thread in threads:
+        if address == thread.addr:
+            return thread
+    thread = scheduler_thread()._to_bunch()
+    thread.name = "[Invalid Thread %08X]" % address
+    return thread
 
 
 def gethwname(id):
