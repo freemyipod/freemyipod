@@ -195,9 +195,11 @@ class c_enum(_SimpleCData):
         return False
     
     def __ne__(self, other):
-        if self.value == other:
-            return False
-        return True
+        if type(other) == str:
+            try: return getattr(self, other) != self.value
+            except AttributeError: return True
+        else:
+            return self.value != other
 
 
 class ExtendedCStruct(LittleEndianStructure):
