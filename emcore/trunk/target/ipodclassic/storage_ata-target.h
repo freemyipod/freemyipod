@@ -24,7 +24,16 @@
 #ifndef __STORAGE_ATA_TARGET_H__
 #define __STORAGE_ATA_TARGET_H__
 
-#include "global.h"
+#include "../global.h"
+
+
+struct ata_target_driverinfo
+{
+    int (*soft_reset)();
+    int (*bbt_translate)(uint64_t sector, uint32_t count, uint64_t* phys, uint32_t* physcount);
+    void (*bbt_reload)();
+    void (*bbt_disable)();
+};
 
 
 extern uint16_t ata_identify_data[0x100];
@@ -35,6 +44,9 @@ extern struct mutex ata_mutex;
 extern uint16_t (*ata_bbt)[0x20];
 extern uint64_t ata_virtual_sectors;
 
+int ata_bbt_translate(uint64_t sector, uint32_t count, uint64_t* phys, uint32_t* physcount);
+void ata_bbt_reload();
+void ata_bbt_disable();
 int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool write);
 #endif
 

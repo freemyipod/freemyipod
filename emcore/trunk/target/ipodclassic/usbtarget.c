@@ -69,6 +69,20 @@ int usb_target_handle_request(uint32_t* buffer, int bufsize)
             size = 16;
             break;
         }
+        case 0xffff0003:  // ATA_BBT_RELOAD
+        {
+            ata_bbt_reload();
+            buffer[0] = 1;
+            size = 16;
+            break;
+        }
+        case 0xffff0004:  // ATA_BBT_DISABLE
+        {
+            ata_bbt_disable();
+            buffer[0] = 1;
+            size = 16;
+            break;
+        }
         default:
             buffer[0] = 2;
             size = 16;

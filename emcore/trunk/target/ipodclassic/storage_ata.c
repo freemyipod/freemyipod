@@ -26,6 +26,12 @@
 #include "timer.h"
 #include "../ipodnano3g/s5l8702.h"
 
+
+#ifndef ATA_RETRIES
+#define ATA_RETRIES 3
+#endif
+
+
 /** static, private data **/ 
 uint16_t ata_identify_data[0x100];
 bool ata_lba48;
@@ -55,6 +61,16 @@ void ata_bbt_read_sectors(uint32_t sector, uint32_t count, void* buffer)
                rc, sector, count);
 }
 #endif
+
+static struct ata_target_driverinfo drvinfo =
+{
+    .soft_reset = ata_soft_reset,
+#ifdef ATA_HAVE_BBT
+    .bbt_translate = ata_bbt_translate,
+    .bbt_reload = ata_bbt_reload,
+    .bbt_disable = ata_bbt_disable
+#endif
+};
 
 
 static uint16_t ata_read_cbr(uint32_t volatile* reg)
@@ -333,6 +349,59 @@ int ata_rw_chunk(uint64_t sector, uint32_t cnt, void* buffer, bool write)
     return 0;
 }
 
+#ifdef ATA_HAVE_BBT
+int ata_bbt_translate(uint64_t sector, uint32_t count, uint64_t* phys, uint32_t* physcount)
+{
+    if (sector + count > ata_virtual_sectors) RET_ERR(0);
+    if (!ata_bbt)
+    {
+        *phys = sector;
+        *physcount = count;
+        return 0;
+    }
+    if (!count)
+    {
+        *phys = 0;
+        *physcount = 0;
+        return 0;
+    }
+    uint32_t offset;
+    uint32_t l0idx = sector >> 15;
+    uint32_t l0offs = sector & 0x7fff;
+    *physcount = MIN(count, 0x8000 - l0offs);
+    uint32_t l0data = ata_bbt[0][l0idx << 1];
+    uint32_t base = ata_bbt[0][(l0idx << 1) | 1] << 12;
+    if (l0data < 0x8000) offset = l0data + base;
+    else
+    {
+        uint32_t l1idx = (sector >> 10) & 0x1f;
+        uint32_t l1offs = sector & 0x3ff;
+        *physcount = MIN(count, 0x400 - l1offs);
+        uint32_t l1data = ata_bbt[l0data & 0x7fff][l1idx];
+        if (l1data < 0x8000) offset = l1data + base;
+        else
+        {
+            uint32_t l2idx = (sector >> 5) & 0x1f;
+            uint32_t l2offs = sector & 0x1f;
+            *physcount = MIN(count, 0x20 - l2offs);
+            uint32_t l2data = ata_bbt[l1data & 0x7fff][l2idx];
+            if (l2data < 0x8000) offset = l2data + base;
+            else
+            {
+                uint32_t l3idx = sector & 0x1f;
+                uint32_t l3data = ata_bbt[l2data & 0x7fff][l3idx];
+                for (*physcount = 1; *physcount < count && l3idx + *physcount < 0x20; *physcount++)
+                    if (ata_bbt[l2data & 0x7fff][l3idx + *physcount] != l3data)
+                        break;
+                offset = l3data + base;
+            }
+        }
+    }
+    *phys = sector + offset;
+    return 0;
+}
+#endif
+
 int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
 {
 #ifdef ATA_HAVE_BBT
@@ -340,39 +409,10 @@ int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
     if (ata_bbt)
         while (count)
         {
-            uint32_t offset;
-            uint32_t l0idx = sector >> 15;
-            uint32_t l0offs = sector & 0x7fff;
-            uint32_t cnt = MIN(count, 0x8000 - l0offs);
-            uint32_t l0data = ata_bbt[0][l0idx << 1];
-            uint32_t base = ata_bbt[0][(l0idx << 1) | 1] << 12;
-            if (l0data < 0x8000) offset = l0data + base;
-            else
-            {
-                uint32_t l1idx = (sector >> 10) & 0x1f;
-                uint32_t l1offs = sector & 0x3ff;
-                cnt = MIN(count, 0x400 - l1offs);
-                uint32_t l1data = ata_bbt[l0data & 0x7fff][l1idx];
-                if (l1data < 0x8000) offset = l1data + base;
-                else
-                {
-                    uint32_t l2idx = (sector >> 5) & 0x1f;
-                    uint32_t l2offs = sector & 0x1f;
-                    cnt = MIN(count, 0x20 - l2offs);
-                    uint32_t l2data = ata_bbt[l1data & 0x7fff][l2idx];
-                    if (l2data < 0x8000) offset = l2data + base;
-                    else
-                    {
-                        uint32_t l3idx = sector & 0x1f;
-                        uint32_t l3data = ata_bbt[l2data & 0x7fff][l3idx];
-                        for (cnt = 1; cnt < count && l3idx + cnt < 0x20; cnt++)
-                            if (ata_bbt[l2data & 0x7fff][l3idx + cnt] != l3data)
-                                break;
-                        offset = l3data + base;
-                    }
-                }
-            }
-            uint64_t phys = sector + offset;
+            uint64_t phys;
+            uint32_t cnt;
+            PASS_RC(ata_bbt_translate(sector, count, &phys, &cnt), 0, 0);
+            uint32_t offset = phys - sector;
             if (offset != ata_last_offset && phys - ata_last_phys < 64) ata_soft_reset();
             ata_last_offset = offset;
             ata_last_phys = phys + cnt;
@@ -398,20 +438,16 @@ int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool 
     {
         uint32_t cnt = MIN(ata_lba48 ? 8192 : 32, count);
         int rc = -1;
-        int tries = 3;
-        while (tries-- && rc)
-        {
-            rc = ata_rw_chunk(sector, cnt, buffer, write);
-            if (rc) ata_soft_reset();
-        }
-        if (rc)
+        rc = ata_rw_chunk(sector, cnt, buffer, write);
+        if (rc) ata_soft_reset();
+        if (rc && ATA_RETRIES)
         {
             void* buf = buffer;
             uint64_t sect;
             for (sect = sector; sect < sector + cnt; sect++)
             {
                 rc = -1;
-                tries = 3;
+                tries = ATA_RETRIES;
                 while (tries-- && rc)
                 {
                     rc = ata_rw_chunk(sect, 1, buf, write);
@@ -451,7 +487,13 @@ int ata_soft_reset()
     ata_write_cbr(&ATA_PIO_DAD, BIT(1) | BIT(2));
     sleep(10);
     ata_write_cbr(&ATA_PIO_DAD, 0);
-    PASS_RC_MTX(ata_wait_for_rdy(60000000), 0, 0, &ata_mutex);
+    int rc = ata_wait_for_rdy(20000000);
+    if (IS_ERR(rc))
+    {
+        ata_power_down();
+        sleep(3000000);
+        ata_power_up();
+    }
     ata_set_active();
     mutex_unlock(&ata_mutex);
 }
@@ -512,6 +554,7 @@ void ata_get_info(IF_MD2(int drive,) struct storage_info *info)
     (*info).vendor = "Apple";
     (*info).product = "iPod Classic";
     (*info).revision = "1.0";
+    (*info).driverinfo = &drvinfo;
 }
 
 long ata_last_disk_activity(void)
@@ -519,19 +562,20 @@ long ata_last_disk_activity(void)
     return ata_last_activity_value;
 }
 
-int ata_init(void)
-{
-    mutex_init(&ata_mutex);
-    wakeup_init(&ata_wakeup);
-    PCON(7) = 0x44444444;
-    PCON(8) = 0x44444444;
-    PCON(9) = 0x44444444;
-    PCON(10) = (PCON(10) & ~0xffff) | 0x4444;
-    ata_powered = false;
-    ata_total_sectors = 0;
 #ifdef ATA_HAVE_BBT
+void ata_bbt_disable()
+{
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
+    if (ata_bbt) free(ata_bbt);
     ata_bbt = NULL;
+    ata_virtual_sectors = ata_total_sectors;
+    mutex_unlock(&ata_mutex);
+}
+
+void ata_bbt_reload()
+{
+    mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
+    ata_bbt_disable();
     ata_power_up();
     uint32_t* buf = (uint32_t*)memalign(0x10, 0x1000);
     if (buf)
@@ -559,6 +603,21 @@ int ata_init(void)
     }
     else ata_virtual_sectors = ata_total_sectors;
     mutex_unlock(&ata_mutex);
+}
+#endif
+
+int ata_init(void)
+{
+    mutex_init(&ata_mutex);
+    wakeup_init(&ata_wakeup);
+    PCON(7) = 0x44444444;
+    PCON(8) = 0x44444444;
+    PCON(9) = 0x44444444;
+    PCON(10) = (PCON(10) & ~0xffff) | 0x4444;
+    ata_powered = false;
+    ata_total_sectors = 0;
+#ifdef ATA_HAVE_BBT
+    ata_bbt_reload();
 #endif
     thread_create(&ata_thread_handle, "ATA idle monitor", ata_thread, ata_stack,
                   sizeof(ata_stack), OS_THREAD, 1, true);
