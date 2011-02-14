@@ -50,6 +50,7 @@ struct storage_info
     char *vendor;
     char *product;
     char *revision;
+    void *driverinfo;
 };
 
 #if !defined(CONFIG_STORAGE_MULTI)
