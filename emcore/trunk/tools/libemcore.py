@@ -570,6 +570,20 @@ class Emcore(object):
         if (rc.rc > 0x80000000):
             raise DeviceError("HDD access (type=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (type, sector, count, addr, rc.rc))
     
+    @command(timeout = 30000, target = 0x4c435049)
+    def ipodclassic_reloadbbt(self):
+        """ Target-specific function: ipodclassic
+            Reload the ATA bbt
+        """
+        rc = self.lib.monitorcommand(struct.pack("<IIII", 0xffff0003, 0, 0, 0), "III", (None, None, None))
+    
+    @command(timeout = 30000, target = 0x4c435049)
+    def ipodclassic_disablebbt(self):
+        """ Target-specific function: ipodclassic
+            Disable the ATA bbt
+        """
+        rc = self.lib.monitorcommand(struct.pack("<IIII", 0xffff0004, 0, 0, 0), "III", (None, None, None))
+    
     @command(target = 0x4c435049)
     def ipodclassic_writebbt(self, bbt, tempaddr = None):
         """ Target-specific function: ipodclassic
@@ -590,6 +604,7 @@ class Emcore(object):
             malloc = False
         try:
             self.write(tempaddr, bbt)
+	    self.disk_unmount(0)
             sector = 0
             count = 1
             offset = 0
@@ -602,6 +617,8 @@ class Emcore(object):
                     sector = bbtheader[5 +i]
                     count = 1
             self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
+	    self.ipodclassic_reloadbbt()
+	    self.disk_mount(0)
         finally:
             if malloc == True:
                 self.free(tempaddr)
