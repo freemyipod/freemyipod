@@ -447,7 +447,7 @@ int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool 
             for (sect = sector; sect < sector + cnt; sect++)
             {
                 rc = -1;
-                tries = ATA_RETRIES;
+                int tries = ATA_RETRIES;
                 while (tries-- && rc)
                 {
                     rc = ata_rw_chunk(sect, 1, buf, write);
