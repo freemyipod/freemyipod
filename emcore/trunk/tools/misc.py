@@ -79,12 +79,12 @@ class Logger(object):
                 if majorver() > 2:
                     sys.stdout.write(text)
                 else:
-                    sys.stdout.write(text.encode(sys.stdout.encoding, "replace"))
+                    sys.stdout.write(text.encode(sys.stdout.encoding or "latin1", "replace"))
             if target == "stderr":
                 if majorver() > 2:
                     sys.stdout.write(text)
                 else:
-                    sys.stderr.write(text.encode(sys.stderr.encoding, "replace"))
+                    sys.stderr.write(text.encode(sys.stderr.encoding or "latin1", "replace"))
             elif target == "file":
                 with open(self.logfile, 'a') as f:
                     f.write(text)
