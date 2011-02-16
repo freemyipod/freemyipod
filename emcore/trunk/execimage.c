@@ -111,6 +111,7 @@ struct scheduler_thread* execimage(void* image, bool copy)
         *((void**)(image + reloc)) = image + data;
     }
     if (tempsize != finalsize) realloc(image, finalsize); /* Can only shrink => safe */
+    memset(image + textsize, 0, bsssize);
     clean_dcache();
     invalidate_icache();
     struct scheduler_thread* thread;
