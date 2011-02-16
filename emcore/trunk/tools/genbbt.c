@@ -41,6 +41,7 @@ int main(int argc, char** argv)
     while (bbtpages <= 32832)
     {
         bbtsize = bbtpages << 6;
+        l0count = (sectors - bbtsize + 0xfffff) >> 19;
         bbt = malloc(bbtsize);
         memset(bbt, 0, bbtsize);
         int logical = 0;
