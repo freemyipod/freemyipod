@@ -57,119 +57,20 @@ struct storage_info
 /* storage_spindown, storage_sleep and storage_spin are passed as
  * pointers, which doesn't work with argument-macros.
  */
-    #define storage_num_drives() NUM_DRIVES
     #if (CONFIG_STORAGE & STORAGE_ATA)
         #define STORAGE_FUNCTION(NAME) (ata_## NAME)
-        #define storage_spindown ata_spindown
-        #define storage_sleep ata_sleep
-        #define storage_spin ata_spin
-
-        #define storage_enable(on) ata_enable(on)
-        #define storage_sleepnow() ata_sleepnow()
-        #define storage_disk_is_active() ata_disk_is_active()
-        #define storage_soft_reset() ata_soft_reset()
-        #define storage_init() ata_init()
-        #define storage_close() ata_close()
-        #ifdef HAVE_STORAGE_FLUSH
-            #define storage_flush() (void)0
-        #endif
-        #define storage_last_disk_activity() ata_last_disk_activity()
-        #define storage_get_identify() ata_get_identify()
-
-        #ifdef HAVE_HOTSWAP
-            #define storage_removable(drive) ata_removable(IF_MD(drive))
-            #define storage_present(drive) ata_present(IF_MD(drive))
-        #endif
     #elif (CONFIG_STORAGE & STORAGE_SD)
         #define STORAGE_FUNCTION(NAME) (sd_## NAME)
-        #define storage_spindown sd_spindown
-        #define storage_sleep sd_sleep
-        #define storage_spin sd_spin
-
-        #define storage_enable(on) sd_enable(on)
-        #define storage_sleepnow() sd_sleepnow()
-        #define storage_disk_is_active() 0
-        #define storage_soft_reset() (void)0
-        #define storage_init() sd_init()
-        #ifdef HAVE_STORAGE_FLUSH
-            #define storage_flush() (void)0
-        #endif
-        #define storage_last_disk_activity() sd_last_disk_activity()
-        #define storage_get_identify() sd_get_identify()
-
-        #ifdef HAVE_HOTSWAP
-            #define storage_removable(drive) sd_removable(IF_MD(drive))
-            #define storage_present(drive) sd_present(IF_MD(drive))
-        #endif
      #elif (CONFIG_STORAGE & STORAGE_MMC)
         #define STORAGE_FUNCTION(NAME) (mmc_## NAME)
-        #define storage_spindown mmc_spindown
-        #define storage_sleep mmc_sleep
-        #define storage_spin mmc_spin
-
-        #define storage_enable(on) mmc_enable(on)
-        #define storage_sleepnow() mmc_sleepnow()
-        #define storage_disk_is_active() mmc_disk_is_active()
-        #define storage_soft_reset() (void)0
-        #define storage_init() mmc_init()
-        #ifdef HAVE_STORAGE_FLUSH
-            #define storage_flush() (void)0
-        #endif
-        #define storage_last_disk_activity() mmc_last_disk_activity()
-        #define storage_get_identify() mmc_get_identify()
-       
-        #ifdef HAVE_HOTSWAP
-            #define storage_removable(drive) mmc_removable(IF_MD(drive))
-            #define storage_present(drive) mmc_present(IF_MD(drive))
-        #endif
     #elif (CONFIG_STORAGE & STORAGE_NAND)
         #define STORAGE_FUNCTION(NAME) (nand_## NAME)
-        #define storage_spindown nand_spindown
-        #define storage_sleep nand_sleep
-        #define storage_spin nand_spin
-
-        #define storage_enable(on) (void)0
-        #define storage_sleepnow() nand_sleepnow()
-        #define storage_disk_is_active() 0
-        #define storage_soft_reset() (void)0
-        #define storage_init() nand_init()
-        #ifdef HAVE_STORAGE_FLUSH
-            #define storage_flush() nand_flush()
-        #endif
-        #define storage_last_disk_activity() nand_last_disk_activity()
-        #define storage_get_identify() nand_get_identify()
-       
-        #ifdef HAVE_HOTSWAP
-            #define storage_removable(drive) nand_removable(IF_MD(drive))
-            #define storage_present(drive) nand_present(IF_MD(drive))
-        #endif
     #elif (CONFIG_STORAGE & STORAGE_RAMDISK)
         #define STORAGE_FUNCTION(NAME) (ramdisk_## NAME)
-        #define storage_spindown ramdisk_spindown
-        #define storage_sleep ramdisk_sleep
-        #define storage_spin ramdisk_spin
-
-        #define storage_enable(on) (void)0
-        #define storage_sleepnow() ramdisk_sleepnow()
-        #define storage_disk_is_active() 0
-        #define storage_soft_reset() (void)0
-        #define storage_init() ramdisk_init()
-        #ifdef HAVE_STORAGE_FLUSH
-            #define storage_flush() (void)0
-        #endif
-        #define storage_last_disk_activity() ramdisk_last_disk_activity()
-        #define storage_get_identify() ramdisk_get_identify()
-       
-        #ifdef HAVE_HOTSWAP
-            #define storage_removable(drive) ramdisk_removable(IF_MD(drive))
-            #define storage_present(drive) ramdisk_present(IF_MD(drive))
-        #endif
     #else
         //#error No storage driver!
     #endif
-#else /* NOT CONFIG_STORAGE_MULTI */
-
-/* Simulator and multi-driver use normal functions */
+#endif
 
 void storage_enable(bool on);
 void storage_sleep(void);
@@ -186,8 +87,6 @@ int storage_num_drives(void);
 bool storage_removable(int drive);
 bool storage_present(int drive);
 #endif
-
-#endif /* NOT CONFIG_STORAGE_MULTI */
 
 int storage_read_sectors(IF_MD2(int drive,) unsigned long start, int count, void* buf);
 int storage_read_sectors_md(int drive, unsigned long start, int count, void* buf);

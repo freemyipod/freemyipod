@@ -67,6 +67,11 @@ void nand_enable(bool on)
     (void)on;
 }
 
+int nand_num_drives(void)
+{
+    return 1;
+}
+
 void nand_get_info(IF_MD2(int drive,) struct storage_info *info)
 {
     uint32_t ppb = ftl_banks * (*ftl_nand_type).pagesperblock;

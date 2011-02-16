@@ -21,7 +21,6 @@
 #include "global.h"
 #include "storage.h"
 
-#ifdef CONFIG_STORAGE_MULTI
 
 #define DRIVER_MASK     0xff000000
 #define DRIVER_OFFSET   24
@@ -31,7 +30,6 @@
 
 static unsigned int storage_drivers[NUM_DRIVES];
 static unsigned int num_drives;
-#endif
 
 
 int storage_read_sectors(IF_MD2(int drive,) unsigned long start, int count,
@@ -166,8 +164,6 @@ void storage_get_info(int drive, struct storage_info *info)
 #endif /* CONFIG_STORAGE_MULTI */
 }
 #endif /* STORAGE_GET_INFO */
-
-#ifdef CONFIG_STORAGE_MULTI
 
 int storage_num_drives(void)
 {
@@ -568,5 +564,3 @@ bool storage_present(int drive)
     }
 }
 #endif
-
-#endif /*CONFIG_STORAGE_MULTI*/
