@@ -163,7 +163,7 @@ int wakeup_wait(struct wakeup* obj, int timeout)
     if (obj->waiter)
     {
         leave_critical_section(mode);
-        panicf(PANIC_KILLTHREAD, "Multiple threads waiting single wakeup! (%08X)", obj);
+        panicf(PANIC_KILLTHREAD, "Multiple threads waiting for single wakeup! (%08X)", obj);
     }
 
     if (obj->signalled) obj->signalled = false;
