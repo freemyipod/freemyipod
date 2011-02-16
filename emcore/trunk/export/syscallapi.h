@@ -262,6 +262,22 @@ struct emcore_syscall_table
     typeof(crc32) *crc32;
     typeof(clockgate_get_state) *clockgate_get_state;
     typeof(malloc_walk) *malloc_walk;
+    typeof(storage_sleep) *storage_sleep;
+    typeof(storage_disk_is_active) *storage_disk_is_active;
+    typeof(storage_soft_reset) *storage_soft_reset;
+    typeof(storage_flush) *storage_flush;
+    typeof(storage_spin) *storage_spin;
+    typeof(storage_spindown) *storage_spindown;
+    typeof(storage_last_disk_activity) *storage_last_disk_activity;
+    typeof(storage_num_drives) *storage_num_drives;
+    typeof(read_battery_voltage) *read_battery_voltage;
+    typeof(read_battery_current) *read_battery_current;
+    typeof(read_battery_mwh_design) *read_battery_mwh_design;
+    typeof(read_battery_mwh_full) *read_battery_mwh_full;
+    typeof(read_battery_mwh_current) *read_battery_mwh_current;
+    typeof(read_battery_mw) *read_battery_mw;
+    typeof(read_input_mw) *read_input_mw;
+    typeof(read_battery_state) *read_battery_state;
 };
 
 

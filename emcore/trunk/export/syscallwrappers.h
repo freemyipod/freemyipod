@@ -204,6 +204,22 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define crc32 __emcore_syscall->crc32
 #define clockgate_get_state __emcore_syscall->clockgate_get_state
 #define malloc_walk __emcore_syscall->malloc_walk
+#define storage_sleep __emcore_syscall->storage_sleep
+#define storage_disk_is_active __emcore_syscall->storage_disk_is_active
+#define storage_soft_reset __emcore_syscall->storage_soft_reset
+#define storage_flush __emcore_syscall->storage_flush
+#define storage_spin __emcore_syscall->storage_spin
+#define storage_spindown __emcore_syscall->storage_spindown
+#define storage_last_disk_activity __emcore_syscall->storage_last_disk_activity
+#define storage_num_drives __emcore_syscall->storage_num_drives    
+#define read_battery_voltage __emcore_syscall->read_battery_voltage
+#define read_battery_current __emcore_syscall->read_battery_current
+#define read_battery_mwh_design __emcore_syscall->read_battery_mwh_design
+#define read_battery_mwh_full __emcore_syscall->read_battery_mwh_full
+#define read_battery_mwh_current __emcore_syscall->read_battery_mwh_current
+#define read_battery_mw __emcore_syscall->read_battery_mw
+#define read_input_mw __emcore_syscall->read_input_mw
+#define read_battery_state __emcore_syscall->read_battery_state
 
 
 #endif

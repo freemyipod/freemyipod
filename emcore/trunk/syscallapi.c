@@ -222,5 +222,25 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .lcd_get_format = lcd_get_format,
     .crc32 = crc32,
     .clockgate_get_state = clockgate_get_state,
-    .malloc_walk = malloc_walk
+    .malloc_walk = malloc_walk,
+#ifdef HAVE_STORAGE
+    .storage_sleep = storage_sleep,
+    .storage_disk_is_active = storage_disk_is_active,
+    .storage_soft_reset = storage_soft_reset,
+#ifdef HAVE_STORAGE_FLUSH
+    .storage_flush = storage_flush,
+#endif
+    .storage_spin = storage_spin,
+    .storage_spindown = storage_spindown,
+    .storage_last_disk_activity = storage_last_disk_activity,
+    .storage_num_drives = storage_num_drives,
+#endif
+    .read_battery_voltage = read_battery_voltage,
+    .read_battery_current = read_battery_current,
+    .read_battery_mwh_design = read_battery_mwh_design,
+    .read_battery_mwh_full = read_battery_mwh_full,
+    .read_battery_mwh_current = read_battery_mwh_current,
+    .read_battery_mw = read_battery_mw,
+    .read_input_mw = read_input_mw,
+    .read_battery_state = read_battery_state
 };
