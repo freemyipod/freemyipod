@@ -29,7 +29,8 @@
 
 struct ata_target_driverinfo
 {
-    int (*soft_reset)();
+    void (*srst_after_error)(bool enable);
+    void (*set_retries)(int retries);
     int (*bbt_translate)(uint64_t sector, uint32_t count, uint64_t* phys, uint32_t* physcount);
     void (*bbt_reload)();
     void (*bbt_disable)();
@@ -39,6 +40,9 @@ struct ata_target_driverinfo
 extern uint16_t ata_identify_data[0x100];
 extern uint64_t ata_total_sectors;
 extern struct mutex ata_mutex;
+
+void ata_set_retries(int retries);
+void ata_srst_after_error(bool enable);
 
 #ifdef ATA_HAVE_BBT
 extern uint16_t (*ata_bbt)[0x20];

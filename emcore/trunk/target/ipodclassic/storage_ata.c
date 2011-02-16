@@ -45,6 +45,8 @@ static long ata_sleep_timeout = 20000000;
 static struct scheduler_thread ata_thread_handle;
 static uint32_t ata_stack[0x80] STACK_ATTR;
 static bool ata_powered;
+static int ata_retries = ATA_RETRIES;
+static bool ata_error_srst = true;
 
 #ifdef ATA_HAVE_BBT
 #include "panic.h"
@@ -53,18 +55,24 @@ uint64_t ata_virtual_sectors;
 uint32_t ata_last_offset;
 uint64_t ata_last_phys;
 
-void ata_bbt_read_sectors(uint32_t sector, uint32_t count, void* buffer)
+int ata_bbt_read_sectors(uint32_t sector, uint32_t count, void* buffer)
 {
+    if (ata_last_phys != sector - 1 && ata_last_phys > sector - 64) ata_soft_reset();
     int rc = ata_rw_sectors_internal(sector, count, buffer, false);
+    if (rc) rc = ata_rw_sectors_internal(sector, count, buffer, false);
+    ata_last_phys = sector + count - 1;
+    ata_last_offset = 0;
     if (IS_ERR(rc))
-        panicf(PANIC_KILLTHREAD, "ATA: Error %08X while reading BBT (sector %d, count %d)\n",
-               rc, sector, count);
+        cprintf(CONSOLE_BOOT, "ATA: Error %08X while reading BBT (sector %d, count %d)\n",
+                rc, sector, count);
+    return rc;
 }
 #endif
 
 static struct ata_target_driverinfo drvinfo =
 {
-    .soft_reset = ata_soft_reset,
+    .set_retries = ata_set_retries,
+    .srst_after_error = ata_srst_after_error,
 #ifdef ATA_HAVE_BBT
     .bbt_translate = ata_bbt_translate,
     .bbt_reload = ata_bbt_reload,
@@ -72,6 +80,16 @@ static struct ata_target_driverinfo drvinfo =
 #endif
 };
 
+
+void ata_set_retries(int retries)
+{
+    ata_retries = retries;
+}
+
+void ata_srst_after_error(bool enable)
+{
+    ata_error_srst = enable;
+}
 
 static uint16_t ata_read_cbr(uint32_t volatile* reg)
 {
@@ -149,6 +167,16 @@ int ata_identify(uint16_t* buf)
 void ata_set_active(void)
 {
     ata_last_activity_value = USEC_TIMER;
+}
+
+bool ata_disk_is_active(void)
+{
+    return ata_powered;
+}
+
+int ata_num_drives(void)
+{
+    return 1;
 }
 
 int ata_set_feature(uint32_t feature, uint32_t param)
@@ -439,19 +467,19 @@ int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool 
         uint32_t cnt = MIN(ata_lba48 ? 8192 : 32, count);
         int rc = -1;
         rc = ata_rw_chunk(sector, cnt, buffer, write);
-        if (rc) ata_soft_reset();
-        if (rc && ATA_RETRIES)
+        if (rc && ata_error_srst) ata_soft_reset();
+        if (rc && ata_retries)
         {
             void* buf = buffer;
             uint64_t sect;
             for (sect = sector; sect < sector + cnt; sect++)
             {
                 rc = -1;
-                int tries = ATA_RETRIES;
+                int tries = ata_retries;
                 while (tries-- && rc)
                 {
                     rc = ata_rw_chunk(sect, 1, buf, write);
-                    if (rc) ata_soft_reset();
+                    if (rc && ata_error_srst) ata_soft_reset();
                 }
                 if (rc) break;
                 buf += SECTOR_SIZE;
@@ -496,6 +524,7 @@ int ata_soft_reset()
     }
     ata_set_active();
     mutex_unlock(&ata_mutex);
+    return rc;
 }
 
 int ata_read_sectors(IF_MD2(int drive,) unsigned long start, int incount,
@@ -580,23 +609,38 @@ void ata_bbt_reload()
     uint32_t* buf = (uint32_t*)memalign(0x10, 0x1000);
     if (buf)
     {
-        ata_bbt_read_sectors(0, 1, buf);
-        if (!memcmp(buf, "emBIbbth", 8))
+        if (IS_ERR(ata_bbt_read_sectors(0, 1, buf)))
+            ata_virtual_sectors = ata_total_sectors;
+        else if (!memcmp(buf, "emBIbbth", 8))
         {
             ata_virtual_sectors = (((uint64_t)buf[0x1fd]) << 32) | buf[0x1fc];
             uint32_t count = buf[0x1ff];
             ata_bbt = (typeof(ata_bbt))memalign(0x10, 0x1000 * count);
-            uint32_t i;
-            uint32_t cnt;
-            for (i = 0; i < count; i += cnt)
+            if (!ata_bbt)
             {
-                uint32_t phys = buf[0x200 + i];
-                for (cnt = 1; cnt < count; cnt++)
-                    if (buf[0x200 + i + cnt] != phys + cnt)
-                        break;
-                ata_bbt_read_sectors(phys, cnt, ata_bbt[i << 6]);
+                cprintf(CONSOLE_BOOT, "ATA: Failed to allocate memory for BBT! (%d bytes)",
+                        0x1000 * count);
+                ata_virtual_sectors = ata_total_sectors;
             }
-            reownalloc(ata_bbt, NULL);
+            else
+            {
+                uint32_t i;
+                uint32_t cnt;
+                for (i = 0; i < count; i += cnt)
+                {
+                    uint32_t phys = buf[0x200 + i];
+                    for (cnt = 1; cnt < count; cnt++)
+                        if (buf[0x200 + i + cnt] != phys + cnt)
+                            break;
+                    if (IS_ERR(ata_bbt_read_sectors(phys, cnt, ata_bbt[i << 6])))
+                    {
+                        free(ata_bbt);
+                        ata_virtual_sectors = ata_total_sectors;
+                        break;
+                    }
+                }
+                if (ata_bbt) reownalloc(ata_bbt, NULL);
+            }
         }
         else ata_virtual_sectors = ata_total_sectors;
         free(buf);
