@@ -51,3 +51,44 @@ bool vbus_state(void)
 {
     return true;
 }
+
+int read_battery_voltage(int battery)
+{
+    return -1;
+}
+
+int read_battery_current(int battery)
+{
+    return -1;
+}
+
+int read_battery_mwh_design(int battery)
+{
+    return -1;
+}
+
+int read_battery_mwh_full(int battery)
+{
+    return -1;
+}
+
+int read_battery_mwh_current(int battery)
+{
+    return -1;
+}
+
+int read_battery_mw(int battery)
+{
+    return -1;
+}
+
+int read_input_mw(int battery)
+{
+    return -1;
+}
+
+enum battery_state read_battery_state(int battery)
+{
+    if (battery != 0) return BATTERY_STATE_INVALID;
+    return BATTERY_STATE_UNKNOWN;
+}

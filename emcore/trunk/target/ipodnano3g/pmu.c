@@ -80,7 +80,7 @@ int pmu_read_battery_voltage(void)
 /* milliamps */
 int pmu_read_battery_current(void)
 {
-    return pmu_read_adc(2);
+    return -1;
 }
 
 void pmu_ldo_on_in_standby(unsigned int ldo, int onoff)

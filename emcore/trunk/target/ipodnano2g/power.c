@@ -67,3 +67,53 @@ bool vbus_state(void)
 {
     return (PDAT14 & 8) ? false : true;
 }
+
+int read_battery_voltage(int battery)
+{
+    if (battery == 0) return pmu_read_battery_voltage();
+    return -1;
+}
+
+int read_battery_current(int battery)
+{
+    if (battery == 0) return pmu_read_battery_current();
+    return -1;
+}
+
+int read_battery_mwh_design(int battery)
+{
+    if (battery == 0) return 1480;
+    return -1;
+}
+
+int read_battery_mwh_full(int battery)
+{
+    if (battery == 0) return 1480;
+    return -1;
+}
+
+int read_battery_mwh_current(int battery)
+{
+    // TODO: Approximate that better
+    if (battery == 0) return (read_battery_voltage(0) - 3600) * 2;
+    return -1;
+}
+
+int read_battery_mw(int battery)
+{
+    if (battery == 0) return read_battery_current(0) * 3700 / 1000;
+    return -1;
+}
+
+int read_input_mw(int battery)
+{
+    return -1;
+}
+
+enum battery_state read_battery_state(int battery)
+{
+    if (battery != 0) return BATTERY_STATE_INVALID;
+    if (charging_state()) return BATTERY_STATE_CHARGING;
+    if (external_power_state()) return BATTERY_STATE_IDLE;
+    return BATTERY_STATE_DISCHARGING;
+}

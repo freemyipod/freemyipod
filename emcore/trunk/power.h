@@ -27,11 +27,31 @@
 
 #include "global.h"
 
+
+enum battery_state
+{
+    BATTERY_STATE_UNKNOWN,
+    BATTERY_STATE_INVALID,
+    BATTERY_STATE_NONPRESENT,
+    BATTERY_STATE_IDLE,
+    BATTERY_STATE_CHARGING,
+    BATTERY_STATE_DISCHARGING
+};
+
+
 void power_off(void);
 void power_init(void) INITCODE_ATTR;
 bool charging_state(void);
 bool external_power_state(void);
 bool vbus_state(void);
+int read_battery_voltage(int battery);
+int read_battery_current(int battery);
+int read_battery_mwh_design(int battery);
+int read_battery_mwh_full(int battery);
+int read_battery_mwh_current(int battery);
+int read_battery_mw(int battery);
+int read_input_mw(int battery);
+enum battery_state read_battery_state(int battery);
 
 
 #endif
