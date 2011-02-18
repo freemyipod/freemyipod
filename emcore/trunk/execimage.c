@@ -63,7 +63,7 @@ struct scheduler_thread* execimage(void* image, bool copy)
     size_t tempsize = MAX(finalsize, datasize);
     if (compressed)
     {
-        void* alloc = malloc(tempsize);
+        void* alloc = memalign(CACHEALIGN_SIZE, tempsize);
         if (!alloc)
         {
             cprintf(CONSOLE_BOOT, "execimage: Out of memory!\n");
@@ -81,21 +81,23 @@ struct scheduler_thread* execimage(void* image, bool copy)
         }
         image = alloc;
     }
-    else if (copy)
+    else if (copy || (((uint32_t)image) & (CACHEALIGN_SIZE - 1)))
     {
-        void* alloc = malloc(tempsize);
+        void* alloc = memalign(CACHEALIGN_SIZE, tempsize);
         if (!alloc)
         {
             cprintf(CONSOLE_BOOT, "execimage: Out of memory!\n");
+            if (!copy) free(image);
             return NULL;
         }
         memcpy(alloc, image + offset, datasize);
+        if (!copy) free(image);
         image = alloc;
     }
     else
     {
         memcpy(image, image + offset, datasize);
-        void* newimage = realloc(image, tempsize);
+        void* newimage = realign(image, CACHEALIGN_SIZE, tempsize);
         if (!newimage)
         {
             free(image);
