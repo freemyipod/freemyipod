@@ -432,6 +432,10 @@ int ata_bbt_translate(uint64_t sector, uint32_t count, uint64_t* phys, uint32_t*
 
 int ata_rw_sectors(uint64_t sector, uint32_t count, void* buffer, bool write)
 {
+    if (((uint32_t)buffer) & (CACHEALIGN_SIZE - 1))
+        panicf(PANIC_KILLTHREAD,
+               "ATA: Misaligned data buffer at %08X (sector %lu, count %lu)",
+               (unsigned int)buffer, (unsigned int)sector, count);
 #ifdef ATA_HAVE_BBT
     if (sector + count > ata_virtual_sectors) RET_ERR(0);
     if (ata_bbt)
