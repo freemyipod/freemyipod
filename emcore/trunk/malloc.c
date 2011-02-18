@@ -53,12 +53,12 @@ void* memalign(size_t align, size_t size)
     return ptr;
 }
 
-void* realloc(void* ptr, size_t size)
+void* realign(void* ptr, size_t align, size_t size)
 {
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
     size_t oldsize = tlsf_block_size(ptr);
     struct scheduler_thread* owner = *((struct scheduler_thread**)(ptr + oldsize - 4));
-    ptr = tlsf_realloc(global_mallocpool, ptr, size + 4);
+    ptr = tlsf_realign(global_mallocpool, ptr, align, size + 4);
     if (ptr)
     {
         size = tlsf_block_size(ptr);
@@ -66,6 +66,11 @@ void* realloc(void* ptr, size_t size)
     }
     mutex_unlock(&malloc_mutex);
     return ptr;
+}
+
+void* realloc(void* ptr, size_t size)
+{
+    return realign(ptr, 4, size);
 }
 
 void reownalloc(void* ptr, struct scheduler_thread* owner)

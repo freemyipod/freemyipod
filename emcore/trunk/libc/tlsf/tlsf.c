@@ -901,7 +901,7 @@ void tlsf_free(tlsf_pool tlsf, void* ptr)
 ** - an extended buffer size will leave the newly-allocated area with
 **   contents undefined
 */
-void* tlsf_realloc(tlsf_pool tlsf, void* ptr, size_t size)
+void* tlsf_realign(tlsf_pool tlsf, void* ptr, size_t align, size_t size)
 {
 	pool_t* pool = tlsf_cast(pool_t*, tlsf);
 	void* p = 0;
@@ -931,7 +931,8 @@ void* tlsf_realloc(tlsf_pool tlsf, void* ptr, size_t size)
 		*/
 		if (adjust > cursize && (!block_is_free(next) || adjust > combined))
 		{
-			p = tlsf_malloc(tlsf, size);
+            if (align > 4) p = tlsf_memalign(tlsf, align, size);
+            else p = tlsf_malloc(tlsf, size);
 			if (p)
 			{
 				const size_t minsize = tlsf_min(cursize, size);
@@ -955,4 +956,9 @@ void* tlsf_realloc(tlsf_pool tlsf, void* ptr, size_t size)
 	}
 
 	return p;
+}
+
+void* tlsf_realloc(tlsf_pool tlsf, void* ptr, size_t size)
+{
+    return tlsf_realign(tlsf, ptr, 4, size);
 }

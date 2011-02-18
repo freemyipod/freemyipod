@@ -242,5 +242,7 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .read_battery_mwh_current = read_battery_mwh_current,
     .read_battery_mw = read_battery_mw,
     .read_input_mw = read_input_mw,
-    .read_battery_state = read_battery_state
+    .read_battery_state = read_battery_state,
+    .tlsf_realign = tlsf_realign,
+    .realign = realign
 };

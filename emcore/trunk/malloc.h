@@ -31,6 +31,7 @@
 
 void* malloc(size_t size) ICODE_ATTR;
 void* memalign(size_t align, size_t size) ICODE_ATTR;
+void* realign(void* ptr, size_t align, size_t size) ICODE_ATTR;
 void* realloc(void* ptr, size_t size) ICODE_ATTR;
 void reownalloc(void* ptr, struct scheduler_thread* owner);
 void free(void* ptr) ICODE_ATTR;

@@ -31,6 +31,7 @@ void tlsf_destroy(tlsf_pool pool);
 /* malloc/memalign/realloc/free replacements. */
 void* tlsf_malloc(tlsf_pool pool, size_t bytes) ICODE_ATTR;
 void* tlsf_memalign(tlsf_pool pool, size_t align, size_t bytes) ICODE_ATTR;
+void* tlsf_realign(tlsf_pool pool, void* ptr, size_t align, size_t size) ICODE_ATTR;
 void* tlsf_realloc(tlsf_pool pool, void* ptr, size_t size) ICODE_ATTR;
 void tlsf_free(tlsf_pool pool, void* ptr) ICODE_ATTR;
 
