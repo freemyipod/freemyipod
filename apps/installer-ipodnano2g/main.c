@@ -74,6 +74,7 @@ volatile int scrollpos;
 void handler(void* user, enum button_event eventtype, int which, int value)
 {
     if (eventtype == BUTTON_PRESS) button |= 1 << which;
+    if (eventtype == BUTTON_RELEASE) button &= ~(1 << which);
     if (eventtype == WHEEL_MOVED_ACCEL)
         scrollpos = MAX(0, MIN(309, scrollpos + value / 8));
     wakeup_signal(&eventwakeup);
@@ -755,7 +756,6 @@ void main(void)
                 shutdown(false);
                 reset();
             }
-            button = 0;
         }
 
         button_unregister_handler(hook);
@@ -794,7 +794,6 @@ void main(void)
                 shutdown(false);
                 reset();
             }
-            button = 0;
         }
 		
         button_unregister_handler(hook);
@@ -818,7 +817,6 @@ void main(void)
                 break;
             }
             else if (button == 4) break;
-            button = 0;
         }
 		
         button_unregister_handler(hook);
