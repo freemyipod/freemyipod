@@ -159,7 +159,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
             return -7;
         }
     } else {
-        if(file->write && (file->attr & FAT_ATTR_DIRECTORY)) {
+        if(file->attr & FAT_ATTR_DIRECTORY) {
             errno = EISDIR;
             free(file);
             closedir(dir);
