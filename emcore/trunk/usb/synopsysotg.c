@@ -192,7 +192,6 @@ void INT_USB_FUNC(void)
             {
                 if (epints & 1)  /* Transfer completed */
                 {
-                    invalidate_dcache();
                     int bytes = endpoints[i].size - (DIEPTSIZ(i) & 0x3FFFF);
                     if (endpoints[i].busy)
                     {
@@ -224,7 +223,6 @@ void INT_USB_FUNC(void)
             {
                 if (epints & 1)  /* Transfer completed */
                 {
-                    invalidate_dcache();
                     int bytes = endpoints[i].size - (DOEPTSIZ(i) & 0x3FFFF);
                     if (endpoints[i].busy)
                     {
@@ -300,7 +298,7 @@ static void ep_recv(int ep, void *ptr, int length)
         DOEPTSIZ(ep) = length | (packets << 19);
         DOEPDMA(ep) = ptr;
     }
-    clean_dcache();
+    invalidate_dcache();
     DOEPCTL(ep) |= 0x84000000;  /* EPx OUT ENABLE CLEARNAK */
 }
 

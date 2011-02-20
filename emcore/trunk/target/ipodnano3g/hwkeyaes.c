@@ -51,9 +51,8 @@ void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, ui
     AESAUXSIZE = size;
     AESAUXADDR = data;
     AESSIZE3 = size;
-	clean_dcache();
-    AESGO = 1;
 	invalidate_dcache();
+    AESGO = 1;
     while (!(AESSTATUS & 0xf)) sleep(MIN(10000, size >> 4));
     clockgate_enable(10, false);
     mutex_unlock(&hwkeyaes_mutex);

@@ -94,11 +94,10 @@ void spi_read(int port, uint32_t size, void* buf)
         nextlli = lli;
         lli = &lli[-1];
     }
-    clean_dcache();
+    invalidate_dcache();
     DMAC0CCONFIG(port + 5) = 0x9001 | (SPIDMA(port) << 1);
     wakeup_wait(&spiwakeup[port], TIMEOUT_BLOCK);
     clockgate_dma(0, port + 5, false);
-    invalidate_dcache();
     SPISETUP(port) &= ~0x41;
 }
 

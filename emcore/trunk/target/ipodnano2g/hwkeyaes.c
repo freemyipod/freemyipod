@@ -58,12 +58,11 @@ void hwkeyaes(enum hwkeyaes_direction direction, uint32_t keyidx, void* data, ui
         AESOUTADDR = (void*)((uint32_t)data + (ptr << 2));
         AESINADDR = (void*)((uint32_t)data + (ptr << 2));
         AESAUXADDR = (void*)((uint32_t)data + (ptr << 2));
-	    clean_dcache();
+	    invalidate_dcache();
         AESSTATUS = 6;
         AESGO = go;
         go = 3;
         while ((AESSTATUS & 6) == 0);
-	    invalidate_dcache();
         if (direction == HWKEYAES_DECRYPT)
 		{
 			if (!ptr) break;

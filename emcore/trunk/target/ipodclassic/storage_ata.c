@@ -41,7 +41,7 @@
 
 /** static, private data **/ 
 static uint8_t ceata_taskfile[16] __attribute__((aligned(16)));
-uint16_t ata_identify_data[0x100];
+uint16_t ata_identify_data[0x100] __attribute__((aligned(16)));
 bool ceata;
 bool ata_lba48;
 bool ata_dma;
@@ -343,6 +343,7 @@ int ceata_read_multiple_register(uint32_t addr, void* dest, uint32_t size)
     SDCI_DMACOUNT = 1;
     SDCI_DMAADDR = dest;
     SDCI_DCTRL = SDCI_DCTRL_TXFIFORST | SDCI_DCTRL_RXFIFORST;
+    invalidate_dcache();
     PASS_RC(mmc_send_command(SDCI_CMD_CMD_NUM(MMC_CMD_CEATA_RW_MULTIPLE_REG)
                            | SDCI_CMD_CMD_TYPE_ADTC | SDCI_CMD_RES_TYPE_R1
                            | SDCI_CMD_RES_SIZE_48 | SDCI_CMD_NCR_NID_NCR,
@@ -352,7 +353,6 @@ int ceata_read_multiple_register(uint32_t addr, void* dest, uint32_t size)
                              NULL, CEATA_COMMAND_TIMEOUT), 2, 1);
     long startusec = USEC_TIMER;
     if (wakeup_wait(&mmc_wakeup, CEATA_COMMAND_TIMEOUT) == THREAD_TIMEOUT) RET_ERR(2);
-    invalidate_dcache();
     PASS_RC(mmc_dsta_check_data_success(), 2, 3);
     return 0;
 }
@@ -472,7 +472,6 @@ int ceata_rw_multiple_block(bool write, void* buf, uint32_t count, long timeout)
     uint32_t direction;
     if (write)
     {
-        clean_dcache();
         cmdtype = SDCI_CMD_CMD_TYPE_ADTC | SDCI_CMD_CMD_RD_WR;
         responsetype = SDCI_CMD_RES_TYPE_R1 | SDCI_CMD_RES_BUSY;
         direction = MMC_CMD_CEATA_RW_MULTIPLE_BLOCK_DIRECTION_WRITE;
@@ -487,6 +486,7 @@ int ceata_rw_multiple_block(bool write, void* buf, uint32_t count, long timeout)
     SDCI_DMAADDR = buf;
     SDCI_DMACOUNT = count;
     SDCI_DCTRL = SDCI_DCTRL_TXFIFORST | SDCI_DCTRL_RXFIFORST;
+    invalidate_dcache();
     PASS_RC(mmc_send_command(SDCI_CMD_CMD_NUM(MMC_CMD_CEATA_RW_MULTIPLE_BLOCK)
                            | SDCI_CMD_CMD_TYPE_ADTC | cmdtype | responsetype
                            | SDCI_CMD_RES_SIZE_48 | SDCI_CMD_NCR_NID_NCR,
@@ -498,7 +498,6 @@ int ceata_rw_multiple_block(bool write, void* buf, uint32_t count, long timeout)
         PASS_RC(ceata_cancel_command(), 4, 1);
         RET_ERR(2);
     }
-    if (!write) invalidate_dcache();
     PASS_RC(mmc_dsta_check_data_success(), 4, 3);
     if (wakeup_wait(&mmc_comp_wakeup, timeout) == THREAD_TIMEOUT)
     {
@@ -519,11 +518,6 @@ int ata_identify(uint16_t* buf)
         PASS_RC(ceata_wait_idle(), 2, 0);
         PASS_RC(ceata_write_multiple_register(0, ceata_taskfile, 16), 2, 1);
         PASS_RC(ceata_rw_multiple_block(false, buf, 1, CEATA_COMMAND_TIMEOUT), 2, 2);
-        for (i = 0; i < 0x100; i++)
-        {
-            uint16_t word = buf[i];
-            buf[i] = (word >> 8) | (word << 8);
-        }
     }
     else
     {
