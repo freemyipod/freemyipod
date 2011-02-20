@@ -25,7 +25,7 @@ SECTIONS
         *(.rodata*)
         . = ALIGN(0x4);
         *(.data*)
-        . = ALIGN(0x4);
+        . = ALIGN(0x10);
     } > VIRTUAL
 
     .bss (NOLOAD) :
