@@ -250,16 +250,21 @@ static long cluster2sec(IF_MV2(struct bpb* fat_bpb,) long cluster)
            + fat_bpb->firstdatasector;
 }
 
-void fat_size(IF_MV2(int volume,) unsigned long* size, unsigned long* free)
+void fat_size_mv(int volume, unsigned long* size, unsigned long* free)
 {
-#ifndef HAVE_MULTIVOLUME
-    const int volume = 0;
-#endif
     struct bpb* fat_bpb = &fat_bpbs[volume];
     if (size)
       *size = fat_bpb->dataclusters * (fat_bpb->bpb_secperclus * SECTOR_SIZE / 1024);
     if (free)
       *free = fat_bpb->fsinfo.freecount * (fat_bpb->bpb_secperclus * SECTOR_SIZE / 1024);
+}
+
+void fat_size(IF_MV2(int volume,) unsigned long* size, unsigned long* free)
+{
+#ifndef HAVE_MULTIVOLUME
+    const int volume = 0;
+#endif
+    fat_size_mv(volume, size, free);
 }
 
 void fat_init(void)

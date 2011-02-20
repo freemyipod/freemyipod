@@ -280,6 +280,7 @@ struct emcore_syscall_table
     typeof(read_battery_state) *read_battery_state;
     typeof(tlsf_realign) *tlsf_realign;
     typeof(realign) *realign;
+    typeof(fat_size_mv) *fat_size_mv;
 };
 
 

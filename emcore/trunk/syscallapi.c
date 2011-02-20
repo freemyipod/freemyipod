@@ -244,5 +244,8 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .read_input_mw = read_input_mw,
     .read_battery_state = read_battery_state,
     .tlsf_realign = tlsf_realign,
-    .realign = realign
+    .realign = realign,
+#ifdef HAVE_STORAGE
+    .fat_size_mv = fat_size_mv
+#endif
 };

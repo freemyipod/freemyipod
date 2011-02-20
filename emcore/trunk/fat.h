@@ -19,13 +19,22 @@
  *
  ****************************************************************************/
 
+
 #ifndef FAT_H
 #define FAT_H
 
-#ifndef IN_APPLICATION_CODE
 
 #include "global.h"
 #include "util.h"
+
+
+extern void fat_size_mv(int volume, unsigned long* size, unsigned long* free);
+extern void fat_enable_flushing(bool state);
+
+
+#ifndef IN_APPLICATION_CODE
+
+
 #include "mv.h" /* for volume definitions */
 
 #ifndef SECTOR_SIZE
@@ -134,8 +143,8 @@ extern bool fat_ismounted(int volume);
 extern void* fat_get_sector_buffer(void);
 extern void fat_release_sector_buffer(void);
 
+
 #endif
 
-extern void fat_enable_flushing(bool state);
 
 #endif

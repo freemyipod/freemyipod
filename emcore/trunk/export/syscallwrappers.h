@@ -222,6 +222,7 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define read_battery_state __emcore_syscall->read_battery_state
 #define tlsf_realign __emcore_syscall->tlsf_realign
 #define realign __emcore_syscall->realign
+#define fat_size_mv __emcore_syscall->fat_size_mv
 
 
 #endif
