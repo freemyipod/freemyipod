@@ -134,7 +134,7 @@ void mkfat32(struct progressbar_state* progressbar)
     uint32_t database = fatsectors + reserved;
     uint32_t clusoffset = 0;
     uint32_t* buf = memalign(0x10, 0x20000);
-    memset(buf, 0, 0x800);
+    memset(buf, 0, 0x1000);
     memcpy(buf, "\xeb\x58\x00MSWIN5.0\0\x10", 0xd);
     ((uint8_t*)buf)[0xd] = secperclus;
     ((uint16_t*)buf)[7] = reserved;
@@ -150,7 +150,7 @@ void mkfat32(struct progressbar_state* progressbar)
     ((uint16_t*)buf)[0xff] = 0xaa55;
     if (rc = storage_write_sectors_md(0, 0, 1, buf))
         panicf(PANIC_KILLTHREAD, "Error writing MBR: %08X", rc);
-    memset(buf, 0, 0x800);
+    memset(buf, 0, 0x1000);
     buf[0] = 0x41615252;
     buf[0x79] = 0x61417272;
     buf[0x7a] = clustercount - 1;
