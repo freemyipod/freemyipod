@@ -544,11 +544,6 @@ bool ata_disk_is_active(void)
     return ata_powered;
 }
 
-int ata_num_drives(void)
-{
-    return 1;
-}
-
 int ata_set_feature(uint32_t feature, uint32_t param)
 {
     PASS_RC(ata_wait_for_rdy(500000), 1, 0);
@@ -1116,7 +1111,6 @@ int ata_init(void)
     return 0;
 }
 
-#ifdef CONFIG_STORAGE_MULTI
 int ata_num_drives(int first_drive)
 {
     /* We don't care which logical drive number(s) we have been assigned */
@@ -1124,7 +1118,6 @@ int ata_num_drives(int first_drive)
     
     return 1;
 }
-#endif
 
 void INT_ATA()
 {
