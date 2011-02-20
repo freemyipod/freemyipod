@@ -212,7 +212,7 @@ static struct usb_string_descriptor CACHEALIGN_ATTR string_devicename =
 {
     32,
     USB_DT_STRING,
-    {'e', 'm', 'B', 'I', 'O', 'S', ' ', 'D', 'e', 'b', 'u', 'g', 'g', 'e', 'r'}
+    {'e', 'm', 'C', 'O', 'R', 'E', ' ', 'D', 'e', 'b', 'u', 'g', 'g', 'e', 'r'}
 };
 
 static const struct usb_string_descriptor CACHEALIGN_ATTR lang_descriptor =
