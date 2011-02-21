@@ -351,7 +351,6 @@ int ceata_read_multiple_register(uint32_t addr, void* dest, uint32_t size)
                            | MMC_CMD_CEATA_RW_MULTIPLE_REG_ADDRESS(addr & 0xfc)
                            | MMC_CMD_CEATA_RW_MULTIPLE_REG_COUNT(size & 0xfc),
                              NULL, CEATA_COMMAND_TIMEOUT), 2, 1);
-    long startusec = USEC_TIMER;
     if (wakeup_wait(&mmc_wakeup, CEATA_COMMAND_TIMEOUT) == THREAD_TIMEOUT) RET_ERR(2);
     PASS_RC(mmc_dsta_check_data_success(), 2, 3);
     return 0;
