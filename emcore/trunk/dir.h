@@ -48,9 +48,9 @@ struct dirent {
 #include "fat.h"
 
 typedef struct dirdesc {
+    struct fat_dir fatdir CACHEALIGN_ATTR;
     struct dirdesc* next;
     long startcluster;
-    struct fat_dir fatdir;
     struct dirent theent;
     struct scheduler_thread* process;
 #ifdef HAVE_MULTIVOLUME
