@@ -39,20 +39,20 @@ void timer_init()
 
 void timer_schedule_wakeup(uint32_t usecs)
 {
-    if (usecs > 9942053)
+    if (usecs > 28256363)
     {
         TBPRE = 511;
         TBDATA1 = 65535;
     }
-    else if (usecs > 19417)
+    else if (usecs > 55188)
     {
         TBPRE = 511;
-        TBDATA1 = (usecs * 216) >> 15;
+        TBDATA1 = (usecs * 152) >> 16;
     }
     else
     {
         TBPRE = 0;
-        TBDATA1 = (usecs * 216) >> 6;
+        TBDATA1 = (usecs * 152) >> 7;
     }
     TBCON = (1 << 13) | /* TB_INT1_EN */
             (0 << 12) | /* TB_INT0_EN */
