@@ -713,7 +713,7 @@ int ata_rw_chunk(uint64_t sector, uint32_t cnt, void* buffer, bool write)
         ceata_taskfile[0xf] = write ? 0x35 : 0x25;
         PASS_RC(ceata_wait_idle(), 2, 0);
         PASS_RC(ceata_write_multiple_register(0, ceata_taskfile, 16), 2, 1);
-        PASS_RC(ceata_rw_multiple_block(write, buffer, cnt, CEATA_COMMAND_TIMEOUT), 2, 2);
+        PASS_RC(ceata_rw_multiple_block(write, buffer, cnt << 3, CEATA_COMMAND_TIMEOUT), 2, 2);
     }
     else
     {
