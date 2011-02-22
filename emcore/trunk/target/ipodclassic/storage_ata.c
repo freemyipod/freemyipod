@@ -678,8 +678,7 @@ void ata_power_down()
         ceata_taskfile[0xf] = 0xe0;
         ceata_wait_idle();
         ceata_write_multiple_register(0, ceata_taskfile, 16);
-        wakeup_wait(&mmc_comp_wakeup, CEATA_COMMAND_TIMEOUT);
-        sleep(30000);
+        sleep(1000000);
         clockgate_enable(9, false);
     }
     else
