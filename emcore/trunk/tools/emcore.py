@@ -886,7 +886,7 @@ class Commandline(object):
             storageinfo = self.emcore.storage_get_info(volume)
             buffsize = min(buffsize, storageinfo.sectorsize * count)
             if buffer is None:
-                buffer = self.emcore.malloc(buffsize)
+                buffer = self.emcore.memalign(0x10, buffsize)
                 malloc = True
             else:
                 buffer = to_int(buffer)
@@ -924,7 +924,7 @@ class Commandline(object):
             storageinfo = self.emcore.storage_get_info(volume)
             buffsize = min(buffsize, storageinfo.sectorsize * count)
             if buffer is None:
-                buffer = self.emcore.malloc(buffsize)
+                buffer = self.emcore.memalign(0x10, buffsize)
                 malloc = True
             else:
                 buffer = to_int(buffer)
@@ -1022,7 +1022,7 @@ class Commandline(object):
                 size = self.emcore.file_size(fd)
                 buffsize = min(buffsize, size)
                 if buffer is None:
-                    buffer = self.emcore.malloc(buffsize)
+                    buffer = self.emcore.memalign(0x10, buffsize)
                     malloc = True
                 else:
                     buffer = to_int(buffer)
@@ -1055,7 +1055,7 @@ class Commandline(object):
         handle = self.emcore.dir_open(remotepath)
         try:
             if buffer is None:
-                buffer = self.emcore.malloc(buffsize)
+                buffer = self.emcore.memalign(0x10, buffsize)
                 malloc = True
             else:
                 buffer = to_int(buffer)
@@ -1094,7 +1094,7 @@ class Commandline(object):
         try:
             buffsize = min(buffsize, os.path.getsize(localname))
             if buffer is None:
-                buffer = self.emcore.malloc(buffsize)
+                buffer = self.emcore.memalign(0x10, buffsize)
                 malloc = True
             else:
                 buffer = to_int(buffer)
@@ -1106,6 +1106,7 @@ class Commandline(object):
                     while True:
                         data = f.read(buffsize)
                         if len(data) == 0: break
+                        self.emcore.write(buffer, data)
                         self.emcore.write(buffer, data)
                         bytes = 0
                         while bytes < len(data):
@@ -1130,7 +1131,7 @@ class Commandline(object):
         """
         buffsize = to_int(buffsize)
         if buffer is None:
-            buffer = self.emcore.malloc(buffsize)
+            buffer = self.emcore.memalign(0x10, buffsize)
             malloc = True
         else:
             buffer = to_int(buffer)
