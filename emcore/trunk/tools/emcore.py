@@ -1107,7 +1107,6 @@ class Commandline(object):
                         data = f.read(buffsize)
                         if len(data) == 0: break
                         self.emcore.write(buffer, data)
-                        self.emcore.write(buffer, data)
                         bytes = 0
                         while bytes < len(data):
                             bytes = bytes + self.emcore.file_write(fd, len(data) - bytes, buffer + bytes)
