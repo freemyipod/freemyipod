@@ -977,24 +977,24 @@ void ata_spindown(int seconds)
 
 void ata_sleep(void)
 {
+    ata_last_activity_value = USEC_TIMER - ata_sleep_timeout + 200000;
+}
+
+void ata_sleepnow(void)
+{
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
     ata_power_down();
     mutex_unlock(&ata_mutex);
 }
 
-void ata_sleepnow(void)
-{
-    ata_sleep();
-}
-
 void ata_close(void)
 {
-    ata_sleep();
+    ata_sleepnow();
 }
 
 void ata_spin(void)
 {
-    ata_power_up();
+    ata_set_active();
 }
 
 void ata_get_info(IF_MD2(int drive,) struct storage_info *info)
