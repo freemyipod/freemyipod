@@ -257,10 +257,9 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    ldrsb r0, [r7]               \n");
     __asm__ volatile("    add r1, r1, r4               \n");
     __asm__ volatile("    add r1, r1, r0               \n");
-    __asm__ volatile("    cmp r1, #0                   \n");
-    __asm__ volatile("    movlt r1, #0                 \n");
     __asm__ volatile("    cmp r1, #0xff                \n");
-    __asm__ volatile("    movgt r1, #0xff              \n");
+    __asm__ volatile("    mvnhi r1, r1,asr#31          \n");
+    __asm__ volatile("    andhi r1, r1, #0xff          \n");
     __asm__ volatile("    mov r0, r1,lsr#3             \n");
     __asm__ volatile("    orr r2, r0,lsl#11            \n");
     __asm__ volatile("    sub r1, r1, r0,lsl#3         \n");
@@ -273,10 +272,9 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    ldrsb r0, [r7]               \n");
     __asm__ volatile("    add r1, r1, r5               \n");
     __asm__ volatile("    add r1, r1, r0               \n");
-    __asm__ volatile("    cmp r1, #0                   \n");
-    __asm__ volatile("    movlt r1, #0                 \n");
     __asm__ volatile("    cmp r1, #0xff                \n");
-    __asm__ volatile("    movgt r1, #0xff              \n");
+    __asm__ volatile("    mvnhi r1, r1,asr#31          \n");
+    __asm__ volatile("    andhi r1, r1, #0xff          \n");
     __asm__ volatile("    mov r0, r1,lsr#2             \n");
     __asm__ volatile("    orr r2, r0,lsl#5             \n");
     __asm__ volatile("    sub r1, r1, r0,lsl#2         \n");
@@ -289,10 +287,9 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    ldrsb r0, [r7]               \n");
     __asm__ volatile("    add r1, r1, r6               \n");
     __asm__ volatile("    add r1, r1, r0               \n");
-    __asm__ volatile("    cmp r1, #0                   \n");
-    __asm__ volatile("    movlt r1, #0                 \n");
     __asm__ volatile("    cmp r1, #0xff                \n");
-    __asm__ volatile("    movgt r1, #0xff              \n");
+    __asm__ volatile("    mvnhi r1, r1,asr#31          \n");
+    __asm__ volatile("    andhi r1, r1, #0xff          \n");
     __asm__ volatile("    mov r0, r1,lsr#3             \n");
     __asm__ volatile("    orr r2, r0                   \n");
     __asm__ volatile("    sub r1, r1, r0,lsl#3         \n");
