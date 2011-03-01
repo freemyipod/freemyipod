@@ -52,7 +52,7 @@ void pmu_write(int address, unsigned char val)
 void pmu_init()
 {
     mutex_init(&pmumutex);
-    pmu_write(0x1e, 0x0e);  // Vcore @ 0.975V
+    pmu_write(0x1e, 0x0f);  // Vcore @ 1.000V
     pmu_write(0x22, 0x22);  // Vmem @ 1.475V
 }
 
