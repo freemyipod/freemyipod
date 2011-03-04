@@ -834,7 +834,7 @@ int ata_bbt_translate(uint64_t sector, uint32_t count, uint64_t* phys, uint32_t*
             {
                 uint32_t l3idx = sector & 0x1f;
                 uint32_t l3data = ata_bbt[l2data & 0x7fff][l3idx];
-                for (*physcount = 1; *physcount < count && l3idx + *physcount < 0x20; *physcount++)
+                for (*physcount = 1; *physcount < count && l3idx + *physcount < 0x20; (*physcount)++)
                     if (ata_bbt[l2data & 0x7fff][l3idx + *physcount] != l3data)
                         break;
                 offset = l3data + base;
