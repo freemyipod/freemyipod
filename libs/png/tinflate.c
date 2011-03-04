@@ -227,27 +227,29 @@ static int tinf_getbit(TINF_DATA *d)
 //          d->bytecount, d->bitcount, d->source);
 
    /* check if tag is empty */
-   if (!--d->bitcount)
+   if (!d->bitcount)
    {
-       while (!--d->bytecount)
+       while (!d->bytecount)
        {
            DEBUGF("tinf_getbit: refilling bytes");
-   DEBUGF("tinf_getbit: bytecount=%d, bitcount=%d, source=0x%08X",
-          d->bytecount, d->bitcount, d->source);
+           DEBUGF("tinf_getbit: bytecount=%d, bitcount=%d, source=0x%08X",
+                  d->bytecount, d->bitcount, d->source);
            d->bytecount = (d->source[4] << 24) | (d->source[5] << 16)
                         | (d->source[6] << 8) | d->source[7];
            d->source += 12;
-   DEBUGF("tinf_getbit: bytecount=%d, bitcount=%d, source=0x%08X",
-          d->bytecount, d->bitcount, d->source);
+           DEBUGF("tinf_getbit: bytecount=%d, bitcount=%d, source=0x%08X",
+                  d->bytecount, d->bitcount, d->source);
        }
       /* load next tag */
       d->tag = *d->source++;
       d->bitcount = 8;
+      d->bytecount--;
    }
 
    /* shift bit out of tag */
    bit = d->tag & 1;
    d->tag >>= 1;
+   d->bitcount--;
 
 //   DEBUGF("tinf_getbit: returning bit %d", bit);
    return bit;
@@ -479,9 +481,9 @@ int tinf_uncompress(void *dest, unsigned int *destLen,
     int bfinal;
 
     d.source = (const unsigned char *)(source + 10);
-    d.bitcount = 1;
+    d.bitcount = 0;
     d.bytecount = ((d.source[-10] << 24) | (d.source[-9] << 16)
-                 | (d.source[-8] << 8) | d.source[-7]) + 1;
+                 | (d.source[-8] << 8) | d.source[-7]) - 2;
 
     d.dest = (unsigned char *)dest;
     d.destLen = destLen;
@@ -524,8 +526,20 @@ int tinf_uncompress(void *dest, unsigned int *destLen,
        if (res) return res;
 
        if (d.source > (unsigned char *)source + sourceLen)
+       {
+           DEBUGF("tinf_uncompress: Hit end of buffer! (source=0x%08X, len=%d, current=0x%08X)",
+                  source, sourceLen, d.source);
            return -7;
+       }
     } while (!bfinal);
+
+    d.bytecount -= 4;
+   
+    if (d.bytecount)
+    {
+        DEBUGF("tinf_uncompress: %d leftover bytes, %d bits!", d.bytecount, d.bitcount);
+        return -8;
+    }
 
     return 0;
 }

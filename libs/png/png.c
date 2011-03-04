@@ -166,9 +166,9 @@ struct png_info* png_open(const void* data, size_t size)
             if (!idat)
             {
                 info.idat = in - 8;
-                info.idatlen += length + 12;
                 idat = 1;
             }
+            info.idatlen += length + 12;
             in += length;
             break;
         case PNG_CHUNK_IEND:
