@@ -31,6 +31,9 @@
 #include "../png.h"
 
 
+/* emCORE library identifier */
+#define LIBPNG_IDENTIFIER 0x64474e50
+
 /* increase this every time the api struct changes */
 #define LIBPNG_API_VERSION 1
 

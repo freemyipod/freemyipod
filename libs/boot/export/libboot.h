@@ -30,6 +30,9 @@
 int verify_rockbox_checksum(void* image, size_t size);
 
 
+/* emCORE library identifier */
+#define LIBBOOT_IDENTIFIER 0x4c424365
+
 /* increase this every time the api struct changes */
 #define LIBBOOT_API_VERSION 1
 

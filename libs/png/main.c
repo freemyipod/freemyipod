@@ -36,4 +36,5 @@ struct libpng_api apitable =
     .png_destroy = png_destroy
 };
 
-EMCORE_LIB_HEADER(0x64474e50, LIBPNG_API_VERSION, LIBPNG_MIN_API_VERSION, NULL, NULL, apitable)
+EMCORE_LIB_HEADER(LIBPNG_IDENTIFIER, LIBPNG_API_VERSION, LIBPNG_MIN_API_VERSION,
+                  NULL, NULL, apitable)

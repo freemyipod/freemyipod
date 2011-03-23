@@ -190,11 +190,11 @@ void main(void)
 #define oldnorword ((uint32_t*)oldnor)
 
     cputc(3, '.');
-    struct emcorelib_header* libpng = get_library(0x64474e50, LIBPNG_API_VERSION, LIBSOURCE_RAM_NEEDCOPY, f_png_emcorelib);
+    struct emcorelib_header* libpng = get_library(LIBPNG_IDENTIFIER, LIBPNG_API_VERSION, LIBSOURCE_RAM_NEEDCOPY, f_png_emcorelib);
     if (!libpng) panicf(PANIC_KILLTHREAD, "Could not load PNG decoder library!");
     struct libpng_api* png = (struct libpng_api*)libpng->api;
     cputc(3, '.');
-    struct emcorelib_header* libui = get_library(0x49554365, LIBUI_API_VERSION, LIBSOURCE_RAM_NEEDCOPY, f_ui_emcorelib);
+    struct emcorelib_header* libui = get_library(LIBUI_IDENTIFIER, LIBUI_API_VERSION, LIBSOURCE_RAM_NEEDCOPY, f_ui_emcorelib);
     if (!libui) panicf(PANIC_KILLTHREAD, "Could not load user interface library!");
     struct libui_api* ui = (struct libui_api*)libui->api;
     cputc(3, '.');

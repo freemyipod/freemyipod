@@ -141,13 +141,13 @@ struct chooser_info mychooser =
 
 static void main()
 {
-    struct emcorelib_header* libboot = get_library(0x4c424365, LIBBOOT_API_VERSION, LIBSOURCE_BOOTFLASH, "libboot ");
+    struct emcorelib_header* libboot = get_library(LIBBOOT_IDENTIFIER, LIBBOOT_API_VERSION, LIBSOURCE_BOOTFLASH, "libboot ");
     if (!libboot) panicf(PANIC_KILLTHREAD, "Could not load booting library!");
     struct libboot_api* boot = (struct libboot_api*)libboot->api;
-    struct emcorelib_header* libpng = get_library(0x64474e50, LIBPNG_API_VERSION, LIBSOURCE_BOOTFLASH, "libpng  ");
+    struct emcorelib_header* libpng = get_library(LIBPNG_IDENTIFIER, LIBPNG_API_VERSION, LIBSOURCE_BOOTFLASH, "libpng  ");
     if (!libpng) panicf(PANIC_KILLTHREAD, "Could not load PNG decoder library!");
     struct libpng_api* png = (struct libpng_api*)libpng->api;
-    struct emcorelib_header* libui = get_library(0x49554365, LIBUI_API_VERSION, LIBSOURCE_BOOTFLASH, "libui   ");
+    struct emcorelib_header* libui = get_library(LIBUI_IDENTIFIER, LIBUI_API_VERSION, LIBSOURCE_BOOTFLASH, "libui   ");
     if (!libui) panicf(PANIC_KILLTHREAD, "Could not load user interface library!");
     struct libui_api* ui = (struct libui_api*)libui->api;
     int size = bootflash_filesize("backgrnd");

@@ -8,7 +8,7 @@ static void main()
     int size;
     if (!(clickwheel_get_state() & 0x1f))
     {
-        struct emcorelib_header* libboot = get_library(0x4c424365, LIBBOOT_API_VERSION, LIBSOURCE_BOOTFLASH, "libboot ");
+        struct emcorelib_header* libboot = get_library(LIBBOOT_IDENTIFIER, LIBBOOT_API_VERSION, LIBSOURCE_BOOTFLASH, "libboot ");
         if (!libboot) panicf(PANIC_KILLTHREAD, "Could not load booting library!");
         struct libboot_api* boot = (struct libboot_api*)libboot->api;
         int fd = file_open("/.rockbox/rockbox.ipod", O_RDONLY);

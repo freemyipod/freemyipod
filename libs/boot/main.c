@@ -31,7 +31,8 @@ struct libboot_api apitable =
 };
 
 
-EMCORE_LIB_HEADER(0x4c424365, LIBBOOT_API_VERSION, LIBBOOT_MIN_API_VERSION, NULL, NULL, apitable)
+EMCORE_LIB_HEADER(LIBBOOT_IDENTIFIER, LIBBOOT_API_VERSION, LIBBOOT_MIN_API_VERSION,
+                  NULL, NULL, apitable)
 
 
 int verify_rockbox_checksum(void* image, size_t size)

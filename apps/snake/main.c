@@ -142,7 +142,7 @@ static void main()
 {
     int i;
 
-    struct emcorelib_header* libui = get_library(0x49554365, LIBUI_API_VERSION, LIBSOURCE_BOOTFLASH, "libui   ");
+    struct emcorelib_header* libui = get_library(LIBUI_IDENTIFIER, LIBUI_API_VERSION, LIBSOURCE_BOOTFLASH, "libui   ");
     if (!libui) panicf(PANIC_KILLTHREAD, "Could not load user interface library!");
     ui = (struct libui_api*)libui->api;
 
@@ -159,8 +159,8 @@ static void main()
     xrandshift = __emcore_syscall->__clzsi2(tilesx - 1) - 1;
     yrandshift = __emcore_syscall->__clzsi2(tilesy - 1) - 1;
     framebuf = malloc(framebufsize);
-    field = malloc(tilecount * sizeof(typeof(field)));
-    snake = malloc(tilecount * sizeof(typeof(snake)));
+    field = malloc(tilecount * sizeof(typeof(*field)));
+    snake = malloc(tilecount * sizeof(typeof(*snake)));
     if (!framebuf || !field || !snake) panicf(PANIC_KILLTHREAD, "Out of memory!");
     struct button_hook_entry* hook = button_register_handler(buttonhandler, NULL);
     if (!hook) panicf(PANIC_KILLTHREAD, "Could not register button hook!");

@@ -33,6 +33,9 @@
 #include "../chooser_renderer_iconflow.h"
 
 
+/* emCORE library identifier */
+#define LIBUI_IDENTIFIER 0x49554365
+
 /* increase this every time the api struct changes */
 #define LIBUI_API_VERSION 1
 
