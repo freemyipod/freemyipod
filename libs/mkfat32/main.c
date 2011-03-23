@@ -72,28 +72,29 @@ int mkfat32(int volume, int startsector, int totalsectors, int sectorsize, int s
     memcpy(&((uint8_t*)buf)[0x47], label, 0xb);
     memcpy(&((uint8_t*)buf)[0x52], "FAT32   ", 8);
     ((uint16_t*)buf)[0xff] = 0xaa55;
-    PASS_RC(storage_write_sectors_md(volume, startsector, 1, buf), 2, 0);
+    PASS_RC_FREE(storage_write_sectors_md(volume, startsector, 1, buf), 2, 0, buf);
     memset(buf, 0, sectorsize);
     buf[0] = 0x41615252;
     buf[0x79] = 0x61417272;
     buf[0x7a] = clustercount - 1;
     buf[0x7b] = 2;
     buf[0x7f] = 0xaa550000;
-    PASS_RC(storage_write_sectors_md(volume, startsector + 1, 1, buf), 2, 1);
+    PASS_RC_FREE(storage_write_sectors_md(volume, startsector + 1, 1, buf), 2, 1, buf);
     statusinit(statususer, fatsectors);
     uint32_t cursect = 0;
     for (i = 0; i < fatsectors; i += 32)
     {
         memset(buf, 0, 32 * sectorsize);
         if (!i) memcpy(buf, "\xf8\xff\xff\x0f\xff\xff\xff\xff\xff\xff\xff\x0f", 12);
-        PASS_RC(storage_write_sectors_md(volume, startsector + reserved + i,
-                                         MIN(fatsectors - i, 32), buf), 2, 2);
+        PASS_RC_FREE(storage_write_sectors_md(volume, startsector + reserved + i,
+                                         MIN(fatsectors - i, 32), buf), 2, 2, buf);
         statuscallback(statususer, i);
     }
     memset(buf, 0, secperclus * sectorsize);
     memcpy(buf, label, 11);
     ((uint8_t*)buf)[0xc] = 0x80;
-    PASS_RC(storage_write_sectors_md(volume, startsector + database, secperclus, buf), 2, 3);
+    PASS_RC_FREE(storage_write_sectors_md(volume, startsector + database,
+                                          secperclus, buf), 2, 3, buf);
     free(buf);
     disk_mount(volume);
 }

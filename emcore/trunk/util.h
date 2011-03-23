@@ -60,6 +60,11 @@
     mutex_unlock(mutex);                                       \
     return ERR_RC(val);                                        \
 }
+#define RET_ERR_FREE(val, ptr)                                 \
+{                                                              \
+    free(ptr);                                                 \
+    return ERR_RC(val);                                        \
+}
 #define PASS_RC(expr, bits, val)                               \
 {                                                              \
     int PASS_RC_rc = (expr);                                   \
@@ -73,6 +78,15 @@
     {                                                          \
         mutex_unlock(mutex);                                   \
         return ERR_RC((PASS_RC_MTX_rc << (bits)) | (val));     \
+    }                                                          \
+}
+#define PASS_RC_FREE(expr, bits, val, ptr)                     \
+{                                                              \
+    int PASS_RC_FREE_rc = (expr);                              \
+    if (IS_ERR(PASS_RC_FREE_rc))                               \
+    {                                                          \
+        free(ptr);                                             \
+        return ERR_RC((PASS_RC_FREE_rc << (bits)) | (val));    \
     }                                                          \
 }
 
