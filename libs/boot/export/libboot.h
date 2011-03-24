@@ -28,6 +28,10 @@
 
 
 int verify_rockbox_checksum(void* image, size_t size);
+void check_firmware(void** firmware, int* size, bool verify,
+                    void* buf, int maxsize, bool compressed);
+void load_from_file(void** firmware, int* size, bool verify, const char* filename, int maxsize);
+void load_from_flash(void** firmware, int* size, bool verify, const char* filename, int maxsize);
 
 
 /* emCORE library identifier */
@@ -49,6 +53,9 @@ int verify_rockbox_checksum(void* image, size_t size);
 struct libboot_api
 {
     typeof(verify_rockbox_checksum)* verify_rockbox_checksum;
+    typeof(check_firmware)* check_firmware;
+    typeof(load_from_file)* load_from_file;
+    typeof(load_from_flash)* load_from_flash;
 };
 
 

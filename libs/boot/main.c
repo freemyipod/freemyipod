@@ -27,7 +27,10 @@
 
 static struct libboot_api apitable =
 {
-    .verify_rockbox_checksum = verify_rockbox_checksum
+    .verify_rockbox_checksum = verify_rockbox_checksum,
+    .check_firmware = check_firmware,
+    .load_from_file = load_from_file,
+    .load_from_flash = load_from_flash
 };
 
 
@@ -62,4 +65,71 @@ int verify_rockbox_checksum(void* image, size_t size)
     }
     if (checksum) return -1;
     return 0;
+}
+
+void check_firmware(void** firmware, int* size, bool verify,
+                    void* buf, int maxsize, bool compressed)
+{
+    if (compressed && maxsize)
+    {
+        void* buf2 = malloc(maxsize);
+        if (buf2)
+        {
+            if (!ucl_decompress(buf, *size, buf2, (uint32_t*)size))
+            {
+                free(buf);
+                buf = realloc(buf2, *size);
+                if (!buf) buf = buf2;
+                if (!verify || !verify_rockbox_checksum(buf, *size))
+                    *firmware = buf;
+                else free(buf);
+            }
+            else
+            {
+                free(buf2);
+                free(buf);
+            }
+        }
+        else free(buf);
+    }
+    else if (!compressed)
+    {
+        if (!verify || !verify_rockbox_checksum(buf, *size)) *firmware = buf;
+        else free(buf);
+    }
+}
+
+void load_from_file(void** firmware, int* size, bool verify, const char* filename, int maxsize)
+{
+    int fd = file_open(filename, O_RDONLY);
+    if (fd > 0)
+    {
+        *size = filesize(fd);
+        if (*size > 0)
+        {
+            void* buf = memalign(0x10, *size);
+            if (buf)
+            {
+                if (read(fd, buf, *size) == *size)
+                    check_firmware(firmware, size, verify, buf, maxsize, maxsize);
+                else free(buf);
+            }
+        }
+        close(fd);
+    }
+}
+
+void load_from_flash(void** firmware, int* size, bool verify, const char* filename, int maxsize)
+{
+    *size = bootflash_filesize(filename);
+    if (*size > 0)
+    {
+        void* buf = memalign(0x10, *size);
+        if (buf)
+        {
+            bootflash_read(filename, buf, 0, *size);
+            check_firmware(firmware, size, verify, buf, maxsize,
+                           bootflash_attributes(filename) & 0x800);
+        }
+    }
 }
