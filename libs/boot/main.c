@@ -25,7 +25,7 @@
 #include "export/libboot.h"
 
 
-struct libboot_api apitable =
+static struct libboot_api apitable =
 {
     .verify_rockbox_checksum = verify_rockbox_checksum
 };

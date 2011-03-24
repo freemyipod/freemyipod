@@ -25,7 +25,7 @@
 #include "export/libui.h"
 
 
-struct libui_api apitable =
+static struct libui_api apitable =
 {
     .fill = fill,
     .blit = blit,

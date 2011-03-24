@@ -25,7 +25,7 @@
 #include "export/libpng.h"
 
 
-struct libpng_api apitable =
+static struct libpng_api apitable =
 {
     .png_open = png_open,
     .png_get_width = png_get_width,

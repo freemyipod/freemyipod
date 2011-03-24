@@ -25,7 +25,7 @@
 #include "export/libmkfat32.h"
 
 
-struct libmkfat32_api apitable =
+static struct libmkfat32_api apitable =
 {
     .mkfat32 = mkfat32
 };
