@@ -36,7 +36,7 @@ void renderchar_native(void* buffer, int fgcol, int bgcol, char text, int stride
 void renderchar(void* buffer, int x, int y, int stride,
                 uint32_t fgcolor, uint32_t bgcolor, char c);
 void rendertext(void* buffer, int x, int y, int stride,
-                uint32_t fgcolor, uint32_t bgcolor, char* str);
+                uint32_t fgcolor, uint32_t bgcolor, const char* str);
 int get_font_width(void);
 int get_font_height(void);
 
