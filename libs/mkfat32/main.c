@@ -92,7 +92,7 @@ int mkfat32(int volume, int startsector, int totalsectors, int sectorsize, int s
     }
     memset(buf, 0, secperclus * sectorsize);
     memcpy(buf, label, 11);
-    ((uint8_t*)buf)[0xc] = 0x80;
+    ((uint8_t*)buf)[0xb] = 8;
     PASS_RC_FREE(storage_write_sectors_md(volume, startsector + database,
                                           secperclus, buf), 2, 3, buf);
     free(buf);
