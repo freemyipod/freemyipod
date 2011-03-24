@@ -36,6 +36,7 @@
 .global commonscript
 .global f_png_emcorelib
 .global f_ui_emcorelib
+.global f_mkfat32_emcorelib
 
 
 background_png_size:
@@ -99,6 +100,14 @@ flashscript:
 .word f_ui_emcorelib
 .word f_ui_emcorelib_end - f_ui_emcorelib
 .ascii "libui   "
+
+.byte 0
+.byte 0
+.byte 0
+.byte 1
+.word f_mkfat32_emcorelib
+.word f_mkfat32_emcorelib_end - f_mkfat32_emcorelib
+.ascii "libmkf32"
 
 .byte 0
 .byte 0
@@ -199,6 +208,11 @@ f_png_emcorelib_end:
 f_ui_emcorelib:
 .incbin "flashfiles/ui.emcorelib"
 f_ui_emcorelib_end:
+
+.align 4
+f_mkfat32_emcorelib:
+.incbin "flashfiles/mkfat32.emcorelib"
+f_mkfat32_emcorelib_end:
 
 .align 4
 f_bootmenu_ipodclassic_emcoreapp:

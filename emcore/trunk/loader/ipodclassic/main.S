@@ -1190,7 +1190,7 @@ failed:
 	mov	r0, #1
 	str	r0, [r7]
     	sub	r1, r9, #0x1000
-	mov	r11, #0
+	mov	r11, #0x1000
 	mov	r12, #0x1000
 	bl	bootflash_read
     	sub	r11, r9, #0x1000

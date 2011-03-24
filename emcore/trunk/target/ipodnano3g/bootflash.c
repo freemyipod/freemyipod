@@ -198,7 +198,7 @@ static uint32_t findflashfile(const char* filename, uint32_t* size)
     bootflash_ce(0, true);
     spi_write(0, 3);
     spi_write(0, 0);
-    spi_write(0, 0);
+    spi_write(0, 0x10);
     spi_write(0, 0);
     for (i = 0; i < 0x100; i++)
     {

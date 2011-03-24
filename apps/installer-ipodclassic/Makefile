@@ -7,10 +7,11 @@ BOOTMENUDIR ?= ../bootmenu-ipodclassic/
 LIBBOOTDIR ?= ../../libs/boot/
 LIBPNGDIR ?= ../../libs/png/
 LIBUIDIR ?= ../../libs/ui/
+LIBMKFAT32DIR ?= ../../libs/mkfat32/
 UMSBOOTDIR ?= ../../umsboot/
 TOOLSDIR ?= ../../tools/
 
-FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib \
+FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib flashfiles/mkfat32.emcorelib \
              flashfiles/bootmenu-ipodclassic.emcoreapp flashfiles/background.png flashfiles/icons.png flashfiles/rockbox.png \
              flashfiles/emcoreldr-ipodclassic.bin flashfiles/emcore-ipodclassic.ucl flashfiles/umsboot-ipodclassic.ucl
 
@@ -32,7 +33,7 @@ EMCOREBOOTCFG := python $(EMCOREDIR)/tools/emcorebootcfg.py
 EMCOREEMBEDAPP := python $(EMCOREDIR)/tools/emcoreembedapp.py
 GENPWN := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8702-genpwnage
 
-LIBINCLUDES := -I$(LIBBOOTDIR)/export -I$(LIBPNGDIR)/export -I$(LIBUIDIR)/export
+LIBINCLUDES := -I$(LIBPNGDIR)/export -I$(LIBUIDIR)/export -I$(LIBMKFAT32DIR)/export
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
@@ -172,6 +173,12 @@ flashfiles/ui.emcorelib: $(LIBUIDIR)/build/ui.emcorelib libui
 	@echo [CP]     $@
 	@cp $< $@
 
+$(LIBUIDIR)/build/mkfat32.emcorelib: libmkfat32
+
+flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib libmkfat32
+	@echo [CP]     $@
+	@cp $< $@
+
 $(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl: umsboot
 
 flashfiles/umsboot-ipodclassic.ucl: $(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl umsboot
@@ -230,6 +237,9 @@ libpng:
 libui:
 	@make -C $(LIBUIDIR)
 
+libmkfat32:
+	@make -C $(LIBMKFAT32DIR)
+
 $(UMSBOOTDIR)/build/ipodclassic/umsboot.bin: umsboot
 
 umsboot:
@@ -238,4 +248,4 @@ umsboot:
 clean:
 	@rm -rf build
 
-.PHONY: all clean emcore emcoreldr-ipodclassic bootmenu-ipodclassic libboot libpng libui umsboot libucl flashfiles $(NAME)
+.PHONY: all clean emcore emcoreldr-ipodclassic bootmenu-ipodclassic libboot libpng libui libmkfat32 umsboot libucl flashfiles $(NAME)

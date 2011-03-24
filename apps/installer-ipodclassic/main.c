@@ -24,6 +24,7 @@
 #include "emcoreapp.h"
 #include "libpng.h"
 #include "libui.h"
+#include "libmkfat32.h"
 
 
 void main();
@@ -40,6 +41,7 @@ extern char actions_png[];
 extern uint32_t actions_png_size;
 extern char f_png_emcorelib[];
 extern char f_ui_emcorelib[];
+extern char f_mkfat32_emcorelib[];
 extern uint32_t flashscript[];
 extern uint32_t firstinstcost;
 extern uint32_t firstinstscript[];
@@ -112,69 +114,15 @@ void handler(void* user, enum button_event eventtype, int which, int value)
     wakeup_signal(&eventwakeup);
 }
 
-void mkfat32(struct progressbar_state* progressbar)
+void fat32_progressbar_init(void* user, int max)
 {
-    uint32_t i, j, rc;
-    uint32_t rootdirclus = 2;
-    uint32_t secperclus = 1;
-    uint32_t fatsectors = 1;
-    uint32_t oldfatsectors = 0;
-    uint32_t clustercount;
-    uint32_t reserved = 2;
-    struct storage_info storageinfo;
-    storage_get_info(0, &storageinfo);
-    uint32_t totalsectors = storageinfo.num_sectors;
-    disk_unmount(0);
-    while (fatsectors != oldfatsectors)
-    {
-        oldfatsectors = fatsectors;
-        clustercount = (totalsectors - fatsectors - reserved) / secperclus;
-        fatsectors = (clustercount + 1025) >> 10;
-    }
-    uint32_t database = fatsectors + reserved;
-    uint32_t clusoffset = 0;
-    uint32_t* buf = memalign(0x10, 0x20000);
-    memset(buf, 0, 0x1000);
-    memcpy(buf, "\xeb\x58\x00MSWIN5.0\0\x10", 0xd);
-    ((uint8_t*)buf)[0xd] = secperclus;
-    ((uint16_t*)buf)[7] = reserved;
-    memcpy(&((uint8_t*)buf)[0x10], "\x01\0\0\0\0\xf8\0\0\x3f\0\xff", 0xb);
-    buf[8] = totalsectors;
-    buf[9] = fatsectors;
-    buf[0xb] = rootdirclus + clusoffset;
-    ((uint16_t*)buf)[0x18] = 1;
-    ((uint8_t*)buf)[0x40] = 0x80;
-    ((uint8_t*)buf)[0x42] = 0x29;
-    memcpy(&((uint8_t*)buf)[0x43], "\0\0\0\0iPodClassic", 0xf);
-    memcpy(&((uint8_t*)buf)[0x52], "FAT32   ", 8);
-    ((uint16_t*)buf)[0xff] = 0xaa55;
-    if (rc = storage_write_sectors_md(0, 0, 1, buf))
-        panicf(PANIC_KILLTHREAD, "Error writing MBR: %08X", rc);
-    memset(buf, 0, 0x1000);
-    buf[0] = 0x41615252;
-    buf[0x79] = 0x61417272;
-    buf[0x7a] = clustercount - 1;
-    buf[0x7b] = 2;
-    buf[0x7f] = 0xaa550000;
-    if (rc = storage_write_sectors_md(0, 1, 1, buf))
-        panicf(PANIC_KILLTHREAD, "Error writing FSINFO: %08X", rc);
-    progressbar_init(progressbar, 15, 304, 135, 159, 0x77ff, 0xe8, 0x125f, 0, fatsectors);
-    uint32_t cursect = 0;
-    for (i = 0; i < fatsectors; i += 32)
-    {
-        memset(buf, 0, 0x20000);
-        if (!i) memcpy(buf, "\xf8\xff\xff\x0f\xff\xff\xff\xff\xff\xff\xff\x0f", 12);
-        if (rc = storage_write_sectors_md(0, reserved + i, MIN(fatsectors - i, 32), buf))
-            panicf(PANIC_KILLTHREAD, "Error writing FAT sectors %d-%d: %08X",
-                   i, MIN(fatsectors - 1, i + 31), rc);
-        progressbar_setpos(progressbar, i, false);
-    }
-    memset(buf, 0, secperclus * 0x1000);
-    memcpy(buf, "iPodClassic\x08", 12);
-    if (rc = storage_write_sectors_md(0, database, secperclus, buf))
-        panicf(PANIC_KILLTHREAD, "Error writing root directory sectors: %08X", i, rc);
-    free(buf);
-    disk_mount(0);
+    progressbar_init((struct progressbar_state*)user,
+                     15, 304, 135, 159, 0x77ff, 0xe8, 0x125f, 0, max);
+}
+
+void fat32_progressbar_update(void* user, int current)
+{
+    progressbar_setpos((struct progressbar_state*)user, current, false);
 }
 
 void main(void)
@@ -182,7 +130,8 @@ void main(void)
     uint32_t i, j, k, rc;
     uint32_t dummy;
     struct progressbar_state progressbar;
-    bool appleflash;
+    bool appleflash = false;
+    bool oldflash;
     void* syscfgptr;
     uint8_t* norbuf;
 #define norbufword ((uint32_t*)norbuf)
@@ -197,6 +146,10 @@ void main(void)
     struct emcorelib_header* libui = get_library(LIBUI_IDENTIFIER, LIBUI_API_VERSION, LIBSOURCE_RAM_NEEDCOPY, f_ui_emcorelib);
     if (!libui) panicf(PANIC_KILLTHREAD, "Could not load user interface library!");
     struct libui_api* ui = (struct libui_api*)libui->api;
+    cputc(3, '.');
+    struct emcorelib_header* libmkfat32 = get_library(LIBMKFAT32_IDENTIFIER, LIBMKFAT32_API_VERSION, LIBSOURCE_RAM_NEEDCOPY, f_mkfat32_emcorelib);
+    if (!libmkfat32) panicf(PANIC_KILLTHREAD, "Could not load mkfat32 library!");
+    struct libmkfat32_api* mf32 = (struct libmkfat32_api*)libmkfat32->api;
     cputc(3, '.');
 
     struct png_info* handle = png->png_open(background_png, background_png_size);
@@ -227,22 +180,26 @@ void main(void)
     cputc(3, '.');
     bootflash_readraw(oldnor, 0, 0x100000);
     cputc(3, '.');
-    if (oldnorword[0x400] == 0x53436667) appleflash = false;
+    if (oldnorword[0x400] == 0x53436667) oldflash = true;
     else
     {
-        updating = false;
-        if (oldnorword[0] == 0x53436667) appleflash = true;
+        if (oldnorword[0] == 0x53436667) oldflash = false;
         else panic(PANIC_KILLTHREAD, "Boot flash contents are damaged! "
                                      "(No SYSCFG found)\n\nPlease ask for help.\n");
+        if (oldnorword[0x400] == 0xffffffff && oldnorword[0x3ff80] == 0x666c7368)
+        {
+            appleflash = true;
+            updating = false;
+        }
     }
-    memcpy(&norbuf[0x1000], &oldnor[appleflash ? 0 : 0x1000], 0x1000);
+    memcpy(norbuf, &oldnor[oldflash ? 0x1000 : 0], 0x1000);
     cputc(3, '.');
 
     uint32_t* script = flashscript;
     uint32_t sp = 0;
     uint32_t beginptr = 0x2000;
     uint32_t endptr = 0x100000;
-    uint32_t dirptr = 0;
+    uint32_t dirptr = 0x1000;
     while (script[sp])
     {
         uint32_t file = script[sp] & 0xff;
@@ -289,7 +246,7 @@ void main(void)
             }
             if (!(flags & 4))
             {
-                if (dirptr >= 0x1000)
+                if (dirptr >= 0x2000)
                     panicf(PANIC_KILLTHREAD, "Error: Directory is full!");
                 memcpy(&norbuf[dirptr], &script[sp], 8);
                 norbufword[(dirptr >> 2) + 2] = file;
@@ -373,7 +330,11 @@ void main(void)
         displaylcd(0, 0, 320, 240, bg, 0, 0, 320);
         displaylcd(77, 100, 165, 36, framebuf, 0, 0, 165);
 
-        mkfat32(&progressbar);
+        struct storage_info storageinfo;
+        storage_get_info(0, &storageinfo);
+        int rc = mf32->mkfat32(0, 0, storageinfo.num_sectors, 4096, 1, "iPodClassic", &progressbar,
+                              fat32_progressbar_init, fat32_progressbar_update);
+        if (rc < 0) panicf(PANIC_KILLTHREAD, "Error formatting hard drive: %08X", rc);
     }
 
     ui->blenda(165, 36, 255, framebuf, 0, 0, 165, bg, 77, 100, 320, actions, 0, 36, 165);
@@ -460,8 +421,10 @@ void main(void)
     free(actions);
     free(bg);
 
+    release_library(libmkfat32);
     release_library(libui);
     release_library(libpng);
+    library_unload(libmkfat32);
     library_unload(libui);
     library_unload(libpng);
 
