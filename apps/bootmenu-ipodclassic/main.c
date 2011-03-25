@@ -106,7 +106,7 @@ struct chooser_renderer_list_itemdata toolchooser_rparams_umsboot =
 
 void run_umsboot(void** firmware, void** app, int* size)
 {
-    boot->load_from_flash(firmware, size, true, "umsboot ", 0x10000);
+    boot->load_from_flash(firmware, size, false, "umsboot ", 0x10000);
     if (!*firmware)
     {
         memcpy(framebuf, bg, 320 * 240 * 3);
