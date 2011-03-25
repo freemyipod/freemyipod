@@ -27,7 +27,8 @@
 
 
 #define STRINGIFY(x) #x
-#define BOOTNOTE_FILENAME "/Notes/" STRINGIFY(BASENAME) ".bootnote"
+#define STR(x) STRINGIFY(x)
+#define BOOTNOTE_FILENAME "/Notes/" STR(BASENAME) ".bootnote"
 
 
 void main();
@@ -283,7 +284,7 @@ uint32_t fat32_resize_fulldisk(struct progressbar_state* progressbar)
     ((uint16_t*)buf1)[0x18] = 1;
     ((uint8_t*)buf1)[0x40] = 0x80;
     ((uint8_t*)buf1)[0x42] = 0x29;
-    if (!fat32_ok) memcpy(&((uint8_t*)buf1)[0x43], "\0\0\0\0iPod Nano  ", 0xf);
+    if (!fat32_ok) memcpy(&((uint8_t*)buf1)[0x43], "\0\0\0\0iPod Nano2G", 0xf);
     else memcpy(&((uint8_t*)buf1)[0x43], &((uint8_t*)buf2)[0x43], 0xf);
     memcpy(&((uint8_t*)buf1)[0x52], "FAT32   ", 8);
     ((uint16_t*)buf1)[0xff] = 0xaa55;
@@ -391,7 +392,7 @@ uint32_t fat32_resize_fulldisk(struct progressbar_state* progressbar)
         for (i = 0; i < fat32_secperclus; i++)
         {
             memset(buf1, 0, 0x800);
-            if (!i) memcpy(buf1, "iPod Nano  \x08", 12);
+            if (!i) memcpy(buf1, "iPod Nano2G\x08", 12);
             if (storage_write_sectors_md(0, database + i, 1, buf1))
             {
                 free(buf1);
@@ -748,7 +749,8 @@ void main(void)
                     sleep(500000);
                     ui->blenda(160, 60, 255, framebuf, 0, 0, 160,
                                darkened, 8, 27, 176, disclaimer, 0, 550, 160);
-                    displaylcd(8, 27, 160, 91, framebuf, 0, 0, 160);
+                    displaylcd(8, 27, 160, 60, framebuf, 0, 0, 160);
+                    displaylcd(8, 87, 160, 31, darkened, 8, 87, 176);
                     button = 0;
                     while (!button) wakeup_wait(&eventwakeup, TIMEOUT_BLOCK);
                     memcpy((void*)0x2202bf00, "diskmodehotstuff\1\0\0", 20);
@@ -765,7 +767,8 @@ void main(void)
     {
         ui->blenda(160, 80, 255, framebuf, 0, 0, 160,
                    darkened, 8, 27, 176, disclaimer, 0, 470, 160);
-        displaylcd(8, 27, 160, 91, framebuf, 0, 0, 160);
+        displaylcd(8, 27, 160, 80, framebuf, 0, 0, 160);
+        displaylcd(8, 107, 160, 11, darkened, 8, 107, 176);
 
         button = 0;
         struct button_hook_entry* hook = button_register_handler(handler, NULL);
@@ -786,7 +789,8 @@ void main(void)
                     sleep(500000);
                     ui->blenda(160, 60, 255, framebuf, 0, 0, 160,
                                darkened, 8, 27, 176, disclaimer, 0, 550, 160);
-                    displaylcd(8, 27, 160, 91, framebuf, 0, 0, 160);
+                    displaylcd(8, 27, 160, 60, framebuf, 0, 0, 160);
+                    displaylcd(8, 87, 160, 31, darkened, 8, 87, 176);
                     button = 0;
                     while (!button) wakeup_wait(&eventwakeup, TIMEOUT_BLOCK);
                     memcpy((void*)0x2202bf00, "diskmodehotstuff\1\0\0", 20);
@@ -800,9 +804,10 @@ void main(void)
     }
     else if (fat32_startsector)
     {
-        ui->blenda(160, 70, 255, framebuf, 0, 0, 160,
-                   darkened, 8, 27, 176, disclaimer, 0, 400, 160);
-        displaylcd(8, 27, 160, 91, framebuf, 0, 0, 160);
+        ui->blenda(130, 70, 255, framebuf, 0, 0, 130,
+                   darkened, 23, 27, 176, disclaimer, 0, 400, 160);
+        displaylcd(8, 27, 160, 91, darkened, 8, 27, 176);
+        displaylcd(23, 27, 130, 70, framebuf, 0, 0, 130);
 
         button = 0;
         struct button_hook_entry* hook = button_register_handler(handler, NULL);

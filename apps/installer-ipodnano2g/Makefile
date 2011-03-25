@@ -5,17 +5,20 @@ BASENAME ?= $(NAME)
 FATNAME ?= INSTAL~1BOO
 
 EMCOREDIR ?= ../../emcore/trunk/
+UNINSTDIR ?= ../uninstaller-ipodnano2g/
 BOOTMENUDIR ?= ../bootmenu-ipodnano2g/
 LIBBOOTDIR ?= ../../libs/boot/
 LIBPNGDIR ?= ../../libs/png/
 LIBUIDIR ?= ../../libs/ui/
+LIBMKFAT32DIR ?= ../../libs/mkfat32/
 UMSBOOTDIR ?= ../../umsboot/
 NOTEBOOTDIR ?= ../../noteboot/
 TOOLSDIR ?= ../../tools/
 
-FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib flashfiles/crapple.png \
-             flashfiles/bootmenu-ipodnano2g.emcoreapp flashfiles/background.png flashfiles/icons.png flashfiles/rockbox.png \
-             flashfiles/emcoreldr-ipodnano2g.dfu flashfiles/emcore-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
+FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib flashfiles/mkfat32.emcorelib \
+             flashfiles/crapple.png flashfiles/uninstaller-ipodnano2g.emcoreapp flashfiles/bootmenu-ipodnano2g.emcoreapp \
+	     flashfiles/background.png flashfiles/icons.png flashfiles/rockbox.png flashfiles/emcoreldr-ipodnano2g.dfu \
+             flashfiles/emcore-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -43,7 +46,7 @@ CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCORE
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
-preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
+preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:" | sed -e "s:^\\./::")
 
 REVISION := $(shell svnversion .)
 REVISIONINT := $(shell echo $(REVISION) | sed -e "s/[^0-9].*$$//")
@@ -191,9 +194,21 @@ flashfiles/ui.emcorelib: $(LIBUIDIR)/build/ui.emcorelib libui
 	@echo [CP]     $@
 	@cp $< $@
 
+$(LIBMKFAT32DIR)/build/mkfat32.emcorelib: libmkfat32
+
+flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib libmkfat32
+	@echo [CP]     $@
+	@cp $< $@
+
 $(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl: umsboot
 
 flashfiles/umsboot-ipodnano2g.ucl: $(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl umsboot
+	@echo [CP]     $@
+	@cp $< $@
+
+$(UNINSTDIR)/build/uninstaller-ipodnano2g.emcoreapp: uninstaller-ipodnano2g
+
+flashfiles/uninstaller-ipodnano2g.emcoreapp: $(UNINSTDIR)/build/uninstaller-ipodnano2g.emcoreapp uninstaller-ipodnano2g
 	@echo [CP]     $@
 	@cp $< $@
 
@@ -241,6 +256,9 @@ emcore:
 emcoreldr-ipodnano2g:
 	@make -C $(EMCOREDIR)/loader/ipodnano2g
 
+uninstaller-ipodnano2g:
+	@make -C $(UNINSTDIR)
+
 bootmenu-ipodnano2g:
 	@make -C $(BOOTMENUDIR)
 
@@ -253,10 +271,13 @@ libpng:
 libui:
 	@make -C $(LIBUIDIR)
 
+libmkfat32:
+	@make -C $(LIBMKFAT32DIR)
+
 umsboot:
 	@make -C $(UMSBOOTDIR) ipodnano2g
 
 clean:
 	@rm -rf build
 
-.PHONY: all clean emcore emcoreldr-ipodnano2g bootmenu-ipodnano2g libboot libpng libui umsboot libucl flashfiles $(NAME)
+.PHONY: all clean emcore emcoreldr-ipodnano2g bootmenu-ipodnano2g uninstaller-ipodnano2g libboot libpng libui libmkfat32 umsboot libucl flashfiles $(NAME)

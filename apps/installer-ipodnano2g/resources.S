@@ -115,6 +115,22 @@ flashscript:
 .byte 0
 .byte 0
 .byte 1
+.word f_mkfat32_emcorelib
+.word f_mkfat32_emcorelib_end - f_mkfat32_emcorelib
+.ascii "libmkf32"
+
+.byte 0
+.byte 0
+.byte 0
+.byte 1
+.word f_uninstaller_ipodnano2g_emcoreapp
+.word f_uninstaller_ipodnano2g_emcoreapp_end - f_uninstaller_ipodnano2g_emcoreapp
+.ascii "uninst  "
+
+.byte 0
+.byte 0
+.byte 0
+.byte 1
 .word f_bootmenu_ipodnano2g_emcoreapp
 .word f_bootmenu_ipodnano2g_emcoreapp_end - f_bootmenu_ipodnano2g_emcoreapp
 .ascii "bootmenu"
@@ -151,17 +167,23 @@ flashscript:
 .word f_crapple_png_end - f_crapple_png
 .ascii "crapple "
 
+.byte 0
+.byte 2
+.byte 0
+.byte 1
+.word f_rockbox_ipod_ucl
+.word f_rockbox_ipod_ucl_end - f_rockbox_ipod_ucl
+.ascii "rockbox "
+
 .word 0
 
 
 firstinstcost:
-.word 0
-firstinstscript:
+.word 11
+commoncost:
 .word 0
 
-commoncost:
-.word 11
-commonscript:
+firstinstscript:
 .word 1
 .word boot_dirname
 .word 1
@@ -170,6 +192,7 @@ commonscript:
 .word 0xffffffff
 .word 0
 .word 10
+commonscript:
 .word 0
 
 
@@ -231,6 +254,16 @@ f_ui_emcorelib:
 f_ui_emcorelib_end:
 
 .align 4
+f_mkfat32_emcorelib:
+.incbin "flashfiles/mkfat32.emcorelib"
+f_mkfat32_emcorelib_end:
+
+.align 4
+f_uninstaller_ipodnano2g_emcoreapp:
+.incbin "flashfiles/uninstaller-ipodnano2g.emcoreapp"
+f_uninstaller_ipodnano2g_emcoreapp_end:
+
+.align 4
 f_bootmenu_ipodnano2g_emcoreapp:
 .incbin "flashfiles/bootmenu-ipodnano2g.emcoreapp"
 f_bootmenu_ipodnano2g_emcoreapp_end:
@@ -239,6 +272,11 @@ f_bootmenu_ipodnano2g_emcoreapp_end:
 f_umsboot_ipodnano2g_ucl:
 .incbin "flashfiles/umsboot-ipodnano2g.ucl"
 f_umsboot_ipodnano2g_ucl_end:
+
+.align 4
+f_rockbox_ipod_ucl:
+.incbin "flashfiles/rockbox.ipod.ucl"
+f_rockbox_ipod_ucl_end:
 
 .align 4
 f_emcore_ipodnano2g_ucl:
