@@ -173,7 +173,7 @@ flashfiles/ui.emcorelib: $(LIBUIDIR)/build/ui.emcorelib libui
 	@echo [CP]     $@
 	@cp $< $@
 
-$(LIBUIDIR)/build/mkfat32.emcorelib: libmkfat32
+$(LIBMKFAT32DIR)/build/mkfat32.emcorelib: libmkfat32
 
 flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib libmkfat32
 	@echo [CP]     $@
