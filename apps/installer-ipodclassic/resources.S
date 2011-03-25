@@ -154,11 +154,10 @@ flashscript:
 
 firstinstcost:
 .word 0
-firstinstscript:
-.word 0
-
 commoncost:
 .word 0
+
+firstinstscript:
 commonscript:
 .word 0
 
