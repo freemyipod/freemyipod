@@ -38,12 +38,12 @@ void load_from_flash(void** firmware, int* size, bool verify, const char* filena
 #define LIBBOOT_IDENTIFIER 0x4c424365
 
 /* increase this every time the api struct changes */
-#define LIBBOOT_API_VERSION 1
+#define LIBBOOT_API_VERSION 2
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
    new function which are "waiting" at the end of the function table) */
-#define LIBBOOT_MIN_API_VERSION 1
+#define LIBBOOT_MIN_API_VERSION 2
 
 /* NOTE: To support backwards compatibility, only add new functions at
          the end of the structure.  Every time you add a new function,

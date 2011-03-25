@@ -36,12 +36,12 @@ int mkfat32(int volume, int startsector, int totalsectors, int sectorsize, int s
 #define LIBMKFAT32_IDENTIFIER 0x3233464d
 
 /* increase this every time the api struct changes */
-#define LIBMKFAT32_API_VERSION 1
+#define LIBMKFAT32_API_VERSION 2
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
    new function which are "waiting" at the end of the function table) */
-#define LIBMKFAT32_MIN_API_VERSION 1
+#define LIBMKFAT32_MIN_API_VERSION 2
 
 /* NOTE: To support backwards compatibility, only add new functions at
          the end of the structure.  Every time you add a new function,
