@@ -6,6 +6,7 @@ EMCOREDIR ?= ../../emcore/trunk/
 LIBBOOTDIR ?= ../../libs/boot/
 LIBPNGDIR ?= ../../libs/png/
 LIBUIDIR ?= ../../libs/ui/
+LIBMKFAT32DIR ?= ../../libs/mkfat32/
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -20,13 +21,13 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 ELF2ECA := $(CROSS)elf2emcoreapp
 
-LIBINCLUDES := -I$(LIBBOOTDIR)/export -I$(LIBPNGDIR)/export -I$(LIBUIDIR)/export
+LIBINCLUDES := -I$(LIBBOOTDIR)/export -I$(LIBPNGDIR)/export -I$(LIBUIDIR)/export -I$(LIBMKFAT32DIR)/export
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
-preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
+preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:" | sed -e "s:^\\./::")
 
 REVISION := $(shell svnversion .)
 REVISIONINT := $(shell echo $(REVISION) | sed -e "s/[^0-9].*$$//")
