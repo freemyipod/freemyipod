@@ -102,6 +102,6 @@ build:
 	@mkdir $@
 
 clean:
-	rm -rf build
+	@rm -rf build
 
 .PHONY: all clean $(NAME)
