@@ -17,7 +17,7 @@ CFLAGS  += -Os -mthumb -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -f
 LDFLAGS += --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
-preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:")
+preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:" | sed -e "s:^\\./::")
 
 SRC := $(call preprocesspaths,SOURCES,)
 OBJ := $(SRC:%.c=build/%.o)
