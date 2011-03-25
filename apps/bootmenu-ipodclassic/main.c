@@ -495,12 +495,12 @@ struct chooser_info mainchooser =
     .items =
     {
         {
-            .user = (void*)run_powerdown,
+            .user = run_powerdown,
             .actionparams = NULL,
             .renderparams = &mainchooser_rparams_powerdown
         },
         {
-            .user = (void*)run_rockbox,
+            .user = run_rockbox,
             .actionparams = NULL,
             .renderparams = &mainchooser_rparams_rockbox
         },
