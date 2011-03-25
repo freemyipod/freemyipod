@@ -86,16 +86,15 @@ all: $(TARGETS)
 
 $(foreach target,$(TARGETS),$(eval $(call TARGET_template,$(target))))
 
-build/version.h: version.h .svn/entries build
+build/version.h: version.h .svn/entries
 	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
+	@-if not exist build md build
 	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
 else
+	@-mkdir -p build
 	@sed -e 's/\$$REVISION\$$/$(REVISION)/' -e 's/\$$REVISIONINT\$$/$(REVISIONINT)/' < $< > $@
 endif
-
-build:
-	@mkdir $@
 
 clean:
 	@rm -rf build
