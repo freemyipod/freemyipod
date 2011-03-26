@@ -113,7 +113,7 @@ class Emcore(object):
                 raise DeviceError("Connected to unknown software type. Exiting")
         
         self.getpacketsizeinfo()
-        self.getusermemrange()
+        self.getmallocpoolbounds()
     
     @staticmethod
     def _alignsplit(addr, size, blksize, align):
@@ -191,12 +191,12 @@ class Emcore(object):
         return resp
     
     @command()
-    def getusermemrange(self):
-        """ This returns the memory range the user has access to. """
+    def getmallocpoolbounds(self):
+        """ This returns the memory range of the malloc pool """
         resp = self.lib.monitorcommand(struct.pack("<IIII", 1, 2, 0, 0), "III", ("lower", "upper", None))
-        self.logger.debug("Device user memory = 0x%X - 0x%X\n" % (resp.lower, resp.upper))
-        self.lib.dev.usermem.lower = resp.lower
-        self.lib.dev.usermem.upper = resp.upper
+        self.logger.debug("Malloc pool bounds = 0x%X - 0x%X\n" % (resp.lower, resp.upper))
+        self.lib.dev.mallocpool.lower = resp.lower
+        self.lib.dev.mallocpool.upper = resp.upper
         return resp
     
     @command()
@@ -1037,9 +1037,9 @@ class Dev(object):
         self.swtypeid = None
         self.hwtypeid = None
         
-        self.usermem = Bunch()
-        self.usermem.lower = None
-        self.usermem.upper = None
+        self.mallocpool = Bunch()
+        self.mallocpool.lower = None
+        self.mallocpool.upper = None
     
     def __del__(self):
         self.disconnect()

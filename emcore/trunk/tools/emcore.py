@@ -156,7 +156,7 @@ class Commandline(object):
     def getinfo(self, infotype):
         """
             Get info on the running emCORE.
-            <infotype> may be either of 'version', 'packetsize', 'usermemrange'.
+            <infotype> may be either of 'version', 'packetsize', 'mallocpoolbounds'.
         """
         if infotype == "version":
             hwtype = gethwname(self.emcore.lib.dev.hwtypeid)
@@ -175,14 +175,14 @@ class Commandline(object):
             self.logger.info("data out: %d\n" % self.emcore.lib.dev.packetsizelimit.dout, 4)
             self.logger.info("data in: %d\n" % self.emcore.lib.dev.packetsizelimit.din, 4)
         
-        elif infotype == "usermemrange":
-            resp = self.emcore.getusermemrange()
-            self.logger.info("The user memory range is 0x%X - 0x%X" % (
-                             self.emcore.lib.dev.usermem.lower,
-                             self.emcore.lib.dev.usermem.upper - 1))
+        elif infotype == "mallocpoolbounds":
+            resp = self.emcore.getmallocpoolbounds()
+            self.logger.info("The malloc pool is 0x%X - 0x%X" % (
+                             self.emcore.lib.dev.mallocpool.lower,
+                             self.emcore.lib.dev.mallocpool.upper - 1))
         
         else:
-            raise ArgumentTypeError("one out of 'version', 'packetsize', 'usermemrange'", infotype)
+            raise ArgumentTypeError("one out of 'version', 'packetsize', 'mallocpoolbounds'", infotype)
     
     @command
     def reset(self, force=False):
