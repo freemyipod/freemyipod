@@ -37,6 +37,7 @@ static int chooser_renderer_iconflow_init(struct chooser_data* data)
     struct chooser_renderer_iconflow_data* rdata;
     rdata = (struct chooser_renderer_iconflow_data*)(data->rendererdata);
     rdata->viewposition = params->startposition * data->info->actionhandler->stepsperitem(data);
+    rdata->accumulator = 0;
     rdata->lastupdate = USEC_TIMER;
     return 0;
 }
