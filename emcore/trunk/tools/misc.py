@@ -268,6 +268,7 @@ def getthread(address, threads):
     for thread in threads:
         if address == thread.addr:
             return thread
+    from libemcoredata import scheduler_thread
     thread = scheduler_thread()._to_bunch()
     thread.name = "[Invalid Thread %08X]" % address
     return thread
