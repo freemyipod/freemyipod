@@ -473,15 +473,17 @@ int thread_terminate_internal(struct scheduler_thread* thread, uint32_t mode)
 
     if (!thread) thread = current_thread;
     if (thread->state == THREAD_RUNNING) needsswitch = true;
-    else if (thread->state == THREAD_BLOCKED)
+    else
     {
-        if (thread->block_type == THREAD_BLOCK_MUTEX)
-            mutex_remove_from_queue((struct mutex*)t->blocked_by, thread);
-        else if (thread->block_type == THREAD_BLOCK_WAKEUP)
-            ((struct wakeup*)thread->blocked_by)->waiter = NULL;
+        if (thread->state == THREAD_BLOCKED)
+        {
+            if (thread->block_type == THREAD_BLOCK_MUTEX)
+                mutex_remove_from_queue((struct mutex*)t->blocked_by, thread);
+            else if (thread->block_type == THREAD_BLOCK_WAKEUP)
+                ((struct wakeup*)thread->blocked_by)->waiter = NULL;
+        }
+        thread->state = THREAD_SUSPENDED;
     }
-    for (t = head_thread; t && t->thread_next != thread; t = t->thread_next);
-    if (t) t->thread_next = thread->thread_next;
 
     leave_critical_section(mode);
 
@@ -494,6 +496,11 @@ int thread_terminate_internal(struct scheduler_thread* thread, uint32_t mode)
     button_unregister_all_of_thread(thread);
 #endif
     free_all_of_thread(thread);
+
+    mode = enter_critical_section();
+    for (t = head_thread; t && t->thread_next != thread; t = t->thread_next);
+    if (t) t->thread_next = thread->thread_next;
+    leave_critical_section(mode);
 
     if (needsswitch) yield();
 
@@ -515,7 +522,7 @@ int thread_killlevel(enum thread_type type, bool killself)
         bool found = false;
         uint32_t mode = enter_critical_section();
         for (t = head_thread; t; t = t->thread_next)
-            if (t->type <= type && (killself || current_thread != t))
+            if (t->type <= type && current_thread != t)
             {
                 thread_terminate_internal(t, mode);
                 found = true;
@@ -526,6 +533,7 @@ int thread_killlevel(enum thread_type type, bool killself)
         leave_critical_section(mode);
         break;
     }
+    if (killself) thread_exit();
     return count;
 }
 
