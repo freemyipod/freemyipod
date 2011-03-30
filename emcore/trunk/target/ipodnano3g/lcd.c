@@ -99,16 +99,16 @@ void lcd_init()
 //        pmu_write(0x31, 0x0b);  // Vlcd @ 2.000V
 //        break;
     case 1:
-        pmu_write(0x31, 0x0e);  // Vlcd @ 2.300V
+//        pmu_write(0x31, 0x0e);  // Vlcd @ 2.300V
         break;
     case 2:
-        pmu_write(0x31, 0x12);  // Vlcd @ 2.700V
+//        pmu_write(0x31, 0x12);  // Vlcd @ 2.700V
         break;
 //    case 3:
 //        pmu_write(0x31, 0x0b);  // Vlcd @ 2.000V
 //        break;
-    default:
-        pmu_write(0x31, 0x0b);  // Vlcd @ 2.000V
+//    default:
+//        pmu_write(0x31, 0x0b);  // Vlcd @ 2.000V
     }
 }
 
@@ -347,6 +347,7 @@ void filllcd(unsigned int x, unsigned int y, unsigned int width, unsigned int he
 
 void lcd_shutdown()
 {
+    mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
     displaylcd_sync();
     uint32_t type = lcd_detect();
     if (type & 2)
