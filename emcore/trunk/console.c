@@ -25,6 +25,7 @@
 #include "console.h"
 #include "lcdconsole.h"
 #include "usb/dbgconsole.h"
+#include "uart.h"
 #include "format.h"
 #include "thread.h"
 #include <stdarg.h>
@@ -46,6 +47,9 @@ void console_init()
 {
     mutex_init(&console_mutex);
     mutex_init(&console_readmutex);
+#ifdef HAVE_UART
+    uart_init();
+#endif
 }
 
 void cputc_internal(unsigned int consoles, char string) ICODE_ATTR;
@@ -56,6 +60,9 @@ void cputc_internal(unsigned int consoles, char string)
 #endif
 #ifdef HAVE_USB
     if (consoles & 2) dbgconsole_putc(string);
+#endif
+#ifdef HAVE_UART
+    if (consoles & 4) uart_putc(string);
 #endif
 }
 
@@ -114,6 +121,9 @@ void cputs(unsigned int consoles, const char* string)
 #ifdef HAVE_USB
     if (consoles & 2) dbgconsole_puts(string);
 #endif
+#ifdef HAVE_UART
+    if (consoles & 4) uart_puts(string);
+#endif
     mutex_unlock(&console_mutex);
 }
 
@@ -125,6 +135,9 @@ void cwrite(unsigned int consoles, const char* string, size_t length)
 #endif
 #ifdef HAVE_USB
     if (consoles & 2) dbgconsole_write(string, length);
+#endif
+#ifdef HAVE_UART
+    if (consoles & 4) uart_write(string, length);
 #endif
     mutex_unlock(&console_mutex);
 }
@@ -145,6 +158,9 @@ int cgetc(unsigned int consoles, int timeout)
 #ifdef HAVE_USB
     if ((consoles & 2) && (result = dbgconsole_getc(timeout)) != -1) return result;
 #endif
+#ifdef HAVE_UART
+    if ((consoles & 4) && (result = uart_getc(timeout)) != -1) return result;
+#endif
     mutex_unlock(&console_readmutex);
 }
 
@@ -155,6 +171,9 @@ int cread(unsigned int consoles, char* buffer, size_t length, int timeout)
 #ifdef HAVE_USB
     if ((consoles & 2) && (result = dbgconsole_read(buffer, length, timeout))) return result;
 #endif
+#ifdef HAVE_UART
+    if ((consoles & 2) && (result = uart_read(buffer, length, timeout))) return result;
+#endif
     mutex_unlock(&console_readmutex);
 }
 
@@ -164,13 +183,23 @@ void creada(unsigned int consoles, char* buffer, size_t length, int timeout)
     mutex_lock(&console_readmutex, TIMEOUT_BLOCK);
     while (length)
     {
+        if (
 #ifdef HAVE_USB
-        if (length && (consoles & 2) && (result = dbgconsole_read(buffer, length, timeout)))
+            ((consoles & 2) && (result = dbgconsole_read(buffer, length, timeout)))
+#else
+            false
+#endif
+            ||
+#ifdef HAVE_UART
+            ((consoles & 4) && (result = uart_read(buffer, length, timeout)))
+#else
+            false
+#endif
+            )
         {
             buffer = &buffer[result];
             length -= result;
         }
-#endif
     }
     mutex_unlock(&console_readmutex);
 }

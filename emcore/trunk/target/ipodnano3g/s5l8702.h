@@ -767,6 +767,17 @@ struct dma_lli
 #define WHEELTX      (*((uint32_t volatile*)(0x3C20001C)))
 
 
+/////UART/////
+#define ULCON  (*((uint32_t volatile*)0x3cc00000))
+#define UCON   (*((uint32_t volatile*)0x3cc00004))
+#define UFCON  (*((uint32_t volatile*)0x3cc00008))
+#define UMCON  (*((uint32_t volatile*)0x3cc0000c))
+#define UFSTAT (*((uint32_t volatile*)0x3cc00018))
+#define UTXH   (*((uint8_t volatile*)0x3cc00020))
+#define URXH   (*((uint8_t volatile*)0x3cc00024))
+#define UBRDIV (*((uint32_t volatile*)0x3cc00028))
+
+
 /////CLOCK GATES/////
 #define CLOCKGATE_LCD 1
 #define CLOCKGATE_USB_1 2

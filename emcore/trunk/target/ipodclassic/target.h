@@ -61,6 +61,8 @@
 
 #define HAVE_BOOTFLASH
 
+#define HAVE_UART
+
 #define HAVE_STORAGE
 #define HAVE_HDD_STORAGE
 #define HAVE_STORAGE_FLUSH
