@@ -34,6 +34,7 @@
 #include "mmu.h"
 #include "shutdown.h"
 #include "execimage.h"
+#include "dbgconsole.h"
 #ifdef HAVE_I2C
 #include "i2c.h"
 #endif
