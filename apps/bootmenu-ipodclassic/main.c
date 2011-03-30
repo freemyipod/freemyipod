@@ -420,10 +420,10 @@ struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
 
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_toolchooser =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 135)),
-                          LIBUI_POINT(80, 85)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 135)),
-                                   LIBUI_POINT(80, 85)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 136)),
+                          LIBUI_POINT(80, 84)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 136)),
+                                   LIBUI_POINT(80, 84)),
     .text = "Tools",
     .text_color = 0xffffcccc,
 };
