@@ -38,8 +38,8 @@
 #endif
 
 
-struct library_handle* library_list_head;
-struct mutex library_mutex;
+static struct library_handle* library_list_head;
+static struct mutex library_mutex;
 
 
 struct library_handle* library_register(void* image, struct emcorelib_header* header)
