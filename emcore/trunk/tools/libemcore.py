@@ -391,7 +391,7 @@ class Emcore(object):
             threadstruct.addr = structptr
             if threadstruct.name != 0:
                 threadstruct.name = self.readstring(threadstruct.name)
-            else: threadstruct.name = "[Thread %08X]" % structptr
+            else: threadstruct.name = "[Thread 0x%08X]" % structptr
             threadstruct.state = thread_state(threadstruct.state)
             if threadstruct.block_type == "THREAD_BLOCK_MUTEX":
                 blocked_by_struct = mutex
