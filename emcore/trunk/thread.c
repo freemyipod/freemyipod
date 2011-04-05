@@ -93,6 +93,8 @@ int mutex_lock(struct mutex* obj, int timeout)
     {
         obj->count = 1;
         obj->owner = current_thread;
+        obj->owned_next = current_thread->owned_mutexes;
+        current_thread->owned_mutexes = obj;
     }
     else if (obj->owner == current_thread) obj->count++;
     else
@@ -117,6 +119,35 @@ int mutex_lock(struct mutex* obj, int timeout)
     return ret;
 }
 
+void mutex_unlock_internal(struct mutex* obj)
+{
+    struct mutex* o;
+    if (!obj->owner->owned_mutexes) return;
+    if (obj->owner->owned_mutexes == obj) obj->owner->owned_mutexes = obj->owned_next;
+    else
+    {
+        o = obj->owner->owned_mutexes;
+        while (o->owned_next)
+        {
+            if (o->owned_next == obj) o->owned_next = obj->owned_next;
+            o = o->owned_next;
+        }
+    }
+    if (obj->waiters)
+    {
+        obj->count = 1;
+        obj->owner = obj->waiters;
+        obj->waiters->state = THREAD_READY;
+        obj->waiters->block_type = THREAD_NOT_BLOCKED;
+        obj->waiters->blocked_by = NULL;
+        obj->waiters->timeout = 0;
+        obj->waiters = obj->waiters->queue_next;
+        obj->owned_next = obj->owner->owned_mutexes;
+        obj->owner->owned_mutexes = obj;
+    }
+    else obj->count = 0;
+}
+
 int mutex_unlock(struct mutex* obj)
 {
     int ret = THREAD_OK;
@@ -133,18 +164,8 @@ int mutex_unlock(struct mutex* obj)
         leave_critical_section(mode);
         panicf(PANIC_KILLTHREAD, "Trying to unlock mutex owned by different thread! (%08X)", obj);
     }
-
     if (--(obj->count)) ret = obj->count;
-    else if (obj->waiters)
-    {
-        obj->count = 1;
-        obj->owner = obj->waiters;
-        obj->waiters->state = THREAD_READY;
-        obj->waiters->block_type = THREAD_NOT_BLOCKED;
-        obj->waiters->blocked_by = NULL;
-        obj->waiters->timeout = 0;
-        obj->waiters = obj->waiters->queue_next;
-    }
+    else mutex_unlock_internal(obj);
 
     leave_critical_section(mode);
     return ret;
@@ -484,6 +505,10 @@ int thread_terminate_internal(struct scheduler_thread* thread, uint32_t mode)
         }
         thread->state = THREAD_SUSPENDED;
     }
+
+    struct mutex* m;
+    for (m = thread->owned_mutexes; m; m = m->owned_next)
+        mutex_unlock_internal(m);
 
     leave_critical_section(mode);
 

@@ -68,7 +68,9 @@ enum thread_type
 };
 
 
-#define SCHEDULER_THREAD_INFO_VERSION 2
+#define SCHEDULER_THREAD_INFO_VERSION 3
+
+struct mutex;
 
 struct scheduler_thread
 {
@@ -81,6 +83,7 @@ struct scheduler_thread
     uint32_t startusec;
     struct scheduler_thread* thread_next;
     struct scheduler_thread* queue_next;
+    struct mutex* owned_mutexes;
     uint32_t timeout;
     uint32_t blocked_since;
     void* blocked_by;
@@ -96,6 +99,7 @@ struct mutex
 {
     struct scheduler_thread* owner;
     struct scheduler_thread* waiters;
+    struct mutex* owned_next;
     int count;
 };
 
