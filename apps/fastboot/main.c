@@ -29,52 +29,23 @@ static void main()
 {
     void* firmware = NULL;
     int size;
+    struct emcorelib_header* lib = get_library(LIBBOOT_IDENTIFIER, LIBBOOT_API_VERSION, LIBSOURCE_BOOTFLASH, "libboot ");
+    if (!lib) panicf(PANIC_KILLTHREAD, "Could not load libboot");
+    struct libboot_api* boot = (struct libboot_api*)lib->api;
     if (!(clickwheel_get_state() & 0x1f))
-    {
-        struct emcorelib_header* libboot = get_library(LIBBOOT_IDENTIFIER, LIBBOOT_API_VERSION, LIBSOURCE_BOOTFLASH, "libboot ");
-        if (!libboot) panicf(PANIC_KILLTHREAD, "Could not load booting library!");
-        struct libboot_api* boot = (struct libboot_api*)libboot->api;
-        int fd = file_open("/.rockbox/rockbox.ipod", O_RDONLY);
-        if (fd > 0)
-        {
-            size = filesize(fd);
-            if (size > 0)
-            {
-                void* buf = memalign(0x10, size);
-                if (buf)
-                {
-                    if (read(fd, buf, size) == size)
-                        if (!boot->verify_rockbox_checksum(buf, size))
-                            firmware = buf;
-                    if (!firmware) free(buf);
-                }
-            }
-            close(fd);
-        }
-        release_library(libboot);
-        library_unload(libboot);
-    }
+        boot->load_from_file(&firmware, &size, true, "/.rockbox/rockbox.ipod", 0);
     if (firmware)
     {
+        release_library(lib);
+        library_unload(lib);
         shutdown(false);
         execfirmware((void*)0x08000000, firmware, size);
     }
     else
     {
-        int size = bootflash_filesize("bootmenu");
-        if (size > 0)
-        {
-            void* buffer = memalign(0x10, size);
-            if (buffer)
-            {
-                if (bootflash_read("bootmenu", buffer, 0, size) == size)
-                {
-                    if (execimage(buffer, false) != NULL) return;
-                }
-                else free(buffer);
-            }
-        }
-        panic(PANIC_KILLTHREAD, "Failed to launch boot menu");
+        boot->load_from_flash(&firmware, &size, false, "bootmenu", 0);
+        if (!firmware || execimage(firmware, false) == NULL)
+            panic(PANIC_KILLTHREAD, "Failed to launch boot menu");
     }
 }
 
