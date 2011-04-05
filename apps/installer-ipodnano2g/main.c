@@ -848,6 +848,7 @@ void main(void)
     backlight_on(true);
 
     disk_mount(0);
+    remove("/.boot/init.emcoreapp");
     int updating = !(appleflash || rc);
     int cost;
     if (updating)
