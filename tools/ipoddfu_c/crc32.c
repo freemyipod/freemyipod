@@ -17,29 +17,34 @@ static unsigned long crc32table[256];
  * Standard seed is 0xffffffff or 0.
  * Some implementations xor result with 0xffffffff after calculation.
  */
-uint32_t crc32(void *data, unsigned int len, uint32_t seed) {
-	uint8_t *d = data;
-	
-	while (len--) {
-		seed = ((seed >> 8) & 0x00FFFFFF) ^ crc32table [(seed ^ *d++) & 0xFF];
-	}
-	
-	return seed;
+uint32_t crc32(void *data, unsigned int len, uint32_t seed)
+{
+    uint8_t *d = data;
+    
+    while (len--)
+    {
+        seed = ((seed >> 8) & 0x00FFFFFF) ^ crc32table [(seed ^ *d++) & 0xFF];
+    }
+    
+    return seed;
 }
 
 /* Calculate crc32table */
-void crc32_init() {
-	uint32_t poly = 0xEDB88320L;
-	uint32_t crc;
-	int i, j;
+void crc32_init()
+{
+    uint32_t poly = 0xEDB88320L;
+    uint32_t crc;
+    int i, j;
 
-	for (i = 0; i < 256; ++i) {
-		crc = i;
-		
-		for (j = 8; j > 0; --j) {
-			crc = (crc >> 1) ^ ((crc & 1) ? poly : 0);
-		}
-		
-		crc32table[i] = crc;
-	}
+    for (i = 0; i < 256; ++i)
+    {
+        crc = i;
+        
+        for (j = 8; j > 0; --j)
+        {
+            crc = (crc >> 1) ^ ((crc & 1) ? poly : 0);
+        }
+        
+        crc32table[i] = crc;
+    }
 }
