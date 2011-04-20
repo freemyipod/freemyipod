@@ -60,14 +60,19 @@ static enum chooser_result chooser_renderer_iconflow_render(struct chooser_data*
     rdata = (struct chooser_renderer_iconflow_data*)(data->rendererdata);
     long time = USEC_TIMER;
     long timediff = time - rdata->lastupdate;
-    int distance = data->position - rdata->viewposition;
-    if (distance) rc = CHOOSER_RESULT_REDRAW;
-    int factor = params->smoothness / timediff + 1;
+    if (!timediff) timediff = 1;
+    int distance;
+    if (!rdata->lastupdate) distance = 0;
+    else distance = data->position - rdata->viewposition;
+    int factor = params->smoothness / timediff;
+    if (!factor) factor = 1;
     rdata->accumulator += distance;
     distance = rdata->accumulator / factor;
     rdata->accumulator -= distance * factor;
     rdata->viewposition += distance;
     rdata->lastupdate = time;
+    if (data->position - rdata->viewposition) rc = CHOOSER_RESULT_REDRAW;
+    else rdata->lastupdate = 0;
     if (params->copy_dest.buf.addr == params->fill_dest.loc.buf.addr
      && params->copy_dest.buf.stride == params->fill_dest.loc.buf.stride
      && params->copy_dest.pos.x == params->fill_dest.loc.pos.x
