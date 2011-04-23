@@ -41,10 +41,16 @@ __start:
 .section .initcode,"ax",%progbits
 .global _start
 _start:
+	mrc	p15, 0, r0,c1,c0
+	bic	r0, r0, #0x200
+	orr	r0, r0, #0x100
+	mcr	p15, 0, r0,c1,c0
+	mov	r0, #0x7fffffff
+	mcr	p15, 0, r0,c3,c0
 	mov	r0, #0x22000000
-	orr	r1, r0, #0x00000c00
+	orr	r1, r0, #0x00000100
 	orr	r0, r0, #0x0003c000
-	orr	r1, r1, #0x0000001e
+	orr	r1, r1, #0x000000fe
 	add	r2, r0, #0x200
 	mov	r3, #0
 	str	r1, [r0], #4
