@@ -161,7 +161,7 @@ endif
 build/libucl.a: libucl
 
 libucl:
-	@make -C libucl CFLAGS="$(CFLAGS) -I../$(EMCOREDIR)/export"
+	@$(MAKE) -C libucl CFLAGS="$(CFLAGS) -I../$(EMCOREDIR)/export"
 
 build/version.h: version.h .svn/entries
 	@echo [PP]     $<
@@ -251,31 +251,31 @@ flashfiles/emcore-ipodnano2g.bin: $(EMCOREDIR)/build/ipodnano2g/emcore.bin emcor
 	@$(EMCOREBOOTCFG) $< $@ "(3, '/.boot/init.emcoreapp', None, (2, 'bootmenu', None, None))"
 
 emcore:
-	@make -C $(EMCOREDIR) ipodnano2g
+	@$(MAKE) -C $(EMCOREDIR) ipodnano2g
 
 emcoreldr-ipodnano2g:
-	@make -C $(EMCOREDIR)/loader/ipodnano2g
+	@$(MAKE) -C $(EMCOREDIR)/loader/ipodnano2g
 
 uninstaller-ipodnano2g:
-	@make -C $(UNINSTDIR)
+	@$(MAKE) -C $(UNINSTDIR)
 
 bootmenu-ipodnano2g:
-	@make -C $(BOOTMENUDIR)
+	@$(MAKE) -C $(BOOTMENUDIR)
 
 libboot:
-	@make -C $(LIBBOOTDIR)
+	@$(MAKE) -C $(LIBBOOTDIR)
 
 libpng:
-	@make -C $(LIBPNGDIR)
+	@$(MAKE) -C $(LIBPNGDIR)
 
 libui:
-	@make -C $(LIBUIDIR)
+	@$(MAKE) -C $(LIBUIDIR)
 
 libmkfat32:
-	@make -C $(LIBMKFAT32DIR)
+	@$(MAKE) -C $(LIBMKFAT32DIR)
 
 umsboot:
-	@make -C $(UMSBOOTDIR) ipodnano2g
+	@$(MAKE) -C $(UMSBOOTDIR) ipodnano2g
 
 clean:
 	@rm -rf build

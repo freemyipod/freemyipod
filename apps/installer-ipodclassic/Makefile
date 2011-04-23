@@ -220,30 +220,30 @@ flashfiles/emcore-ipodclassic.bin: $(EMCOREDIR)/build/ipodclassic/emcore.bin emc
 	@$(EMCOREBOOTCFG) $< $@ "(3, '/.boot/init.emcoreapp', None, (2, 'bootmenu', None, None))"
 
 emcore:
-	@make -C $(EMCOREDIR) ipodclassic
+	@$(MAKE) -C $(EMCOREDIR) ipodclassic
 
 emcoreldr-ipodclassic:
-	@make -C $(EMCOREDIR)/loader/ipodclassic
+	@$(MAKE) -C $(EMCOREDIR)/loader/ipodclassic
 
 bootmenu-ipodclassic:
-	@make -C $(BOOTMENUDIR)
+	@$(MAKE) -C $(BOOTMENUDIR)
 
 libboot:
-	@make -C $(LIBBOOTDIR)
+	@$(MAKE) -C $(LIBBOOTDIR)
 
 libpng:
-	@make -C $(LIBPNGDIR)
+	@$(MAKE) -C $(LIBPNGDIR)
 
 libui:
-	@make -C $(LIBUIDIR)
+	@$(MAKE) -C $(LIBUIDIR)
 
 libmkfat32:
-	@make -C $(LIBMKFAT32DIR)
+	@$(MAKE) -C $(LIBMKFAT32DIR)
 
 $(UMSBOOTDIR)/build/ipodclassic/umsboot.bin: umsboot
 
 umsboot:
-	@make -C $(UMSBOOTDIR) ipodclassic
+	@$(MAKE) -C $(UMSBOOTDIR) ipodclassic
 
 clean:
 	@rm -rf build
