@@ -41,6 +41,42 @@ __start:
 .section .initcode,"ax",%progbits
 .global _start
 _start:
+	mov	r0, #0x22000000
+	orr	r1, r0, #0x00000c00
+	orr	r0, r0, #0x0003c000
+	orr	r1, r1, #0x0000001e
+	add	r2, r0, #0x200
+	mov	r3, #0
+	str	r1, [r0], #4
+.mmuloop1:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop1
+	add	r0, r0, #0x100
+	add	r2, r0, #0x500
+.mmuloop2:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop2
+	add	r0, r0, #0x4
+	add	r2, r0, #0x7c
+.mmuloop3:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop3
+	add	r0, r0, #0x4
+	add	r2, r0, #0x500
+	add	r2, r2, #0x7c
+.mmuloop4:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop4
+	add	r0, r0, #0x200
+	add	r2, r0, #0x3000
+.mmuloop5:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop5
 	mrc	p15, 0, r0,c1,c0
 	orr	r0, r0, #5
 	mcr	p15, 0, r0,c1,c0
