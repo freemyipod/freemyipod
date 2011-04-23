@@ -209,7 +209,14 @@ static struct usb_config_bundle
     }
 };
 
-static struct usb_string_descriptor CACHEALIGN_ATTR string_devicename =
+static struct usb_string_descriptor CACHEALIGN_ATTR string_vendor =
+{
+    30,
+    USB_DT_STRING,
+    {'f', 'r', 'e', 'e', 'm', 'y', 'i', 'p', 'o', 'd', '.', 'o', 'r', 'g'}
+};
+
+static struct usb_string_descriptor CACHEALIGN_ATTR string_product =
 {
     32,
     USB_DT_STRING,
@@ -264,6 +271,7 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
             size = sizeof(device_descriptor);
             break;
         case USB_DT_OTHER_SPEED_CONFIG:
+
         case USB_DT_CONFIG:
             if ((req->wValue >> 8) == USB_DT_CONFIG)
             {
@@ -294,14 +302,12 @@ void usb_handle_control_request(struct usb_ctrlrequest* req)
                 size = lang_descriptor.bLength;
                 break;
             case 1:
-                string_devicename.bLength = 14;
-                addr = &string_devicename;
-                size = string_devicename.bLength;
+                addr = &string_vendor;
+                size = string_vendor.bLength;
                 break;
             case 2:
-                string_devicename.bLength = 32;
-                addr = &string_devicename;
-                size = string_devicename.bLength;
+                addr = &string_product;
+                size = string_product.bLength;
                 break;
             }
             break;
