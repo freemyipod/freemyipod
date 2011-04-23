@@ -86,6 +86,10 @@ endif
 
 build/resources.o: flashfiles.built
 
+ifeq ($(AUTOBUILD_FLASHFILES),true)
+flashfiles.built: flashfiles
+endif
+
 build/$(NAME).elf: ls.x $(OBJ)
 	@echo [LD]     $@
 	@$(LD) $(LDFLAGS) -o $@ -T ls.x $(OBJ)
