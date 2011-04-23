@@ -23,8 +23,31 @@
 #define ASM_FILE
 #include "global.h"
 
-.section .icode.yield, "ax", %progbits
+.section .icode.contextswitch, "ax", %progbits
 .align 2
+.global panic_recover
+.type panic_recover, %function
+panic_recover:
+	mrs	r0, cpsr
+	and	r0, r0, #0x1f
+	cmp	r0, #0x17
+	cmpne	r0, #0x1b
+	bne	yield
+	ldr	sp, =_abortstackend - 0x44
+	ldr	r9, =current_thread
+	ldr	lr, [r9]
+	ldmia	sp!, {r0-r7}
+	stmia	lr!, {r0-r7}
+	ldmia	sp!, {r0-r8}
+	stmia	lr!, {r0-r8}
+	msr	cpsr_c, #0xd2
+	bl	scheduler_pause_accounting
+	adr	lr, resume_thread
+	mov	r0, #0
+	mov	r1, r9
+	b	scheduler_switch
+.size panic_recover, .-panic_recover
+
 .global yield
 .type yield, %function
 yield:

@@ -144,41 +144,116 @@ hang:
 
 .type reset_handler, %function
 reset_handler:
+	stmfd	sp, {r10-r12}
+	mov	r10, sp
+	mov	r11, lr
+	mrs	r12, cpsr
+	msr	cpsr_c, #0xd7
+	sub	sp, sp, #0x44
+	stmia	sp!, {r0-r9}
+	sub	r0, r10, #0xc
+	ldmia	r0, {r0-r2}
+	mov	r3, r10
+	mov	r4, r11
+	mov	r5, r11
+	mov	r6, r12
+	stmia	sp!, {r0-r6}
+	sub	sp, sp, #0x44
 	mov	r0, #0
 	adr	r1, reset_text
+	mov	r2, r11
 	b	panic
-reset_text:
-	.ascii	"Hit reset vector!\0"
 .size reset_handler, .-reset_handler
 
 .type undef_instr_handler, %function
 undef_instr_handler:
+	sub	sp, sp, #0x44
+	stmia	sp!, {r0-r12}
+	sub	r2, lr, #4
+	mrs	r3, spsr
+	mrs	r4, cpsr
+	orr	r0, r3, #0xc0
+	msr	cpsr_c, r0
+	mov	r0, sp
+	mov	r1, lr
+	msr	cpsr_c, r4
+	stmia	sp!, {r0-r3}
+	sub	sp, sp, #0x44
 	mov	r0, #0
 	adr	r1, undef_instr_text
-	sub	r2, lr, #4
+	ldr	r3, [r2]
 	b	panicf
 .size undef_instr_handler, .-undef_instr_handler
 
 .type prefetch_abort_handler, %function
 prefetch_abort_handler:
+	sub	sp, sp, #0x44
+	stmia	sp!, {r0-r12}
+	sub	r2, lr, #4
+	mrs	r3, spsr
+	mrs	r4, cpsr
+	orr	r0, r3, #0xc0
+	msr	cpsr_c, r0
+	mov	r0, sp
+	mov	r1, lr
+	msr	cpsr_c, r4
+	stmia	sp!, {r0-r3}
+	sub	sp, sp, #0x44
 	mov	r0, #0
 	adr	r1, prefetch_abort_text
-	sub	r2, lr, #4
+	mrc	p15, 0, r3,c5,c0
+	mov	r4, r3,lsr#4
+	and	r4, r4, #0xf
+	and	r5, r3, #0xf
+	stmfd	sp!, {r4-r5}
 	b	panicf
 .size prefetch_abort_handler, .-prefetch_abort_handler
 
 .type data_abort_handler, %function
 data_abort_handler:
+	sub	sp, sp, #0x44
+	stmia	sp!, {r0-r12}
+	sub	r2, lr, #8
+	mrs	r3, spsr
+	mrs	r4, cpsr
+	orr	r0, r3, #0xc0
+	msr	cpsr_c, r0
+	mov	r0, sp
+	mov	r1, lr
+	msr	cpsr_c, r4
+	stmia	sp!, {r0-r3}
+	sub	sp, sp, #0x44
 	mov	r0, #0
 	adr	r1, data_abort_text
-	sub	r2, lr, #4
+	mrc	p15, 0, r3,c5,c0
+	mov	r4, r3,lsr#4
+	and	r4, r4, #0xf
+	and	r5, r3, #0xf
+	mrc	p15, 0, r6,c6,c0
+	stmfd	sp!, {r4-r6}
 	b	panicf
 .size data_abort_handler, .-data_abort_handler
 
 .type reserved_handler, %function
 reserved_handler:
+	stmfd	sp, {r10-r12}
+	mov	r10, sp
+	mov	r11, lr
+	mrs	r12, cpsr
+	msr	cpsr_c, #0xd7
+	sub	sp, sp, #0x44
+	stmia	sp!, {r0-r9}
+	sub	r0, r10, #0xc
+	ldmia	r0, {r0-r2}
+	mov	r3, r10
+	mov	r4, r11
+	mov	r5, r11
+	mov	r6, r12
+	stmia	sp!, {r0-r6}
+	sub	sp, sp, #0x44
 	mov	r0, #0
 	adr	r1, reserved_text
+	mov	r2, r11
 	b	panic
 .size reserved_handler, .-reserved_handler
 
@@ -189,20 +264,23 @@ fiq_handler:
 	b	panic
 .size fiq_handler, .-fiq_handler
 
-undef_instr_text:
-	.ascii	"Undefined instruction at %08X!\0"
-
 prefetch_abort_text:
-	.ascii	"Prefetch abort at %08X!\0"
+	.ascii	"Prefetch abort at %08X!\nFSR: %08X (domain %d, fault %d)\0"
+
+reset_text:
+	.ascii	"Hit reset vector!\n(Last known PC: %08X)\0"
+
+undef_instr_text:
+	.ascii	"Undefined instruction at %08X!\n(Opcode: %08X)\0"
 
 data_abort_text:
-	.ascii	"Data abort at %08X!\0"
-
-reserved_text:
-	.ascii	"Hit reserved exception handler!\0"
+	.ascii	"Data abort at %08X!\nFSR: %08X (domain %d, fault %d)\nAddress: %08X\0"
 
 fiq_text:
 	.ascii	"Unhandled FIQ!\0"
+
+reserved_text:
+	.ascii	"Hit reserved exception handler!\n(Last known PC: %08X)\0"
 
 syscall_text:
 	.ascii	"Unhandled syscall!\0"
