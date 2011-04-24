@@ -1,6 +1,7 @@
 NAME := installer-ipodnano2g
 STACKSIZE := 4096
 COMPRESS := false
+AUTOBUILD_FLASHFILES ?= true
 BASENAME ?= $(NAME)
 FATNAME ?= INSTAL~1BOO
 
@@ -100,10 +101,10 @@ else
 	@$(ELF2ECA) -s $(STACKSIZE) -o $@ $^
 endif
 
-build/resources.o: flashfiles.built
-
 ifeq ($(AUTOBUILD_FLASHFILES),true)
-flashfiles.built: flashfiles
+build/resources.o: $(FLASHFILES)
+else
+build/resources.o: flashfiles.built
 endif
 
 build/$(NAME).elf: ls.x $(OBJ) $(LIBS)
@@ -163,8 +164,6 @@ endif
 	@$(CC) -c $(CFLAGS) -o $@ $<
 
 build/libucl.a: libucl
-
-libucl:
 	@$(MAKE) -C libucl CFLAGS="$(CFLAGS) -I../$(EMCOREDIR)/export"
 
 build/version.h: version.h .svn/entries
@@ -181,44 +180,51 @@ flashfiles: $(FLASHFILES)
 	@touch flashfiles.built
 
 $(LIBBOOTDIR)/build/boot.emcorelib: libboot
+	@$(MAKE) -C $(LIBBOOTDIR)
 
-flashfiles/boot.emcorelib: $(LIBBOOTDIR)/build/boot.emcorelib libboot
+flashfiles/boot.emcorelib: $(LIBBOOTDIR)/build/boot.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
 $(LIBPNGDIR)/build/png.emcorelib: libpng
+	@$(MAKE) -C $(LIBPNGDIR)
 
-flashfiles/png.emcorelib: $(LIBPNGDIR)/build/png.emcorelib libpng
+flashfiles/png.emcorelib: $(LIBPNGDIR)/build/png.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
 $(LIBUIDIR)/build/ui.emcorelib: libui
+	@$(MAKE) -C $(LIBUIDIR)
 
-flashfiles/ui.emcorelib: $(LIBUIDIR)/build/ui.emcorelib libui
+flashfiles/ui.emcorelib: $(LIBUIDIR)/build/ui.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
 $(LIBMKFAT32DIR)/build/mkfat32.emcorelib: libmkfat32
+	@$(MAKE) -C $(LIBMKFAT32DIR)
 
-flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib libmkfat32
+flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
 $(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl: umsboot
+	@$(MAKE) -C $(UMSBOOTDIR) ipodnano2g
 
-flashfiles/umsboot-ipodnano2g.ucl: $(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl umsboot
+flashfiles/umsboot-ipodnano2g.ucl: $(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl
 	@echo [CP]     $@
 	@cp $< $@
 
 $(UNINSTDIR)/build/uninstaller-ipodnano2g.emcoreapp: uninstaller-ipodnano2g
+	@$(MAKE) -C $(UNINSTDIR)
 
-flashfiles/uninstaller-ipodnano2g.emcoreapp: $(UNINSTDIR)/build/uninstaller-ipodnano2g.emcoreapp uninstaller-ipodnano2g
+flashfiles/uninstaller-ipodnano2g.emcoreapp: $(UNINSTDIR)/build/uninstaller-ipodnano2g.emcoreapp
 	@echo [CP]     $@
 	@cp $< $@
 
 $(BOOTMENUDIR)/build/bootmenu-ipodnano2g.emcoreapp: bootmenu-ipodnano2g
+	@$(MAKE) -C $(BOOTMENUDIR)
 
-flashfiles/bootmenu-ipodnano2g.emcoreapp: $(BOOTMENUDIR)/build/bootmenu-ipodnano2g.emcoreapp bootmenu-ipodnano2g
+flashfiles/bootmenu-ipodnano2g.emcoreapp: $(BOOTMENUDIR)/build/bootmenu-ipodnano2g.emcoreapp
 	@echo [CP]     $@
 	@cp $< $@
 
@@ -239,8 +245,9 @@ flashfiles/crapple.png: $(BOOTMENUDIR)/images/crapple.png
 	@cp $< $@
 
 $(EMCOREDIR)/loader/ipodnano2g/build/emcoreldr-ipodnano2g.dfu: emcoreldr-ipodnano2g
+	@$(MAKE) -C $(EMCOREDIR)/loader/ipodnano2g
 
-flashfiles/emcoreldr-ipodnano2g.dfu: $(EMCOREDIR)/loader/ipodnano2g/build/emcoreldr-ipodnano2g.dfu emcoreldr-ipodnano2g
+flashfiles/emcoreldr-ipodnano2g.dfu: $(EMCOREDIR)/loader/ipodnano2g/build/emcoreldr-ipodnano2g.dfu
 	@echo [CP]     $@
 	@cp $< $@
 
@@ -249,37 +256,11 @@ flashfiles/emcore-ipodnano2g.ucl: flashfiles/emcore-ipodnano2g.bin
 	@$(UCLPACK) $< $@
 
 $(EMCOREDIR)/build/ipodnano2g/emcore.bin: emcore
-
-flashfiles/emcore-ipodnano2g.bin: $(EMCOREDIR)/build/ipodnano2g/emcore.bin emcore
-	@echo [EMBCFG] $@
-	@$(EMCOREBOOTCFG) $< $@ "(3, '/.boot/init.emcoreapp', None, (2, 'bootmenu', None, None))"
-
-emcore:
 	@$(MAKE) -C $(EMCOREDIR) ipodnano2g
 
-emcoreldr-ipodnano2g:
-	@$(MAKE) -C $(EMCOREDIR)/loader/ipodnano2g
-
-uninstaller-ipodnano2g:
-	@$(MAKE) -C $(UNINSTDIR)
-
-bootmenu-ipodnano2g:
-	@$(MAKE) -C $(BOOTMENUDIR)
-
-libboot:
-	@$(MAKE) -C $(LIBBOOTDIR)
-
-libpng:
-	@$(MAKE) -C $(LIBPNGDIR)
-
-libui:
-	@$(MAKE) -C $(LIBUIDIR)
-
-libmkfat32:
-	@$(MAKE) -C $(LIBMKFAT32DIR)
-
-umsboot:
-	@$(MAKE) -C $(UMSBOOTDIR) ipodnano2g
+flashfiles/emcore-ipodnano2g.bin: $(EMCOREDIR)/build/ipodnano2g/emcore.bin
+	@echo [EMBCFG] $@
+	@$(EMCOREBOOTCFG) $< $@ "(3, '/.boot/init.emcoreapp', None, (2, 'bootmenu', None, None))"
 
 clean:
 	@rm -rf build

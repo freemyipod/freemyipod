@@ -1,6 +1,7 @@
 NAME := installer-ipodclassic
 STACKSIZE := 4096
 COMPRESS := false
+AUTOBUILD_FLASHFILES ?= true
 
 EMCOREDIR ?= ../../emcore/trunk/
 BOOTMENUDIR ?= ../bootmenu-ipodclassic/
@@ -84,10 +85,10 @@ else
 	@$(ELF2ECA) -s $(STACKSIZE) -o $@ $^
 endif
 
-build/resources.o: flashfiles.built
-
 ifeq ($(AUTOBUILD_FLASHFILES),true)
-flashfiles.built: flashfiles
+build/resources.o: $(FLASHFILES)
+else
+build/resources.o: flashfiles.built
 endif
 
 build/$(NAME).elf: ls.x $(OBJ)
@@ -160,38 +161,44 @@ flashfiles: $(FLASHFILES)
 	@touch flashfiles.built
 
 $(LIBBOOTDIR)/build/boot.emcorelib: libboot
+	@$(MAKE) -C $(LIBBOOTDIR)
 
-flashfiles/boot.emcorelib: $(LIBBOOTDIR)/build/boot.emcorelib libboot
+flashfiles/boot.emcorelib: $(LIBBOOTDIR)/build/boot.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
 $(LIBPNGDIR)/build/png.emcorelib: libpng
+	@$(MAKE) -C $(LIBPNGDIR)
 
-flashfiles/png.emcorelib: $(LIBPNGDIR)/build/png.emcorelib libpng
+flashfiles/png.emcorelib: $(LIBPNGDIR)/build/png.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
 $(LIBUIDIR)/build/ui.emcorelib: libui
+	@$(MAKE) -C $(LIBUIDIR)
 
-flashfiles/ui.emcorelib: $(LIBUIDIR)/build/ui.emcorelib libui
+flashfiles/ui.emcorelib: $(LIBUIDIR)/build/ui.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
 $(LIBMKFAT32DIR)/build/mkfat32.emcorelib: libmkfat32
+	@$(MAKE) -C $(LIBMKFAT32DIR)
 
-flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib libmkfat32
+flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
-$(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl: umsboot
+$(UMSBOOTDIR)/build/ipodclassic/umsboot.ucl: umsboot
+	@$(MAKE) -C $(UMSBOOTDIR) ipodclassic
 
-flashfiles/umsboot-ipodclassic.ucl: $(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl umsboot
+flashfiles/umsboot-ipodclassic.ucl: $(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl
 	@echo [CP]     $@
 	@cp $< $@
 
 $(BOOTMENUDIR)/build/bootmenu-ipodclassic.emcoreapp: bootmenu-ipodclassic
+	@$(MAKE) -C $(BOOTMENUDIR)
 
-flashfiles/bootmenu-ipodclassic.emcoreapp: $(BOOTMENUDIR)/build/bootmenu-ipodclassic.emcoreapp bootmenu-ipodclassic
+flashfiles/bootmenu-ipodclassic.emcoreapp: $(BOOTMENUDIR)/build/bootmenu-ipodclassic.emcoreapp
 	@echo [CP]     $@
 	@cp $< $@
 
@@ -208,8 +215,9 @@ flashfiles/rockbox.png: $(BOOTMENUDIR)/images/rockbox.png
 	@cp $< $@
 
 $(EMCOREDIR)/loader/ipodclassic/build/emcoreldr-ipodclassic.bin: emcoreldr-ipodclassic
+	@$(MAKE) -C $(EMCOREDIR)/loader/ipodclassic
 
-flashfiles/emcoreldr-ipodclassic.bin: $(EMCOREDIR)/loader/ipodclassic/build/emcoreldr-ipodclassic.bin emcoreldr-ipodclassic
+flashfiles/emcoreldr-ipodclassic.bin: $(EMCOREDIR)/loader/ipodclassic/build/emcoreldr-ipodclassic.bin
 	@echo [CP]     $@
 	@cp $< $@
 
@@ -218,36 +226,11 @@ flashfiles/emcore-ipodclassic.ucl: flashfiles/emcore-ipodclassic.bin
 	@$(UCLPACK) $< $@
 
 $(EMCOREDIR)/build/ipodclassic/emcore.bin: emcore
-
-flashfiles/emcore-ipodclassic.bin: $(EMCOREDIR)/build/ipodclassic/emcore.bin emcore
-	@echo [EMBCFG] $@
-	@$(EMCOREBOOTCFG) $< $@ "(3, '/.boot/init.emcoreapp', None, (2, 'bootmenu', None, None))"
-
-emcore:
 	@$(MAKE) -C $(EMCOREDIR) ipodclassic
 
-emcoreldr-ipodclassic:
-	@$(MAKE) -C $(EMCOREDIR)/loader/ipodclassic
-
-bootmenu-ipodclassic:
-	@$(MAKE) -C $(BOOTMENUDIR)
-
-libboot:
-	@$(MAKE) -C $(LIBBOOTDIR)
-
-libpng:
-	@$(MAKE) -C $(LIBPNGDIR)
-
-libui:
-	@$(MAKE) -C $(LIBUIDIR)
-
-libmkfat32:
-	@$(MAKE) -C $(LIBMKFAT32DIR)
-
-$(UMSBOOTDIR)/build/ipodclassic/umsboot.bin: umsboot
-
-umsboot:
-	@$(MAKE) -C $(UMSBOOTDIR) ipodclassic
+flashfiles/emcore-ipodclassic.bin: $(EMCOREDIR)/build/ipodclassic/emcore.bin
+	@echo [EMBCFG] $@
+	@$(EMCOREBOOTCFG) $< $@ "(3, '/.boot/init.emcoreapp', None, (2, 'bootmenu', None, None))"
 
 clean:
 	@rm -rf build
