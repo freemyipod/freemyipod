@@ -540,9 +540,9 @@ void run_diskmode(void** firmware, void** app, int* size)
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_toolchooser =
 {
     .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 75)),
-                          LIBUI_POINT(44, 48)),
+                          LIBUI_POINT(44, 47)),
     .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 75)),
-                                   LIBUI_POINT(44, 48)),
+                                   LIBUI_POINT(44, 47)),
     .text = "Tools",
     .text_color = 0xffffcccc,
 };
