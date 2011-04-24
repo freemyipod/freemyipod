@@ -82,9 +82,10 @@ static enum chooser_result chooser_renderer_list_render(struct chooser_data* dat
 {
     const struct chooser_renderer_list_params* params;
     params = (const struct chooser_renderer_list_params*)(data->info->rendererparams);
+    const struct chooser_item* selected = data->selected;
     struct chooser_renderer_list_data* rdata;
     rdata = (struct chooser_renderer_list_data*)(data->rendererdata);
-    chooser_renderer_list_scroll_into_view(data, data->selected);
+    chooser_renderer_list_scroll_into_view(data, selected);
     const struct chooser_item* item = rdata->top_item;
     if (params->copy_dest.buf.addr == params->fill_dest.loc.buf.addr
      && params->copy_dest.buf.stride == params->fill_dest.loc.buf.stride
@@ -157,7 +158,7 @@ static enum chooser_result chooser_renderer_list_render(struct chooser_data* dat
         uint32_t text_color;
         const struct libui_surface* icon;
         int icon_opacity;
-        if (item == data->selected)
+        if (item == selected)
         {
             fill_color = iparams->fill_color_selected;
             text_color = iparams->text_color_selected;

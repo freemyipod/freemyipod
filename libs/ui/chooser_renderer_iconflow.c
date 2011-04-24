@@ -73,6 +73,7 @@ static enum chooser_result chooser_renderer_iconflow_render(struct chooser_data*
     rdata->lastupdate = time;
     if (data->position - rdata->viewposition) rc = CHOOSER_RESULT_REDRAW;
     else rdata->lastupdate = 0;
+    const struct chooser_item* selected = data->selected;
     if (params->copy_dest.buf.addr == params->fill_dest.loc.buf.addr
      && params->copy_dest.buf.stride == params->fill_dest.loc.buf.stride
      && params->copy_dest.pos.x == params->fill_dest.loc.pos.x
@@ -147,7 +148,7 @@ static enum chooser_result chooser_renderer_iconflow_render(struct chooser_data*
     const struct chooser_item* item = data->info->items;
     while (true)
     {
-        if (item == data->selected && dir == 1)
+        if (item == selected && dir == 1)
         {
             dir = -1;
             item = &data->info->items[data->info->itemcount - 1];
@@ -155,12 +156,12 @@ static enum chooser_result chooser_renderer_iconflow_render(struct chooser_data*
         }
         iparams = (const struct chooser_renderer_iconflow_itemdata*)(item->renderparams);
         const struct libui_surface* icon;
-        if (item == data->selected) icon = &iparams->icon_selected;
+        if (item == selected) icon = &iparams->icon_selected;
         else icon = &iparams->icon;
         int ix, iy, io;
         int dist = pos - vpos;
         chooser_renderer_iconflow_geticondata(x, y, w, h, spi * iiv, dist, icon, &ix, &iy, &io);
-        if (item == data->selected)
+        if (item == selected)
         {
             io = 255;
             if (iparams->text && iparams->text_color)
@@ -171,7 +172,7 @@ static enum chooser_result chooser_renderer_iconflow_render(struct chooser_data*
          && ix + icon->size.x <= x + w && iy + icon->size.y <= y + h)
             blenda(icon->size.x, icon->size.y, io, buf, ix, iy, stride, buf, ix, iy, stride,
                    icon->loc.buf.addr, icon->loc.pos.x, icon->loc.pos.y, icon->loc.buf.stride);
-        if (item == data->selected) break;
+        if (item == selected) break;
         item += dir;
         pos += dir * spi;
     }
@@ -190,6 +191,7 @@ static const struct chooser_item* chooser_renderer_iconflow_itematpixel(struct c
     const struct chooser_renderer_iconflow_params* params;
     params = (const struct chooser_renderer_iconflow_params*)(data->info->rendererparams);
     if (x >= params->viewport.size.x || y >= params->viewport.size.y) return NULL;
+    const struct chooser_item* selected = data->selected;
     struct chooser_renderer_iconflow_data* rdata;
     rdata = (struct chooser_renderer_iconflow_data*)(data->rendererdata);
     const struct chooser_item* result = NULL;
@@ -206,7 +208,7 @@ static const struct chooser_item* chooser_renderer_iconflow_itematpixel(struct c
     const struct chooser_item* item = data->info->items;
     while (true)
     {
-        if (item == data->selected && dir == 1)
+        if (item == selected && dir == 1)
         {
             dir = -1;
             item = &data->info->items[data->info->itemcount - 1];
@@ -214,13 +216,13 @@ static const struct chooser_item* chooser_renderer_iconflow_itematpixel(struct c
         }
         iparams = (const struct chooser_renderer_iconflow_itemdata*)(item->renderparams);
         const struct libui_surface* icon;
-        if (item == data->selected) icon = &iparams->icon_selected;
+        if (item == selected) icon = &iparams->icon_selected;
         else icon = &iparams->icon;
         int ix, iy, o;
         int dist = pos - vpos;
         chooser_renderer_iconflow_geticondata(vx, vy, vw, vh, spi * iiv, dist, icon, &ix, &iy, &o);
         if (x >= ix && y >= ix && x < ix + icon->size.x && y < iy + icon->size.y) result = item;
-        if (item == data->selected) break;
+        if (item == selected) break;
         item += dir;
         pos += dir * spi;
     }
