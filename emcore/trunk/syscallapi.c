@@ -173,6 +173,7 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .rendertext = rendertext,
     .get_font_width = get_font_width,
     .get_font_height = get_font_height,
+    .lcd_get_format = lcd_get_format,
 #endif
 #ifdef HAVE_BACKLIGHT
     .backlight_on = backlight_on,
@@ -218,7 +219,6 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
 #ifdef HAVE_STORAGE
     .fat_enable_flushing = fat_enable_flushing,
 #endif
-    .lcd_get_format = lcd_get_format,
     .crc32 = crc32,
     .clockgate_get_state = clockgate_get_state,
     .malloc_walk = malloc_walk,
