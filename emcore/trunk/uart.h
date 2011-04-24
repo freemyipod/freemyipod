@@ -33,6 +33,9 @@ void uart_set_baud(int baud);
 void uart_putc(char string) ICODE_ATTR;
 void uart_puts(const char* string) ICODE_ATTR;
 void uart_write(const char* string, size_t length) ICODE_ATTR;
+void uart_sputc(char string) ICODE_ATTR;
+void uart_sputs(const char* string) ICODE_ATTR;
+void uart_swrite(const char* string, size_t length) ICODE_ATTR;
 int uart_getc(int timeout) ICODE_ATTR;
 int uart_read(char* string, size_t length, int timeout) ICODE_ATTR;
 

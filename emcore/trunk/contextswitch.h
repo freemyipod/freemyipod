@@ -29,7 +29,8 @@
 
 
 void handle_irq(void) __attribute__((noreturn)) ICODE_ATTR;
-void panic_recover() ICODE_ATTR;
+void panic_fatal(uint32_t mode) ICODE_ATTR;
+void panic_recover(uint32_t mode) ICODE_ATTR;
 void yield() ICODE_ATTR;
 void resume_thread(void) __attribute__((noreturn)) ICODE_ATTR;
 uint32_t enter_critical_section(void) ICODE_ATTR;

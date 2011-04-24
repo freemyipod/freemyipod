@@ -26,6 +26,7 @@
 #include "s5l8720.h"
 #include "util.h"
 #include "clockgates-target.h"
+#include "lcd.h"
 
 
 static struct dma_lli lcd_lli[(LCD_WIDTH * LCD_HEIGHT - 1) / 0xfff]
@@ -37,14 +38,12 @@ static struct mutex lcd_mutex IDATA_ATTR;
 static struct wakeup lcd_wakeup IDATA_ATTR;
 
 static bool lcd_dma_busy IDATA_ATTR;
-static bool lcd_in_irq IDATA_ATTR;
 
 
 void lcd_init()
 {
     mutex_init(&lcd_mutex);
     wakeup_init(&lcd_wakeup);
-    lcd_in_irq = false;
     lcd_dma_busy = true;
     clockgate_dma(0, 4, true);
     if (!(DMAC0C4CONFIG & 1))
@@ -98,13 +97,6 @@ bool displaylcd_busy()
     return lcd_dma_busy;
 }
 
-bool displaylcd_safe()
-{
-    lcd_in_irq = true;
-    if (!lcd_dma_busy) return true;
-    return !(DMAC0C4CONFIG & 1);
-}
-
 void displaylcd_sync() ICODE_ATTR;
 void displaylcd_sync()
 {
@@ -114,15 +106,16 @@ void displaylcd_sync()
 }
 
 void displaylcd_setup(unsigned int startx, unsigned int endx,
-                      unsigned int starty, unsigned int endy) ICODE_ATTR;
+                      unsigned int starty, unsigned int endy, bool safe) ICODE_ATTR;
 void displaylcd_setup(unsigned int startx, unsigned int endx,
-                      unsigned int starty, unsigned int endy)
+                      unsigned int starty, unsigned int endy, bool safe)
 {
-    if (!lcd_in_irq)
+    if (!safe)
     {
         mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
         displaylcd_sync();
     }
+    else while (DMAC0C4CONFIG & 1);
     lcd_send_cmd(0x2a);
     lcd_send_data(startx);
     lcd_send_data(endx);
@@ -158,9 +151,18 @@ void displaylcd_native(unsigned int startx, unsigned int endx,
 {
     int pixels = (endx - startx + 1) * (endy - starty + 1);
     if (pixels <= 0) return;
-    displaylcd_setup(startx, endx, starty, endy);
+    displaylcd_setup(startx, endx, starty, endy, false);
     displaylcd_dma(data, pixels, false);
-    if (!lcd_in_irq) mutex_unlock(&lcd_mutex);
+    mutex_unlock(&lcd_mutex);
+}
+
+void displaylcd_safe_native(unsigned int startx, unsigned int endx,
+                       unsigned int starty, unsigned int endy, void* data)
+{
+    int pixels = (endx - startx + 1) * (endy - starty + 1);
+    if (pixels <= 0) return;
+    displaylcd_setup(startx, endx, starty, endy, true);
+    displaylcd_dma(data, pixels, false);
 }
 
 void filllcd_native(unsigned int startx, unsigned int endx,
@@ -168,10 +170,10 @@ void filllcd_native(unsigned int startx, unsigned int endx,
 {
     int pixels = (endx - startx + 1) * (endy - starty + 1);
     if (pixels <= 0) return;
-    displaylcd_setup(startx, endx, starty, endy);
+    displaylcd_setup(startx, endx, starty, endy, false);
     lcd_color = color;
     displaylcd_dma(&lcd_color, pixels, true);
-    if (!lcd_in_irq) mutex_unlock(&lcd_mutex);
+    mutex_unlock(&lcd_mutex);
 }
 
 void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
@@ -185,7 +187,9 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
 //TODO: This is ARMv5E optimized assembly, should be converted to ARMv6
     __asm__ volatile("    muls r12, r2, r3             \n");
     __asm__ volatile("    bxeq lr                      \n");
-    __asm__ volatile("    stmfd sp!, {r2-r11,lr}       \n");
+    __asm__ volatile("    stmfd sp!, {r1-r11,lr}       \n");
+    __asm__ volatile("    mov r12, #0                  \n");
+    __asm__ volatile("    str r12, [sp]                \n");
     __asm__ volatile("    mov r12, r2                  \n");
     __asm__ volatile("    add r8, r2, r2,lsl#1         \n");
     __asm__ volatile("    add r3, r1, r3               \n");
@@ -194,6 +198,7 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    add r1, r0, r12              \n");
     __asm__ volatile("    sub r1, r1, #1               \n");
     __asm__ volatile("    bl displaylcd_setup          \n");
+    __asm__ volatile("    add sp, sp, #4               \n");
     __asm__ volatile("    mov r0, r8                   \n");
     __asm__ volatile("    bl malloc                    \n");
     __asm__ volatile("    cmp r0, #0                   \n");
@@ -310,12 +315,10 @@ void filllcd(unsigned int x, unsigned int y, unsigned int width, unsigned int he
 void INT_DMAC0C4()
 {
     DMAC0INTTCCLR = 0x10;
-    lcd_in_irq = true;
     lcd_dma_busy = false;
     clockgate_dma(0, 4, false);
     lcdconsole_callback();
     wakeup_signal(&lcd_wakeup);
-    lcd_in_irq = false;
 }
 
 int lcd_translate_color(uint8_t alpha, uint8_t red, uint8_t green, uint8_t blue)

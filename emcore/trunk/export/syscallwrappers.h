@@ -127,7 +127,6 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define filllcd_native __emcore_syscall->filllcd_native
 #define displaylcd_sync __emcore_syscall->displaylcd_sync
 #define displaylcd_busy __emcore_syscall->displaylcd_busy
-#define displaylcd_safe __emcore_syscall->displaylcd_safe
 #define lcd_get_width __emcore_syscall->lcd_get_width
 #define lcd_get_height __emcore_syscall->lcd_get_height
 #define lcd_get_bytes_per_pixel __emcore_syscall->lcd_get_bytes_per_pixel

@@ -375,7 +375,7 @@ class Emcore(object):
         """ Gets current state of the scheduler """
         schedulerstate = self.lockscheduler()
         resp = self.lib.monitorcommand(struct.pack("<IIII", 15, 0, 0, 0), "III", ("structver", "structptr", None))
-        if resp.structver != 2:
+        if resp.structver != 3:
             raise DeviceError("Unsupported thread struct version!")
         
         threads = []

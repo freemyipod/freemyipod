@@ -1029,11 +1029,11 @@ int dbgconsole_getfree()
     return free;
 }
 
-int dbgconsole_makespace(int length) ICODE_ATTR;
-int dbgconsole_makespace(int length)
+int dbgconsole_makespace(int length, bool safe) ICODE_ATTR;
+int dbgconsole_makespace(int length, bool safe)
 {
     int free = dbgconsole_getfree();
-    while (!free && dbgconsoleattached)
+    while (!free && dbgconsoleattached && !safe)
     {
         dbgconsoleattached = false;
         wakeup_wait(&dbgconsendwakeup, 2000000);
@@ -1058,19 +1058,29 @@ int dbgconsole_makespace(int length)
     return length;
 }
 
-void dbgconsole_putc(char string)
+void dbgconsole_putc_internal(char string, bool safe)
 {
-    dbgconsole_makespace(1);
+    dbgconsole_makespace(1, safe);
     dbgconsendbuf[dbgconsendwriteidx++] = string;
     if (dbgconsendwriteidx >= sizeof(dbgconsendbuf))
         dbgconsendwriteidx -= sizeof(dbgconsendbuf);
 }
 
-void dbgconsole_write(const char* string, size_t length)
+void dbgconsole_putc(char string)
+{
+    dbgconsole_putc_internal(string, false);
+}
+
+void dbgconsole_sputc(char string)
+{
+    dbgconsole_putc_internal(string, true);
+}
+
+void dbgconsole_write_internal(const char* string, size_t length, bool safe)
 {
     while (length)
     {
-        int space = dbgconsole_makespace(length);
+        int space = dbgconsole_makespace(length, safe);
         if (dbgconsendwriteidx + space >= sizeof(dbgconsendbuf))
         {
             int bytes = sizeof(dbgconsendbuf) - dbgconsendwriteidx;
@@ -1087,9 +1097,24 @@ void dbgconsole_write(const char* string, size_t length)
     }
 }
 
+void dbgconsole_write(const char* string, size_t length)
+{
+    dbgconsole_write_internal(string, length, false);
+}
+
+void dbgconsole_swrite(const char* string, size_t length)
+{
+    dbgconsole_write_internal(string, length, true);
+}
+
 void dbgconsole_puts(const char* string)
 {
     dbgconsole_write(string, strlen(string));
+}
+
+void dbgconsole_sputs(const char* string)
+{
+    dbgconsole_swrite(string, strlen(string));
 }
 
 int dbgconsole_getavailable() ICODE_ATTR;

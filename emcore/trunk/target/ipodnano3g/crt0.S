@@ -206,6 +206,7 @@ reset_handler:
 	b	panic
 .size reset_handler, .-reset_handler
 
+.global undef_instr_handler
 .type undef_instr_handler, %function
 undef_instr_handler:
 	sub	sp, sp, #0x44

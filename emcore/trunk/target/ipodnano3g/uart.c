@@ -48,15 +48,34 @@ void uart_putc(char byte)
     UTXH = byte;
 }
 
+void uart_sputc(char byte)
+{
+    while (UFSTAT & BIT(9));
+    UTXH = byte;
+}
+
 void uart_puts(const char* string)
 {
     char byte;
     while (byte = *string++) uart_putc(byte);
 }
 
+void uart_sputs(const char* string)
+{
+    char byte;
+    while (byte = *string++) uart_sputc(byte);
+}
+
 void uart_write(const char* string, size_t length)
+
 {
     while (length--) uart_putc(*string++);
+}
+
+void uart_swrite(const char* string, size_t length)
+
+{
+    while (length--) uart_sputc(*string++);
 }
 
 int uart_getc(int timeout)

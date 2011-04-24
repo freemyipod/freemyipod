@@ -164,7 +164,6 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .filllcd_native = filllcd_native,
     .displaylcd_sync = displaylcd_sync,
     .displaylcd_busy = displaylcd_busy,
-    .displaylcd_safe = displaylcd_safe,
     .lcd_get_width = lcd_get_width,
     .lcd_get_height = lcd_get_height,
     .lcd_get_bytes_per_pixel = lcd_get_bytes_per_pixel,

@@ -23,18 +23,16 @@
 
 #include "global.h"
 #include "panic.h"
-#include "lcd.h"
-#include "lcdconsole.h"
 #include "console.h"
 #include "format.h"
 #include "thread.h"
 #include "contextswitch.h"
 
 
-void handle_panic(enum panic_severity severity)
+void handle_panic(enum panic_severity severity, uint32_t mode)
 {
+    if (severity == PANIC_FATAL) panic_fatal(mode);
     struct scheduler_thread* t;
-    uint32_t mode = enter_critical_section();
     if (severity == PANIC_KILLUSERTHREADS)
     {
         int i;
@@ -45,60 +43,30 @@ void handle_panic(enum panic_severity severity)
     current_thread->state = THREAD_DEFUNCT_ACK;
     current_thread->block_type = THREAD_DEFUNCT_PANIC;
     leave_critical_section(mode);
-    panic_recover();
+    panic_recover(mode);
 }
 
 void panic(enum panic_severity severity, const char* string)
 {
-    if (severity == PANIC_FATAL)
-    {
-        enter_critical_section();
-        while (!displaylcd_safe());
-        lcdconsole_puts_noblit("\n*PANIC*\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
-        lcdconsole_puts_noblit(string, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
-        lcdconsole_puts_noblit("\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
-        lcdconsole_update();
-        hang();
-    }
-    else
-    {
-        cputs(CONSOLE_BOOT, "\n*PANIC*\n");
-        cputs(CONSOLE_BOOT, string);
-        cputc(CONSOLE_BOOT, '\n');
-        handle_panic(severity);
-    }
-}
-
-static int pprfunc(void* ptr, unsigned char letter)
-{
-    lcdconsole_putc_noblit(letter, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
-    return true;
+    uint32_t mode = enter_critical_section();
+    csputs(CONSOLE_PANIC, "\n*PANIC*\n");
+    csputs(CONSOLE_PANIC, string);
+    csputc(CONSOLE_PANIC, '\n');
+    csflush(CONSOLE_PANIC);
+    handle_panic(severity, mode);
 }
 
 void panicf(enum panic_severity severity, const char* string, ...)
 {
     va_list ap;
-    if (severity == PANIC_FATAL)
-    {
-        enter_critical_section();
-        while (!displaylcd_safe());
-        lcdconsole_puts_noblit("\n*PANIC*\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
-        va_start(ap, string);
-        format(pprfunc, NULL, string, ap);
-        va_end(ap);
-        lcdconsole_puts_noblit("\n", LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
-        lcdconsole_update();
-        hang();
-    }
-    else
-    {
-        cputs(CONSOLE_BOOT, "\n*PANIC*\n");
-        va_start(ap, string);
-        cvprintf(CONSOLE_BOOT, string, ap);
-        va_end(ap);
-        cputc(CONSOLE_BOOT, '\n');
-        handle_panic(severity);
-    }
+    uint32_t mode = enter_critical_section();
+    csputs(CONSOLE_PANIC, "\n*PANIC*\n");
+    va_start(ap, string);
+    csvprintf(CONSOLE_PANIC, string, ap);
+    va_end(ap);
+    csputc(CONSOLE_PANIC, '\n');
+    csflush(CONSOLE_PANIC);
+    handle_panic(severity, mode);
 }
 
 void __div0()

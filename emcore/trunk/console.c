@@ -56,7 +56,7 @@ void cputc_internal(unsigned int consoles, char string) ICODE_ATTR;
 void cputc_internal(unsigned int consoles, char string)
 {
 #ifdef HAVE_LCD
-    if (consoles & 1) lcdconsole_putc(string, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
+    if (consoles & 1) lcdconsole_putc_noblit(string, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
 #endif
 #ifdef HAVE_USB
     if (consoles & 2) dbgconsole_putc(string);
@@ -74,6 +74,14 @@ static int cprfunc(void* ptr, unsigned char letter)
     return true;
 }
 
+static int csprfunc(void* ptr, unsigned char letter)
+{
+    struct for_cprintf* pr = (struct for_cprintf*)ptr;
+    csputc(pr->consoles, letter);
+    pr->bytes++;
+    return true;
+}
+
 int cprintf(unsigned int consoles, const char* fmt, ...)
 {
     va_list ap;
@@ -86,7 +94,28 @@ int cprintf(unsigned int consoles, const char* fmt, ...)
     va_start(ap, fmt);
     format(cprfunc, &pr, fmt, ap);
     va_end(ap);
+#ifdef HAVE_LCD
+    if (consoles & 1) lcdconsole_update();
+#endif
     mutex_unlock(&console_mutex);
+
+    return pr.bytes;
+}
+
+int csprintf(unsigned int consoles, const char* fmt, ...)
+
+{
+    va_list ap;
+    struct for_cprintf pr;
+
+    pr.consoles = consoles;
+    pr.bytes = 0;
+
+    uint32_t mode = enter_critical_section();
+    va_start(ap, fmt);
+    format(csprfunc, &pr, fmt, ap);
+    va_end(ap);
+    leave_critical_section(mode);
 
     return pr.bytes;
 }
@@ -100,7 +129,24 @@ int cvprintf(unsigned int consoles, const char* fmt, va_list ap)
 
     mutex_lock(&console_mutex, TIMEOUT_BLOCK);
     format(cprfunc, &pr, fmt, ap);
+#ifdef HAVE_LCD
+    if (consoles & 1) lcdconsole_update();
+#endif
     mutex_unlock(&console_mutex);
+
+    return pr.bytes;
+}
+
+int csvprintf(unsigned int consoles, const char* fmt, va_list ap)
+{
+    struct for_cprintf pr;
+
+    pr.consoles = consoles;
+    pr.bytes = 0;
+
+    uint32_t mode = enter_critical_section();
+    format(csprfunc, &pr, fmt, ap);
+    leave_critical_section(mode);
 
     return pr.bytes;
 }
@@ -109,7 +155,25 @@ void cputc(unsigned int consoles, char string)
 {
     mutex_lock(&console_mutex, TIMEOUT_BLOCK);
     cputc_internal(consoles, string);
+#ifdef HAVE_LCD
+    if (consoles & 1) lcdconsole_update();
+#endif
     mutex_unlock(&console_mutex);
+}
+
+void csputc(unsigned int consoles, char string)
+{
+    uint32_t mode = enter_critical_section();
+#ifdef HAVE_LCD
+    if (consoles & 1) lcdconsole_putc_noblit(string, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
+#endif
+#ifdef HAVE_USB
+    if (consoles & 2) dbgconsole_sputc(string);
+#endif
+#ifdef HAVE_UART
+    if (consoles & 4) uart_sputc(string);
+#endif
+    leave_critical_section(mode);
 }
 
 void cputs(unsigned int consoles, const char* string)
@@ -127,6 +191,21 @@ void cputs(unsigned int consoles, const char* string)
     mutex_unlock(&console_mutex);
 }
 
+void csputs(unsigned int consoles, const char* string)
+{
+    uint32_t mode = enter_critical_section();
+#ifdef HAVE_LCD
+    if (consoles & 1) lcdconsole_puts_noblit(string, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
+#endif
+#ifdef HAVE_USB
+    if (consoles & 2) dbgconsole_sputs(string);
+#endif
+#ifdef HAVE_UART
+    if (consoles & 4) uart_sputs(string);
+#endif
+    leave_critical_section(mode);
+}
+
 void cwrite(unsigned int consoles, const char* string, size_t length)
 {
     mutex_lock(&console_mutex, TIMEOUT_BLOCK);
@@ -142,6 +221,21 @@ void cwrite(unsigned int consoles, const char* string, size_t length)
     mutex_unlock(&console_mutex);
 }
 
+void cswrite(unsigned int consoles, const char* string, size_t length)
+{
+    uint32_t mode = enter_critical_section();
+#ifdef HAVE_LCD
+    if (consoles & 1) lcdconsole_write_noblit(string, length, LCDCONSOLE_FGCOLOR, LCDCONSOLE_BGCOLOR);
+#endif
+#ifdef HAVE_USB
+    if (consoles & 2) dbgconsole_swrite(string, length);
+#endif
+#ifdef HAVE_UART
+    if (consoles & 4) uart_swrite(string, length);
+#endif
+    leave_critical_section(mode);
+}
+
 void cflush(unsigned int consoles)
 {
     mutex_lock(&console_mutex, TIMEOUT_BLOCK);
@@ -149,6 +243,15 @@ void cflush(unsigned int consoles)
     if (consoles & 1) lcdconsole_update();
 #endif
     mutex_unlock(&console_mutex);
+}
+
+void csflush(unsigned int consoles)
+{
+    uint32_t mode = enter_critical_section();
+#ifdef HAVE_LCD
+    if (consoles & 1) lcdconsole_supdate();
+#endif
+    leave_critical_section(mode);
 }
 
 int cgetc(unsigned int consoles, int timeout)

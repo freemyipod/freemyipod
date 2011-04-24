@@ -35,6 +35,8 @@
 
 
 #define CONSOLE_BOOT 3
+#define CONSOLE_PANIC 7
+#define CONSOLE_PANICDUMP 4
 
 
 #define HAVE_USB

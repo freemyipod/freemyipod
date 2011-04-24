@@ -31,6 +31,9 @@
 void dbgconsole_putc(char string) ICODE_ATTR;
 void dbgconsole_puts(const char* string) ICODE_ATTR;
 void dbgconsole_write(const char* string, size_t length) ICODE_ATTR;
+void dbgconsole_sputc(char string) ICODE_ATTR;
+void dbgconsole_sputs(const char* string) ICODE_ATTR;
+void dbgconsole_swrite(const char* string, size_t length) ICODE_ATTR;
 int dbgconsole_getc(int timeout) ICODE_ATTR;
 int dbgconsole_read(char* string, size_t length, int timeout) ICODE_ATTR;
 

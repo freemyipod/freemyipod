@@ -108,6 +108,11 @@ void lcdconsole_update()
     displaylcd_native(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf);
 }
 
+void lcdconsole_supdate()
+{
+    displaylcd_safe_native(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf);
+}
+
 void lcdconsole_putc(char string, int fgcolor, int bgcolor)
 {
     lcdconsole_putc_noblit(string, fgcolor, bgcolor);
@@ -130,7 +135,7 @@ void lcdconsole_callback()
 {
     if (lcdconsole_needs_update)
     {
-        displaylcd_native(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf);
+        displaylcd_safe_native(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf);
         lcdconsole_needs_update = false;
     }
 }

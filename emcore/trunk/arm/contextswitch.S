@@ -25,29 +25,6 @@
 
 .section .icode.contextswitch, "ax", %progbits
 .align 2
-.global panic_recover
-.type panic_recover, %function
-panic_recover:
-	mrs	r0, cpsr
-	and	r0, r0, #0x1f
-	cmp	r0, #0x17
-	cmpne	r0, #0x1b
-	bne	yield
-	ldr	sp, =_abortstackend - 0x44
-	ldr	r9, =current_thread
-	ldr	lr, [r9]
-	ldmia	sp!, {r0-r7}
-	stmia	lr!, {r0-r7}
-	ldmia	sp!, {r0-r8}
-	stmia	lr!, {r0-r8}
-	msr	cpsr_c, #0xd2
-	bl	scheduler_pause_accounting
-	adr	lr, resume_thread
-	mov	r0, #0
-	mov	r1, r9
-	b	scheduler_switch
-.size panic_recover, .-panic_recover
-
 .global yield
 .type yield, %function
 yield:
@@ -73,17 +50,16 @@ syscall_handler:
 	ldr	sp, [lr,#-4]
 	bics	sp, sp, #0xff000000
 	beq	syscall_breakpoint
+	cmp	sp, #(swilist_end-swilist_start)/4+1
+	bcs	unknown_swi
 	mov	r12, lr
 	mrs	sp, spsr
 	msr	cpsr_c, sp
 	mov	lr, r12
 	ldr	r12, [lr,#-4]
 	bic	r12, r12, #0xff000000
-	cmp	r12, #(swilist_end-swilist_start)/4+1
-	movcs	r0, #0
-	addcc	pc, pc, r12,lsl#2
-	adr	r1, unknown_swi_string
-	mov	r2, r12
+	sub	r12, r12, #2
+	add	pc, pc, r12,lsl#2
 swilist_start:
 	b	panicf
 	b	get_syscall_table
@@ -108,6 +84,17 @@ syscall_breakpoint:
 	mov	r0, #0
 	mov	r1, #0
 	b	scheduler_switch
+	
+unknown_swi:
+	ldr	sp, =_abortstackend - 0x44
+	str	lr, [sp,#-4]
+	mrs	lr, spsr
+	str	lr, [sp,#-8]
+	msr	cpsr_c, #0xdb
+	ldr	lr, [sp,#-8]
+	msr	spsr_all, lr
+	ldr	lr, [sp,#-4]
+	b	undef_instr_handler
 .size syscall_handler, .-syscall_handler
 
 .global irq_handler
@@ -198,5 +185,88 @@ execfirmware:
 	bx	r1
 .size execfirmware, .-execfirmware
 
-unknown_swi_string:
-	.ascii "Unhandled SWI %06X\0"
+.global panic_recover
+.type panic_recover, %function
+panic_recover:
+	and	r0, r0, #0x1f
+	cmp	r0, #0x12
+	beq	irqpanic
+	cmp	r0, #0x17
+	cmpne	r0, #0x1b
+	bne	yield
+	ldr	sp, =_abortstackend - 0x44
+	ldr	r0, [sp,#0x40]
+	and	r0, r0, #0x1f
+	cmp	r0, #0x12
+	beq	irqabort
+	ldr	r9, =current_thread
+	ldr	lr, [r9]
+	ldmia	sp!, {r0-r7}
+	stmia	lr!, {r0-r7}
+	ldmia	sp!, {r0-r8}
+	stmia	lr!, {r0-r8}
+	msr	cpsr_c, #0xd2
+	bl	scheduler_pause_accounting
+	adr	lr, resume_thread
+	mov	r0, #0
+	mov	r1, r9
+	b	scheduler_switch
+.size panic_recover, .-panic_recover
+
+irqabort:
+	mov	r0, #CONSOLE_PANIC
+	adr	r1, irqabort_string
+	ldmfd	sp!, {r2,r3}
+	bl	csprintf
+	mov	r0, #CONSOLE_PANIC
+	bl	csflush
+	mov	r0, #CONSOLE_PANICDUMP
+	adr	r1, stack_string
+	bl	csputs
+	add	sp, sp, #0x3c
+	ldr	r4, [sp,#-0x10]
+	sub	r4, r4, #0x800
+	add	r5, r4, #0x2000
+irqabort_stackline:
+	mov	r0, #CONSOLE_PANICDUMP
+	adr	r1, hexdump_string
+	mov	r2, r4
+	ldr	r3, [r4], #4
+	bl	csprintf
+	cmp	r4, r5
+	bne	irqabort_stackline
+	mov	r0, #CONSOLE_PANICDUMP
+	bl	csflush
+	b	hang
+
+irqpanic:
+	mov	r0, #CONSOLE_PANIC
+	adr	r1, irqpanic_string
+	bl	csputs
+	mov	r0, #CONSOLE_PANIC
+	bl	csflush
+@ fallthrough
+
+.global panic_fatal
+.type panic_fatal, %function
+panic_fatal:
+	b	hang
+.size panic_fatal, .-panic_fatal
+
+stack_string:
+	.ascii "Stack:\n\0"
+	
+hexdump_string:
+	.ascii "%08X: %08X\n\0"
+
+irqabort_string:
+	.ascii "Exception in IRQ handler!\n"
+	.ascii " R0: %08X  R1: %08X\n R2: %08X  R3: %08X\n"
+	.ascii " R4: %08X  R5: %08X\n R6: %08X  R7: %08X\n"
+	.ascii " R8: %08X  R9: %08X\nR10: %08X R11: %08X\n"
+	.ascii "R12: %08X R13: %08X\nR14: %08X R15: %08X\n"
+	.ascii "CPSR: %08X\n\0"
+	
+irqpanic_string:
+	.ascii "Panic in IRQ handler!\n\0"
+		
