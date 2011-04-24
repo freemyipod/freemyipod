@@ -188,7 +188,7 @@ flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
-$(UMSBOOTDIR)/build/ipodclassic/umsboot.ucl: umsboot
+$(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl $(UMSBOOTDIR)/build/ipodclassic/umsboot.bin: umsboot
 	@$(MAKE) -C $(UMSBOOTDIR) ipodclassic
 
 flashfiles/umsboot-ipodclassic.ucl: $(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl

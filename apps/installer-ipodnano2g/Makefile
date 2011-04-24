@@ -207,7 +207,7 @@ flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
-$(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl: umsboot
+$(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl $(UMSBOOTDIR)/build/ipodnano2g/umsboot.bin: umsboot
 	@$(MAKE) -C $(UMSBOOTDIR) ipodnano2g
 
 flashfiles/umsboot-ipodnano2g.ucl: $(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl
