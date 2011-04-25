@@ -157,8 +157,8 @@ renderchar_y:
 	bne	renderchar_x
 	ldmfd	sp!, {r4-r9,pc}
 
-#if (LCD_BYTESPERPIXEL == 2)
 renderchar_native:
+#if (LCD_BYTESPERPIXEL == 2)
 	stmfd	sp!, {r4-r7,lr}
 	ldr	r7, [sp,#0x14]
 	cmn	r2, #1
@@ -224,7 +224,48 @@ renderchar_native_row:
 	add	r0, r0, #2
 	ldmfd	sp!, {r4-r7,pc}
 #else
+#if (LCD_BYTESPERPIXEL == 4)
+
+	stmfd	sp!, {r4-r7,lr}
+	ldr	r7, [sp,#0x14]
+	cmn	r2, #1
+	beq	renderchar_native_nobg
+	mov	r6, r0
+	mov	r4, #8
+renderchar_native_opaquerow:
+	mov	r5, #6
+renderchar_native_opaquecol:
+	str	r2, [r6], #4
+	subs	r5, r5, #1
+	bne	renderchar_native_opaquecol
+	add	r6, r6, r7,lsl#1
+	sub	r6, r6, #12
+	subs	r4, r4, #1
+	bne	renderchar_native_opaquerow
+renderchar_native_nobg:
+	adr	r5, renderchar_font
+	sub	r3, r3, #0x20
+	cmp	r3, #0x5f
+	addcc	r5, r3,lsl#2
+	addcc	r5, r3
+	mov	r3, #5
+renderchar_native_col:
+	mov	r6, r0
+	ldrb	r4, [r5], #1
+renderchar_native_row:
+	tst	r4, #1
+	strne	r1, [r6]
+	add	r6, r6, r7,lsl#2
+	movs	r4, r4,lsr#1
+	bne	renderchar_native_row
+	add	r0, r0, #4
+	subs	r3, r3, #1
+	bne	renderchar_native_col
+	add	r0, r0, #4
+	ldmfd	sp!, {r4-r7,pc}
+#else
 #error Unknown number of bytes per pixel!
+#endif
 #endif
 
 renderchar_font:

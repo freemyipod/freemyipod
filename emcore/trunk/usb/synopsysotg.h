@@ -34,7 +34,7 @@
 #if defined(TARGET_ipodnano3g) || defined(TARGET_ipodclassic)
 #include "target/ipodnano3g/s5l8702.h"
 #endif
-#ifdef TARGET_ipodnano4g
+#if defined(TARGET_ipodnano4g) || defined(TARGET_ipodtouch2g)
 #include "target/ipodnano4g/s5l8720.h"
 #endif
 
