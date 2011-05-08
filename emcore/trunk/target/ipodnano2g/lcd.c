@@ -368,7 +368,7 @@ void lcd_shutdown()
         lcd_send_cmd(0x28);
         lcd_send_cmd(0x10);
     }
-    sleep(10000);
+    sleep(20000);
 }
 
 void INT_DMA8()
