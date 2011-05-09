@@ -1332,7 +1332,7 @@ langstringdescriptor:
 devnamestringdescriptor:
 .byte 0x38
 .byte 3
-.ascii "e\0m\0B\0I\0O\0S\0 \0L\0o\0a\0d\0e\0r\0 \0R\0e\0c\0o\0v\0e\0r\0y\0 \0I\0N\0\062\0G\0"
+.ascii "e\0m\0C\0O\0R\0E\0 \0L\0o\0a\0d\0e\0r\0 \0R\0e\0c\0o\0v\0e\0r\0y\0 \0I\0N\0\062\0G\0"
 
 
 lcd_initmapping:
