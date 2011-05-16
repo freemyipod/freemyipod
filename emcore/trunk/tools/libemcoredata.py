@@ -71,6 +71,7 @@ class scheduler_thread(ExtendedCStruct):
                 ("startusec", c_uint32),
                 ("thread_next", c_uint32),
                 ("queue_next", c_uint32),
+                ("owned_mutexes", c_uint32),
                 ("timeout", c_uint32),
                 ("blocked_since", c_uint32),
                 ("blocked_by", c_uint32),
