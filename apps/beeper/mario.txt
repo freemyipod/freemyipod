@@ -1,0 +1,83 @@
+# Super Mario theme song
+# still unfinished, notes found on Internet
+# col1 = note, col2 = octave, col3 = duration (1 / x)
+# t = tempo (bpm), p = pause
+
+t 216
+
+e   5   8
+e   5   8
+p   0   8
+e   5   8
+p   0   8
+c   5   8
+e   5   8
+p   0   8
+
+g   5   4
+p   0   4
+g   4   4
+p   0   4
+
+c   5   4
+p   0   8
+g   4   4
+p   0   8
+e   4   4
+
+p   0   8
+a   4   8
+p   0   8
+b   4   8
+p   0   8
+a#  4   8
+a   4   8
+p   0   8
+
+g   4   8
+e   5   8
+p   0   8
+g   5   8
+a   5   8
+p   0   8
+f   5   8
+g   5   8
+
+p   0   8
+e   5   8
+p   0   8
+c   5   8
+d   5   8
+b   4   8
+p   0   4
+
+c   5   4
+p   0   8
+g   4   4
+p   0   8
+e   4   4
+
+p   0   8
+a   4   8
+p   0   8
+b   4   8
+p   0   8
+a#  4   8
+a   4   8
+p   0   8
+
+g   4   8
+e   5   8
+p   0   8
+g   5   8
+a   5   8
+p   0   8
+f   5   8
+g   5   8
+
+p   0   8
+e   5   8
+p   0   8
+c   5   8
+d   5   8
+b   4   8
