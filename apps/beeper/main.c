@@ -93,15 +93,19 @@ static void main()
 
 void playsong(void *buf, size_t size) {
     int i;
-    unsigned int cycles[size / 8], lengths[size / 8];
+    unsigned int *cycles, *lengths, count;
     
-    for (i = 0; i < size / 8; ++i)
+    count = size / 8;
+    cycles = malloc(count * sizeof(unsigned int));
+    lengths = malloc(count * sizeof(unsigned int));
+    
+    for (i = 0; i < count; ++i)
     {
         cycles[i] = *((unsigned int *)(buf) + i + i);
         lengths[i] = *((unsigned int *)(buf) + i + i + 1);
     }
     
-    for (i = 0; i < size / 8; ++i)
+    for (i = 0; i < count; ++i)
     {
         if (0 == cycles[i])
         {
@@ -111,6 +115,9 @@ void playsong(void *buf, size_t size) {
         
         singlebeep(cycles[i], lengths[i]);
     }
+    
+    free(lengths);
+    free(cycles);
 }
 
 EMCORE_APP_HEADER("Beeper", main, 127)
