@@ -24,7 +24,11 @@
 #include "emcoreapp.h"
 #include "beep.h"
 
-void playsong(void *buf, size_t size);
+struct note
+{
+    unsigned int cycles;
+    unsigned int length;
+};
 
 static void main()
 {
@@ -36,10 +40,9 @@ static void main()
     
     size_t size;
     int fd;
-    void *buf;
-    unsigned char play;
+    struct note *buf;
+    unsigned int i, count;
 
-    play = 0;
     fd = file_open("/song.dat", O_RDONLY);
     
     if (fd <= 0)
@@ -51,7 +54,7 @@ static void main()
     cputs(3, "File opened\n");
     size = filesize(fd);
         
-    if (size <= 0)
+    if (0 == size)
     {
         close(fd);
         cputs(3, "Unable to get file size or file is empty!\n");
@@ -68,7 +71,7 @@ static void main()
     }
     
     buf = memalign(0x10, size);
-        
+    
     if (!buf)
     {
         close(fd);
@@ -87,37 +90,21 @@ static void main()
     cputs(3, "Read successful\n");
     close(fd);
     cputs(3, "File closed\n");
-    playsong(buf, size);
-    free(buf);
-}
-
-void playsong(void *buf, size_t size) {
-    int i;
-    unsigned int *cycles, *lengths, count;
     
     count = size / 8;
-    cycles = malloc(count * sizeof(unsigned int));
-    lengths = malloc(count * sizeof(unsigned int));
     
     for (i = 0; i < count; ++i)
     {
-        cycles[i] = *((unsigned int *)(buf) + i + i);
-        lengths[i] = *((unsigned int *)(buf) + i + i + 1);
-    }
-    
-    for (i = 0; i < count; ++i)
-    {
-        if (0 == cycles[i])
+        if (0 == buf[i].length)
         {
-            sleep(lengths[i]);
+            sleep(buf[i].length);
             continue;
         }
         
-        singlebeep(cycles[i], lengths[i]);
+        singlebeep(buf[i].cycles, buf[i].length);
     }
     
-    free(lengths);
-    free(cycles);
+    free(buf);
 }
 
 EMCORE_APP_HEADER("Beeper", main, 127)
