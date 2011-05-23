@@ -95,7 +95,7 @@ static void main()
     
     for (i = 0; i < count; ++i)
     {
-        if (0 == buf[i].length)
+        if (0 == buf[i].cycles)
         {
             sleep(buf[i].length);
             continue;
