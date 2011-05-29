@@ -1,7 +1,9 @@
 # Super Mario theme song
-# still unfinished, notes found on Internet
+# source: http://gprime.net/images/mariopiano/
 # col1 = note, col2 = octave, col3 = duration (1 / x)
 # t = tempo (bpm), p = pause
+
+# http://gprime.net/images/mariopiano/smb1maintheme1_4.png
 
 t 216
 
@@ -81,4 +83,492 @@ p   0   8
 c   5   8
 d   5   8
 b   4   8
+p   0   4
 
+p   0   4
+g   5   8
+f#  5   8
+f   5   8
+d#  5   8
+p   0   8
+e   5   8
+
+p   0   8
+g#  4   8
+a   4   8
+c   5   8
+p   0   8
+a   4   8
+c   5   8
+d   5   8
+
+p   0   4
+g   5   8
+f#  5   8
+f   5   8
+d#  5   8
+p   0   8
+e   5   8
+
+p   0   8
+c   6   8
+p   0   8
+c   6   8
+c   6   4
+p   0   4
+
+p   0   4
+g   5   8
+f#  5   8
+f   5   8
+d#  5   8
+p   0   8
+e   5   8
+
+p   0   8
+g#  4   8
+a   4   8
+c   5   8
+p   0   8
+a   4   8
+c   5   8
+d   5   8
+
+p   0   4
+d#  5   4
+p   0   8
+d   5   4
+p   0   8
+
+c   5   2
+p   0   2
+
+p   0   4
+g   5   8
+f#  5   8
+f   5   8
+d#  5   8
+p   0   8
+e   5   8
+
+p   0   8
+g#  4   8
+a   4   8
+c   5   8
+p   0   8
+a   4   8
+c   5   8
+d   5   8
+
+p   0   4
+g   5   8
+f#  5   8
+f   5   8
+d#  5   8
+p   0   8
+e   5   8
+
+# http://gprime.net/images/mariopiano/smb1maintheme2_4.png
+
+p   0   8
+c   6   8
+p   0   8
+c   6   8
+c   6   4
+p   0   4
+
+p   0   4
+g   5   8
+f#  5   8
+f   5   8
+d#  5   8
+p   0   8
+e   5   8
+
+p   0   8
+g#  4   8
+a   4   8
+c   5   8
+p   0   8
+a   4   8
+c   5   8
+d   5   8
+
+p   0   4
+d#  5   4
+p   0   8
+d   5   4
+p   0   8
+
+c   5   2
+p   0   2
+
+c   5   8
+c   5   8
+p   0   8
+c   5   8
+p   0   8
+c   5   8
+d   5   8
+p   0   8
+
+e   5   8
+c   5   8
+p   0   8
+a   4   8
+g   4   4
+p   0   4
+
+c   5   8
+c   5   8
+p   0   8
+c   5   8
+p   0   8
+c   5   8
+d   5   8
+e   5   8
+
+p   0   1
+
+c   5   8
+c   5   8
+p   0   8
+c   5   8
+p   0   8
+c   5   8
+d   5   8
+p   0   8
+
+e   5   8
+c   5   8
+p   0   8
+a   4   8
+g   4   4
+p   0   4
+
+e   5   8
+e   5   8
+p   0   8
+e   5   8
+p   0   8
+c   5   8
+e   5   8
+p   0   8
+
+g   5   4
+p   0   4
+g   4   4
+p   0   4
+
+c   5   4
+p   0   8
+g   4   4
+p   0   8
+e   4   4
+
+p   0   8
+a   4   8
+p   0   8
+b   4   8
+p   0   8
+a#  4   8
+a   4   8
+p   0   8
+
+g   4   8
+e   5   8
+p   0   8
+g   5   8
+a   5   8
+p   0   8
+f   5   8
+g   5   8
+
+p   0   8
+e   5   8
+p   0   8
+c   5   8
+d   5   8
+b   4   8
+p   0   4
+
+c   5   4
+p   0   8
+g   4   4
+p   0   8
+e   4   4
+
+p   0   8
+a   4   8
+p   0   8
+b   4   8
+p   0   8
+a#  4   8
+a   4   8
+p   0   8
+
+g   4   8
+e   5   8
+p   0   8
+g   5   8
+a   5   8
+p   0   8
+f   5   8
+g   5   8
+
+p   0   8
+e   5   8
+p   0   8
+c   5   8
+d   5   8
+b   4   8
+p   0   4
+
+e   5   8
+c   5   8
+p   0   8
+g   4   8
+p   0   4
+g#  4   8
+p   0   8
+
+# http://gprime.net/images/mariopiano/smb1maintheme3_4.png
+
+a   4   8
+f   5   8
+p   0   8
+f   5   8
+a   4   4
+p   0   4
+
+b   4   8
+a   5   8
+p   0   8
+a   5   8
+a   5   8
+g   5   8
+p   0   8
+f   5   8
+
+e   5   8
+c   5   8
+p   0   8
+a   4   8
+g   4   4
+p   0   4
+
+e   5   8
+c   5   8
+p   0   8
+g   4   8
+p   0   4
+g#  4   8
+p   0   8
+
+a   4   8
+f   5   8
+p   0   8
+f   5   8
+a   4   4
+p   0   4
+
+b   4   8
+f   5   8
+p   0   8
+f   5   8
+f   5   8
+e   5   8
+p   0   8
+d   5   8
+
+c   5   2
+p   0   2
+
+e   5   8
+c   5   8
+p   0   8
+g   4   8
+p   0   4
+g#  4   8
+p   0   8
+
+a   4   8
+f   5   8
+p   0   8
+f   5   8
+a   4   4
+p   0   4
+
+b   4   8
+a   5   8
+p   0   8
+a   5   8
+a   5   8
+g   5   8
+p   0   8
+f   5   8
+
+e   5   8
+c   5   8
+p   0   8
+a   4   8
+g   4   4
+p   0   4
+
+e   5   8
+c   5   8
+p   0   8
+g   4   8
+p   0   4
+g#  4   8
+p   0   8
+
+a   4   8
+f   5   8
+p   0   8
+f   5   8
+a   4   4
+p   0   4
+
+b   4   8
+f   5   8
+p   0   8
+f   5   8
+f   5   8
+e   5   8
+p   0   8
+d   5   8
+
+c   5   2
+p   0   2
+
+c   5   8
+c   5   8
+p   0   8
+c   5   8
+p   0   8
+c   5   8
+d   5   8
+p   0   8
+
+e   5   8
+c   5   8
+p   0   8
+a   4   8
+g   4   4
+p   0   4
+
+c   5   8
+c   5   8
+p   0   8
+c   5   8
+p   0   8
+c   5   8
+d   5   8
+e   5   8
+
+p   0   1
+
+c   5   8
+c   5   8
+p   0   8
+c   5   8
+p   0   8
+c   5   8
+d   5   8
+p   0   8
+
+# http://gprime.net/images/mariopiano/smb1maintheme4_4.png
+
+e   5   8
+c   5   8
+p   0   8
+a   4   8
+g   4   4
+p   0   4
+
+e   5   8
+e   5   8
+p   0   8
+e   5   8
+p   0   8
+c   5   8
+e   5   8
+p   0   8
+
+g   5   4
+p   0   4
+g   4   4
+p   0   4
+
+e   5   8
+c   5   8
+p   0   8
+g   4   8
+p   0   4
+g#  4   8
+p   0   8
+
+a   4   8
+f   5   8
+p   0   8
+f   5   8
+a   4   4
+p   0   4
+
+b   4   8
+a   5   8
+p   0   8
+a   5   8
+a   5   8
+g   5   8
+p   0   8
+f   5   8
+
+e   5   8
+c   5   8
+p   0   8
+a   4   8
+g   4   4
+p   0   4
+
+e   5   8
+c   5   8
+p   0   8
+g   4   8
+p   0   4
+g#  4   8
+p   0   8
+
+a   4   8
+f   5   8
+p   0   8
+f   5   8
+a   4   4
+p   0   4
+
+b   4   8
+f   5   8
+p   0   8
+f   5   8
+f   5   8
+e   5   8
+p   0   8
+d   5   8
+
+c   5   2
+p   0   2
+
+c   5   4.5
+g   4   4.5
+e   4   4
+
+a   4   4
+b   4   4
+a   4   4
+
+g#  4   4
+a#  4   4
+a   4   4
+
+g   4   1
