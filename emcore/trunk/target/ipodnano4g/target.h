@@ -54,6 +54,8 @@
 
 #define HAVE_I2C
 
+#define HAVE_HWKEYAES
+
 //#define HAVE_STORAGE
 //#define HAVE_FLASH_STORAGE
 //#define HAVE_STORAGE_FLUSH
