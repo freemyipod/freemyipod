@@ -38,6 +38,7 @@ def usage():
   print "  s5l8702-cryptnor <infile> <outfile>"
   print "  s5l8702-decryptnor <infile> <outfile>"
   print "  s5l8702-genpwnage <infile> <outfile>"
+  print "  s5l8720-genpwnage <infile> <outfile>"
   exit(2)
 
 
@@ -64,6 +65,9 @@ def parsecommand(argv):
 
   elif argv[1] == "s5l8702-genpwnage":
     libipodcrypto.s5l8702genpwnagefile(argv[2], argv[3])
+
+  elif argv[1] == "s5l8720-genpwnage":
+    libipodcrypto.s5l8720genpwnagefile(argv[2], argv[3])
 
   else: usage()
 
