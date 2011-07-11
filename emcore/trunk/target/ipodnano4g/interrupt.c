@@ -23,6 +23,7 @@
 
 #include "global.h"
 #include "panic.h"
+#include "interrupt.h"
 #include "s5l8720.h"
 
 
