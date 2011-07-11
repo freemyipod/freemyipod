@@ -40,8 +40,8 @@
 
 
 /** static, private data **/ 
-static uint8_t ceata_taskfile[16] __attribute__((aligned(16)));
-uint16_t ata_identify_data[0x100] __attribute__((aligned(16)));
+static uint8_t ceata_taskfile[16] CACHEALIGN_ATTR;
+uint16_t ata_identify_data[0x100] CACHEALIGN_ATTR;
 bool ceata;
 bool ata_lba48;
 bool ata_dma;
