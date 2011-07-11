@@ -28,6 +28,9 @@
 void clean_dcache()
 {
     asm volatile(
+        "MOV R0, #0                \n\t"
+        "MCR p15, 0, R0,c7,c10,0   \n\t"
+        "MCR p15, 0, R0,c7,c10,4   \n\t"
         "MOV PC, LR                \n\t"
     );
 }
@@ -35,6 +38,9 @@ void clean_dcache()
 void invalidate_dcache()
 {
     asm volatile(
+        "MOV R0, #0                \n\t"
+        "MCR p15, 0, R0,c7,c14,0   \n\t"
+        "MCR p15, 0, R0,c7,c10,4   \n\t"
         "MOV PC, LR                \n\t"
     );
 }
@@ -42,6 +48,9 @@ void invalidate_dcache()
 void invalidate_icache()
 {
     asm volatile(
+        "MOV R0, #0                \n\t"
+        "MCR p15, 0, R0,c7,c5,0    \n\t"
+        "MCR p15, 0, R0,c7,c5,4    \n\t"
         "MOV PC, LR                \n\t"
     );
 }

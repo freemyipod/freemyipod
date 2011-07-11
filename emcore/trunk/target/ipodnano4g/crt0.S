@@ -41,8 +41,51 @@ __start:
 .section .initcode,"ax",%progbits
 .global _start
 _start:
-	ldr	r0, =0x00450878
-	mcr	p15, 0, r0,c1,c0,0
+	mrc	p15, 0, r0,c1,c0
+	bic	r0, r0, #0x200
+	orr	r0, r0, #0x100
+	mcr	p15, 0, r0,c1,c0
+	mov	r0, #0x7fffffff
+	mcr	p15, 0, r0,c3,c0
+	mov	r0, #0x22000000
+	orr	r1, r0, #0x00000100
+	orr	r0, r0, #0x0003c000
+	orr	r1, r1, #0x000000fe
+	add	r2, r0, #0x200
+	mov	r3, #0
+	str	r1, [r0], #4
+.mmuloop1:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop1
+	add	r0, r0, #0x080
+	add	r2, r0, #0x580
+.mmuloop2:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop2
+	add	r0, r0, #0x4
+	add	r2, r0, #0x7c
+.mmuloop3:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop3
+	add	r0, r0, #0x4
+	add	r2, r0, #0x500
+	add	r2, r2, #0x7c
+.mmuloop4:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop4
+	add	r0, r0, #0x200
+	add	r2, r0, #0x3000
+.mmuloop5:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop5
+	mrc	p15, 0, r0,c1,c0
+	orr	r0, r0, #5
+	mcr	p15, 0, r0,c1,c0
 	ldr	r0, =_sramsource
 	ldr	r1, =_sramstart
 	ldr	r2, =_sramend
@@ -72,29 +115,21 @@ _start:
 	cmp	r1, r0
 	strhi	r2, [r0], #4
 	bhi	.clearbss
-	ldr	r1, =0x38200000
-	ldr	r0, [r1]
-	orr	r0, r0, #1
-	bic	r0, r0, #0x10000
-	str	r0, [r1]
 	mov	r0, #0
-	mcr	p15, 0, r0,c7,c5,0
-	add	r1, r1, #0x00c00000
+	mcr	p15, 0, r0,c7,c10,0 @ clean data cache
+	mcr	p15, 0, r0,c7,c10,4 @ drain write buffer
+	mcr	p15, 0, r0,c7,c5,0  @ invalidate instruction cache
+	mcr	p15, 0, r0,c7,c5,4  @ flush prefetch buffer
+	ldr	r1, =0x38e00000
 	add	r2, r1, #0x00001000
 	add	r3, r1, #0x00002000
-	sub	r4, r0, #1
+	mov	r4, #-1
 	str	r4, [r1,#0x14]
 	str	r4, [r2,#0x14]
 	str	r4, [r1,#0xf00]
 	str	r4, [r2,#0xf00]
 	str	r4, [r3,#0x08]
 	str	r4, [r3,#0x0c]
-	str	r0, [r1,#0x14]
-	str	r0, [r2,#0x14]
-	mov	r0, #0
-	ldr	r1, =0x3c500000
-	str	r0, [r1,#0x48]
-	str	r0, [r1,#0x4c]
 	msr	cpsr_c, #0xd2
 	ldr	sp, =_irqstackend
 	msr	cpsr_c, #0xd7
@@ -127,6 +162,7 @@ reset:
 	str	r0, [r1]
 hang:
 	msr	cpsr_c, #0xd3
+	mov	r0, #0
 	mcr	p15, 0, r0,c7,c0,4
 	b	hang
 .size reset, .-reset
@@ -192,7 +228,7 @@ prefetch_abort_handler:
 	sub	sp, sp, #0x44
 	mov	r0, #0
 	adr	r1, prefetch_abort_text
-	mrc	p15, 0, r3,c5,c0,1
+	mrc	p15, 0, r3,c5,c0
 	mov	r4, r3,lsr#4
 	and	r4, r4, #0xf
 	and	r5, r3, #0xf
@@ -292,12 +328,7 @@ read_native_timer:
 .type read_usec_timer, %function
 read_usec_timer:
 	ldr	r0, val_3c700000
-	ldr	r1, [r0,#0x80]
-	ldr	r0, [r0,#0x84]
-	mov	r0, r0,lsr#5
-	orr	r0, r0, r1,lsl#27
-	add	r0, r0, r0,asr#2
-	add	r0, r0, r0,asr#6
+	ldr	r0, [r0,#0xb4]
 	bx	lr
 .size read_usec_timer, .-read_usec_timer
 
