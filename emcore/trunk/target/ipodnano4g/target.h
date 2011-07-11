@@ -30,8 +30,8 @@
 
 #define ARM_ARCH 6
 #define LITTLE_ENDIAN
-#define CACHEALIGN_BITS 4
-#define CPU_FREQ 191692800
+#define CACHEALIGN_BITS 5
+#define CPU_FREQ 532000000
 
 
 #define CONSOLE_BOOT 3
