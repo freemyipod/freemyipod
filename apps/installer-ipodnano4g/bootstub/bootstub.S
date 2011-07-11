@@ -24,32 +24,33 @@
 
 .global _start
 _start:
-
 	msr	cpsr_c, #0xd3
 	mrc	p15, 0, r0,c1,c0
 	bic	r0, r0, #1
 	mcr	p15, 0, r0,c1,c0 @ disable mmu
 
 	mov	lr, #0
-	adr	sp, values1
 	mcr	p15, 0, lr,c7,c14,0 @ clean & invalidate data cache
 	mcr	p15, 0, lr,c7,c10,4 @ drain write buffer
 	mcr	p15, 0, lr,c7,c5    @ invalidate instruction cache
+	mcr	p15, 0, lr,c7,c5,4  @ flush prefetch buffer
 	mcr	p15, 0, lr,c8,c7    @ invalidate all unlocked entries in the TLB
 	mcr	p15, 0, lr,c13,c0,0 @ disable context id register
     
-.macro block0_constpool	   @ Block 0 (MMU, DMA) register map:
+	adr	sp, values1
+
+.macro block0_constpool    @ Block 0 (MMU) register map:
                            @ R0: Unused
                            @ R1: Unused
                            @ R2: Unused
                            @ R3: Scratchpad
-	                   @ R4: Unused
-	                   @ R5: Unused
-	                   @ R6: Unused
-	                   @ R7: Unused
-	                   @ R8: Unused
-	                   @ R9: Unused
-	.word	0x0005107D @ R10: CP15r1
+                           @ R4: Unused
+                           @ R5: Unused
+                           @ R6: Unused
+                           @ R7: Unused
+                           @ R8: Unused
+                           @ R9: Unused
+	.word	0x0005187D @ R10: CP15r1
 	.word	0x2202C000 @ R11: First level page table
 	.word	0x00000C1E @ R12: Default segment flags
                            @ R13: Constant pool pointer
@@ -59,6 +60,9 @@ _start:
 	mcr	p15, 0, r11,c2,c0 @ set first level translation table
 	mov	r3, #-1
 	mcr	p15, 0, r3,c3,c0 @ disable domain access control                  @ R3: Unused
+	orr	r0, r12, #0x22000000
+	str	r0, [r11], #4
+	add	r12, r12, #0x00100000
 mmuloop:
 	str	r12, [r11], #4
 	add	r12, r12, #0x00100000
@@ -66,11 +70,12 @@ mmuloop:
 	biccs	r12, r12, #0xc
 	tst	r12, #0x40000000
 	beq	mmuloop
-                       								  @ R11: Unused
-    										  @ R12: Unused
+                                                                                  @ R11: Unused
+                                                                                  @ R12: Unused
 	mcr	p15, 0, r10,c1,c0                                                 @ R10: Unused
 
-.macro block1_constpool	   @ Block 1 (SYSCON) register map:
+
+.macro block1_constpool    @ Block 1 (SYSCON) register map:
 	.word	0x000327E5 @ R0: PWRCON(0)
 	.word	0xFE2BED6D @ R1: PWRCON(1)
 	.word	0x00DCF779 @ R2: PWRCON(4)
@@ -88,7 +93,7 @@ mmuloop:
 .endm                      @ R14: 0
 
 	ldmia	sp!, {r0-r12}
-	str	r0, [r12,#0x48]  @ PWRCON0 ...					  @ R0: Scratchpad
+	str	r0, [r12,#0x48]  @ PWRCON0 ...                                    @ R0: Scratchpad
 	str	r1, [r12,#0x4c]
 	mov	r0, #0x73
 	str	r0, [r12,#0x58]
@@ -111,7 +116,7 @@ sysconwait2:
 	str	r0, [r12,#0x44]
 	str	lr, [r12,#0x44]
 	str	lr, [r12,#0x3c]
-	str	r4, [r12,#0x20]							  @ R4: Scratchpad
+	str	r4, [r12,#0x20]                                                   @ R4: Scratchpad
 	str	r5, [r12,#0x30]
 	mov	r5, #1                                                            @ R5: 1
 	str	r5, [r12,#0x44]
@@ -122,21 +127,21 @@ sysconwait3:
 	tst	r4, #0x1
 	beq	sysconwait3      @ while (!([SYSCON+0x40] & 1))
     
-	str	r6, [r12,#0x04]							  @ R6: Unused
+	str	r6, [r12,#0x04]                                                   @ R6: Unused
 	add	r3, r3, #0x3e                                                     @ R3: 0x003E3E3E
 sysconwait4:
 	ldr	r4, [r12,#0x04]
-	tst	r4, r3								  @ R3: Unused
+	tst	r4, r3                                                            @ R3: Unused
 	bne	sysconwait4
     
-	str	r7, [r12]							  @ R7: Unused
+	str	r7, [r12]                                                         @ R7: Unused
 sysconwait5:
 	ldr	r2, [r12]
 	tst	r4, #0xf
 	bne	sysconwait5
     
 	str	r8, [r12,#0x08]
-	orr	r4, r8, r8,lsr#1						  @ R8: Unused
+	orr	r4, r8, r8,lsr#1                                                  @ R8: Unused
 	str	r4, [r12,#0x0c]
 	mov	r4, #0xc000
 	str	r4, [r12,#0x10]
@@ -147,26 +152,26 @@ sysconwait5:
 	str	r4, [r9]                                                          @ R9: Unused
 	mov	r0, #0x10                                                         @ R5: 0x10
 
-	                   @ Block 2 (TIMER) register map:
-	                   @ R0: 1
-	                   @ R1: PWRCON(1)
-	                   @ R2: PWRCON(4)
-	                   @ R3: Scratchpad
-	                   @ R4: Scratchpad
-	                   @ R5: 0x10
-	                   @ R6: Unused
-	                   @ R7: Unused
-	                   @ R8: Unused
-	                   @ R9: Unused
-	                   @ R10: PWRCON(1) during timer setup
-	                   @ R11: PWRCON(4) during timer setup
-	                   @ R12: SYSCON base address
+                           @ Block 2 (TIMER) register map:
+                           @ R0: 1
+                           @ R1: PWRCON(1)
+                           @ R2: PWRCON(4)
+                           @ R3: Scratchpad
+                           @ R4: Scratchpad
+                           @ R5: 0x10
+                           @ R6: Unused
+                           @ R7: Unused
+                           @ R8: Unused
+                           @ R9: Unused
+                           @ R10: PWRCON(1) during timer setup
+                           @ R11: PWRCON(4) during timer setup
+                           @ R12: SYSCON base address
                            @ R13: Constant pool pointer
                            @ R14: 0
 
 	str	r10, [r12,#0x4c]     @ PWRCON(1) for timer setup                  @ R10: Unused
 	mov	r4, #0x13
-	str	r4, [r12,#0x58]	     @ PWRCON(2) for timer setup
+	str	r4, [r12,#0x58]             @ PWRCON(2) for timer setup
 	str	r11, [r12,#0x6c]     @ PWRCON(4) for timer setup                  @ R11: Unused
 	orr     r11, r12, #0x00200000                                             @ R11: TIMER base address
 	str	r0, [r11,#0x4]       @ TACMD = 0x10
@@ -188,23 +193,23 @@ sysconwait5:
 	str	r1, [r12,#0x4c]      @ PWRCON(1)                                  @ R1: Unused
 	mov	r3, #0x73
 	str	r3, [r12,#0x58]      @ PWRCON(2)
-	str	r2, [r12,#0x6c]      @ PWRCON(4)				  @ R2: Unused
+	str	r2, [r12,#0x6c]      @ PWRCON(4)                                  @ R2: Unused
 	orr	r10, r11, #0x00800000                                             @ R10: GPIO base address
 
-	                   @ Block 3 (GPIO) register map:
-	                   @ R0: Unused
-	                   @ R1: Unused
-	                   @ R2: Unused
-	                   @ R3: Scratchpad
-	                   @ R4: -1
-	                   @ R5: 1
-	                   @ R6: Unused
-	                   @ R7: Unused
-	                   @ R8: Unused
-	                   @ R9: Unused
-	                   @ R10: GPIO base address
-	                   @ R11: TIMER base address
-	                   @ R12: SYSCON base address
+                           @ Block 3 (GPIO) register map:
+                           @ R0: Unused
+                           @ R1: Unused
+                           @ R2: Unused
+                           @ R3: Scratchpad
+                           @ R4: -1
+                           @ R5: 1
+                           @ R6: Unused
+                           @ R7: Unused
+                           @ R8: Unused
+                           @ R9: Unused
+                           @ R10: GPIO base address
+                           @ R11: TIMER base address
+                           @ R12: SYSCON base address
                            @ R13: Constant pool pointer
                            @ R14: 0
 
@@ -227,7 +232,7 @@ sysconwait5:
 .endm
 
 	ldr	r3, [sp], #0x4
-	str	r3, [r10], #0xc                                       		  @ R10: PCONx iterator
+	str	r3, [r10], #0xc                                                   @ R10: PCONx iterator
 	mov	r3, #0x20
 	str	r3, [r10], #0x4     @ PCON0 + 0xc = 0x20
 	mov	r3, #0x40
@@ -240,7 +245,7 @@ gpioloop1:
 	str	lr, [r10], #0x10    @ PCON + 0x10 = 0
 	cmp	r10, r9
 	bls	gpioloop1
-										  @ R10: 0x3CF001E0
+                                                                                  @ R10: 0x3CF001E0
 	ldr	r3, [r10,#0x1a8]
 	bic	r3, r3, #2
 	orr	r3, r3, #1
@@ -255,32 +260,32 @@ gpioloop2:
 	add	r8, r8, #4
 	subs	r9, r9, #1
 	bne	gpioloop2
-    										  @ R9: 0
-	ldr	r8, [r10,#-0x180]						  @ R8: PCON3 backup
+                                                                                  @ R9: 0
+	ldr	r8, [r10,#-0x180]                                                 @ R8: PCON3 backup
 	and	r3, r8, #0xff
 	str	r3, [r10,#-0x180]   @ *PCON3 &= 0xff
-	mov	r0, #0x3e8							  @ R0: Scratchpad
-	bl	udelay	                                                          @ R14: Return address
+	mov	r0, #0x3e8                                                        @ R0: Scratchpad
+	bl	udelay                                                            @ R14: Return address
 	ldr	r3, [r10,#-0x17c]
 	and	r3, r3, #0xfc
 	mov	r6, r3, lsr #0x2                                                  @ R6: Data for first PMU access
 	str	r8, [r10,#-0x180]
 	bic	r10, r11, #0x00100000                                             @ R10: I2C base address
 
-	                   @ Block 4 (I2C) register map:
-	                   @ R0: Scratchpad
-	                   @ R1: Scratchpad
-	                   @ R2: Unused
-	                   @ R3: Unused
-	                   @ R4: -1
-	                   @ R5: 1
-	                   @ R6: Data for first PMU access
-	                   @ R7: Unused
-	                   @ R8: Unused
-	                   @ R9: 0
-	                   @ R10: I2C base address
-	                   @ R11: TIMER base address
-	                   @ R12: SYSCON base address
+                           @ Block 4 (I2C) register map:
+                           @ R0: Scratchpad
+                           @ R1: Scratchpad
+                           @ R2: Unused
+                           @ R3: Unused
+                           @ R4: -1
+                           @ R5: 1
+                           @ R6: Data for first PMU access
+                           @ R7: Unused
+                           @ R8: Unused
+                           @ R9: 0
+                           @ R10: I2C base address
+                           @ R11: TIMER base address
+                           @ R12: SYSCON base address
                            @ R13: Constant pool pointer
                            @ R14: Return address / Scratchpad
 
@@ -308,20 +313,20 @@ gpioloop2:
 	str	r0, [r10,#0x04]
 	bl	i2cwaitrdy
     
-	                   @ Block 5 (PMU) register map:
-	                   @ R0: Address / Scratchpad (trashed by pmubatch)
-	                   @ R1: Data / Scratchpad (trashed by pmubatch)
-	                   @ R2: Scratchpad (set to 0xb7 by pmu accesses)
-	                   @ R3: Scratchpad (set to 0x10 by pmu accesses)
-	                   @ R4: Scratchpad (trashed by pmu accesses)
-	                   @ R5: 1
-	                   @ R6: Data for first PMU access
-	                   @ R7: Scratchpad (trashed by pmubatch)
-	                   @ R8: Used to store warmboot flag
-	                   @ R9: 0 / pmubatch transfer count (reset to 0 by pmubatch)
-	                   @ R10: I2C base address
-	                   @ R11: TIMER base address
-	                   @ R12: SYSCON base address
+                           @ Block 5 (PMU) register map:
+                           @ R0: Address / Scratchpad (trashed by pmubatch)
+                           @ R1: Data / Scratchpad (trashed by pmubatch)
+                           @ R2: Scratchpad (set to 0xb7 by pmu accesses)
+                           @ R3: Scratchpad (set to 0x10 by pmu accesses)
+                           @ R4: Scratchpad (trashed by pmu accesses)
+                           @ R5: 1
+                           @ R6: Data for first PMU access
+                           @ R7: Scratchpad (trashed by pmubatch)
+                           @ R8: Used to store warmboot flag
+                           @ R9: 0 / pmubatch transfer count (reset to 0 by pmubatch)
+                           @ R10: I2C base address
+                           @ R11: TIMER base address
+                           @ R12: SYSCON base address
                            @ R13: Constant pool / pmubatch data pointer
                            @ R14: Return address / Scratchpad
 
@@ -344,7 +349,7 @@ pmu_batch_1_end:
 .endm
 	mov	r9, #(pmu_batch_1_end - pmu_batch_1_begin) / 2
 	bl	pmubatch
-	tst	r6, #1							          @ R6: Unused
+	tst	r6, #1                                                            @ R6: Unused
 	beq	pmu_skip
 	mov	r0, #0x0d
 	bl	pmuread
@@ -367,7 +372,7 @@ pmu_batch_2_end:
 	bl	pmuread
 	bic	r1, r1, #0x80
 	orr	r1, r1, #0x60
-nop@	bl	pmuwrite
+	bl	pmuwrite
 .macro pmu_batch_3
 pmu_batch_3_begin:
 	.byte	0x44, 0x72
@@ -421,9 +426,9 @@ pmu_batch_5_end:
 	mov	r9, #(pmu_batch_5_end - pmu_batch_5_begin) / 2
 	bl	pmubatch
 
-	orr	lr, r11, #0x00800000						  @ R14: GPIO base address
+	orr	lr, r11, #0x00800000                                              @ R14: GPIO base address
 	str	r9, [lr,#0x384]
-	orr	lr, r11, #0x01000000						  @ R14: MIU base address
+	orr	lr, r11, #0x01000000                                              @ R14: MIU base address
 	str	r5, [lr]
 	ldrh	r0, [sp], #2
 	str	r0, [lr,#0x100]
@@ -431,7 +436,7 @@ pmu_batch_5_end:
 	str	r0, [lr,#0x11c]
 	str	r0, [lr,#0x120]
 	
-.macro block6_constpool	   @ Block 6 (SDRAM) register map:
+.macro block6_constpool           @ Block 6 (SDRAM) register map:
 	.hword	0x1030
 	.word	0x008AAC25 @ R0
 	.word	0x050D67E5 @ R1
@@ -441,18 +446,18 @@ pmu_batch_5_end:
 	.word	0x00008040 @ R5
 	.word	0x8000100F @ R6: For LCD init at end of block
 	.word	0x41100DB8 @ R7: For LCD init at end of block
-	                   @ R8: Warmboot flag
-	                   @ R9: 0
-	                   @ R10: I2C base address
-	                   @ R11: TIMER base address
-	                   @ R12: SYSCON base address
+                           @ R8: Warmboot flag
+                           @ R9: 0
+                           @ R10: I2C base address
+                           @ R11: TIMER base address
+                           @ R12: SYSCON base address
                            @ R13: Constant pool pointer
 .endm                      @ R14: MIU base address
 
 	ldmia	sp!, {r0-r7}
-	str	r0, [lr,#0x114]							  @ R0: Unused
-	str	r1, [lr,#0x124]							  @ R1: Unused
-	mov	r0, #0x18							  @ R0: Scratchpad
+	str	r0, [lr,#0x114]                                                   @ R0: Unused
+	str	r1, [lr,#0x124]                                                   @ R1: Unused
+	mov	r0, #8                                                            @ R0: Scratchpad
 	str	r0, [lr,#0x118]
 	str	r2, [lr,#0x108]
 	mov	r0, #4
@@ -463,27 +468,27 @@ miu_wait1:
 	ldr	r0, [lr,#0x140]
 	tst	r0, #2
 	beq	miu_wait1
-	add	r0, r3, #1							  @ R3: Unused
+	add	r0, r3, #1                                                        @ R3: Unused
 	str	r0, [lr,#0x140]
 miu_wait2:
 	ldr	r0, [lr,#0x144]
 	mvn	r0, r0
 	tst	r0, #3
 	bne	miu_wait2
-	ldr	r1, [lr,#0x144]			                                  @ R1: Scratchpad
+	ldr	r1, [lr,#0x144]                                                   @ R1: Scratchpad
 	mov	r0, #0x0ff00000
-	and	r0, r0, r1, lsl #0x2
-	add	r0, r0, r4	                                                  @ R4: Unused
+	and	r0, r0, r1, lsl#2
+	add	r0, r0, r4                                                        @ R4: Unused
 	str	r0, [lr,#0x140]
 	mov	r0, #0x10
 	str	r0, [lr,#0x150]
-	cmp	r8, #0								  @ R8: Unused
+	cmp	r8, #0                                                            @ R8: Unused
 	sub	r8, r10, #0x04300000                                              @ R8: LCD base address
 	str	r6, [r12,#0x08]                                                   @ R6: Unused
 	str	r7, [r8]                                                          @ R7: Unused
 	mov	r0, #0x11
 	str	r0, [r8,#0x20]
-	mov	r3, #0x33							  @ R3: 0x33
+	mov	r3, #0x33                                                         @ R3: 0x33
 	beq	miu_coldboot
 	str	r0, [lr,#0x104]
 	b	miu_common
@@ -516,8 +521,8 @@ miu_wait5:
 	str	r3, [lr,#0x104]
 	str	r3, [lr,#0x104]
 	str	r3, [lr,#0x110]
-	orr	r1, r3, #0x100
-	str	r1, [lr,#0x104]
+	orr	r0, r3, #0x100
+	str	r0, [lr,#0x104]
 miu_wait6:
 	ldr	r0, [lr,#0x104]
 	tst	r0, #0x110000
@@ -525,7 +530,7 @@ miu_wait6:
 	str	r3, [lr,#0x104]
 	str	r3, [lr,#0x104]
 	str	r3, [lr,#0x104]
-	str	r5, [lr,#0x110]							  @ R5: Unused
+	str	r5, [lr,#0x110]                                                   @ R5: Unused
 	str	r1, [lr,#0x104]
 miu_wait7:
 	ldr	r0, [lr,#0x104]
@@ -534,7 +539,7 @@ miu_wait7:
 	str	r3, [lr,#0x104]
 	str	r3, [lr,#0x104]
 miu_common:
-	str	r3, [lr,#0x104]							  @ R3: Unused
+	str	r3, [lr,#0x104]                                                   @ R3: Unused
 	mov	r0, #0x40
 	str	r0, [lr,#0x10c]
 	ldr	r0, [lr,#0x100]
@@ -544,7 +549,7 @@ miu_common:
 	str	r0, [lr,#0x11c]
 	mov	r0, #1
 	str	r0, [lr,#0x120]
-	orr	r1, r2, #0x1000							  @ R2: Unused
+	orr	r1, r2, #0x1000                                                   @ R2: Unused
 	str	r1, [lr,#0x108]
 	str	r0, [lr,#0x08]
 	mov	r1, #0x3e000000
@@ -552,7 +557,7 @@ miu_common:
 	str	r0, [r1,#0x08]
 
                            @ Block 7 (LCD) register map:
-	                   @ R0: Cmd/Data to be written / Scratchpad
+                           @ R0: Cmd/Data to be written / Scratchpad
                            @ R1: Scratchpad
                            @ R2: Scratchpad
                            @ R3: Scratchpad
@@ -560,11 +565,11 @@ miu_common:
                            @ R5: Scratchpad
                            @ R6: Unused
                            @ R7: Unused
-	                   @ R8: LCD base address
-	                   @ R9: 0
-	                   @ R10: I2C base address
-	                   @ R11: TIMER base address
-	                   @ R12: SYSCON base address
+                           @ R8: LCD base address
+                           @ R9: 0
+                           @ R10: I2C base address
+                           @ R11: TIMER base address
+                           @ R12: SYSCON base address
                            @ R13: LCD init script pointer / Scratchpad
                            @ R14: Return address / Scratchpad
 
@@ -575,6 +580,7 @@ lcd_sequences_begin:
 	.word	lcd_sequence_e6 - lcd_sequences_begin
 	.word	lcd_sequence_b3 - lcd_sequences_begin
 lcd_sequence_b3:
+.byte 0x01, 0x11, 0xf8, 0x01, 0x13, 0x01, 0x29, 0x80
 	.byte	0x01, 0x11
 	.byte	0xf8
 	.byte	0x02, 0xfe, 0x00
@@ -597,12 +603,13 @@ lcd_sequence_b3:
 	.byte	0x0c, 0xe2, 0x7e, 0x04, 0x43, 0x40, 0x00, 0x02, 0x13, 0x00, 0x00, 0x01, 0x0b
 	.byte	0x0c, 0xe3, 0x40, 0x40, 0x03, 0x74, 0x0e, 0x00, 0x00, 0x31, 0x02, 0x0b, 0x01
 	.byte	0x0c, 0xe4, 0x5a, 0x43, 0x67, 0x56, 0x00, 0x02, 0x67, 0x72, 0x00, 0x05, 0x12
-	.byte	0x0c, 0xe5, 0x50, 0x66, 0x47, 0x53, 0x0a, 0x00, 0x27, 0x76, 0x02, 0x12, 0x02
+	.byte	0x0c, 0xe5, 0x50, 0x66, 0x47, 0x53, 0x0a, 0x00, 0x27, 0x76, 0x02, 0x12, 0x05
 	.byte	0x02, 0x3a, 0x06
 	.byte	0x01, 0x13
 	.byte	0x01, 0x29
 	.byte	0x80
 lcd_sequence_c4:
+.byte 0x01, 0x01, 0x85, 0x01, 0x11, 0x01, 0x29, 0x80
 	.byte	0x01, 0x01
 	.byte	0x85
 	.byte	0x02, 0xc0, 0x00
@@ -612,7 +619,7 @@ lcd_sequence_c4:
 	.byte	0x03, 0xc4, 0x73, 0x03
 	.byte	0x03, 0xc5, 0x3c, 0x3c
 	.byte	0x02, 0xfe, 0x00
-@	.byte	0x03, 0xb1, 0x6a, 0x15
+	.byte	0x03, 0xb1, 0x6a, 0x15
 	.byte	0x03, 0xb2, 0x6a, 0x15
 	.byte	0x03, 0xb3, 0x6a, 0x15
 	.byte	0x02, 0xb4, 0x02
@@ -625,12 +632,13 @@ lcd_sequence_c4:
 	.byte	0x0c, 0xe3, 0x3f, 0x10, 0x16, 0x44, 0x0e, 0x04, 0x6c, 0x44, 0x04, 0x03, 0x0b
 	.byte	0x0c, 0xe4, 0x00, 0x61, 0x77, 0x04, 0x02, 0x04, 0x72, 0x32, 0x09, 0x19, 0x06
 	.byte	0x0c, 0xe5, 0x4f, 0x42, 0x27, 0x67, 0x0f, 0x02, 0x26, 0x33, 0x01, 0x03, 0x09
-@	.byte	0x02, 0x3a, 0x66
+	.byte	0x02, 0x3a, 0x66
 	.byte	0x02, 0x36, 0x00
 	.byte	0x01, 0x11
 	.byte	0x01, 0x29
 	.byte	0x80
 lcd_sequence_d5:
+.byte 0x01, 0x01, 0x85, 0x01, 0x11, 0x01, 0x29, 0x80
 	.byte	0x02, 0xfe, 0x00
 	.byte	0x02, 0xc0, 0x01
 	.byte	0x02, 0xc1, 0x01
@@ -658,6 +666,7 @@ lcd_sequence_d5:
 	.byte	0x01, 0x29
 	.byte	0x80
 lcd_sequence_e6:
+.byte 0x01, 0x11, 0xf8, 0x01, 0x13, 0x01, 0x29, 0x80
 	.byte	0x01, 0x11
 	.byte	0xf8
 	.byte	0x02, 0xfe, 0x00
@@ -715,10 +724,23 @@ lcdbyte:
 	bl	sendlcdd
 	b	lcdbyte
 
-	                   @ udelay register map:
-	                   @ R0: Microseconds
-	                   @ R1: Trashed
-	                   @ R11: TIMER base address
+values1:
+	block0_constpool
+	block1_constpool
+	gpio_initdata
+	pmu_batch_1
+	pmu_batch_2
+	pmu_batch_3
+	pmu_batch_4
+	pmu_batch_5
+	block6_constpool
+	lcd_sequences
+	.align	2
+
+                           @ udelay register map:
+                           @ R0: Microseconds
+                           @ R1: Trashed
+                           @ R11: TIMER base address
                            @ R14: Return address
 
 udelay:
@@ -730,9 +752,9 @@ udelayloop:
 	bmi	udelayloop
 	mov	pc, lr
 
-	                   @ i2cwaitrdy register map:
-	                   @ R9: Set to 0
-	                   @ R10: I2C base address
+                           @ i2cwaitrdy register map:
+                           @ R9: Set to 0
+                           @ R10: I2C base address
                            @ R14: Return address
 
 i2cwaitrdy:
@@ -741,9 +763,9 @@ i2cwaitrdy:
 	bne	i2cwaitrdy
 	mov	pc, lr
 
-	                   @ i2cwait register map:
-	                   @ R3: Set to 0x10
-	                   @ R10: I2C base address
+                           @ i2cwait register map:
+                           @ R3: Set to 0x10
+                           @ R10: I2C base address
                            @ R14: Return address
 
 i2cwait:
@@ -752,13 +774,13 @@ i2cwait:
 	beq	i2cwait
 	mov	pc, lr
 
-	                   @ pmuwrite register map:
-	                   @ R0: Address
-	                   @ R1: Data
-			   @ R2: Set to 0xb7
-	                   @ R3: Set to 0x10
-	                   @ R4: Return address backup
-	                   @ R10: I2C base address
+                           @ pmuwrite register map:
+                           @ R0: Address
+                           @ R1: Data
+                           @ R2: Set to 0xb7
+                           @ R3: Set to 0x10
+                           @ R4: Return address backup
+                           @ R10: I2C base address
                            @ R14: Return address / Scratchpad
 
 pmuwrite:
@@ -785,13 +807,13 @@ pmuwrite_wait:
 	bne	pmuwrite_wait
 	mov	pc, r4
 
-	                   @ pmuread register map:
-	                   @ R0: Address
-	                   @ R1: Data
-			   @ R2: Set to 0xb7
-	                   @ R3: Set to 0x10
-	                   @ R4: Return address backup
-	                   @ R10: I2C base address
+                           @ pmuread register map:
+                           @ R0: Address
+                           @ R1: Data
+                           @ R2: Set to 0xb7
+                           @ R3: Set to 0x10
+                           @ R4: Return address backup
+                           @ R10: I2C base address
                            @ R14: Return address / Scratchpad
 
 pmuread:
@@ -820,20 +842,20 @@ pmuread:
 	str	lr, [r10,#0x04]
 	str	r2, [r10]
 pmuread_wait:
-	ldr	r1, [r10,#0x04]
-	tst	r1, #0x20
+	ldr	lr, [r10,#0x04]
+	tst	lr, #0x20
 	bne	pmuread_wait
 	mov	pc, r4
 
-	                   @ pmubatch register map:
-	                   @ R0: Scratchpad
-	                   @ R1: Scratchpad
-			   @ R2: Set to 0xb7
-	                   @ R3: Set to 0x10
-	                   @ R4: Inner return address backup
-			   @ R7: Outer return address backup
-			   @ R9: Number of address-data pairs to be sent (must be >0), will be reset to 0
-	                   @ R10: I2C base address
+                           @ pmubatch register map:
+                           @ R0: Scratchpad
+                           @ R1: Scratchpad
+                           @ R2: Set to 0xb7
+                           @ R3: Set to 0x10
+                           @ R4: Inner return address backup
+                           @ R7: Outer return address backup
+                           @ R9: Number of address-data pairs to be sent (must be >0), will be reset to 0
+                           @ R10: I2C base address
                            @ R13: Address-data pair list pointer (will be incremented)
                            @ R14: Return address / Scratchpad
 
@@ -847,10 +869,10 @@ pmubatch_loop:
 	bne	pmubatch_loop
 	mov	pc, r7
 
-	                   @ sendlcdc register map:
-	                   @ R0: Command to be sent
-	                   @ R8: LCD base address
-			   @ R9: Will be set to 0
+                           @ sendlcdc register map:
+                           @ R0: Command to be sent
+                           @ R8: LCD base address
+                           @ R9: Will be set to 0
                            @ R14: Return address
 
 sendlcdc:
@@ -860,10 +882,10 @@ sendlcdc:
 	str	r0, [r8,#0x04]
 	mov	pc, lr
 
-	                   @ sendlcdd register map:
-	                   @ R0: Data to be sent
-	                   @ R8: LCD base address
-			   @ R9: Will be set to 0
+                           @ sendlcdd register map:
+                           @ R0: Data to be sent
+                           @ R8: LCD base address
+                           @ R9: Will be set to 0
                            @ R14: Return address
 
 sendlcdd:
@@ -873,9 +895,9 @@ sendlcdd:
 	str	r0, [r8,#0x40]
 	mov	pc, lr
 	
-	                   @ readlcd register map:
-	                   @ R0: Result data
-	                   @ R8: LCD base address
+                           @ readlcd register map:
+                           @ R0: Result data
+                           @ R8: LCD base address
                            @ R14: Return address
 
 readlcd:
@@ -892,6 +914,9 @@ readlcd_wait:
 	mov	pc, lr
 
 lcddone:
+	bic	r1, r10, #0x04400000
+	mov	r0, #1
+	str	r0, [r1,#0x30]
 	ldr	r0, _stubend
 	adr	r1, _stubend + 4
 	mov	r2, #0x08000000
@@ -901,22 +926,10 @@ movepayloadloop:
 	ldrhi	r3, [r1], #4
 	strhi	r3, [r2], #4
 	bhi	movepayloadloop
-	mcr	p15, 0, r9,c7,c14,0 @ clean & invalidate data cache
+	mcr	p15, 0, r9,c7,c14,0 @ clean data cache
 	mcr	p15, 0, r9,c7,c10,4 @ drain write buffer
-	mcr	p15, 0, r9,c7,c5    @ invalidate instruction cache
+	mcr	p15, 0, r9,c7,c5,0  @ invalidate instruction cache
+	mcr	p15, 0, r9,c7,c5,4  @ flush prefetch buffer
 	mov	pc, #0x08000000
-
-values1:
-	block0_constpool
-	block1_constpool
-	gpio_initdata
-	pmu_batch_1
-	pmu_batch_2
-	pmu_batch_3
-	pmu_batch_4
-	pmu_batch_5
-	block6_constpool
-	lcd_sequences
-	.align	2
 
 _stubend:
