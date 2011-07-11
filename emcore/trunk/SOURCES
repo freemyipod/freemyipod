@@ -26,7 +26,7 @@ usb/synopsysotg.c
 target/ipodnano4g/mmu.c
 target/ipodnano4g/lcd.c
 target/ipodnano4g/timer.c
-target/ipodnano4g/i2c.S
+target/ipodnano4g/i2c.c
 target/ipodnano4g/interrupt.c
 target/ipodnano4g/power.c
 target/ipodnano4g/accel.c
