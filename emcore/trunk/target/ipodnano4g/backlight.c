@@ -45,5 +45,5 @@ void backlight_set_fade(uint8_t fade)
 
 void backlight_set_brightness(uint8_t brightness)
 {
-    i2c_sendbyte(0, 0xe6, 0x30, (250 * (brightness & 0xff)) >> 8);
+    i2c_sendbyte(0, 0xe6, 0x30, brightness & 0xff);
 }
