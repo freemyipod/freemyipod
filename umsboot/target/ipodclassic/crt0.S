@@ -66,36 +66,22 @@ __start:
 	cmp	r1, r0
 	strhi	r2, [r0], #4
 	bhi	.clearbss2
-	ldr	r1, =0x38200000
-	ldr	r0, [r1]
-	orr	r0, r0, #1
-	bic	r0, r0, #0x10000
-	str	r0, [r1]
 .cleancache:
 	mrc	p15, 0, r15,c7,c10,3
 	bne	.cleancache
 	mov	r0, #0
 	mcr	p15, 0, r0,c7,c10,4
 	mcr	p15, 0, r0,c7,c5,0
-	ldr	r1, =0x38200000
-	ldr	r0, [r1]
-	orr	r0, r0, #1
-	bic	r0, r0, #0x10000
-	str	r0, [r1]
-	mov	r0, #0
-	mcr	p15, 0, r0,c7,c5,0
 	add	r1, r1, #0x00c00000
 	add	r2, r1, #0x00001000
 	add	r3, r1, #0x00002000
-	sub	r4, r0, #1
+	mov	r4, #-1
 	str	r4, [r1,#0x14]
 	str	r4, [r2,#0x14]
 	str	r4, [r1,#0xf00]
 	str	r4, [r2,#0xf00]
 	str	r4, [r3,#0x08]
 	str	r4, [r3,#0x0c]
-	str	r0, [r1,#0x14]
-	str	r0, [r2,#0x14]
 	msr	cpsr_c, #0xd2
 	ldr	sp, =_irqstackend
 	msr	cpsr_c, #0xd7
