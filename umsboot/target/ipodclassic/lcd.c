@@ -27,7 +27,7 @@
 
 
 static struct dma_lli lcd_lli[(LCD_WIDTH * LCD_HEIGHT - 1) / 0xfff]
-    IDATA_ATTR __attribute__((aligned(16)));
+    IDATA_ATTR CACHEALIGN_ATTR;
 
 static uint16_t lcd_color IDATA_ATTR;
 
