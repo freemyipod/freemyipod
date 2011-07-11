@@ -1,1 +1,1 @@
-CFLAGS_ipodnano4g += -mcpu=arm1136j-s
+CFLAGS_ipodnano4g += -mcpu=arm1176jz-s
