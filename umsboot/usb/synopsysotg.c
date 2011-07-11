@@ -66,7 +66,7 @@ static void reset_endpoints(int reinit)
     DOEPCTL0 = 0x8000;  /* EP0 OUT ACTIVE */
     DOEPTSIZ0 = 0x20080040;  /* EP0 OUT Transfer Size:
                                 64 Bytes, 1 Packet, 1 Setup Packet */
-    DOEPDMA0 = (uint32_t)&ctrlreq;
+    DOEPDMA0 = &ctrlreq;
     DOEPCTL0 |= 0x84000000;  /* EP0 OUT ENABLE CLEARNAK */
     if (reinit)
     {
@@ -128,18 +128,19 @@ void usb_drv_release_endpoint(int ep)
 
 static void usb_reset(void)
 {
-    volatile int i;
-
     DCTL = 0x802;  /* Soft Disconnect */
 
     OPHYPWR = 0;  /* PHY: Power up */
+    udelay(10);
     OPHYUNK1 = 1;
     OPHYUNK2 = 0xE3F;
-    OPHYCLK = SYNOPSYSOTG_CLOCK;
     ORSTCON = 1;  /* PHY: Assert Software Reset */
     udelay(10);
     ORSTCON = 0;  /* PHY: Deassert Software Reset */
+    udelay(10);
     OPHYUNK3 = 0x600;
+    OPHYCLK = SYNOPSYSOTG_CLOCK;
+    udelay(400);
 
     GRSTCTL = 1;  /* OTG: Assert Software Reset */
     while (GRSTCTL & 1);  /* Wait for OTG to ack reset */
@@ -189,7 +190,6 @@ void INT_USB_FUNC(void)
             {
                 if (epints & 1)  /* Transfer completed */
                 {
-                    invalidate_dcache();
                     int bytes = endpoints[i].size - (DIEPTSIZ(i) & 0x3FFFF);
                     if (endpoints[i].busy)
                     {
@@ -219,7 +219,6 @@ void INT_USB_FUNC(void)
             {
                 if (epints & 1)  /* Transfer completed */
                 {
-                    invalidate_dcache();
                     int bytes = endpoints[i].size - (DOEPTSIZ(i) & 0x3FFFF);
                     if (endpoints[i].busy)
                     {
@@ -241,7 +240,7 @@ void INT_USB_FUNC(void)
                 if (!i)
                 {
                     DOEPTSIZ0 = 0x20080040;
-                    DOEPDMA0 = (uint32_t)&ctrlreq;
+                    DOEPDMA0 = &ctrlreq;
                     DOEPCTL0 |= 0x84000000;
                 }
                 DOEPINT(i) = epints;
@@ -265,12 +264,12 @@ static void ep_send(int ep, const void *ptr, int length)
     if (!length)
     {
         DIEPTSIZ(ep) = 1 << 19;  /* one empty packet */
-        DIEPDMA(ep) = 0x10000000;  /* dummy address */
+        DIEPDMA(ep) = NULL;  /* dummy address */
     }
     else
     {
         DIEPTSIZ(ep) = length | (packets << 19);
-        DIEPDMA(ep) = (uint32_t)ptr;
+        DIEPDMA(ep) = ptr;
     }
     clean_dcache();
     DIEPCTL(ep) |= 0x84000000;  /* EPx OUT ENABLE CLEARNAK */
@@ -287,14 +286,14 @@ static void ep_recv(int ep, void *ptr, int length)
     if (!length)
     {
         DOEPTSIZ(ep) = 1 << 19;  /* one empty packet */
-        DOEPDMA(ep) = 0x10000000;  /* dummy address */
+        DOEPDMA(ep) = NULL;  /* dummy address */
     }
     else
     {
         DOEPTSIZ(ep) = length | (packets << 19);
-        DOEPDMA(ep) = (uint32_t)ptr;
+        DOEPDMA(ep) = ptr;
     }
-    clean_dcache();
+    invalidate_dcache();
     DOEPCTL(ep) |= 0x84000000;  /* EPx OUT ENABLE CLEARNAK */
 }
 
@@ -361,9 +360,11 @@ void usb_drv_power_down(void)
 {
     DCTL = 0x802;  /* Soft Disconnect */
 
-    ORSTCON = 1;  /* Put the PHY into reset (needed to get current down) */
-    PCGCCTL = 1;  /* Shut down PHY clock */
     OPHYPWR = 0xF;  /* PHY: Power down */
+    udelay(10);
+    ORSTCON = 7;  /* Put the PHY into reset (needed to get current down) */
+    udelay(10);
+    PCGCCTL = 1;  /* Shut down PHY clock */
     
     clockgate_enable(CLOCKGATE_USB_1, false);
     clockgate_enable(CLOCKGATE_USB_2, false);
