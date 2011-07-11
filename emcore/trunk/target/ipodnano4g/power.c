@@ -22,7 +22,13 @@
 
 
 #include "global.h"
+#include "i2c.h"
+#include "timer.h"
 #include "power.h"
+
+
+long power_last_update;
+bool power_last_state;
 
 
 void reset();
@@ -35,6 +41,7 @@ void power_off(void)
 
 void power_init(void)
 {
+    power_last_update = 0;
 }
 
 bool charging_state(void)
@@ -44,12 +51,17 @@ bool charging_state(void)
 
 bool external_power_state(void)
 {
-    return false;
+    return vbus_state();
 }
 
 bool vbus_state(void)
 {
-    return true;
+    if (TIMEOUT_EXPIRED(power_last_update, 200000))
+    {
+        power_last_update = USEC_TIMER;
+        power_last_state = !!(i2c_recvbyte(0, 0xe6, 4) & 0x40);
+    }
+    return power_last_state;
 }
 
 int read_battery_voltage(int battery)
