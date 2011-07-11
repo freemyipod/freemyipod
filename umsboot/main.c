@@ -217,6 +217,7 @@ void init()
 #ifdef HAVE_TARGETINIT_VERYEARLY
     targetinit_veryearly();
 #endif
+    interrupt_init();
 #ifdef HAVE_LCD
     lcd_init();
     lcdconsole_init();
@@ -224,7 +225,6 @@ void init()
 #ifdef HAVE_TARGETINIT_EARLY
     targetinit_early();
 #endif
-    interrupt_init();
 #ifdef HAVE_I2C
     i2c_init();
 #endif
