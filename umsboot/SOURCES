@@ -12,6 +12,16 @@ target/ipodnano2g/backlight.c
 usb/synopsysotg.c
 #endif
 
+#ifdef TARGET_ipodnano4g
+target/ipodnano4g/mmu.c
+target/ipodnano4g/lcd.c
+target/ipodnano4g/i2c.c
+target/ipodnano4g/interrupt.c
+target/ipodnano4g/power.c
+target/ipodnano4g/clockgates.c
+target/ipodnano4g/backlight.c
+usb/synopsysotg.c
+#endif
 #ifdef TARGET_ipodclassic
 target/ipodclassic/mmu.c
 target/ipodclassic/lcd.c
