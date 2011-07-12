@@ -72,7 +72,7 @@ __start:
 	mov	r0, #0
 	mcr	p15, 0, r0,c7,c10,4
 	mcr	p15, 0, r0,c7,c5,0
-	add	r1, r1, #0x00c00000
+	ldr	r1, =0x38e00000
 	add	r2, r1, #0x00001000
 	add	r3, r1, #0x00002000
 	mov	r4, #-1
