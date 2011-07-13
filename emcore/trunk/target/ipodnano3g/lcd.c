@@ -136,6 +136,8 @@ void displaylcd_setup(unsigned int startx, unsigned int endx,
         displaylcd_sync();
     }
     else while (DMAC0C4CONFIG & 1);
+    while (!(LCDSTATUS & 0x2));
+    LCDCON = 0x80100db0;
     if (lcd_detect() & 2)
     {
         lcd_send_cmd(0x210);
@@ -265,6 +267,12 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    movne r10, #3                \n");
     __asm__ volatile("    moveq r10, #0                \n");
     __asm__ volatile("    ldr r9, =0x38300040          \n");
+    __asm__ volatile("displaylcd_dither_wait :         \n");
+    __asm__ volatile("    ldr r4, [r9,#-0x24]          \n");
+    __asm__ volatile("    tst r4, #2                   \n");
+    __asm__ volatile("    beq displaylcd_dither_wait   \n");
+    __asm__ volatile("    ldr r4, =0x81104eb0          \n");
+    __asm__ volatile("    str r4, [r9,#-0x40]          \n");
     __asm__ volatile("displaylcd_dither_y:             \n");
     __asm__ volatile("    ldr lr, [sp]                 \n");
     __asm__ volatile("    mov r4, #0                   \n");
@@ -272,7 +280,6 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    mov r6, #0                   \n");
     __asm__ volatile("    mov r7, r8                   \n");
     __asm__ volatile("displaylcd_dither_x:             \n");
-    __asm__ volatile("    mov r2, #0                   \n");
     __asm__ volatile("    ldrb r1, [r3], #1            \n");
     __asm__ volatile("    ldrsb r0, [r7]               \n");
     __asm__ volatile("    add r1, r1, r4               \n");
@@ -280,10 +287,10 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    cmp r1, #0xff                \n");
     __asm__ volatile("    mvnhi r1, r1,asr#31          \n");
     __asm__ volatile("    andhi r1, r1, #0xff          \n");
-    __asm__ volatile("    mov r0, r1,lsr#3             \n");
-    __asm__ volatile("    orr r2, r0,lsl#11            \n");
-    __asm__ volatile("    sub r1, r1, r0,lsl#3         \n");
-    __asm__ volatile("    sub r1, r1, r0,lsr#2         \n");
+    __asm__ volatile("    mov r0, r1,lsr#2             \n");
+    __asm__ volatile("    mov r2, r0,lsl#18            \n");
+    __asm__ volatile("    sub r1, r1, r0,lsl#2         \n");
+    __asm__ volatile("    sub r1, r1, r0,lsr#4         \n");
     __asm__ volatile("    mov r4, r4,lsr#1             \n");
     __asm__ volatile("    add r4, r4, r1,lsr#2         \n");
     __asm__ volatile("    strb r4, [r7], #1            \n");
@@ -296,7 +303,7 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    mvnhi r1, r1,asr#31          \n");
     __asm__ volatile("    andhi r1, r1, #0xff          \n");
     __asm__ volatile("    mov r0, r1,lsr#2             \n");
-    __asm__ volatile("    orr r2, r0,lsl#5             \n");
+    __asm__ volatile("    orr r2, r2, r0,lsl#10        \n");
     __asm__ volatile("    sub r1, r1, r0,lsl#2         \n");
     __asm__ volatile("    sub r1, r1, r0,lsr#4         \n");
     __asm__ volatile("    mov r5, r5,lsr#1             \n");
@@ -310,14 +317,18 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    cmp r1, #0xff                \n");
     __asm__ volatile("    mvnhi r1, r1,asr#31          \n");
     __asm__ volatile("    andhi r1, r1, #0xff          \n");
-    __asm__ volatile("    mov r0, r1,lsr#3             \n");
-    __asm__ volatile("    orr r2, r0                   \n");
-    __asm__ volatile("    sub r1, r1, r0,lsl#3         \n");
-    __asm__ volatile("    sub r1, r1, r0,lsr#2         \n");
+    __asm__ volatile("    mov r0, r1,lsr#2             \n");
+    __asm__ volatile("    orr r2, r2, r0,lsl#2         \n");
+    __asm__ volatile("    sub r1, r1, r0,lsl#2         \n");
+    __asm__ volatile("    sub r1, r1, r0,lsr#4         \n");
     __asm__ volatile("    mov r6, r6,lsr#1             \n");
     __asm__ volatile("    add r6, r6, r1,lsr#2         \n");
     __asm__ volatile("    strb r6, [r7], #1            \n");
     __asm__ volatile("    mov r6, r1,asr#1             \n");
+    __asm__ volatile("displaylcd_dither_wait2:         \n");
+    __asm__ volatile("    ldr r0, [r9,#-0x24]          \n");
+    __asm__ volatile("    tst r0, #0x10                \n");
+    __asm__ volatile("    bne displaylcd_dither_wait2  \n");
     __asm__ volatile("    str r2, [r9]                 \n");
     __asm__ volatile("    sub r3, r3, r10              \n");
     __asm__ volatile("    subs lr, lr, #1              \n");
@@ -354,6 +365,8 @@ void lcd_shutdown()
 {
     mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
     displaylcd_sync();
+    while (!(LCDSTATUS & 0x2));
+    LCDCON = 0x80100db0;
     uint32_t type = lcd_detect();
     if (type & 2)
     {

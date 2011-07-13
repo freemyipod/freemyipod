@@ -91,6 +91,8 @@ void displaylcd(unsigned int startx, unsigned int endx,
                 unsigned int starty, unsigned int endy, void* data, int color)
 {
     displaylcd_sync();
+    while (!(LCDSTATUS & 0x2));
+    LCDCON = 0x80100db0;
     if (lcd_detect() & 2)
     {
         lcd_send_cmd(0x210);
