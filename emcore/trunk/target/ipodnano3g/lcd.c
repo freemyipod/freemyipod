@@ -324,9 +324,9 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    mov r6, r6,lsr#1             \n");
     __asm__ volatile("    add r6, r6, r1,lsr#2         \n");
     __asm__ volatile("    strb r6, [r7], #1            \n");
-    __asm__ volatile("    mov r6, r1,asr#1             \n");
     __asm__ volatile("displaylcd_dither_wait2:         \n");
     __asm__ volatile("    ldr r0, [r9,#-0x24]          \n");
+    __asm__ volatile("    mov r6, r1,asr#1             \n");
     __asm__ volatile("    tst r0, #0x10                \n");
     __asm__ volatile("    bne displaylcd_dither_wait2  \n");
     __asm__ volatile("    str r2, [r9]                 \n");

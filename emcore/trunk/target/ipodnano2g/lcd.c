@@ -257,7 +257,6 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    mov r6, #0                   \n");
     __asm__ volatile("    mov r7, r8                   \n");
     __asm__ volatile("displaylcd_dither_x:             \n");
-    __asm__ volatile("    mov r2, #0                   \n");
     __asm__ volatile("    ldrb r1, [r3], #1            \n");
     __asm__ volatile("    ldrsb r0, [r7]               \n");
     __asm__ volatile("    add r1, r1, r4               \n");
@@ -266,7 +265,7 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    mvnhi r1, r1,asr#31          \n");
     __asm__ volatile("    andhi r1, r1, #0xff          \n");
     __asm__ volatile("    mov r0, r1,lsr#3             \n");
-    __asm__ volatile("    orr r2, r0,lsl#11            \n");
+    __asm__ volatile("    mov r2, r0,lsl#11            \n");
     __asm__ volatile("    sub r1, r1, r0,lsl#3         \n");
     __asm__ volatile("    sub r1, r1, r0,lsr#2         \n");
     __asm__ volatile("    mov r4, r4,lsr#1             \n");
@@ -281,7 +280,7 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    mvnhi r1, r1,asr#31          \n");
     __asm__ volatile("    andhi r1, r1, #0xff          \n");
     __asm__ volatile("    mov r0, r1,lsr#2             \n");
-    __asm__ volatile("    orr r2, r0,lsl#5             \n");
+    __asm__ volatile("    orr r2, r2, r0,lsl#5        \n");
     __asm__ volatile("    sub r1, r1, r0,lsl#2         \n");
     __asm__ volatile("    sub r1, r1, r0,lsr#4         \n");
     __asm__ volatile("    mov r5, r5,lsr#1             \n");
@@ -296,7 +295,7 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    mvnhi r1, r1,asr#31          \n");
     __asm__ volatile("    andhi r1, r1, #0xff          \n");
     __asm__ volatile("    mov r0, r1,lsr#3             \n");
-    __asm__ volatile("    orr r2, r0                   \n");
+    __asm__ volatile("    orr r2, r2, r0               \n");
     __asm__ volatile("    sub r1, r1, r0,lsl#3         \n");
     __asm__ volatile("    sub r1, r1, r0,lsr#2         \n");
     __asm__ volatile("    mov r6, r6,lsr#1             \n");
