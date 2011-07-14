@@ -85,6 +85,7 @@ _start:
 	bne	.mmuloop5
 	mrc	p15, 0, r0,c1,c0
 	orr	r0, r0, #5
+	orr	r0, r0, #0x400000
 	mcr	p15, 0, r0,c1,c0
 	ldr	r0, =_sramsource
 	ldr	r1, =_sramstart
