@@ -43,11 +43,11 @@ static void main()
     struct note *buf;
     unsigned int i, count;
 
-    fd = file_open("/song.dat", O_RDONLY);
+    fd = file_open("/.apps/beeper/song.dat", O_RDONLY);
     
     if (fd <= 0)
     {
-        cputs(3, "Unable to open /song.dat!\n");
+        cputs(3, "Unable to open /.apps/beeper/song.dat!\n");
         return;
     }
     
