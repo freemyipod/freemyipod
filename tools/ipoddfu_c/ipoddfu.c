@@ -1,9 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-#include <libusb-1.0/libusb.h>
-
 //
 //
 //    Copyright 2011 user890104
@@ -26,6 +20,12 @@
 //
 //
 
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <libusb-1.0/libusb.h>
 
 #include "usb.h"
 #include "dfu.h"
