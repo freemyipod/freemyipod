@@ -117,7 +117,7 @@ static int chooser_action_handler_wheel_stepsperitem(struct chooser_data* data)
     return params->stepsperitem;
 }
 
-static void chooser_ction_handler_wheel_destroy(struct chooser_data* data)
+static void chooser_action_handler_wheel_destroy(struct chooser_data* data)
 {
     free(data->actionhandlerdata);
 }
@@ -130,5 +130,5 @@ const struct chooser_action_handler chooser_action_handler_wheel =
     .handleevent = chooser_action_handler_wheel_handleevent,
     .handletick = chooser_action_handler_wheel_handletick,
     .stepsperitem = chooser_action_handler_wheel_stepsperitem,
-    .destroy = chooser_ction_handler_wheel_destroy
+    .destroy = chooser_action_handler_wheel_destroy
 };
