@@ -118,7 +118,7 @@ extern int _poolstart;   // These aren't ints at all, but gcc complains about vo
 extern int _poolend;     // used here, and we only need the address, so just make it happy...
 
 
-static struct usb_device_descriptor CACHEALIGN_ATTR device_descriptor =
+static struct usb_device_descriptor device_descriptor CACHEALIGN_ATTR =
 {
     .bLength            = sizeof(struct usb_device_descriptor),
     .bDescriptorType    = USB_DT_DEVICE,
@@ -144,7 +144,7 @@ static struct usb_config_bundle
     struct usb_endpoint_descriptor endpoint2_descriptor;
     struct usb_endpoint_descriptor endpoint3_descriptor;
     struct usb_endpoint_descriptor endpoint4_descriptor;
-} __attribute__((packed)) CACHEALIGN_ATTR config_bundle = 
+} __attribute__((packed)) config_bundle CACHEALIGN_ATTR = 
 {
     .config_descriptor =
     {
@@ -209,21 +209,21 @@ static struct usb_config_bundle
     }
 };
 
-static struct usb_string_descriptor CACHEALIGN_ATTR string_vendor =
+static struct usb_string_descriptor string_vendor CACHEALIGN_ATTR =
 {
     30,
     USB_DT_STRING,
     {'f', 'r', 'e', 'e', 'm', 'y', 'i', 'p', 'o', 'd', '.', 'o', 'r', 'g'}
 };
 
-static struct usb_string_descriptor CACHEALIGN_ATTR string_product =
+static struct usb_string_descriptor string_product CACHEALIGN_ATTR =
 {
     32,
     USB_DT_STRING,
     {'e', 'm', 'C', 'O', 'R', 'E', ' ', 'D', 'e', 'b', 'u', 'g', 'g', 'e', 'r'}
 };
 
-static const struct usb_string_descriptor CACHEALIGN_ATTR lang_descriptor =
+static const struct usb_string_descriptor lang_descriptor CACHEALIGN_ATTR =
 {
     4,
     USB_DT_STRING,
