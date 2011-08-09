@@ -191,7 +191,7 @@ bool usb_ejected;
 static bool locked;
 
 
-static struct usb_device_descriptor CACHEALIGN_ATTR device_descriptor =
+static struct usb_device_descriptor device_descriptor CACHEALIGN_ATTR =
 {
     .bLength            = sizeof(struct usb_device_descriptor),
     .bDescriptorType    = USB_DT_DEVICE,
@@ -215,7 +215,7 @@ static struct usb_config_bundle
     struct usb_interface_descriptor interface_descriptor;
     struct usb_endpoint_descriptor endpoint1_descriptor;
     struct usb_endpoint_descriptor endpoint2_descriptor;
-} __attribute__((packed)) CACHEALIGN_ATTR config_bundle = 
+} __attribute__((packed)) config_bundle CACHEALIGN_ATTR = 
 {
     .config_descriptor =
     {
@@ -262,21 +262,21 @@ static struct usb_config_bundle
     }
 };
 
-static struct usb_string_descriptor CACHEALIGN_ATTR string_vendorname =
+static struct usb_string_descriptor string_vendorname CACHEALIGN_ATTR =
 {
     30,
     USB_DT_STRING,
     {'f', 'r', 'e', 'e', 'm', 'y', 'i', 'p', 'o', 'd', '.', 'o', 'r', 'g'}
 };
 
-static struct usb_string_descriptor CACHEALIGN_ATTR string_devicename =
+static struct usb_string_descriptor string_devicename CACHEALIGN_ATTR =
 {
     16,
     USB_DT_STRING,
     {'U', 'M', 'S', 'b', 'o', 'o', 't'}
 };
 
-static const struct usb_string_descriptor CACHEALIGN_ATTR lang_descriptor =
+static const struct usb_string_descriptor lang_descriptor CACHEALIGN_ATTR =
 {
     4,
     USB_DT_STRING,
