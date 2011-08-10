@@ -203,7 +203,7 @@ reset_handler:
 	mov	r0, #0
 	adr	r1, reset_text
 	mov	r2, r11
-	b	panic
+	b	panicf
 .size reset_handler, .-reset_handler
 
 .global undef_instr_handler
@@ -296,7 +296,7 @@ reserved_handler:
 	mov	r0, #0
 	adr	r1, reserved_text
 	mov	r2, r11
-	b	panic
+	b	panicf
 .size reserved_handler, .-reserved_handler
 
 .type fiq_handler, %function
