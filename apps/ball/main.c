@@ -114,6 +114,8 @@ static void main()
         --run_cycles;
     }
     
+    free(fb);
+    
     cputs(3, "Application terminated\n");
 }
 
