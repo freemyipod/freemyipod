@@ -245,6 +245,13 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .tlsf_realign = tlsf_realign,
     .realign = realign,
 #ifdef HAVE_STORAGE
-    .fat_size_mv = fat_size_mv
+    .fat_size_mv = fat_size_mv,
+#endif
+#ifdef HAVE_RTC
+    .rtc_read_datetime = rtc_read_datetime,
+    .rtc_write_datetime = rtc_write_datetime,
+#endif
+#ifdef HAVE_ACCELEROMETER
+    .accel_read_force_vector = accel_read_force_vector,
 #endif
 };

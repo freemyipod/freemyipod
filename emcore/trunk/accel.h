@@ -26,6 +26,13 @@
 
 #include "global.h"
 
-int8_t accel_get_axis(uint8_t axis);
+struct accel_vector
+{
+    int32_t x;
+    int32_t y;
+    int32_t z;
+};
+
+void accel_read_force_vector(struct accel_vector* values);
 
 #endif

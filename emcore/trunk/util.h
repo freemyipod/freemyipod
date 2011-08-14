@@ -237,5 +237,8 @@ static inline uint32_t swap_odd_even32(uint32_t value)
  * break strict aliasing rules' B.S. */
 #define PUN_PTR(type, p) ((type)(intptr_t)(p))
 
+#define BCD2DEC(X) (((((X)>>4) & 0x0f) * 10) + ((X) & 0xf))
+#define DEC2BCD(X) ((((X)/10)<<4) | ((X)%10))
+
 
 #endif

@@ -222,6 +222,9 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define tlsf_realign __emcore_syscall->tlsf_realign
 #define realign __emcore_syscall->realign
 #define fat_size_mv __emcore_syscall->fat_size_mv
+#define rtc_read_datetime __emcore_syscall->rtc_read_datetime
+#define rtc_write_datetime __emcore_syscall->rtc_write_datetime
+#define accel_read_force_vector __emcore_syscall->accel_read_force_vector
 
 
 #endif

@@ -20,6 +20,7 @@ target/ipodnano2g/hwkeyaes.c
 target/ipodnano2g/hmacsha1.c
 target/ipodnano2g/usbtarget.c
 usb/synopsysotg.c
+target/ipodnano2g/rtc.c
 #endif
 
 #ifdef TARGET_ipodnano4g
@@ -53,6 +54,7 @@ target/ipodnano3g/spi.c
 target/ipodnano3g/targetinit.c
 target/ipodnano3g/uart.c
 usb/synopsysotg.c
+target/ipodnano2g/rtc.c
 #endif
 
 #ifdef TARGET_ipodclassic

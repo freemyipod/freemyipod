@@ -60,6 +60,8 @@
 #include "../malloc.h"
 #include "../library.h"
 #include "../crc32.h"
+#include "../rtc.h"
+#include "../accel.h"
 #include "../libc/include/assert.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
@@ -71,7 +73,7 @@
 #endif
 
 /* increase this every time the api struct changes */
-#define EMCORE_API_VERSION 4
+#define EMCORE_API_VERSION 5
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
@@ -280,6 +282,9 @@ struct emcore_syscall_table
     typeof(tlsf_realign) *tlsf_realign;
     typeof(realign) *realign;
     typeof(fat_size_mv) *fat_size_mv;
+    typeof(rtc_read_datetime) *rtc_read_datetime;
+    typeof(rtc_write_datetime) *rtc_write_datetime;
+    typeof(accel_read_force_vector) *accel_read_force_vector;
 };
 
 

@@ -62,5 +62,7 @@
 //#define CONFIG_STORAGE STORAGE_NAND
 //#define SECTOR_SIZE 4096
 
+#define HAVE_ACCELEROMETER
+
 
 #endif

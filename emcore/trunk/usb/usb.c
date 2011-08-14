@@ -144,7 +144,7 @@ static struct usb_config_bundle
     struct usb_endpoint_descriptor endpoint2_descriptor;
     struct usb_endpoint_descriptor endpoint3_descriptor;
     struct usb_endpoint_descriptor endpoint4_descriptor;
-} __attribute__((packed)) config_bundle CACHEALIGN_ATTR = 
+} __attribute__((packed)) config_bundle CACHEALIGN_ATTR =
 {
     .config_descriptor =
     {

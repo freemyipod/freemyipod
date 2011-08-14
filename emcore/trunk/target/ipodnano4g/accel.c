@@ -23,8 +23,15 @@
 
 #include "global.h"
 #include "i2c.h"
+#include "accel.h"
 
-int8_t accel_get_axis(uint8_t axis)
+void accel_read_force_vector(struct accel_vector* values)
 {
-    return i2c_recvbyte(0, 0x3a, 0x29 + 2 * axis);
+    int8_t buf[5];
+
+    i2c_recv(0, 0x3a, 0x29 | 0x80, buf, 5);
+
+    values->x = ((int32_t)buf[0]) * 1207960;
+    values->y = ((int32_t)buf[2]) * 1207960;
+    values->z = ((int32_t)buf[4]) * 1207960;
 }

@@ -76,5 +76,7 @@
 #define HAVE_TARGETINIT_LATE
 #define HAVE_TARGETINIT_EXECFIRMWARE
 
+#define HAVE_RTC
+
 
 #endif
