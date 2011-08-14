@@ -26,29 +26,17 @@
 #define BALL_W 5
 #define BALL_H 5
 
-unsigned int dw, dh, dbpp;
-void* fb;
-
-static inline void drawat(unsigned int x, unsigned int y, unsigned char color)
-{
-    if (x >= dw || y >= dh) return;
-    
-    // TODO: is there a better way?
-    *((char *)(fb + dbpp * x + dbpp * dw * y)) = color;
-    *((char *)(fb + dbpp * x + dbpp * dw * y + 1)) = color;
-    *((char *)(fb + dbpp * x + dbpp * dw * y + 2)) = color;
-}
+// 24-bit FB (rgb888)
+#define DBPP 3
 
 static void main()
 {
-    unsigned int run_cycles = 5000;
-    
-    dw = lcd_get_width();
+    unsigned int run_cycles = 5000,
+    dw = lcd_get_width(),
     dh = lcd_get_height();
-    dbpp = 3; // 24-bit FB (rgb888)
     
-    unsigned int fb_size = dbpp * dw * dh;
-    fb = malloc(fb_size);
+    unsigned int fb_size = DBPP * dw * dh;
+    void* fb = malloc(fb_size);
     
     if (fb == NULL)
     {
@@ -58,7 +46,21 @@ static void main()
     unsigned int i, x = 0, y = 0,
     old_x, old_y, bx, by,
     size = BALL_W * BALL_H;
+    unsigned char shape[BALL_H][BALL_W][DBPP];
     int vx = 1, vy = 1;
+    
+    // generate our shape
+    memset(&shape, 0xff, sizeof(shape));
+    
+    // skip the first and the last pixel
+    // then skip the ones in top-right and bottom-left
+    // to create a rounded square
+    for (i = 1; i < size - 1; ++i)
+    {
+        if (i == BALL_W - 1 || i == size - BALL_W) continue;
+        
+        memset(((void *)&shape) + i * DBPP, 0, DBPP);
+    }
     
     //filllcd(0, 0, dw, dh, 0xffffff); // broken on Nano 4G?
     memset(fb, 0xff, fb_size);
@@ -85,22 +87,10 @@ static void main()
         
         x += vx; y += vy;
         
-        // draw our ball-like object
-        // a circle-like actually, since we
-        // don't have a 3D engine yet :)
-        for (i = 1; i < BALL_W - 1; ++i)
+        // copy the shape to the framebuffer
+        for (i = 0; i < BALL_H; ++i)
         {
-            drawat(x + i, y, 0);
-        }
-        
-        for (i = BALL_W; i < size - BALL_W; ++i)
-        {
-            drawat(x + i % BALL_W, y + i / BALL_W, 0);
-        }
-        
-        for (i = 1; i < BALL_W - 1; ++i)
-        {
-            drawat(x + i, y + BALL_H - 1, 0);
+            memcpy(fb + x * DBPP + (y + i) * dw * DBPP, &shape[i], sizeof(shape[i]));
         }
         
         // offset to redraw from
