@@ -418,11 +418,22 @@ struct chooser_info toolchooser =
 
 bool mainchooser_preblit(struct chooser_data* data)
 {
-    char buf[4];
+    char buf[6];
+    struct rtc_datetime dt;
+    rtc_read_datetime(&dt);
+    snprintf(buf, sizeof(buf), "%02d:%02d", dt.hour, dt.minute);
+    // clock
+    rendertext(framebuf, 143, 4, 176, 0xffffcccc, 0, buf);
     struct chooser_action_handler_wheel_data* adata;
     adata = (struct chooser_action_handler_wheel_data*)(data->actionhandlerdata);
     snprintf(buf, sizeof(buf), "%3d", adata->timeout_remaining / 1000000);
-    rendertext(framebuf, 158, 124, 176, 0xffffcccc, 0, buf);
+    // remaining time
+    rendertext(framebuf, 155, 121, 176, 0xffffcccc, 0, buf);
+    unsigned int batt_level = 22 * read_battery_mwh_current(0) / read_battery_mwh_full(0);
+    // remaining battery level
+    ui->blendcolor(batt_level, 6, 0xc0ffcccc, framebuf, 5, 5, 176, framebuf, 5, 5, 176);
+    // background of the rest space
+    ui->blendcolor(22 - batt_level, 6, 0x40000000, framebuf, 5 + batt_level, 5, 176, framebuf, 5 + batt_level, 5, 176);
     return false;
 }
 
@@ -673,6 +684,17 @@ static void main()
     boot = (struct libboot_api*)libboot->api;
     struct emcorelib_header* libui = loadlib(LIBUI_IDENTIFIER, LIBUI_API_VERSION, "libui   ");
     ui = (struct libui_api*)libui->api;
+    // draw the battery meter box
+    // top line
+    ui->blendcolor(24, 1, 0xffffcccc, bg, 4, 4, 176, bg, 4, 4, 176);
+    // bottom line
+    ui->blendcolor(24, 1, 0xffffcccc, bg, 4, 11, 176, bg, 4, 11, 176);
+    // left line
+    ui->blendcolor(1, 6, 0xffffcccc, bg, 4, 5, 176, bg, 4, 5, 176);
+    // right line
+    ui->blendcolor(1, 6, 0xffffcccc, bg, 27, 5, 176, bg, 27, 5, 176);
+    // tip - right
+    ui->blendcolor(1, 4, 0xffffcccc, bg, 28, 6, 176, bg, 28, 6, 176);
     framebuf = malloc(176 * 132 * 3);
     if (!framebuf) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer!");
     framebuf2 = malloc(176 * 132 * 3);
