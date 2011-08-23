@@ -318,6 +318,22 @@ void run_uninstaller(void** firmware, void** app, int* size)
     }
 }
 
+bool update_display(struct chooser_data* data)
+{
+    char buf[6];
+    struct rtc_datetime dt;
+    rtc_read_datetime(&dt);
+    snprintf(buf, sizeof(buf), "%02d:%02d", dt.hour, dt.minute);
+    // clock
+    rendertext(framebuf, 143, 4, 176, 0xffffcccc, 0, buf);
+    unsigned int batt_level = 22 * read_battery_mwh_current(0) / read_battery_mwh_full(0);
+    // remaining battery level
+    ui->blendcolor(batt_level, 6, 0xc0ffcccc, framebuf, 5, 5, 176, framebuf, 5, 5, 176);
+    // background of the rest space
+    ui->blendcolor(22 - batt_level, 6, 0x40000000, framebuf, 5 + batt_level, 5, 176, framebuf, 5 + batt_level, 5, 176);
+    return false;
+}
+
 struct chooser_renderer_list_params toolchooser_rparams =
 {
     .version = CHOOSER_RENDERER_LIST_PARAMS_VERSION,
@@ -336,7 +352,7 @@ struct chooser_renderer_list_params toolchooser_rparams =
     .blit_dest = LIBUI_POINT(0, 0),
     .blit_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 176), LIBUI_POINT(0, 0)),
                               LIBUI_POINT(176, 132)),
-    .preblit = NULL,
+    .preblit = update_display,
     .postblit = NULL
 };
 
@@ -418,22 +434,12 @@ struct chooser_info toolchooser =
 
 bool mainchooser_preblit(struct chooser_data* data)
 {
-    char buf[6];
-    struct rtc_datetime dt;
-    rtc_read_datetime(&dt);
-    snprintf(buf, sizeof(buf), "%02d:%02d", dt.hour, dt.minute);
-    // clock
-    rendertext(framebuf, 143, 4, 176, 0xffffcccc, 0, buf);
+    char buf[4];
     struct chooser_action_handler_wheel_data* adata;
     adata = (struct chooser_action_handler_wheel_data*)(data->actionhandlerdata);
     snprintf(buf, sizeof(buf), "%3d", adata->timeout_remaining / 1000000);
-    // remaining time
     rendertext(framebuf, 155, 121, 176, 0xffffcccc, 0, buf);
-    unsigned int batt_level = 22 * read_battery_mwh_current(0) / read_battery_mwh_full(0);
-    // remaining battery level
-    ui->blendcolor(batt_level, 6, 0xc0ffcccc, framebuf, 5, 5, 176, framebuf, 5, 5, 176);
-    // background of the rest space
-    ui->blendcolor(22 - batt_level, 6, 0x40000000, framebuf, 5 + batt_level, 5, 176, framebuf, 5 + batt_level, 5, 176);
+    update_display(data);
     return false;
 }
 
