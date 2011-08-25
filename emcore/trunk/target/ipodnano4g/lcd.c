@@ -251,15 +251,16 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    qadd8 r0, r0, r1             \n"); // 1 cycle, r0 latency 2
                                                              // bubble (due to r0 latency)
     __asm__ volatile("    sadd8 r0, r0, r4             \n"); // 1 cycle
-    __asm__ volatile("    str r0, [r9]                 \n"); // 1 cycle, 1 mem, r9 early
     __asm__ volatile("    bic r2, r0, r6               \n"); // 1 cycle
     __asm__ volatile("    and r1, r6, r0,lsr#6         \n"); // 1 cycle, r0 early
     __asm__ volatile("    orr r2, r2, r1               \n"); // 1 cycle
     __asm__ volatile("    mov r1, r5                   \n"); // 1 cycle
     __asm__ volatile("    shsub8 r5, r0, r2            \n"); // 1 cycle
+    __asm__ volatile("    rev r0, r0                   \n"); // 1 cycle, r1 early
     __asm__ volatile("    shadd8 r1, r1, r5            \n"); // 1 cycle
+    __asm__ volatile("    mov r0, r0, lsr#8            \n"); // 1 cycle, r1 early
+    __asm__ volatile("    str r0, [r9]                 \n"); // 1 cycle, 1 mem, r9 early
     __asm__ volatile("    str r1, [r7], #4             \n"); // 1 cycle, 1 mem, r7 early
-    __asm__ volatile("    nop                          \n"); // 2 cycles
     __asm__ volatile("    nop                          \n"); // 2 cycles
     __asm__ volatile("    nop                          \n"); // 2 cycles
     __asm__ volatile("    nop                          \n"); // 2 cycles
