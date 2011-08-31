@@ -13,8 +13,8 @@ UMSBOOTDIR ?= ../../umsboot/
 TOOLSDIR ?= ../../tools/
 
 FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib flashfiles/mkfat32.emcorelib \
-             flashfiles/bootmenu-ipodclassic.emcoreapp flashfiles/background.png flashfiles/icons.png flashfiles/rockbox.png \
-             flashfiles/emcoreldr-ipodclassic.bin flashfiles/emcore-ipodclassic.ucl flashfiles/umsboot-ipodclassic.ucl
+             flashfiles/bootmenu-ipodclassic.emcoreapp flashfiles/emcoreldr-ipodclassic.bin \
+             flashfiles/emcore-ipodclassic.ucl flashfiles/umsboot-ipodclassic.ucl
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -199,18 +199,6 @@ $(BOOTMENUDIR)/build/bootmenu-ipodclassic.emcoreapp: bootmenu-ipodclassic
 	@$(MAKE) -C $(BOOTMENUDIR)
 
 flashfiles/bootmenu-ipodclassic.emcoreapp: $(BOOTMENUDIR)/build/bootmenu-ipodclassic.emcoreapp
-	@echo [CP]     $@
-	@cp $< $@
-
-flashfiles/background.png: $(BOOTMENUDIR)/images/background.png
-	@echo [CP]     $@
-	@cp $< $@
-
-flashfiles/icons.png: $(BOOTMENUDIR)/images/icons.png
-	@echo [CP]     $@
-	@cp $< $@
-
-flashfiles/rockbox.png: $(BOOTMENUDIR)/images/rockbox.png
 	@echo [CP]     $@
 	@cp $< $@
 

@@ -8,6 +8,8 @@ LIBPNGDIR ?= ../../libs/png/
 LIBUIDIR ?= ../../libs/ui/
 LIBMKFAT32DIR ?= ../../libs/mkfat32/
 
+RESOURCES = images/background.png images/icons.png images/rockbox.png
+
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
 else
@@ -51,6 +53,8 @@ ifeq ($(COMPRESS),true)
 else
 	@$(ELF2ECA) -s $(STACKSIZE) -o $@ $^
 endif
+
+build/resources.o: $(RESOURCES)
 
 build/$(NAME).elf: ls.x $(OBJ)
 	@echo [LD]     $@

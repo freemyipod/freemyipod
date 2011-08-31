@@ -27,6 +27,13 @@
 #include "libui.h"
 #include "libmkfat32.h"
 
+extern char background_png[];
+extern uint32_t background_png_size;
+extern char icons_png[];
+extern uint32_t icons_png_size;
+extern char rockbox_png[];
+extern uint32_t rockbox_png_size;
+
 struct libpng_api* png;
 struct libboot_api* boot;
 struct libui_api* ui;
@@ -42,19 +49,14 @@ static struct emcorelib_header* loadlib(uint32_t identifier, uint32_t version, c
     return lib;
 }
 
-static void* loadpng(const char* filename, void* (*decoder)(struct png_info* handle))
+static void* loadpng(const char* buf, const uint32_t size, void* (*decoder)(struct png_info* handle))
 {
-    int size = bootflash_filesize(filename);
-    if (size == -1) panicf(PANIC_KILLTHREAD, "Could not load %s", filename);
-    void* buf = memalign(0x10, size);
-    if (!buf) panicf(PANIC_KILLTHREAD, "Could not allocate buffer for %s", filename);
-    bootflash_read(filename, buf, 0, size);
+    if (size == 0) panicf(PANIC_KILLTHREAD, "Could not load PNG at 0x%08X", buf);
     struct png_info* handle = png->png_open(buf, size);
-    if (!handle) panicf(PANIC_KILLTHREAD, "Could not parse %s", filename);
+    if (!handle) panicf(PANIC_KILLTHREAD, "Could not parse PNG at 0x%08X", buf);
     void* out = decoder(handle);
-    if (!out) panicf(PANIC_KILLTHREAD, "Could not decode %s", filename);
+    if (!out) panicf(PANIC_KILLTHREAD, "Could not decode PNG at 0x%08X", buf);
     png->png_destroy(handle);
-    free(buf);
     return out;
 }
 
@@ -550,9 +552,9 @@ static void main()
 {
     struct emcorelib_header* libpng = loadlib(LIBPNG_IDENTIFIER, LIBPNG_API_VERSION, "libpng  ");
     png = (struct libpng_api*)libpng->api;
-    bg = loadpng("backgrnd", (void* (*)(struct png_info*))(png->png_decode_rgb));
-    icons = loadpng("iconset ", (void* (*)(struct png_info*))(png->png_decode_rgba));
-    rbxlogo = loadpng("rbxlogo ", (void* (*)(struct png_info*))(png->png_decode_rgb));
+    bg = loadpng(background_png, background_png_size, (void* (*)(struct png_info*))(png->png_decode_rgb));
+    icons = loadpng(icons_png, icons_png_size, (void* (*)(struct png_info*))(png->png_decode_rgba));
+    rbxlogo = loadpng(rockbox_png, rockbox_png_size, (void* (*)(struct png_info*))(png->png_decode_rgb));
     release_library(libpng);
     library_unload(libpng);
     struct emcorelib_header* libboot = loadlib(LIBBOOT_IDENTIFIER,

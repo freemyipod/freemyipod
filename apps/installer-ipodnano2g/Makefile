@@ -17,9 +17,8 @@ NOTEBOOTDIR ?= ../../noteboot/
 TOOLSDIR ?= ../../tools/
 
 FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib flashfiles/mkfat32.emcorelib \
-             flashfiles/crapple.png flashfiles/uninstaller-ipodnano2g.emcoreapp flashfiles/bootmenu-ipodnano2g.emcoreapp \
-	     flashfiles/background.png flashfiles/icons.png flashfiles/rockbox.png flashfiles/emcoreldr-ipodnano2g.dfu \
-             flashfiles/emcore-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
+             flashfiles/uninstaller-ipodnano2g.emcoreapp flashfiles/bootmenu-ipodnano2g.emcoreapp \
+	     flashfiles/emcoreldr-ipodnano2g.dfu flashfiles/emcore-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -225,22 +224,6 @@ $(BOOTMENUDIR)/build/bootmenu-ipodnano2g.emcoreapp: bootmenu-ipodnano2g
 	@$(MAKE) -C $(BOOTMENUDIR)
 
 flashfiles/bootmenu-ipodnano2g.emcoreapp: $(BOOTMENUDIR)/build/bootmenu-ipodnano2g.emcoreapp
-	@echo [CP]     $@
-	@cp $< $@
-
-flashfiles/background.png: $(BOOTMENUDIR)/images/background.png
-	@echo [CP]     $@
-	@cp $< $@
-
-flashfiles/icons.png: $(BOOTMENUDIR)/images/icons.png
-	@echo [CP]     $@
-	@cp $< $@
-
-flashfiles/rockbox.png: $(BOOTMENUDIR)/images/rockbox.png
-	@echo [CP]     $@
-	@cp $< $@
-
-flashfiles/crapple.png: $(BOOTMENUDIR)/images/crapple.png
 	@echo [CP]     $@
 	@cp $< $@
 

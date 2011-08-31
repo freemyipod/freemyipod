@@ -136,38 +136,6 @@ flashscript:
 .ascii "bootmenu"
 
 .byte 0
-.byte 0
-.byte 0
-.byte 1
-.word f_background_png
-.word f_background_png_end - f_background_png
-.ascii "backgrnd"
-
-.byte 0
-.byte 0
-.byte 0
-.byte 1
-.word f_icons_png
-.word f_icons_png_end - f_icons_png
-.ascii "iconset "
-
-.byte 0
-.byte 0
-.byte 0
-.byte 1
-.word f_rockbox_png
-.word f_rockbox_png_end - f_rockbox_png
-.ascii "rbxlogo "
-
-.byte 0
-.byte 0
-.byte 0
-.byte 1
-.word f_crapple_png
-.word f_crapple_png_end - f_crapple_png
-.ascii "crapple "
-
-.byte 0
 .byte 2
 .byte 0
 .byte 1
@@ -217,26 +185,6 @@ boot_dirname:
 
 ofw_filename:
 .ascii "/.boot/appleos.bin\0"
-
-.align 4
-f_background_png:
-.incbin "flashfiles/background.png"
-f_background_png_end:
-
-.align 4
-f_icons_png:
-.incbin "flashfiles/icons.png"
-f_icons_png_end:
-
-.align 4
-f_rockbox_png:
-.incbin "flashfiles/rockbox.png"
-f_rockbox_png_end:
-
-.align 4
-f_crapple_png:
-.incbin "flashfiles/crapple.png"
-f_crapple_png_end:
 
 .align 4
 f_boot_emcorelib:
