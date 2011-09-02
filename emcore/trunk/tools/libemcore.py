@@ -732,7 +732,7 @@ class Emcore(object):
     def file_truncate(self, fd, length):
         """ Truncates a file referenced by a handle to a specified length """
         self.logger.debug("Truncating file with handle 0x%X to 0x%X bytes\n" % (fd, length))
-        result = self.lib.monitorcommand(struct.pack("<IIII", 35, fd, offset, 0), "III", ("rc", None, None))
+        result = self.lib.monitorcommand(struct.pack("<IIII", 35, fd, length, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_truncate(fd=%d, length=0x%08X) failed with RC=0x%08X, errno=%d" % (fd, length, result.rc, self.errno()))
         self.logger.debug("File truncate result: 0x%X\n" % (result.rc))
