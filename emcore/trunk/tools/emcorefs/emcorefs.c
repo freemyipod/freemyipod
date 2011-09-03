@@ -1,0 +1,114 @@
+//
+//
+//    Copyright 2011 user890104
+//
+//
+//    This file is part of emCORE.
+//
+//    emCORE is free software: you can redistribute it and/or
+//    modify it under the terms of the GNU General Public License as
+//    published by the Free Software Foundation, either version 2 of the
+//    License, or (at your option) any later version.
+//
+//    emCORE is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+//    See the GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License along
+//    with emCORE.  If not, see <http://www.gnu.org/licenses/>.
+//
+//
+
+
+#include "global.h"
+
+#include "usb.h"
+#include "cache.h"
+#include "emcore.h"
+#include "fuse.h"
+#include "util.h"
+#include "emcorefs.h"
+
+
+struct fuse_operations emcorefs_oper =
+{
+    .getattr    = emcorefs_getattr,
+    .opendir    = emcorefs_opendir,
+    .readdir    = emcorefs_readdir,
+    .releasedir = emcorefs_releasedir,
+    .open       = emcorefs_open,
+    .read       = emcorefs_read,
+    .release    = emcorefs_release,
+};
+
+int emcorefs_init(void)
+{
+    int res;
+    uint32_t count;
+
+    res = emcore_file_close_all(&count);
+
+    if (EMCORE_SUCCESS != res)
+    {
+        return res;
+    }
+
+    res = emcore_dir_close_all(&count);
+
+    return res;
+}
+
+int main(int argc, char* argv[])
+{
+    int res, res2;
+    uint8_t reattach = 0;
+
+    res = usb_init();
+
+    if (LIBUSB_SUCCESS == res)
+    {
+        res = usb_find(EMCORE_USB_VID, EMCORE_USB_PID, &reattach);
+    }
+
+    if (LIBUSB_SUCCESS == res)
+    {
+        res = emcorefs_init();
+    }
+
+    if (EMCORE_SUCCESS == res)
+    {
+#ifdef TEST_ONLY
+        /* gcc complains about unused vars */
+        (void)(argc);
+        (void)(argv);
+
+        res = emcore_test();
+#else
+        cache_init();
+
+        res = fuse_main(argc, argv, &emcorefs_oper, NULL);
+
+        cache_destroy();
+#endif
+    }
+
+    if (EMCORE_SUCCESS != res)
+    {
+        print_error(res);
+    }
+
+    res2 = usb_destroy(reattach);
+
+    if (LIBUSB_SUCCESS != res2)
+    {
+        print_error(res2);
+    }
+
+    if (res < 0)
+    {
+        res = -res;
+    }
+
+    return res;
+}
