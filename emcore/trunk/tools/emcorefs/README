@@ -1,0 +1,78 @@
+                  ____ ___  ____  _____ _____ ____  
+   ___ _ __ ___  / ___/ _ \|  _ \| ____|  ___/ ___| 
+  / _ \ '_ ` _ \| |  | | | | |_) |  _| | |_  \___ \ 
+ |  __/ | | | | | |___ |_| |  _ <| |___|  _|  ___) |
+  \___|_| |_| |_|\____\___/|_| \_\_____|_|   |____/ 
+
+emCOREFS is a FUSE-based filesystem that uses emCORE's Monitor API
+to provide communication with device's FS. It is still in very early
+state, but some features (directory listing, reading files) are done.
+
+For communication with the device, this application uses libusb 1.0.
+
+Building
+--------
+You need:
+1. GCC/Make
+2. pkg-config
+3. libusb >= 1.0
+4. libfuse >= 2.8
+5. maybe other packages
+
+Compiling:
+make - standard build, no debug messages, only fatal errors on
+    startup are shown.
+make debug - debug build, some debug/error messages are shown.
+    libusb debug messages are enabled, too.
+
+Testing:
+make test - run the build without FUSE debugging messages, going
+    into the background if it connects to the device successfully.
+make testdebug - run the build in the foreground, showing FUSE debug
+    messages in the terminal.
+
+Running
+-------
+You need FUSE >= 2.8 installed.
+Currently only tested on Linux (Ubuntu 11.04 in my case). Maybe an
+OSX-compatible version would appear at some point.
+Starting: ./emcorefs <mountpoint>
+Stopping: fusermount -u <mountpoint as seen in /etc/mtab>
+
+Known bugs/issues
+-----------------
+* Read-only support at the moment.
+* Running FUSE with multithreading breaks file reading because of
+    the way these are implemented on emCORE's side.
+    Workaround: use the "-s" option.
+* Most errors are not handled properly, EIO (Input/output error) is
+    given in many cases where there's a more descriptive error
+    message available. Will be fixed in the future.
+
+Future plans
+------------
+* Implement write support.
+* Merge some functions that are doing similar tasks to reduce code
+    duplication. Return proper error codes in FS operations.
+
+Bug reporting
+-------------
+Main developer: Vencislav "user890104" Atanasov
+How to contact: http://www.freemyipod.org/wiki/Contact
+
+License terms
+-------------
+emCOREFS is distributed under the same license terms as emCORE.
+
+emCORE is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation, either version 2 of the
+License, or (at your option) any later version.
+
+emCORE is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with emCORE.  If not, see <http://www.gnu.org/licenses/>.
