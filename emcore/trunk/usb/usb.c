@@ -88,7 +88,9 @@ enum dbgaction_t
     DBGACTION_REALLOC,
     DBGACTION_REOWNALLOC,
     DBGACTION_FREE,
-    DBGACTION_FREEMONITOR
+    DBGACTION_FREEMONITOR,
+    DBGACTION_RTCREAD,
+    DBGACTION_RTCWRITE,
 };
 
 static struct scheduler_thread dbgthread_handle IBSS_ATTR;
@@ -667,6 +669,15 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
         case 57:  // FREE MONITOR ALLOCATIONS
             if (set_dbgaction(DBGACTION_FREEMONITOR, 0)) break;
             break;
+#ifdef HAVE_RTC
+        case 60:  // RTC READ
+            if (set_dbgaction(DBGACTION_RTCREAD, 0)) break;
+            break;
+        case 61:  // RTC WRITE
+            if (set_dbgaction(DBGACTION_RTCWRITE, 0)) break;
+            memcpy(dbgasyncsendbuf, &dbgrecvbuf[1], 7);
+            break;
+#endif
         default:
             dbgsendbuf[0] = 2;
             size = 16;
@@ -999,6 +1010,18 @@ void dbgthread(void)
                 dbgasyncsendbuf[1] = (uint32_t)free_all_of_thread(current_thread);
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
+#ifdef HAVE_RTC
+            case DBGACTION_RTCREAD:
+                dbgasyncsendbuf[0] = 1;
+                rtc_read_datetime((struct rtc_datetime*)(&dbgasyncsendbuf[1]));
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+            case DBGACTION_RTCWRITE:
+                rtc_write_datetime((const struct rtc_datetime*)(dbgasyncsendbuf));
+                dbgasyncsendbuf[0] = 1;
+                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
+                break;
+#endif
             }
             dbgaction = DBGACTION_IDLE;
         }
