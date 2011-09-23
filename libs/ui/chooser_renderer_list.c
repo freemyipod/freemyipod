@@ -47,6 +47,10 @@ static void chooser_renderer_list_scroll_into_view(struct chooser_data* data,
             available -= iparams->size.y;
             curr++;
         }
+        else
+        {
+            break;
+        }
     }
     rdata->bottom_item = --curr;
     while (curr < item && curr < &data->info->items[data->info->itemcount])
