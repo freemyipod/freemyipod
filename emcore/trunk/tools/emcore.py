@@ -19,7 +19,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with emCORE.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
+#
 
 """
     Command line interface to communicate with emCORE devices.
@@ -311,6 +311,32 @@ class Commandline(object):
             sys.stdout.write("\n")
     
     @command
+    def uploadbyte(self, addr, byte):
+        """
+            Uploads a single byte to the device
+            <addr>: the address to upload the byte to
+            <byte>: the byte to upload
+        """
+        addr = to_int(addr)
+        byte = to_int(byte)
+        if byte > 0xFF:
+            raise ArgumentError("Specified integer too long")
+        data = struct.pack("B", byte)
+        self.emcore.write(addr, data)
+        self.logger.info("Byte '0x%X' written successfully to 0x%X\n" % (byte, addr))
+    
+    @command
+    def downloadbyte(self, addr):
+        """
+            Downloads a single byte from the device and prints it to the console window
+            <addr>: the address to download the byte from
+        """
+        addr = to_int(addr)
+        data = self.emcore.read(addr, 1)
+        byte = struct.unpack("B", data)[0]
+        self.logger.info("Read '0x%X' from address 0x%X\n" % (byte, addr))
+    
+    @command
     def uploadint(self, addr, integer):
         """
             Uploads a single integer to the device
@@ -383,7 +409,7 @@ class Commandline(object):
         while True:
             resp = self.emcore.usbcread()
             self.logger.write(resp.data, target = "stdout")
-            time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
+#            time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
     
     @command
     def writeusbconsole(self, *args):

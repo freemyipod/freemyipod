@@ -86,6 +86,7 @@ class scheduler_thread(ExtendedCStruct):
 class mutex(ExtendedCStruct):
     _fields_ = [("owner", c_uint32),
                 ("waiters", c_uint32),
+                ("owned_next", c_uint32),
                 ("count", c_int32),
                 ]
 

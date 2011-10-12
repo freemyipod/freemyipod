@@ -1015,7 +1015,7 @@ class Dev(object):
         self.logger.debug("Initializing Dev object\n")
         
         self.interface = 0
-        self.timeout = 100
+        self.timeout = 1000
         
         self.connect()
         self.findEndpoints()
