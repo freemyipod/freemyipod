@@ -623,7 +623,7 @@ class Commandline(object):
             This may BRICK your device (unless it has a good recovery option)
             <addr_mem>: the address in memory to copy the data from
             <addr_bootflsh>: the address in bootflash to write to
-            [force]: Use this flag to suppress the 5 seconds delay
+            [force]: Use this flag to suppress the 10 seconds delay
         """
         addr_flash = to_int(addr_flash)
         addr_mem = to_int(addr_mem)
@@ -784,30 +784,85 @@ class Commandline(object):
             <filenameprefix>: prefix of the files that will be created
         """
         info = self.emcore.ipodnano2g_getnandinfo()
-        self.logger.info("Dumping NAND contents...")
         try:
-            infofile = open(filenameprefix+"_info.txt", 'wb')
-            datafile = open(filenameprefix+"_data.bin", 'wb')
-            sparefile = open(filenameprefix+"_spare.bin", 'wb')
-            statusfile = open(filenameprefix+"_status.bin", 'wb')
+            buf = self.emcore.memalign(0x10, 0x1088000)
+            self.logger.info("Dumping NAND contents...")
+            try:
+                infofile = open(filenameprefix+"_info.txt", 'wb')
+                datafile = open(filenameprefix+"_data.bin", 'wb')
+                sparefile = open(filenameprefix+"_spare.bin", 'wb')
+                statusfile = open(filenameprefix+"_status.bin", 'wb')
+            except IOError:
+                raise ArgumentError("Can not open file for writing!")
+            infofile.write("NAND chip type: 0x%X\r\n" % info["type"])
+            infofile.write("Number of banks: %d\r\n" % info["banks"])
+            infofile.write("Number of blocks: %d\r\n" % info["blocks"])
+            infofile.write("Number of user blocks: %d\r\n" % info["userblocks"])
+            infofile.write("Pages per block: %d\r\n" % info["pagesperblock"])
+            for i in range(info["banks"] * info["blocks"] * info["pagesperblock"] / 8192):
+                self.logger.info(".")
+                self.emcore.ipodnano2g_nandread(buf, i * 8192, 8192, 1, 1)
+                datafile.write(self.emcore.read(buf, 0x01000000))
+                sparefile.write(self.emcore.read(buf + 0x01000000, 0x00080000))
+                statusfile.write(self.emcore.read(buf + 0x01080000, 0x00008000))
+            infofile.close()
+            datafile.close()
+            sparefile.close()
+            statusfile.close()
+            self.logger.info("done\n")
+        finally:
+            self.emcore.free(buf)
+    
+    @command
+    def ipodnano2g_restorenand(self, filenameprefix, force=False):
+        """
+            Target-specific function: ipodnano2g
+            Restores the whole NAND chip from <filenameprefix>_data.bin and <filenameprefix>_spare.bin
+            [force]: use this flag to suppress the 10 seconds delay
+        """
+        self.logger.warn("Flashing NAND image %s!\n" % filenameprefix)
+        if force == False:
+            self.logger.warn("If this was not what you intended press Ctrl-C NOW")
+            for i in range(10):
+                self.logger.info(".")
+                time.sleep(1)
+            self.logger.info("\n\n")
+        info = self.emcore.ipodnano2g_getnandinfo()
+        ppb = info["pagesperblock"]
+        banks = info["banks"]
+        blocks = info["blocks"]
+        try:
+            if (os.path.getsize(filenameprefix+"_data.bin") != blocks * banks * ppb * 2048):
+                raise ArgumentError("Data file size does not match flash size!")
+            if (os.path.getsize(filenameprefix+"_spare.bin") != blocks * banks * ppb * 64):
+                raise ArgumentError("Spare file size does not match flash size!")
+            datafile = open(filenameprefix+"_data.bin", 'rb')
+            sparefile = open(filenameprefix+"_spare.bin", 'rb')
         except IOError:
-            raise ArgumentError("Can not open file for writing!")
-        infofile.write("NAND chip type: 0x%X\r\n" % info["type"])
-        infofile.write("Number of banks: %d\r\n" % info["banks"])
-        infofile.write("Number of blocks: %d\r\n" % info["blocks"])
-        infofile.write("Number of user blocks: %d\r\n" % info["userblocks"])
-        infofile.write("Pages per block: %d\r\n" % info["pagesperblock"])
-        for i in range(info["banks"] * info["blocks"] * info["pagesperblock"] / 8192):
-            self.logger.info(".")
-            self.emcore.ipodnano2g_nandread(0x08000000, i * 8192, 8192, 1, 1)
-            datafile.write(self.emcore.read(0x08000000, 0x01000000))
-            sparefile.write(self.emcore.read(0x09000000, 0x00080000))
-            statusfile.write(self.emcore.read(0x09080000, 0x00008000))
-        infofile.close()
+            raise ArgumentError("Can not open input files!")
+        try:
+            buf = self.emcore.memalign(0x10, banks * ppb * 0x844)
+            for block in range(info["blocks"]):
+                for bank in range(info["banks"]):
+                    self.logger.info("\r    Erasing block %d bank %d" % (block, bank))
+                    self.emcore.ipodnano2g_nanderase(buf, block * banks + bank, 1)
+                    rc = struct.unpack("<I", self.emcore.read(buf, 4))[0]
+                    if rc != 0: self.logger.info("\rBlock %d bank %d erase failed with RC %08X\n" % (block, bank, rc))
+                self.logger.info("\r  Uploading block %d data  " % block)
+                self.emcore.write(buf, datafile.read(banks * ppb * 2048))
+                self.emcore.write(buf + banks * ppb * 2048, sparefile.read(banks * ppb * 64))
+                self.logger.info("\rProgramming block %d       " % block)
+                self.emcore.ipodnano2g_nandwrite(buf, block * banks * ppb, banks * ppb, 0)
+                rc = struct.unpack("<%dI" % (banks * ppb), self.emcore.read(buf + banks * ppb * 2112, banks * ppb * 4))
+                for page in range(ppb):
+                  for bank in range(banks):
+                      if rc[banks * page + bank] != 0:
+                          self.logger.info("\rBlock %d bank %d page %d programming failed with RC %08X\n" % (block, bank, page, rc[banks * page + bank]))
+        finally:
+            self.emcore.free(buf)
         datafile.close()
         sparefile.close()
-        statusfile.close()
-        self.logger.info("done\n")
+        self.logger.info("\rdone\n")
     
     @command
     def ipodnano2g_wipenand(self, filename, force=False):
@@ -815,7 +870,7 @@ class Commandline(object):
             Target-specific function: ipodnano2g
             Wipes the whole NAND chip and logs the result to a file
             <filename>: location of the log file
-            [force]: use this flag to suppress the 5 seconds delay
+            [force]: use this flag to suppress the 10 seconds delay
         """
         self.logger.warn("Wiping the whole NAND chip!\n")
         if force == False:
@@ -824,18 +879,22 @@ class Commandline(object):
                 self.logger.info(".")
                 time.sleep(1)
             self.logger.info("\n")
-        info = self.emcore.ipodnano2g_getnandinfo()
-        self.logger.info("Wiping NAND contents...")
         try:
-            statusfile = open(filename, 'wb')
-        except IOError:
-            raise ArgumentError("Can not open file for writing!")
-        for i in range(info["banks"] * info["blocks"] / 64):
-            self.logger.info(".")
-            self.emcore.ipodnano2g_nanderase(0x08000000, i * 64, 64)
-            statusfile.write(self.emcore.read(0x08000000, 0x00000100))
-        statusfile.close()
-        self.logger.info("done\n")
+            buf = self.emcore.malloc(0x100)
+            info = self.emcore.ipodnano2g_getnandinfo()
+            self.logger.info("Wiping NAND contents...")
+            try:
+                statusfile = open(filename, 'wb')
+            except IOError:
+                raise ArgumentError("Can not open file for writing!")
+            for i in range(info["banks"] * info["blocks"] / 64):
+                self.logger.info(".")
+                self.emcore.ipodnano2g_nanderase(buf, i * 64, 64)
+                statusfile.write(self.emcore.read(buf, 0x00000100))
+            statusfile.close()
+            self.logger.info("done\n")
+        finally:
+            self.emcore.free(buf)
     
     @command
     def ipodclassic_writebbt(self, filename, tempaddr = None):
