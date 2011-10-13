@@ -841,28 +841,27 @@ class Commandline(object):
         except IOError:
             raise ArgumentError("Can not open input files!")
         try:
-            buf = self.emcore.memalign(0x10, banks * ppb * 0x844)
+            buf = self.emcore.memalign(0x10, 0x844)
             for block in range(info["blocks"]):
                 for bank in range(info["banks"]):
-                    self.logger.info("\r    Erasing block %d bank %d" % (block, bank))
+                    self.logger.info("\r    Erasing block %d bank %d         " % (block, bank))
                     self.emcore.ipodnano2g_nanderase(buf, block * banks + bank, 1)
                     rc = struct.unpack("<I", self.emcore.read(buf, 4))[0]
                     if rc != 0: self.logger.info("\rBlock %d bank %d erase failed with RC %08X\n" % (block, bank, rc))
-                self.logger.info("\r  Uploading block %d data  " % block)
-                self.emcore.write(buf, datafile.read(banks * ppb * 2048))
-                self.emcore.write(buf + banks * ppb * 2048, sparefile.read(banks * ppb * 64))
-                self.logger.info("\rProgramming block %d       " % block)
-                self.emcore.ipodnano2g_nandwrite(buf, block * banks * ppb, banks * ppb, 0)
-                rc = struct.unpack("<%dI" % (banks * ppb), self.emcore.read(buf + banks * ppb * 2112, banks * ppb * 4))
                 for page in range(ppb):
-                  for bank in range(banks):
-                      if rc[banks * page + bank] != 0:
-                          self.logger.info("\rBlock %d bank %d page %d programming failed with RC %08X\n" % (block, bank, page, rc[banks * page + bank]))
+                    for bank in range(banks):
+                        data = datafile.read(2048) + sparefile.read(64)
+                        if data == "\xff" * 2112: continue
+                        self.emcore.write(buf, data)
+                        self.logger.info("\rProgramming block %d page %d bank %d" % (block, page, bank))
+                        self.emcore.ipodnano2g_nandwrite(buf, ((block * ppb) + page) * banks + bank, 1, 0)
+                        rc = struct.unpack("<I", self.emcore.read(buf + 2112, 4))[0]
+                        if rc != 0: self.logger.info("\rBlock %d bank %d page %d programming failed with RC %08X\n" % (block, bank, page, rc))
         finally:
             self.emcore.free(buf)
         datafile.close()
         sparefile.close()
-        self.logger.info("\rdone\n")
+        self.logger.info("\ndone\n")
     
     @command
     def ipodnano2g_wipenand(self, filename, force=False):
