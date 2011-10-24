@@ -377,10 +377,10 @@ bool mainchooser_preblit(struct chooser_data* data)
 
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_powerdown =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 56)),
-                          LIBUI_POINT(80, 79)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 56)),
-                                   LIBUI_POINT(80, 79)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 0)),
+                          LIBUI_POINT(80, 80)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 0)),
+                                   LIBUI_POINT(80, 80)),
     .text = "Power off",
     .text_color = 0xffffcccc,
 };
@@ -393,10 +393,10 @@ void run_powerdown(void** firmware, void** app, int* size)
 
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_rockbox =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(80, 25)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(80, 25)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 80)),
+                          LIBUI_POINT(80, 80)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 80)),
+                                   LIBUI_POINT(80, 80)),
     .text = "Rockbox",
     .text_color = 0xffffcccc,
 };
@@ -429,20 +429,20 @@ void run_rockbox(void** firmware, void** app, int* size)
 
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 25)),
-                          LIBUI_POINT(80, 31)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 25)),
-                                   LIBUI_POINT(80, 31)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 160)),
+                          LIBUI_POINT(80, 80)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 160)),
+                                   LIBUI_POINT(80, 80)),
     .text = "emCORE console",
     .text_color = 0xffffcccc,
 };
 
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_toolchooser =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 136)),
-                          LIBUI_POINT(80, 84)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 136)),
-                                   LIBUI_POINT(80, 84)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 240)),
+                          LIBUI_POINT(80, 80)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 240)),
+                                   LIBUI_POINT(80, 80)),
     .text = "Tools",
     .text_color = 0xffffcccc,
 };

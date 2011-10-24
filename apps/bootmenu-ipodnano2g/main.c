@@ -449,9 +449,9 @@ bool mainchooser_preblit(struct chooser_data* data)
 
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_powerdown =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 31)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 0)),
                           LIBUI_POINT(44, 44)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 31)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 0)),
                                    LIBUI_POINT(44, 44)),
     .text = "Power off",
     .text_color = 0xffffcccc,
@@ -465,10 +465,10 @@ void run_powerdown(void** firmware, void** app, int* size)
 
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_crapple =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 123)),
-                          LIBUI_POINT(44, 43)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 123)),
-                                   LIBUI_POINT(44, 43)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 44)),
+                          LIBUI_POINT(44, 44)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 44)),
+                                   LIBUI_POINT(44, 44)),
     .text = "Original firmware",
     .text_color = 0xffffcccc,
 };
@@ -494,10 +494,10 @@ void run_crapple(void** firmware, void** app, int* size)
 
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_rockbox =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(44, 14)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(44, 14)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 88)),
+                          LIBUI_POINT(44, 44)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 88)),
+                                   LIBUI_POINT(44, 44)),
     .text = "Rockbox",
     .text_color = 0xffffcccc,
 };
@@ -528,22 +528,12 @@ void run_rockbox(void** firmware, void** app, int* size)
     }
 }
 
-struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
-{
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 14)),
-                          LIBUI_POINT(44, 17)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 14)),
-                                   LIBUI_POINT(44, 17)),
-    .text = "emCORE console",
-    .text_color = 0xffffcccc,
-};
-
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_diskmode =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 166)),
-                          LIBUI_POINT(44, 31)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 166)),
-                                   LIBUI_POINT(44, 31)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 132)),
+                          LIBUI_POINT(44, 44)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 132)),
+                                   LIBUI_POINT(44, 44)),
     .text = "Disk mode",
     .text_color = 0xffffcccc,
 };
@@ -558,12 +548,22 @@ void run_diskmode(void** firmware, void** app, int* size)
     }
 }
 
+struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
+{
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 176)),
+                          LIBUI_POINT(44, 44)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 176)),
+                                   LIBUI_POINT(44, 44)),
+    .text = "emCORE console",
+    .text_color = 0xffffcccc,
+};
+
 struct chooser_renderer_iconflow_itemdata mainchooser_rparams_toolchooser =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 75)),
-                          LIBUI_POINT(44, 47)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 75)),
-                                   LIBUI_POINT(44, 47)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 220)),
+                          LIBUI_POINT(44, 44)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 44), LIBUI_POINT(0, 220)),
+                                   LIBUI_POINT(44, 44)),
     .text = "Tools",
     .text_color = 0xffffcccc,
 };
@@ -650,14 +650,14 @@ struct chooser_info mainchooser =
             .renderparams = &mainchooser_rparams_rockbox
         },
         {
-            .user = NULL,
-            .actionparams = NULL,
-            .renderparams = &mainchooser_rparams_console
-        },
-        {
             .user = run_diskmode,
             .actionparams = NULL,
             .renderparams = &mainchooser_rparams_diskmode
+        },
+        {
+            .user = NULL,
+            .actionparams = NULL,
+            .renderparams = &mainchooser_rparams_console
         },
         {
             .user = run_toolchooser,
