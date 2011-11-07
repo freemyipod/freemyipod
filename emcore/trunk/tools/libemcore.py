@@ -31,6 +31,7 @@ import struct
 import ctypes
 import usb.core
 import base64
+import datetime
 
 from libemcoredata import *
 from misc import Logger, Bunch, remote_pointer, Error, ArgumentError, getthread, gethwname
@@ -952,6 +953,23 @@ class Emcore(object):
         """ Frees all memory allocations created by the monitor thread """
         self.logger.debug("Freeing all memory allocations created by the monitor thread\n")
         return self.lib.monitorcommand(struct.pack("<IIII", 57, 0, 0, 0), "III", (None, None, None))
+    
+    @command()
+    def rtcread(self):
+        """ Reads the real time clock on the device """
+        self.logger.debug("Reading the clock\n")
+        date = self.lib.monitorcommand(struct.pack("<IIII", 60, 0, 0, 0), "BBBBBBBBI", ("second", "minute", "hour", "weekday", "day", "month", "year", None, None))
+        dt = datetime.datetime(date.year + 2000, date.month, date.day, date.hour, date.minute, date.second)
+        self.logger.debug("Read date '%s' from device", (dt.ctime()))
+        return dt
+    
+    @command()
+    def rtcwrite(self, dt):
+        """ Sets the real time clock on the device to the datetime object 'dt' """
+        self.logger.debug("Setting the clock to: %s\n" % (dt.ctime()))
+        if dt.year < 2000 or dt.year > 2255:
+            raise ArgumentError("The Year must be between 2000 and 2255")
+        return self.lib.monitorcommand(struct.pack("<IBBBBBBBBI", 61, dt.second, dt.minute, dt.hour, dt.weekday(), dt.day, dt.month, dt.year - 2000, 0, 0), "III", (None, None, None))
 
 
 class Lib(object):

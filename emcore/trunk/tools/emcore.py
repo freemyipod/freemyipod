@@ -1322,6 +1322,23 @@ class Commandline(object):
         self.logger.info("Freeing all memory allocations created by the monitor thread\n")
         self.emcore.free_all()
         self.logger.info("Successfully freed all memory allocations created by the monitor thread\n")
+    
+    @command
+    def rtcread(self):
+        """ Reads the real time clock on the device """
+        import datetime
+        self.logger.info("Reading the clock\n")
+        dt = self.emcore.rtcread()
+        self.logger.info("Successfully read the clock: %s\n" % (dt.ctime()))
+            
+    @command
+    def rtcwrite(self):
+        """ Sets the real time clock on the device to the current local time """
+        import datetime
+        dt = datetime.datetime.now()
+        self.logger.info("Setting the clock to: %s\n" % (dt.ctime()))
+        self.emcore.rtcwrite(dt)
+        self.logger.info("Successfully set the clock\n")
         
 
 if __name__ == "__main__":
