@@ -628,7 +628,7 @@ class Emcore(object):
     def storage_get_info(self, volume):
         """ Get information about a storage device """
         self.logger.debug("Getting storage information\n")
-        result = self.lib.monitorcommand(struct.pack("<IIII", 27, volume, 0, 0), "IIIIIIII", ("version", None, None, "sectorsize", "numsectors", "vendorptr", "productptr", "revisionptr"))
+        result = self.lib.monitorcommand(struct.pack("<IIII", 27, volume, 0, 0), "IIIIIIIII", ("version", None, None, "sectorsize", "numsectors", "vendorptr", "productptr", "revisionptr", "driverinfoptr"))
         if result.version != 1:
             raise ValueError("Unknown version of storage_info struct: %d" % result.version)
         result.vendor = self.readstring(result.vendorptr)
