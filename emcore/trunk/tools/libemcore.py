@@ -605,7 +605,7 @@ class Emcore(object):
             malloc = False
         try:
             self.write(tempaddr, bbt)
-	    self.disk_unmount(0)
+            self.disk_unmount(0)
             sector = 0
             count = 1
             offset = 0
@@ -618,8 +618,8 @@ class Emcore(object):
                     sector = bbtheader[5 +i]
                     count = 1
             self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
-	    self.ipodclassic_reloadbbt()
-	    self.disk_mount(0)
+            self.ipodclassic_reloadbbt()
+            self.disk_mount(0)
         finally:
             if malloc == True:
                 self.free(tempaddr)
