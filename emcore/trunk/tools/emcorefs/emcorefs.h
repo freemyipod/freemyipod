@@ -27,7 +27,6 @@
 #include "global.h"
 
 
-int emcorefs_init(void);
 int main(int argc, char* argv[]);
 
 #endif /* __EMCOREFS_H__ */

@@ -119,6 +119,8 @@ int emcore_dir_open(uint32_t* handle, const char* name);
 int emcore_dir_read(struct emcore_dir_entry* entry, const uint32_t handle);
 int emcore_dir_close(const uint32_t handle);
 int emcore_dir_close_all(uint32_t* count);
+int emcore_dir_create(const char* name);
+int emcore_dir_remove(const char* name);
 int emcore_errno(uint32_t* emcore_errno_value);
 int emcore_malloc(uint32_t* ptr, const uint32_t size);
 int emcore_memalign(uint32_t* ptr, const uint32_t align, const uint32_t size);

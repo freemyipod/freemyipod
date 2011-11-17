@@ -26,7 +26,7 @@
 
 #include "global.h"
 
-
+int emcorefs_init(void);
 int emcorefs_getattr(const char* path, struct stat* stbuf);
 int emcorefs_opendir(const char* path, struct fuse_file_info* fi);
 int emcorefs_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi);
@@ -34,5 +34,10 @@ int emcorefs_releasedir(const char* path, struct fuse_file_info* fi);
 int emcorefs_open(const char* path, struct fuse_file_info* fi);
 int emcorefs_read(const char* path, char* buf, uint32_t size, off_t offset, struct fuse_file_info* fi);
 int emcorefs_release(const char* path, struct fuse_file_info* fi);
+int emcorefs_mkdir(const char* path, mode_t mode);
+int emcorefs_rmdir(const char* path);
+int emcorefs_create(const char* path, mode_t mode, struct fuse_file_info* fi);
+int emcorefs_mknod(const char* path, mode_t mode, dev_t dev);
+int emcorefs_unlink(const char* path);
 
 #endif /* __FUSE_H__ */

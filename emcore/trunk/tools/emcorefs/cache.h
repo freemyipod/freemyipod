@@ -30,6 +30,11 @@
 void cache_init(void);
 struct emcore_dir_entry* cache_get(const char* name);
 void cache_insert(const char* dir_name, const struct emcore_dir_entry* entry);
+void cache_remove(const char* dir_name);
 void cache_destroy(void);
+
+#ifdef DEBUG2
+void cache_dump(void);
+#endif
 
 #endif /* __CACHE_H__ */

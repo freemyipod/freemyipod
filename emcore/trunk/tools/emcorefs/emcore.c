@@ -375,6 +375,7 @@ int emcore_file_open(uint32_t* handle, const char* path, const int flags)
 {
     int res;
     uint32_t str_length, data_length, in[4], *out;
+    int flags_emcore = 0;
     
     *handle = 0;
     
@@ -389,7 +390,37 @@ int emcore_file_open(uint32_t* handle, const char* path, const int flags)
     out = calloc(sizeof(char), data_length);
 
     *(out) = 30;
-    *(out + 1) = flags;
+    
+    /*
+    #define O_RDONLY 0
+    #define O_WRONLY 1
+    #define O_RDWR   2
+    #define O_CREAT  4
+    #define O_APPEND 8
+    #define O_TRUNC  0x10
+    */
+    
+    if (flags & O_WRONLY) {
+        flags_emcore |= 0x01;
+    }
+    
+    if (flags & O_RDWR) {
+        flags_emcore |= 0x02;
+    }
+    
+    if (flags & O_CREAT) {
+        flags_emcore |= 0x04;
+    }
+    
+    if (flags & O_APPEND) {
+        flags_emcore |= 0x08;
+    }
+    
+    if (flags & O_TRUNC) {
+        flags_emcore |= 0x10;
+    }
+    
+    *(out + 1) = flags_emcore;
     
     strncpy(((char*)(out + 4)), path, str_length);
 
@@ -746,8 +777,8 @@ int emcore_dir_read(struct emcore_dir_entry* entry, const uint32_t handle)
         {
             return res;
         }
-
-        if (EMCORE_SUCCESS != emcore_errno_value)
+        
+        if (EMCORE_SUCCESS != emcore_errno_value && 2 != emcore_errno_value)
         {
             return EMCORE_ERROR_IO;
         }
@@ -832,6 +863,74 @@ int emcore_dir_close_all(uint32_t* count)
     }
     
     *count = in[1];
+    
+    return EMCORE_SUCCESS;
+}
+
+int emcore_dir_create(const char* name)
+{
+    int res;
+    uint32_t str_length, data_length, in[4], *out;
+    
+    str_length = strlen(name);
+    data_length = str_length + 1 + EMCORE_HEADER_SIZE;
+    
+    if (data_length > emcore_usb_eps_mps.cout)
+    {
+        return EMCORE_ERROR_OVERFLOW;
+    }
+
+    out = calloc(sizeof(char), data_length);
+
+    *(out) = 47;
+    
+    strncpy(((char*)(out + 4)), name, str_length);
+
+    res = emcore_monitor_command(out, in, data_length, 16);
+
+    if (EMCORE_SUCCESS != res)
+    {
+        return res;
+    }
+    
+    if (in[1] > 0x80000000)
+    {
+        return EMCORE_ERROR_IO;
+    }
+    
+    return EMCORE_SUCCESS;
+}
+
+int emcore_dir_remove(const char* name)
+{
+    int res;
+    uint32_t str_length, data_length, in[4], *out;
+    
+    str_length = strlen(name);
+    data_length = str_length + 1 + EMCORE_HEADER_SIZE;
+    
+    if (data_length > emcore_usb_eps_mps.cout)
+    {
+        return EMCORE_ERROR_OVERFLOW;
+    }
+
+    out = calloc(sizeof(char), data_length);
+
+    *(out) = 48;
+    
+    strncpy(((char*)(out + 4)), name, str_length);
+
+    res = emcore_monitor_command(out, in, data_length, 16);
+
+    if (EMCORE_SUCCESS != res)
+    {
+        return res;
+    }
+    
+    if (in[1] > 0x80000000)
+    {
+        return EMCORE_ERROR_IO;
+    }
     
     return EMCORE_SUCCESS;
 }

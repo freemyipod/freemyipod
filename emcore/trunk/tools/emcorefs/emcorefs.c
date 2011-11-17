@@ -40,24 +40,12 @@ struct fuse_operations emcorefs_oper =
     .open       = emcorefs_open,
     .read       = emcorefs_read,
     .release    = emcorefs_release,
+    .mkdir      = emcorefs_mkdir,
+    .rmdir      = emcorefs_rmdir,
+    .create     = emcorefs_create,
+    .mknod      = emcorefs_mknod,
+    .unlink     = emcorefs_unlink,
 };
-
-int emcorefs_init(void)
-{
-    int res;
-    uint32_t count;
-
-    res = emcore_file_close_all(&count);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    res = emcore_dir_close_all(&count);
-
-    return res;
-}
 
 int main(int argc, char* argv[])
 {

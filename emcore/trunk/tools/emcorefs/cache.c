@@ -63,7 +63,7 @@ struct emcore_dir_entry* cache_get(const char* name)
     for (i = 0; i < emcore_dir_cache_length; ++i)
     {
 #ifdef DEBUG2
-        fprintf(stderr, "strcmp([%s], [%s]) == %d\n", name, emcore_dir_entry_cache[i].name, strcmp(name, emcore_dir_entry_cache[i].name));
+        fprintf(stderr, "cache_get: strcmp([%s], [%s]) == %d\n", name, emcore_dir_entry_cache[i].name, strcmp(name, emcore_dir_entry_cache[i].name));
 #endif
         if (0 == strcmp(name, emcore_dir_entry_cache[i].name))
         {
@@ -138,6 +138,43 @@ void cache_insert(const char* dir_name, const struct emcore_dir_entry* entry)
     ++emcore_dir_cache_length;
 }
 
+void cache_remove(const char* name)
+{
+    size_t i;
+    void* new_ptr;
+    
+    for (i = 0; i < emcore_dir_cache_length; ++i)
+    {
+#ifdef DEBUG2
+        fprintf(stderr, "cache_remove: strcmp([%s], [%s]) == %d\n", name, emcore_dir_entry_cache[i].name, strcmp(name, emcore_dir_entry_cache[i].name));
+#endif
+        if (0 == strcmp(name, emcore_dir_entry_cache[i].name))
+        {
+#ifdef DEBUG2
+            fprintf(stderr, "CACHE REMOVE: [%s]\n", name);
+#endif
+            free(emcore_dir_entry_cache[i].name);
+            
+            if (emcore_dir_cache_length > i + 1) {
+                memcpy(emcore_dir_entry_cache + i, emcore_dir_entry_cache + i + 1, (emcore_dir_cache_length - i - 1) * sizeof(*emcore_dir_entry_cache));
+            }
+            
+            --emcore_dir_cache_length;
+            
+            new_ptr = realloc(emcore_dir_entry_cache,
+                sizeof(*emcore_dir_entry_cache) * (emcore_dir_cache_length));
+
+            if (!new_ptr)
+            {
+                return;
+            }
+
+            emcore_dir_entry_cache = new_ptr;
+        }
+    }
+
+}
+
 void cache_destroy(void)
 {
 #ifdef DEBUG
@@ -153,3 +190,20 @@ void cache_destroy(void)
     fprintf(stderr, "Cache destroyed!\n");
 #endif
 }
+
+#ifdef DEBUG2
+void cache_dump(void)
+{
+    size_t i;
+
+    if (!emcore_dir_cache_length)
+    {
+        return;
+    }
+
+    for (i = 0; i < emcore_dir_cache_length; ++i)
+    {
+        fprintf(stderr, "cache_dump: [%s] 0x%08x %d %d %lu\n", emcore_dir_entry_cache[i].name, emcore_dir_entry_cache[i].attributes, emcore_dir_entry_cache[i].size, emcore_dir_entry_cache[i].startcluster, fat_time_to_unix_ts(emcore_dir_entry_cache[i].wrtdate, emcore_dir_entry_cache[i].wrttime));
+    }
+}
+#endif
