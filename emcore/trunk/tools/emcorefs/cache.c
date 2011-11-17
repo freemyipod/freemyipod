@@ -131,6 +131,7 @@ void cache_insert(const char* dir_name, const struct emcore_dir_entry* entry)
     cache_entry->name = new_name;
 
     memcpy(emcore_dir_entry_cache + emcore_dir_cache_length, cache_entry, sizeof(*cache_entry));
+    free(cache_entry);
 
 #ifdef DEBUG
     fprintf(stderr, "Inserting [%s] to cache\n", emcore_dir_entry_cache[emcore_dir_cache_length].name);
