@@ -1,4 +1,4 @@
-CFLAGS := -O2 -Wall -Wextra -Werror $(shell pkg-config --cflags --libs libusb-1.0 fuse)
+CFLAGS += -O2 -Wall -Wextra -Werror $(shell pkg-config --cflags --libs libusb-1.0 fuse)
 SOURCES = util.c usb.c emcore.c cache.c fuse.c emcorefs.c
 TARGET = build/emcorefs
 

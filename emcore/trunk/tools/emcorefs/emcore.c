@@ -491,7 +491,7 @@ int emcore_file_read(uint32_t* nread, const uint32_t handle, const uint32_t addr
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_write(const uint32_t handle, const uint32_t addr, const uint32_t size)
+int emcore_file_write(uint32_t* nwrite, const uint32_t handle, const uint32_t addr, const uint32_t size)
 {
     int res;
     uint32_t out[4] = { 33, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef }, in[4];
@@ -511,6 +511,8 @@ int emcore_file_write(const uint32_t handle, const uint32_t addr, const uint32_t
     {
         return EMCORE_ERROR_IO;
     }
+    
+    *nwrite = in[1];
     
     return EMCORE_SUCCESS;
 }

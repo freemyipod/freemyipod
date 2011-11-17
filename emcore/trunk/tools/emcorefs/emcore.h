@@ -106,7 +106,7 @@ int emcore_writei2c(const void* data, const uint8_t bus, const uint8_t slave, co
 int emcore_file_open(uint32_t* handle, const char* pathname, const int flags);
 int emcore_file_size(uint32_t* size, const uint32_t handle);
 int emcore_file_read(uint32_t* nread, const uint32_t handle, const uint32_t addr, const uint32_t size);
-int emcore_file_write(const uint32_t handle, const uint32_t addr, const uint32_t size);
+int emcore_file_write(uint32_t* nwrite, const uint32_t handle, const uint32_t addr, const uint32_t size);
 int emcore_file_seek(const uint32_t handle, const uint32_t offset, const uint32_t whence);
 int emcore_file_truncate(const uint32_t handle, const uint32_t length);
 int emcore_file_sync(const uint32_t handle);

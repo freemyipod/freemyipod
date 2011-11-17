@@ -41,7 +41,7 @@ Stopping: fusermount -u <mountpoint as seen in /etc/mtab>
 
 Known bugs/issues
 -----------------
-* Read-only support at the moment.
+* Write support not tested very well.
 * Running FUSE with multithreading breaks file reading because of
     the way these are implemented on emCORE's side.
     Workaround: use the "-s" option.
@@ -51,7 +51,6 @@ Known bugs/issues
 
 Future plans
 ------------
-* Implement write support.
 * Merge some functions that are doing similar tasks to reduce code
     duplication. Return proper error codes in FS operations.
 

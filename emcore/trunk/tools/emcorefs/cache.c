@@ -83,7 +83,12 @@ void cache_insert(const char* dir_name, const struct emcore_dir_entry* entry)
     struct emcore_dir_entry* cache_entry;
     char* new_name;
     size_t new_name_len = 1;
-
+    
+    if (0 == strcmp(entry->name, ".") || 0 == strcmp(entry->name, ".."))
+    {
+        return;
+    }
+    
     new_name_len += strlen(dir_name) + strlen(entry->name);
 
     if (strcmp(dir_name, "/") != 0)
@@ -204,7 +209,7 @@ void cache_dump(void)
 
     for (i = 0; i < emcore_dir_cache_length; ++i)
     {
-        fprintf(stderr, "cache_dump: [%s] 0x%08x %d %d %lu\n", emcore_dir_entry_cache[i].name, emcore_dir_entry_cache[i].attributes, emcore_dir_entry_cache[i].size, emcore_dir_entry_cache[i].startcluster, fat_time_to_unix_ts(emcore_dir_entry_cache[i].wrtdate, emcore_dir_entry_cache[i].wrttime));
+        fprintf(stderr, "cache_dump: [%s] / attr: 0x%08x / size: %d / startcluster: %d / ts: %lu\n", emcore_dir_entry_cache[i].name, emcore_dir_entry_cache[i].attributes, emcore_dir_entry_cache[i].size, emcore_dir_entry_cache[i].startcluster, fat_time_to_unix_ts(emcore_dir_entry_cache[i].wrttime, emcore_dir_entry_cache[i].wrtdate));
     }
 }
 #endif

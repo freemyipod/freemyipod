@@ -33,11 +33,15 @@ int emcorefs_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t 
 int emcorefs_releasedir(const char* path, struct fuse_file_info* fi);
 int emcorefs_open(const char* path, struct fuse_file_info* fi);
 int emcorefs_read(const char* path, char* buf, uint32_t size, off_t offset, struct fuse_file_info* fi);
+int emcorefs_write(const char* path, const char* buf, uint32_t size, off_t offset, struct fuse_file_info* fi);
 int emcorefs_release(const char* path, struct fuse_file_info* fi);
 int emcorefs_mkdir(const char* path, mode_t mode);
 int emcorefs_rmdir(const char* path);
 int emcorefs_create(const char* path, mode_t mode, struct fuse_file_info* fi);
 int emcorefs_mknod(const char* path, mode_t mode, dev_t dev);
 int emcorefs_unlink(const char* path);
+int emcorefs_rename(const char* path, const char* new_path);
+int emcorefs_truncate(const char* path, off_t size);
+int emcorefs_ftruncate(const char* path, off_t size, struct fuse_file_info* fi);
 
 #endif /* __FUSE_H__ */

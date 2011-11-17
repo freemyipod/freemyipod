@@ -34,17 +34,26 @@
 struct fuse_operations emcorefs_oper =
 {
     .getattr    = emcorefs_getattr,
+    
     .opendir    = emcorefs_opendir,
     .readdir    = emcorefs_readdir,
     .releasedir = emcorefs_releasedir,
+
     .open       = emcorefs_open,
     .read       = emcorefs_read,
+    .write      = emcorefs_write,
     .release    = emcorefs_release,
+
     .mkdir      = emcorefs_mkdir,
     .rmdir      = emcorefs_rmdir,
+
     .create     = emcorefs_create,
     .mknod      = emcorefs_mknod,
     .unlink     = emcorefs_unlink,
+    .rename     = emcorefs_rename,
+    .truncate   = emcorefs_truncate,
+    
+    .ftruncate  = emcorefs_ftruncate,
 };
 
 int main(int argc, char* argv[])
