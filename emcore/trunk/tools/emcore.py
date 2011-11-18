@@ -930,6 +930,26 @@ class Commandline(object):
         self.logger.info(" done\n")
     
     @command
+    def ipodclassic_disablebbt(self):
+        """
+            Target-specific function: ipodclassic
+            Disables the hard disk bad block table, if present
+        """
+        self.logger.info("Disabling hard disk BBT...")
+        data = self.emcore.ipodclassic_disablebbt()
+        self.logger.info(" done\n")
+    
+    @command
+    def ipodclassic_reloadbbt(self):
+        """
+            Target-specific function: ipodclassic
+            Reloads the hard disk bad block table, if present
+        """
+        self.logger.info("Reloading hard disk BBT...")
+        data = self.emcore.ipodclassic_reloadbbt()
+        self.logger.info(" done\n")
+    
+    @command
     def getvolumeinfo(self, volume):
         """
             Gathers some information about a storage volume used
