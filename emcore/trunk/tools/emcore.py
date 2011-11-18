@@ -1016,7 +1016,7 @@ class Commandline(object):
                 self.logger.info("Reading volume %s sectors %X - %X to %s..." % (volume, sector, sector + count - 1, file))
                 while count > 0:
                     sectors = min(count, int(buffsize / storageinfo.sectorsize))
-                    self.emcore.storage_read_sectors_md(volume, sector, sectors, buffsize, buffer)
+                    self.emcore.storage_read_sectors_md(volume, sector, sectors, buffer)
                     f.write(self.emcore.read(buffer, storageinfo.sectorsize * sectors))
                     sector = sector + sectors
                     count = count - sectors
@@ -1032,6 +1032,7 @@ class Commandline(object):
         """
             Writes contents of <file> to <count> sectors starting at <sector> on storage <volume>,
             buffering them in memory at [buffer] in chunks of [buffsize] bytes (both optional).
+            If <count> is -1, the number of sectors will be determined from the file size.
         """
         volume = to_int(volume)
         sector = to_int(sector)
@@ -1043,6 +1044,7 @@ class Commandline(object):
             raise ArgumentError("Could not open local file for reading.")
         try:
             storageinfo = self.emcore.storage_get_info(volume)
+            if count == -1: count = int((os.path.getsize(file) + storageinfo.sectorsize - 1) / storageinfo.sectorsize)
             buffsize = min(buffsize, storageinfo.sectorsize * count)
             if buffer is None:
                 buffer = self.emcore.memalign(0x10, buffsize)
@@ -1055,11 +1057,13 @@ class Commandline(object):
                 while count > 0:
                     sectors = min(count, int(buffsize / storageinfo.sectorsize))
                     bytes = storageinfo.sectorsize * sectors
-                    data = f.read(bytes)
-                    if len(data) == 0: break
-                    while len(data) < bytes: data = data + f.read(bytes - len(data))
+                    data = b""
+                    while len(data) < bytes:
+                       new = f.read(bytes - len(data))
+                       data = data + new
+                       if len(new) == 0: break
                     self.emcore.write(buffer, data)
-                    self.emcore.storage_write_sectors_md(volume, sector, sectors, buffsize, buffer)
+                    self.emcore.storage_write_sectors_md(volume, sector, sectors, buffer)
                     sector = sector + sectors
                     count = count - sectors
             finally:
