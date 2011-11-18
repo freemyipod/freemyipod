@@ -26,7 +26,7 @@ import sys
 import libipoddfu
 
 if len(sys.argv) != 2:
-  print "Syntax: ipoddfu.py <file>"
+  print("Syntax: ipoddfu.py <file>")
   exit(2)
 
 dev = libipoddfu.ipoddfu()
