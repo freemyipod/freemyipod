@@ -28,11 +28,11 @@
 
 
 int usb_init(void);
-int usb_find(const uint16_t vendor_id, const uint16_t product_id, uint8_t* reattach);
+int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach);
 int usb_open(libusb_device* dev, uint8_t* reattach);
-int usb_bulk_transfer(const unsigned char endpoint, void* data, const int length);
-int usb_close(const uint8_t reattach);
+int usb_bulk_transfer(unsigned char endpoint, void* data, int length);
+int usb_close(uint8_t reattach);
 void usb_exit(void);
-int usb_destroy(const uint8_t reattach);
+int usb_destroy(uint8_t reattach);
 
 #endif /* __USB_H__ */

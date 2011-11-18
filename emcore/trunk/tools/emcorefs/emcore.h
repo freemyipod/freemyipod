@@ -85,53 +85,53 @@ enum emcore_error
     EMCORE_ERROR_IO,
 };
 
-int emcore_cout(const void* data, const uint32_t length);
-int emcore_cin(void* data, const uint32_t length);
-int emcore_dout(const void* data, const uint32_t length);
-int emcore_din(void* data, const uint32_t length);
+int emcore_cout(const void* data, uint32_t length);
+int emcore_cin(void* data, uint32_t length);
+int emcore_dout(const void* data, uint32_t length);
+int emcore_din(void* data, uint32_t length);
 
-int emcore_monitor_command(const void* out, void* in, const uint32_t send_length, const uint32_t receive_length);
+int emcore_monitor_command(const void* out, void* in, uint32_t send_length, uint32_t receive_length);
 
 int emcore_get_version(struct emcore_dev_info* dev_info);
 int emcore_get_packet_info(struct emcore_usb_endpoints_max_packet_size* max_packet_size);
 int emcore_get_user_mem_range(struct emcore_user_mem_range* mem_range);
-int emcore_reset(const uint8_t graceful);
-int emcore_poweroff(const uint8_t graceful);
-int emcore_readmem(void* data, const uint32_t addr, const uint32_t size);
-int emcore_writemem(const void* data, const uint32_t addr, const uint32_t size);
-int emcore_readdma(void* data, const uint32_t addr, const uint32_t size);
-int emcore_writedma(const void* data, const uint32_t addr, const uint32_t size);
-int emcore_readi2c(void* data, const uint8_t bus, const uint8_t slave, const uint8_t addr, const uint8_t size);
-int emcore_writei2c(const void* data, const uint8_t bus, const uint8_t slave, const uint8_t addr, const uint8_t size);
-int emcore_file_open(uint32_t* handle, const char* pathname, const int flags);
-int emcore_file_size(uint32_t* size, const uint32_t handle);
-int emcore_file_read(uint32_t* nread, const uint32_t handle, const uint32_t addr, const uint32_t size);
-int emcore_file_write(uint32_t* nwrite, const uint32_t handle, const uint32_t addr, const uint32_t size);
-int emcore_file_seek(const uint32_t handle, const uint32_t offset, const uint32_t whence);
-int emcore_file_truncate(const uint32_t handle, const uint32_t length);
-int emcore_file_sync(const uint32_t handle);
-int emcore_file_close(const uint32_t handle);
+int emcore_reset(uint8_t graceful);
+int emcore_poweroff(uint8_t graceful);
+int emcore_readmem(void* data, uint32_t addr, uint32_t size);
+int emcore_writemem(const void* data, uint32_t addr, uint32_t size);
+int emcore_readdma(void* data, uint32_t addr, uint32_t size);
+int emcore_writedma(const void* data, uint32_t addr, uint32_t size);
+int emcore_readi2c(void* data, uint8_t bus, uint8_t slave, uint8_t addr, uint8_t size);
+int emcore_writei2c(const void* data, uint8_t bus, uint8_t slave, uint8_t addr, uint8_t size);
+int emcore_file_open(uint32_t* handle, const char* pathname, int flags);
+int emcore_file_size(uint32_t* size, uint32_t handle);
+int emcore_file_read(uint32_t* nread, uint32_t handle, uint32_t addr, uint32_t size);
+int emcore_file_write(uint32_t* nwrite, uint32_t handle, uint32_t addr, uint32_t size);
+int emcore_file_seek(uint32_t handle, uint32_t offset, uint32_t whence);
+int emcore_file_truncate(uint32_t handle, uint32_t length);
+int emcore_file_sync(uint32_t handle);
+int emcore_file_close(uint32_t handle);
 int emcore_file_close_all(uint32_t* count);
-int emcore_file_kill_all(const uint32_t volume);
+int emcore_file_kill_all(uint32_t volume);
 int emcore_file_unlink(const char* name);
 int emcore_file_rename(const char* path, const char* newpath);
 int emcore_dir_open(uint32_t* handle, const char* name);
-int emcore_dir_read(struct emcore_dir_entry* entry, const uint32_t handle);
-int emcore_dir_close(const uint32_t handle);
+int emcore_dir_read(struct emcore_dir_entry* entry, uint32_t handle);
+int emcore_dir_close(uint32_t handle);
 int emcore_dir_close_all(uint32_t* count);
 int emcore_dir_create(const char* name);
 int emcore_dir_remove(const char* name);
 int emcore_errno(uint32_t* emcore_errno_value);
-int emcore_malloc(uint32_t* ptr, const uint32_t size);
-int emcore_memalign(uint32_t* ptr, const uint32_t align, const uint32_t size);
-int emcore_realloc(uint32_t* new_ptr, const uint32_t ptr, const uint32_t size);
-int emcore_reownalloc(const uint32_t ptr, const uint32_t owner);
-int emcore_free(const uint32_t ptr);
+int emcore_malloc(uint32_t* ptr, uint32_t size);
+int emcore_memalign(uint32_t* ptr, uint32_t align, uint32_t size);
+int emcore_realloc(uint32_t* new_ptr, uint32_t ptr, uint32_t size);
+int emcore_reownalloc(uint32_t ptr, uint32_t owner);
+int emcore_free(uint32_t ptr);
 int emcore_free_all(void);
 
-int emcore_read(void* data, const uint32_t addr, const uint32_t size);
-int emcore_write(const void* data, const uint32_t addr, const uint32_t size);
-int emcore_ls(const uint32_t handle);
+int emcore_read(void* data, uint32_t addr, uint32_t size);
+int emcore_write(const void* data, uint32_t addr, uint32_t size);
+int emcore_ls(uint32_t handle);
 int emcore_test(void);
 
 #endif /* __EMCORE_H__ */

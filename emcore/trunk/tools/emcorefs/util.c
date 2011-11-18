@@ -57,7 +57,7 @@ const char* emcore_error_messages[10] =
     "I/O error",              /* EMCORE_ERROR_IO = 9              */
 };
 
-void dump_packet(const void* data, const size_t length)
+void dump_packet(const void* data, size_t length)
 {
     static size_t i;
 
@@ -79,8 +79,8 @@ void dump_packet(const void* data, const size_t length)
     fprintf(stderr, "\n");
 }
 
-void alignsplit(struct alignsizes* sizeptr, const uint32_t addr,
-    const uint32_t size, const uint32_t blksize, const uint32_t align)
+void alignsplit(struct alignsizes* sizeptr, uint32_t addr,
+    uint32_t size, uint32_t blksize, uint32_t align)
 {
     uint32_t end, bodyaddr, tailaddr;
 
@@ -121,7 +121,7 @@ void alignsplit(struct alignsizes* sizeptr, const uint32_t addr,
     return;
 }
 
-time_t fat_time_to_unix_ts(const short wrttime, const short wrtdate)
+time_t fat_time_to_unix_ts(short wrttime, short wrtdate)
 {
     struct tm result;
     /*
@@ -148,7 +148,7 @@ time_t fat_time_to_unix_ts(const short wrttime, const short wrtdate)
     return mktime(&result);
 }
 
-int32_t unix_ts_to_fat_time(const time_t datetime)
+int32_t unix_ts_to_fat_time(time_t datetime)
 {
     struct tm* tm_ptr;
     
@@ -162,7 +162,7 @@ int32_t unix_ts_to_fat_time(const time_t datetime)
            ((tm_ptr->tm_year - 80) << 0x19);
 }
 
-void print_error(const int code)
+void print_error(int code)
 {
     if (code > 0)
     {

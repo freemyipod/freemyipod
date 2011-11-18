@@ -31,28 +31,28 @@
 struct emcore_usb_endpoints_addr emcore_usb_eps_addr;
 struct emcore_usb_endpoints_max_packet_size emcore_usb_eps_mps;
 
-int emcore_cout(const void* data, const uint32_t length)
+int emcore_cout(const void* data, uint32_t length)
 {
     return usb_bulk_transfer(emcore_usb_eps_addr.cout, (void*)data, length);
 }
 
-int emcore_cin(void* data, const uint32_t length)
+int emcore_cin(void* data, uint32_t length)
 {
     return usb_bulk_transfer(emcore_usb_eps_addr.cin, data, length);
 }
 
-int emcore_dout(const void* data, const uint32_t length)
+int emcore_dout(const void* data, uint32_t length)
 {
     return usb_bulk_transfer(emcore_usb_eps_addr.dout, (void*)data, length);
 }
 
-int emcore_din(void* data, const uint32_t length)
+int emcore_din(void* data, uint32_t length)
 {
     return usb_bulk_transfer(emcore_usb_eps_addr.din, data, length);
 }
 
 int emcore_monitor_command(const void* out, void* in,
-    const uint32_t send_length, const uint32_t receive_length)
+    uint32_t send_length, uint32_t receive_length)
 {
     int res;
     uint32_t status;
@@ -170,7 +170,7 @@ int emcore_get_user_mem_range(struct emcore_user_mem_range* mem_range)
     return EMCORE_SUCCESS;
 }
 
-int emcore_reset(const uint8_t graceful)
+int emcore_reset(uint8_t graceful)
 {
     int res;
     uint32_t out[4] = { 2, 0xdeadbeef, 0, 0 }, in[4];
@@ -187,7 +187,7 @@ int emcore_reset(const uint8_t graceful)
     return EMCORE_SUCCESS;
 }
 
-int emcore_poweroff(const uint8_t graceful)
+int emcore_poweroff(uint8_t graceful)
 {
     int res;
     uint32_t out[4] = { 3, 0xdeadbeef, 0, 0 }, in[4];
@@ -204,7 +204,7 @@ int emcore_poweroff(const uint8_t graceful)
     return EMCORE_SUCCESS;
 }
 
-int emcore_readmem(void* data, const uint32_t addr, const uint32_t size)
+int emcore_readmem(void* data, uint32_t addr, uint32_t size)
 {
     int res;
     uint32_t data_length, out[4] = { 4, 0xdeadbeef, 0xdeadbeef, 0 };
@@ -233,7 +233,7 @@ int emcore_readmem(void* data, const uint32_t addr, const uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_writemem(const void* data, const uint32_t addr, const uint32_t size)
+int emcore_writemem(const void* data, uint32_t addr, uint32_t size)
 {
     int res;
     uint32_t data_length, in[4], *out;
@@ -262,7 +262,7 @@ int emcore_writemem(const void* data, const uint32_t addr, const uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_readdma(void* data, const uint32_t addr, const uint32_t size)
+int emcore_readdma(void* data, uint32_t addr, uint32_t size)
 {
     int res;
     uint32_t out[4] = { 6, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
@@ -287,7 +287,7 @@ int emcore_readdma(void* data, const uint32_t addr, const uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_writedma(const void* data, const uint32_t addr, const uint32_t size)
+int emcore_writedma(const void* data, uint32_t addr, uint32_t size)
 {
     int res;
     uint32_t out[4] = { 7, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
@@ -312,7 +312,7 @@ int emcore_writedma(const void* data, const uint32_t addr, const uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_readi2c(void* data, const uint8_t bus, const uint8_t slave, const uint8_t addr, const uint8_t size)
+int emcore_readi2c(void* data, uint8_t bus, uint8_t slave, uint8_t addr, uint8_t size)
 {
     int res;
     uint32_t data_length, out[4] = { 8, 0xdeadbeef, 0, 0 };
@@ -340,7 +340,7 @@ int emcore_readi2c(void* data, const uint8_t bus, const uint8_t slave, const uin
     return EMCORE_SUCCESS;
 }
 
-int emcore_writei2c(const void* data, const uint8_t bus, const uint8_t slave, const uint8_t addr, const uint8_t size)
+int emcore_writei2c(const void* data, uint8_t bus, uint8_t slave, uint8_t addr, uint8_t size)
 {
     int res;
     uint32_t data_length, in[4], *out;
@@ -371,7 +371,7 @@ int emcore_writei2c(const void* data, const uint8_t bus, const uint8_t slave, co
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_open(uint32_t* handle, const char* path, const int flags)
+int emcore_file_open(uint32_t* handle, const char* path, int flags)
 {
     int res;
     uint32_t str_length, data_length, in[4], *out;
@@ -441,7 +441,7 @@ int emcore_file_open(uint32_t* handle, const char* path, const int flags)
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_size(uint32_t* size, const uint32_t handle)
+int emcore_file_size(uint32_t* size, uint32_t handle)
 {
     int res;
     uint32_t out[4] = { 31, 0xdeadbeef, 0, 0 }, in[4];
@@ -465,7 +465,7 @@ int emcore_file_size(uint32_t* size, const uint32_t handle)
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_read(uint32_t* nread, const uint32_t handle, const uint32_t addr, const uint32_t size)
+int emcore_file_read(uint32_t* nread, uint32_t handle, uint32_t addr, uint32_t size)
 {
     int res;
     uint32_t out[4] = { 32, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef }, in[4];
@@ -491,7 +491,7 @@ int emcore_file_read(uint32_t* nread, const uint32_t handle, const uint32_t addr
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_write(uint32_t* nwrite, const uint32_t handle, const uint32_t addr, const uint32_t size)
+int emcore_file_write(uint32_t* nwrite, uint32_t handle, uint32_t addr, uint32_t size)
 {
     int res;
     uint32_t out[4] = { 33, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef }, in[4];
@@ -517,7 +517,7 @@ int emcore_file_write(uint32_t* nwrite, const uint32_t handle, const uint32_t ad
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_seek(const uint32_t handle, const uint32_t offset, const uint32_t whence)
+int emcore_file_seek(uint32_t handle, uint32_t offset, uint32_t whence)
 {
     int res;
     uint32_t out[4] = { 34, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef }, in[4];
@@ -541,7 +541,7 @@ int emcore_file_seek(const uint32_t handle, const uint32_t offset, const uint32_
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_truncate(const uint32_t handle, const uint32_t length)
+int emcore_file_truncate(uint32_t handle, uint32_t length)
 {
     int res;
     uint32_t out[4] = { 35, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
@@ -564,7 +564,7 @@ int emcore_file_truncate(const uint32_t handle, const uint32_t length)
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_sync(const uint32_t handle)
+int emcore_file_sync(uint32_t handle)
 {
     int res;
     uint32_t out[4] = { 36, 0xdeadbeef, 0, 0 }, in[4];
@@ -586,7 +586,7 @@ int emcore_file_sync(const uint32_t handle)
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_close(const uint32_t handle)
+int emcore_file_close(uint32_t handle)
 {
     int res;
     uint32_t out[4] = { 37, 0xdeadbeef, 0, 0 }, in[4];
@@ -630,7 +630,7 @@ int emcore_file_close_all(uint32_t* count)
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_kill_all(const uint32_t volume)
+int emcore_file_kill_all(uint32_t volume)
 {
     int res;
     uint32_t out[4] = { 39, 0xdeadbeef, 0, 0 }, in[4];
@@ -751,7 +751,7 @@ int emcore_dir_open(uint32_t* handle, const char* name)
     return EMCORE_SUCCESS;
 }
 
-int emcore_dir_read(struct emcore_dir_entry* entry, const uint32_t handle)
+int emcore_dir_read(struct emcore_dir_entry* entry, uint32_t handle)
 {
     int res;
     uint32_t maxpath, ptr, dirent_size, emcore_errno_value, filename_buf_len,
@@ -825,7 +825,7 @@ int emcore_dir_read(struct emcore_dir_entry* entry, const uint32_t handle)
     return EMCORE_SUCCESS;
 }
 
-int emcore_dir_close(const uint32_t handle)
+int emcore_dir_close(uint32_t handle)
 {
     int res;
     uint32_t out[4] = { 44, 0xdeadbeef, 0, 0 }, in[4];
@@ -954,7 +954,7 @@ int emcore_errno(uint32_t* emcore_errno_value)
     return EMCORE_SUCCESS;
 }
 
-int emcore_malloc(uint32_t* ptr, const uint32_t size)
+int emcore_malloc(uint32_t* ptr, uint32_t size)
 {
     int res;
     uint32_t out[4] = { 52, 0xdeadbeef, 0, 0 }, in[4];
@@ -973,7 +973,7 @@ int emcore_malloc(uint32_t* ptr, const uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_memalign(uint32_t* ptr, const uint32_t align, const uint32_t size)
+int emcore_memalign(uint32_t* ptr, uint32_t align, uint32_t size)
 {
     int res;
     uint32_t out[4] = { 53, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
@@ -993,7 +993,7 @@ int emcore_memalign(uint32_t* ptr, const uint32_t align, const uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_realloc(uint32_t* new_ptr, const uint32_t ptr, const uint32_t size)
+int emcore_realloc(uint32_t* new_ptr, uint32_t ptr, uint32_t size)
 {
     int res;
     uint32_t out[4] = { 54, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
@@ -1013,7 +1013,7 @@ int emcore_realloc(uint32_t* new_ptr, const uint32_t ptr, const uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_reownalloc(const uint32_t ptr, const uint32_t owner)
+int emcore_reownalloc(uint32_t ptr, uint32_t owner)
 {
     uint32_t out[4] = { 55, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
 
@@ -1023,7 +1023,7 @@ int emcore_reownalloc(const uint32_t ptr, const uint32_t owner)
     return emcore_monitor_command(out, in, 16, 16);
 }
 
-int emcore_free(const uint32_t ptr)
+int emcore_free(uint32_t ptr)
 {
     uint32_t out[4] = { 56, 0xdeadbeef, 0, 0 }, in[4];
 
@@ -1039,7 +1039,7 @@ int emcore_free_all(void)
     return emcore_monitor_command(out, in, 16, 16);
 }
 
-int emcore_read(void* data, const uint32_t addr, const uint32_t size)
+int emcore_read(void* data, uint32_t addr, uint32_t size)
 {
     int res;
     struct alignsizes* sizes;
@@ -1107,7 +1107,7 @@ int emcore_read(void* data, const uint32_t addr, const uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_write(const void* data, const uint32_t addr, const uint32_t size)
+int emcore_write(const void* data, uint32_t addr, uint32_t size)
 {
     int res;
     struct alignsizes* sizes;
@@ -1175,7 +1175,7 @@ int emcore_write(const void* data, const uint32_t addr, const uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_ls(const uint32_t handle)
+int emcore_ls(uint32_t handle)
 {
     int res = 0;
     struct emcore_dir_entry entry;

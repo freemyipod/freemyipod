@@ -255,9 +255,12 @@ int emcorefs_open(const char* path, struct fuse_file_info* fi)
     return 0;
 }
 
-int emcorefs_read(const char* path, char* buf, uint32_t size, off_t offset, struct fuse_file_info* fi) {
+int emcorefs_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
+#ifdef DEBUG2
     fprintf(stderr, "FUSE_READ: path=[%s] size=[%d] offset=[%jd] fi->flags=[%d]\n", path, size, offset, fi->flags);
-
+#else
+    (void)path;
+#endif
     int res;
     uint32_t emcore_errno_value, addr, nread = size;
 
@@ -346,9 +349,12 @@ int emcorefs_read(const char* path, char* buf, uint32_t size, off_t offset, stru
     return nread;
 }
 
-int emcorefs_write(const char* path, const char* buf, uint32_t size, off_t offset, struct fuse_file_info* fi) {
+int emcorefs_write(const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
+#ifdef DEBUG2
     fprintf(stderr, "FUSE_WRITE: path=[%s] size=[%d] offset=[%jd] fi->flags=[%d]\n", path, size, offset, fi->flags);
-
+#else
+    (void)path;
+#endif
     int res;
     uint32_t emcore_errno_value, addr, nwrite = size;
 

@@ -58,7 +58,7 @@ int usb_init(void)
     return LIBUSB_SUCCESS;
 }
 
-int usb_find(const uint16_t vendor_id, const uint16_t product_id, uint8_t* reattach)
+int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
 {
     libusb_device **devs, *dev;
     ssize_t devs_cnt;
@@ -289,7 +289,7 @@ int usb_open(libusb_device* dev, uint8_t* reattach)
     return LIBUSB_SUCCESS;
 }
 
-int usb_bulk_transfer(const unsigned char endpoint, void* data, const int length)
+int usb_bulk_transfer(unsigned char endpoint, void* data, int length)
 {
     int transferred;
     int res;
@@ -309,7 +309,7 @@ int usb_bulk_transfer(const unsigned char endpoint, void* data, const int length
     return LIBUSB_SUCCESS;
 }
 
-int usb_close(const uint8_t reattach) {
+int usb_close(uint8_t reattach) {
     int res;
 
 #ifdef DEBUG
@@ -364,7 +364,7 @@ void usb_exit(void)
     libusb_exit(usb_ctx);
 }
 
-int usb_destroy(const uint8_t reattach)
+int usb_destroy(uint8_t reattach)
 {
     int res = LIBUSB_SUCCESS;
 

@@ -36,10 +36,10 @@ struct alignsizes
     uint32_t tail;
 };
 
-void dump_packet(const void* data, const uint32_t length);
-void alignsplit(struct alignsizes* sizeptr, const uint32_t addr, const uint32_t size, const uint32_t blksize, const uint32_t align);
-time_t fat_time_to_unix_ts(const short wrttime, const short wrtdate);
-int32_t unix_ts_to_fat_time(const time_t datetime);
-void print_error(const int code);
+void dump_packet(const void* data, size_t length);
+void alignsplit(struct alignsizes* sizeptr, uint32_t addr, uint32_t size, uint32_t blksize, uint32_t align);
+time_t fat_time_to_unix_ts(short wrttime, short wrtdate);
+int32_t unix_ts_to_fat_time(time_t datetime);
+void print_error(int code);
 
 #endif /* __MISC_H__ */
