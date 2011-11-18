@@ -33,11 +33,11 @@ import libemcoredata
 
 
 def s5l8701cryptdfu(data):
-    data = data.ljust((len(data) + 0x3f) & ~0x3f, "\0")
-    header = "87011.0\0\0\x08\0\0" + struct.pack("<I", len(data))
+    data = data.ljust((len(data) + 0x3f) & ~0x3f, b"\0")
+    header = b"87011.0\0\0\x08\0\0" + struct.pack("<I", len(data))
     emcore = libemcore.Emcore()
     addr = emcore.memalign(0x10, len(data) + 0x800)
-    emcore.write(addr, header.ljust(0x800, "\0") + data)
+    emcore.write(addr, header.ljust(0x800, b"\0") + data)
     emcore.hmac_sha1(addr + 0x800, len(data), addr + 0x10)
     emcore.hmac_sha1(addr, 0x40, addr + 0x40)
     emcore.aesencrypt(addr, len(data) + 0x800, 1)
@@ -58,11 +58,11 @@ def s5l8701decryptdfu(data):
 
 
 def s5l8701cryptfirmware(data):
-    data = data.ljust((len(data) + 0x3f) & ~0x3f, "\0")
-    header = "\0\0\0\0\x02\0\0\0\x01\0\0\0\x40\0\0\0\0\0\0\0" + struct.pack("<I", len(data))
+    data = data.ljust((len(data) + 0x3f) & ~0x3f, b"\0")
+    header = b"\0\0\0\0\x02\0\0\0\x01\0\0\0\x40\0\0\0\0\0\0\0" + struct.pack("<I", len(data))
     emcore = libemcore.Emcore()
     addr = emcore.memalign(0x10, len(data) + 0x800)
-    emcore.write(addr, header.ljust(0x800, "\0") + data)
+    emcore.write(addr, header.ljust(0x800, b"\0") + data)
     emcore.hmac_sha1(addr + 0x800, len(data), addr + 0x1c)
     emcore.hmac_sha1(addr, 0x200, addr + 0x1d4)
     emcore.aesencrypt(addr + 0x800, len(data), 1)
@@ -82,11 +82,11 @@ def s5l8701decryptfirmware(data):
 
 
 def s5l8702cryptnor(data):
-    data = data.ljust((len(data) + 0xf) & ~0xf, "\0")
-    header = "87021.0\x01\0\0\0\0" + struct.pack("<I", len(data)) + hashlib.sha1(data).digest()[:0x10]
+    data = data.ljust((len(data) + 0xf) & ~0xf, b"\0")
+    header = b"87021.0\x01\0\0\0\0" + struct.pack("<I", len(data)) + hashlib.sha1(data).digest()[:0x10]
     emcore = libemcore.Emcore()
     addr = emcore.memalign(0x10, len(data))
-    emcore.write(addr, header.ljust(0x800, "\0") + data)
+    emcore.write(addr, header.ljust(0x800, b"\0") + data)
     emcore.aesencrypt(addr + 0x800, len(data), 2)
     emcore.aesencrypt(addr + 0x10, 0x10, 2)
     emcore.write(addr + 0x40, hashlib.sha1(emcore.read(addr, 0x40)).digest()[:0x10])
@@ -108,26 +108,26 @@ def s5l8702decryptnor(data):
 
 def s5l8702genpwnage(data):
     cert = open(os.path.dirname(__file__) + "/libipodcrypto/s5l8702pwnage.cer", "rb").read()
-    data = data.ljust(max(0x840, (len(data) + 0xf) & ~0xf), "\0")
-    header = ("87021.0\x03\0\0\0\0" + struct.pack("<IIII", len(data) - 0x830, len(data) - 0x4f6, len(data) - 0x7b0, 0x2ba)).ljust(0x40, "\0")
+    data = data.ljust(max(0x840, (len(data) + 0xf) & ~0xf), b"\0")
+    header = (b"87021.0\x03\0\0\0\0" + struct.pack("<IIII", len(data) - 0x830, len(data) - 0x4f6, len(data) - 0x7b0, 0x2ba)).ljust(0x40, b"\0")
     emcore = libemcore.Emcore()
     addr = emcore.memalign(0x10, len(data))
     emcore.write(addr, header + hashlib.sha1(header).digest()[:0x10])
     emcore.aesencrypt(addr + 0x40, 0x10, 1)
-    data = emcore.read(addr, 0x50) + data + cert.ljust((len(cert) + 0xf) & ~0xf, "\0")
+    data = emcore.read(addr, 0x50) + data + cert.ljust((len(cert) + 0xf) & ~0xf, b"\0")
     emcore.free(addr)
     return data
 
 
 def s5l8720genpwnage(data):
     cert = open(os.path.dirname(__file__) + "/libipodcrypto/s5l8720pwnage.cer", "rb").read()
-    data = data.ljust(max(0x640, (len(data) + 0xf) & ~0xf), "\0")
-    header = ("87202.0\x03\0\0\0\0" + struct.pack("<IIII", len(data) - 0x630, len(data) - 0x2f2, len(data) - 0x5b0, 0x2be)).ljust(0x40, "\0")
+    data = data.ljust(max(0x640, (len(data) + 0xf) & ~0xf), b"\0")
+    header = (b"87202.0\x03\0\0\0\0" + struct.pack("<IIII", len(data) - 0x630, len(data) - 0x2f2, len(data) - 0x5b0, 0x2be)).ljust(0x40, b"\0")
     emcore = libemcore.Emcore()
     addr = emcore.memalign(0x10, len(data))
     emcore.write(addr, header + hashlib.sha1(header).digest()[:0x10])
     emcore.aesencrypt(addr + 0x40, 0x10, 1)
-    data = emcore.read(addr, 0x50) + data + cert.ljust((len(cert) + 0xf) & ~0xf, "\0")
+    data = emcore.read(addr, 0x50) + data + cert.ljust((len(cert) + 0xf) & ~0xf, b"\0")
     emcore.free(addr)
     return data
 
