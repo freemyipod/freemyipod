@@ -119,6 +119,19 @@ def s5l8702genpwnage(data):
     return data
 
 
+def s5l8702genpwnage800(data):
+    cert = open(os.path.dirname(__file__) + "/libipodcrypto/s5l8702pwnage.cer", "rb").read()
+    data = data.ljust(max(0x90, (len(data) + 0xf) & ~0xf), b"\0")
+    header = (b"87021.0\x03\0\0\0\0" + struct.pack("<IIII", len(data) - 0x80, len(data) + 0x2ba, len(data), 0x2ba)).ljust(0x40, b"\0")
+    emcore = libemcore.Emcore()
+    addr = emcore.memalign(0x10, len(data))
+    emcore.write(addr, header + hashlib.sha1(header).digest()[:0x10])
+    emcore.aesencrypt(addr + 0x40, 0x10, 1)
+    data = emcore.read(addr, 0x50).ljust(0x800, b"\0") + data + cert.ljust((len(cert) + 0xf) & ~0xf, b"\0")
+    emcore.free(addr)
+    return data
+
+
 def s5l8720genpwnage(data):
     cert = open(os.path.dirname(__file__) + "/libipodcrypto/s5l8720pwnage.cer", "rb").read()
     data = data.ljust(max(0x640, (len(data) + 0xf) & ~0xf), b"\0")
@@ -184,6 +197,14 @@ def s5l8702genpwnagefile(infile, outfile):
     infile = open(infile, "rb")
     outfile = open(outfile, "wb")
     outfile.write(s5l8702genpwnage(infile.read()))
+    infile.close()
+    outfile.close()
+
+
+def s5l8702genpwnagefile800(infile, outfile):
+    infile = open(infile, "rb")
+    outfile = open(outfile, "wb")
+    outfile.write(s5l8702genpwnage800(infile.read()))
     infile.close()
     outfile.close()
 
