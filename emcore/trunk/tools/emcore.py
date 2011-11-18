@@ -19,7 +19,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with emCORE.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
+#
 
 """
     Command line interface to communicate with emCORE devices.
@@ -894,6 +894,23 @@ class Commandline(object):
             self.logger.info("done\n")
         finally:
             self.emcore.free(buf)
+    
+    @command
+    def ipodclassic_readbbt(self, filename, tempaddr = None):
+        """
+            Target-specific function: ipodclassic
+            Reads the bad block table from the hard disk to memory at <tempaddr>
+            (or an allocated block if not given) and writes it to <filename>
+        """
+        tempaddr = to_int(tempaddr)
+        try:
+            f = open(filename, 'wb')
+        except IOError:
+            raise ArgumentError("File not writable.")
+        self.logger.info("Reading bad block table from disk...")
+        f.write(self.emcore.ipodclassic_readbbt(tempaddr))
+        f.close()
+        self.logger.info(" done\n")
     
     @command
     def ipodclassic_writebbt(self, filename, tempaddr = None):

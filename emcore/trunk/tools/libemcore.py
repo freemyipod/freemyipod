@@ -586,6 +586,50 @@ class Emcore(object):
         rc = self.lib.monitorcommand(struct.pack("<IIII", 0xffff0004, 0, 0, 0), "III", (None, None, None))
     
     @command(target = 0x4c435049)
+    def ipodclassic_readbbt(self, tempaddr = None):
+        """ Target-specific function: ipodclassic
+            Read hard drive bad block table
+        """
+        if tempaddr is None:
+            tempaddr = self.memalign(0x10, 4096)
+            malloc = True
+        else:
+            malloc = False
+        try:
+            self.ipodclassic_hddaccess(0, 0, 1, tempaddr)
+            bbt = self.read(tempaddr, 4096)
+        finally:
+            if malloc == True:
+                self.free(tempaddr)
+        try:
+            bbtheader = struct.unpack("<8s2024sQII512I", bbt)
+        except struct.error:
+            raise ArgumentError("There is no emCORE hard disk BBT present on this device")
+        if bbtheader[0] != b"emBIbbth":
+            raise ArgumentError("There is no emCORE hard disk BBT present on this device")
+        bbtsectors = bbtheader[4]
+        if malloc:
+            tempaddr = self.memalign(0x10, 4096 * bbtsectors)
+        try:
+            sector = 1
+            count = 0
+            offset = 0
+            for i in range(0, bbtsectors):
+                if bbtheader[5 + i] == sector + count:
+                    count = count + 1
+                else:
+                    self.ipodclassic_hddaccess(0, sector, count, tempaddr + offset)
+                    offset = offset + count * 4096
+                    sector = bbtheader[5 + i]
+                    count = 1
+            self.ipodclassic_hddaccess(0, sector, count, tempaddr + offset)
+            bbt += self.read(tempaddr, 4096 * bbtsectors)
+        finally:
+            if malloc == True:
+                self.free(tempaddr)
+        return bbt
+    
+    @command(target = 0x4c435049)
     def ipodclassic_writebbt(self, bbt, tempaddr = None):
         """ Target-specific function: ipodclassic
             Write hard drive bad block table
@@ -594,12 +638,13 @@ class Emcore(object):
             bbtheader = struct.unpack("<8s2024sQII512I", bbt[:4096])
         except struct.error:
             raise ArgumentError("The specified file is not an emCORE hard disk BBT")
-        if bbtheader[0] != "emBIbbth":
+        if bbtheader[0] != b"emBIbbth":
             raise ArgumentError("The specified file is not an emCORE hard disk BBT")
-        virtualsectors = bbtheader[2]
         bbtsectors = bbtheader[4]
+        if (bbtsectors + 1) * 4096 != len(bbt):
+            raise ArgumentError("Size of BBT is not consistent: Expected %d bytes, got %d" % ((bbtsectors + 1) * 4096, len(bbt)))
         if tempaddr is None:
-            tempaddr = self.malloc(len(bbt))
+            tempaddr = self.memalign(0x10, len(bbt))
             malloc = True
         else:
             malloc = False
@@ -615,7 +660,7 @@ class Emcore(object):
                 else:
                     self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
                     offset = offset + count * 4096
-                    sector = bbtheader[5 +i]
+                    sector = bbtheader[5 + i]
                     count = 1
             self.ipodclassic_hddaccess(1, sector, count, tempaddr + offset)
             self.ipodclassic_reloadbbt()
