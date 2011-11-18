@@ -62,7 +62,7 @@ int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
 {
     libusb_device **devs, *dev;
     ssize_t devs_cnt;
-    int res, i;
+    int res, i, j;
     struct libusb_device_descriptor dev_desc;
     uint8_t found = 0;
     struct libusb_config_descriptor* cfg_desc;
@@ -82,7 +82,7 @@ int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
     }
 
 #ifdef DEBUG
-    fprintf(stderr, "Found %ld USB devices!\n", devs_cnt);
+    fprintf(stderr, "Found %Zd USB devices!\n", devs_cnt);
 #endif
     for (i = 0; i < devs_cnt; ++i)
     {
@@ -164,15 +164,15 @@ int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
            fprintf(stderr, "Endpoints:");
 #endif
 
-            for (i = 0; i < 4; ++i)
+            for (j = 0; j < 4; ++j)
             {
-                ep_desc = &iface_desc->endpoint[i];
+                ep_desc = &iface_desc->endpoint[j];
 
 #ifdef DEBUG
-                fprintf(stderr, " %d at 0x%02x", i, ep_desc->bEndpointAddress);
+                fprintf(stderr, " %d at 0x%02x", j, ep_desc->bEndpointAddress);
 #endif
 
-                switch (i) {
+                switch (j) {
                     case 0:
                         emcore_usb_eps_addr.cout = ep_desc->bEndpointAddress;
                     break;
