@@ -225,10 +225,14 @@ int emcore_readmem(void* data, uint32_t addr, uint32_t size)
 
     if (EMCORE_SUCCESS != res)
     {
+        free(in);
+
         return res;
     }
 
     memcpy(data, in + EMCORE_HEADER_SIZE, size);
+
+    free(in);
 
     return EMCORE_SUCCESS;
 }
@@ -332,10 +336,14 @@ int emcore_readi2c(void* data, uint8_t bus, uint8_t slave, uint8_t addr, uint8_t
 
     if (EMCORE_SUCCESS != res)
     {
+        free(in);
+
         return res;
     }
 
     memcpy(data, in + 16, size);
+
+    free(in);
 
     return EMCORE_SUCCESS;
 }

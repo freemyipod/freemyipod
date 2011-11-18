@@ -82,7 +82,7 @@ int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
     }
 
 #ifdef DEBUG
-    fprintf(stderr, "Found %d USB devices!\n", devs_cnt);
+    fprintf(stderr, "Found %ld USB devices!\n", devs_cnt);
 #endif
     for (i = 0; i < devs_cnt; ++i)
     {
