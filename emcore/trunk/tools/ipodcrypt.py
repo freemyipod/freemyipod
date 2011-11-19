@@ -27,19 +27,19 @@ import libipodcrypto
 
 
 def usage():
-  print ""
-  print "Please provide a command and (if needed) parameters as command line arguments"
-  print ""
-  print "Available commands:"
-  print "  s5l8701-cryptdfu <infile> <outfile>"
-  print "  s5l8701-decryptdfu <infile> <outfile>"
-  print "  s5l8701-cryptfirmware <infile> <outfile>"
-  print "  s5l8701-decryptfirmware <infile> <outfile>"
-  print "  s5l8702-cryptnor <infile> <outfile>"
-  print "  s5l8702-decryptnor <infile> <outfile>"
-  print "  s5l8702-genpwnage <infile> <outfile>"
-  print "  s5l8702-genpwnage800 <infile> <outfile>"
-  print "  s5l8720-genpwnage <infile> <outfile>"
+  print("")
+  print("Please provide a command and (if needed) parameters as command line arguments")
+  print("")
+  print("Available commands:")
+  print("  s5l8701-cryptdfu <infile> <outfile>")
+  print("  s5l8701-decryptdfu <infile> <outfile>")
+  print("  s5l8701-cryptfirmware <infile> <outfile>")
+  print("  s5l8701-decryptfirmware <infile> <outfile>")
+  print("  s5l8702-cryptnor <infile> <outfile>")
+  print("  s5l8702-decryptnor <infile> <outfile>")
+  print("  s5l8702-genpwnage <infile> <outfile>")
+  print("  s5l8702-genpwnage800 <infile> <outfile>")
+  print("  s5l8720-genpwnage <infile> <outfile>")
   exit(2)
 
 
