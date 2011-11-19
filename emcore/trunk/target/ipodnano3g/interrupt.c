@@ -237,6 +237,12 @@ void interrupt_init(void)
     VIC0INTENABLE = 1 << IRQ_DMAC0;
     VIC0INTENABLE = 1 << IRQ_DMAC1;
 #ifdef TARGET_ipodclassic
+    clockgate_enable(5, true);
+    ATA_IRQ_MASK = 0;
+    ATA_IRQ = ATA_IRQ;
+    ATA_CONTROL = 0;
+    while (!(ATA_CONTROL & BIT(1))) yield();
+    clockgate_enable(5, false);
     VIC0INTENABLE = 1 << IRQ_ATA;
     VIC1INTENABLE = 1 << (IRQ_MMC - 32);
 #endif
