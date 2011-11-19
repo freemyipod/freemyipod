@@ -693,8 +693,9 @@ class Emcore(object):
         self.logger.debug("Reading %d sectors from disk at volume %d, sector %d to memory at 0x%X\n" % (count, volume, sector, addr))
         result = self.lib.monitorcommand(struct.pack("<IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
         self.logger.debug("Read sectors, result: 0x%X\n" % result.rc)
-        if result.rc > 0x80000000:
-            raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
+        self.logger.info(".");
+#        if result.rc > 0x80000000:
+#            raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, result.rc))
 
     @command(timeout = 50000)
     def storage_write_sectors_md(self, volume, sector, count, addr):
@@ -702,8 +703,9 @@ class Emcore(object):
         self.logger.debug("Writing %d sectors from memory at 0x%X to disk at volume %d, sector %d\n" % (count, addr, volume, sector))
         result = self.lib.monitorcommand(struct.pack("<IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
         self.logger.debug("Wrote sectors, result: 0x%X\n" % result.rc)
-        if result.rc > 0x80000000:
-            raise DeviceError("storage_write_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, rc))
+        self.logger.info(".");
+#        if result.rc > 0x80000000:
+#            raise DeviceError("storage_write_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, result.rc))
     
     @command(timeout = 30000)
     def fat_enable_flushing(self, state):
@@ -717,8 +719,9 @@ class Emcore(object):
     @command(timeout = 30000)
     def file_open(self, filename, mode):
         """ Opens a file and returns the handle """
+        fn = filename.encode("utf_8")
         self.logger.debug("Opening remote file %s with mode %d\n" % (filename, mode))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(filename), 30, mode, 0, 0, filename, 0), "III", ("fd", None, None))
+        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(fn), 30, mode, 0, 0, fn, 0), "III", ("fd", None, None))
         if result.fd > 0x80000000:
             raise DeviceError("file_open(filename=\"%s\", mode=0x%X) failed with RC=0x%08X, errno=%d" % (filename, mode, result.fd, self.errno()))
         self.logger.debug("Opened file as handle 0x%X\n" % result.fd)
@@ -827,8 +830,9 @@ class Emcore(object):
     @command(timeout = 30000)
     def file_unlink(self, filename):
         """ Removes a file """
+        fn = filename.encode("utf_8")
         self.logger.debug("Deleting file %s\n" % (filename))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(filename), 40, 0, 0, 0, filename, 0), "III", ("rc", None, None))
+        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(fn), 40, 0, 0, 0, fn, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_unlink(filename=\"%s\") failed with RC=0x%08X, errno=%d" % (filename, result.rc, self.errno()))
         self.logger.debug("Delete file result: 0x%X\n" % (result.rc))
@@ -837,8 +841,10 @@ class Emcore(object):
     @command(timeout = 30000)
     def file_rename(self, oldname, newname):
         """ Renames a file """
-        self.logger.debug("Renaming file %s to %s\n" % (oldname, newname))
-        result = self.lib.monitorcommand(struct.pack("<IIII248s%dsB" % min(247, len(newname)), 41, 0, 0, 0, oldname, newname, 0), "III", ("rc", None, None))
+        on = oldname.encode("utf_8")
+        nn = newname.encode("utf_8")
+        self.logger.debug("Renaming file %s to %s\n" % (on, nn))
+        result = self.lib.monitorcommand(struct.pack("<IIII248s%dsB" % min(247, len(nn)), 41, 0, 0, 0, on, nn, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_rename(oldname=\"%s\", newname=\"%s\") failed with RC=0x%08X, errno=%d" % (oldname, newname, result.rc, self.errno()))
         self.logger.debug("Rename file result: 0x%X\n" % (result.rc))
@@ -847,8 +853,9 @@ class Emcore(object):
     @command(timeout = 30000)
     def dir_open(self, dirname):
         """ Opens a directory and returns the handle """
+        dn = dirname.encode("utf_8")
         self.logger.debug("Opening directory %s\n" % (dirname))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dirname), 42, 0, 0, 0, dirname, 0), "III", ("handle", None, None))
+        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dn), 42, 0, 0, 0, dn, 0), "III", ("handle", None, None))
         if result.handle == 0:
             raise DeviceError("dir_open(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.handle, self.errno()))
         self.logger.debug("Opened directory as handle 0x%X\n" % (result.handle))
@@ -909,8 +916,9 @@ class Emcore(object):
     @command(timeout = 30000)
     def dir_create(self, dirname):
         """ Creates a directory """
+        dn = dirname.encode("utf_8")
         self.logger.debug("Creating directory %s\n" % (dirname))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dirname), 47, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
+        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dn), 47, 0, 0, 0, dn, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_create(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
         self.logger.debug("Create directory result: 0x%X\n" % (result.rc))
@@ -919,8 +927,9 @@ class Emcore(object):
     @command(timeout = 30000)
     def dir_remove(self, dirname):
         """ Removes an (empty) directory """
+        dn = dirname.encode("utf_8")
         self.logger.debug("Removing directory %s\n" % (dirname))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dirname), 48, 0, 0, 0, dirname, 0), "III", ("rc", None, None))
+        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dn), 48, 0, 0, 0, dn, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_remove(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
         self.logger.debug("Remove directory result: 0x%X\n" % (result.rc))
