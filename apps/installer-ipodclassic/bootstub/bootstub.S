@@ -33,16 +33,35 @@ _start:
 	mcr	p15, 0, r0,c7,c5
 	mcr	p15, 0, r0,c8,c7
 	mcr	p15, 0, r0,c13,c0
-	adr	lr, cacheflush_done
+	adr	r5, flushcache
+	mov	r2, #0x22000000
+	add	r1, r2, #0x50 + flushcache - _start
+	adr	r4, _stubend + 4
+	adr	lr, copyloop
 
 flushcache:
 	mrc	p15, 0, r15,c7,c14,3
 	bne	flushcache
 	mov	r0, #0
 	mcr	p15, 0, r0,c7,c10,4
+	mcr	p15, 0, r0,c7,c5
 	bx	lr
 	
-cacheflush_done:
+copyloop:
+	cmp	r1, r2
+	ldrhi	r3, [r5], #4
+	strhi	r3, [r2], #4
+	bhi	copyloop
+	add	lr, r1, #_start - flushcache - 0x50 + sramstart - flushcache
+	b	flushcache
+sramstart:
+	cmp	r4, r5
+	ldrhi	r3, [r5], #4
+	strhi	r3, [r2], #4
+	bhi	sramstart
+	bl	flushcache
+	str	r4, [r2]
+
 	adr	sp, values1
 	ldmia	sp!, {r10-r12}
 	mcr	p15, 0, r11,c2,c0
@@ -227,7 +246,6 @@ values1:
 	.byte 0x26, 9
 	.byte 0x27, 1
 	.byte 0x1a, 0x6f
-	.byte 0x1b, 0
 	.byte 0x1c, 0
 	.byte 0x1d, 0x59
 	.byte 0x33, 9
@@ -773,7 +791,7 @@ val_80100db0:
 	bne	lcdbyteseq
 	movne	r0, r0,lsl#4
 	bne	udelay
-	adr	r1, _stubend + 4
+	ldr	r1, _stubend + 4
 	ldr	r6, val_80100db0
 	ldr	r0, _stubend
 	str	r6, [r4]
@@ -785,7 +803,6 @@ movepayloadloop:
 	strhi	r3, [r2], #4
 	bhi	movepayloadloop
 	bl	flushcache
-	mcr	p15, 0, r0,c7,c5
 	mov	pc, #0x08000000
 
 _stubend:
