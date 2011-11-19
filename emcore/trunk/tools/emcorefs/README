@@ -5,40 +5,48 @@
   \___|_| |_| |_|\____\___/|_| \_\_____|_|   |____/ 
 
 emCOREFS is a FUSE-based filesystem that uses emCORE's Monitor API
-to provide communication with device's FS. It is still in very early
-state, but some features (directory listing, reading files) are done.
+to provide communication with device's FS. It is not yet complete,
+but most features are done. It runs on both Linux and Mac OS X.
 
 For communication with the device, this application uses libusb 1.0.
 
 Building
 --------
 You need:
-1. GCC/Make
+1. GCC/Make (Xcode on OS X)
 2. pkg-config
 3. libusb >= 1.0
-4. libfuse >= 2.8
-5. maybe other packages
+4. libfuse >= 2.8 (or fuse4x on x64 OS X)
+5. all dependencies of the above
 
 Compiling:
 make - standard build, no debug messages, only fatal errors on
     startup are shown.
+
 make debug - debug build, some debug/error messages are shown.
     libusb debug messages are enabled, too.
+
+You can prefix any of these with
+CFLAGS="-DDEBUG_USB_PACKETS"
+in order to have a dump of the usb traffic that's being sent and received.
 
 Testing:
 make test - run the build without FUSE debugging messages, going
     into the background if it connects to the device successfully.
+
 make testdebug - run the build in the foreground, showing FUSE debug
     messages in the terminal.
 
 Running
 -------
-You need FUSE >= 2.8 installed.
-Currently only tested on Linux (Ubuntu 11.04 in my case). Maybe an
-OSX-compatible version would appear at some point.
-Starting: ./emcorefs <mountpoint>
-Stopping: fusermount -u <mountpoint as seen in /etc/mtab>
+You need FUSE >= 2.8 installed. (or fuse4x on x64 OS X)
+Currently tested on:
+- Linux (Ubuntu 11.04 x86)
+- Mac OS X (10.6.8 x64)
 
+Starting: ./emcorefs <mountpoint>
+Stopping: fusermount -u <mountpoint as seen in /etc/mtab> (Linux)
+          diskutil unmount <mountpoint as seen in /etc/mtab> (OS X)
 Known bugs/issues
 -----------------
 * Write support not tested very well.
