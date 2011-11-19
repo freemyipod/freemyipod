@@ -120,7 +120,7 @@ def s5l8702genpwnage(data):
 
 
 def s5l8702genpwnage800(data):
-    cert = open(os.path.dirname(__file__) + "/libipodcrypto/s5l8702pwnage.cer", "rb").read()
+    cert = open(os.path.dirname(__file__) + "/libipodcrypto/s5l8702pwnage800.cer", "rb").read()
     data = data.ljust(max(0x90, (len(data) + 0xf) & ~0xf), b"\0")
     header = (b"87021.0\x03\0\0\0\0" + struct.pack("<IIII", len(data) - 0x80, len(data) + 0x2ba, len(data), 0x2ba)).ljust(0x40, b"\0")
     emcore = libemcore.Emcore()
