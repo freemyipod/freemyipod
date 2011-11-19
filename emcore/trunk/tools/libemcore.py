@@ -693,9 +693,8 @@ class Emcore(object):
         self.logger.debug("Reading %d sectors from disk at volume %d, sector %d to memory at 0x%X\n" % (count, volume, sector, addr))
         result = self.lib.monitorcommand(struct.pack("<IIQIIII", 28, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
         self.logger.debug("Read sectors, result: 0x%X\n" % result.rc)
-        self.logger.info(".");
-#        if result.rc > 0x80000000:
-#            raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, result.rc))
+        if result.rc > 0x80000000:
+            raise DeviceError("storage_read_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, result.rc))
 
     @command(timeout = 50000)
     def storage_write_sectors_md(self, volume, sector, count, addr):
@@ -703,9 +702,8 @@ class Emcore(object):
         self.logger.debug("Writing %d sectors from memory at 0x%X to disk at volume %d, sector %d\n" % (count, addr, volume, sector))
         result = self.lib.monitorcommand(struct.pack("<IIQIIII", 29, volume, sector, count, addr, 0, 0), "III", ("rc", None, None))
         self.logger.debug("Wrote sectors, result: 0x%X\n" % result.rc)
-        self.logger.info(".");
-#        if result.rc > 0x80000000:
-#            raise DeviceError("storage_write_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, result.rc))
+        if result.rc > 0x80000000:
+            raise DeviceError("storage_write_sectors_md(volume=%d, sector=%d, count=%d, addr=0x%08X) failed with RC 0x%08X" % (volume, sector, count, addr, result.rc))
     
     @command(timeout = 30000)
     def fat_enable_flushing(self, state):
