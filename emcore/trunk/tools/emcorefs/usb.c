@@ -193,6 +193,7 @@ int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
 #endif
 
             found = 1;
+            break;
         }
     }
 

@@ -73,7 +73,7 @@ int usb_find(unsigned char *reattach)
         return devs_cnt;
     }
     
-    printf("Found %d USB devices!\n", (int) devs_cnt);
+    printf("Found %Zd USB devices!\n", devs_cnt);
             
     for (i = 0; i < devs_cnt; ++i)
     {
@@ -158,6 +158,7 @@ int usb_find(unsigned char *reattach)
             }
             
             found = 1;
+            break;
         }
     }
 
