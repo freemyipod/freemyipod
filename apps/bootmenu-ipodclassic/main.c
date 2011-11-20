@@ -64,6 +64,7 @@ static void message(int x, const char* line1, const char* line2)
 {
     rendertext(framebuf, x, 140, 320, 0xff3333ff, 0xa0000000, line1);
     rendertext(framebuf, x, 148, 320, 0xff3333ff, 0xa0000000, line2);
+    update_display(NULL);
     displaylcd(0, 0, 320, 240, framebuf, 0, 0, 320);
     sleep(5000000);
 }
@@ -244,6 +245,7 @@ void run_reformat(void** firmware, void** app, int* size)
 {
     memcpy(framebuf, bg, 320 * 240 * 3);
     rendertext(framebuf, 70, 125, 320, 0xff7fffff, 0, "Reformatting data partition...");
+    update_display(NULL);
     displaylcd(0, 0, 320, 240, framebuf, 0, 0, 320);
     struct emcorelib_header* libmkfat32 = loadlib(LIBMKFAT32_IDENTIFIER,
                                                   LIBMKFAT32_API_VERSION, "libmkf32");
@@ -412,6 +414,7 @@ void run_rockbox(void** firmware, void** app, int* size)
         else memcpy(framebuf, bg, 320 * 240 * 3);
         ui->blit(280, MIN(86, i), 3, framebuf, 20, MAX(0, i - 86), 320,
                     rbxlogo, 0, MAX(0, 86 - i), 280);
+        update_display(NULL);
         displaylcd(0, 0, 320, 240, framebuf, 0, 0, 320);
     }
     boot->load_from_file(firmware, size, true, "/.rockbox/rockbox.ipod", 0);

@@ -68,6 +68,7 @@ static void message(int x, const char* line1, const char* line2)
 {
     rendertext(framebuf, x, 73, 176, 0xff3333ff, 0xa0000000, line1);
     rendertext(framebuf, x, 81, 176, 0xff3333ff, 0xa0000000, line2);
+    update_display(NULL);
     displaylcd(0, 0, 176, 132, framebuf, 0, 0, 176);
     sleep(5000000);
 }
@@ -277,6 +278,7 @@ void run_reformat(void** firmware, void** app, int* size)
 {
     memcpy(framebuf, bg, 176 * 132 * 3);
     rendertext(framebuf, 7, 65, 176, 0xff7fffff, 0, "Reformatting data partition");
+    update_display(NULL);
     displaylcd(0, 0, 176, 132, framebuf, 0, 0, 176);
     struct emcorelib_header* libmkfat32 = loadlib(LIBMKFAT32_IDENTIFIER,
                                                   LIBMKFAT32_API_VERSION, "libmkf32");
@@ -485,6 +487,7 @@ void run_crapple(void** firmware, void** app, int* size)
         memcpy(framebuf2, framebuf, 176 * 132 * 3);
         ui->blenda(111, i, 255, framebuf2, 32, 0, 176,
                    framebuf2, 32, 0, 176, crapple, 0, 115 - i, 111);
+        update_display(NULL);
         displaylcd(0, 0, 176, 132, framebuf2, 0, 0, 176);
     }
     boot->load_from_file(firmware, size, false, "/.boot/appleos.ucl", 0x800000);
@@ -513,6 +516,7 @@ void run_rockbox(void** firmware, void** app, int* size)
         else memcpy(framebuf, bg, 176 * 132 * 3);
         ui->blit(154, MIN(47, i), 3, framebuf, 11, MAX(0, i - 47), 176,
                  rbxlogo, 0, MAX(0, 47 - i), 154);
+        update_display(NULL);
         displaylcd(0, 0, 176, 132, framebuf, 0, 0, 176);
     }
     boot->load_from_file(firmware, size, true, "/.rockbox/rockbox.ipod", 0);
