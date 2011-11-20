@@ -66,6 +66,31 @@ class ipoddfu:
         return
     except usb.core.USBError: pass
     try:
+      self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1241)
+      if self.dev and generation in [0, 11] and type in [0, 2]:
+        self.dev.set_configuration(1)
+        self.generation = 11;
+        self.type = 2;
+        print("Connected to iPod Classic 1G WTF mode, USB version %s"  % self.dev.bcdDevice)
+        return
+    try:
+      self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1245)
+      if self.dev and generation in [0, 12] and type in [0, 2]:
+        self.dev.set_configuration(1)
+        self.generation = 12;
+        self.type = 2;
+        print("Connected to iPod Classic 2G WTF mode, USB version %s"  % self.dev.bcdDevice)
+        return
+    try:
+      self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1247)
+      if self.dev and generation in [0, 13] and type in [0, 2]:
+        self.dev.set_configuration(1)
+        self.generation = 13;
+        self.type = 2;
+        print("Connected to iPod Classic 3G WTF mode, USB version %s"  % self.dev.bcdDevice)
+        return
+    except usb.core.USBError: pass
+    try:
       self.dev = usb.core.find(idVendor=0x05ac, idProduct=0x1225)
       if self.dev and generation in [0, 4] and type in [0, 1]:
         self.dev.set_configuration(1)
