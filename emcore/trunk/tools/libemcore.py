@@ -871,7 +871,7 @@ class Emcore(object):
         dirent = self.read(result.ptr, result.maxpath + 16)
         ret = Bunch()
         (ret.name, ret.attributes, ret.size, ret.startcluster, ret.wrtdate, ret.wrttime) = struct.unpack("<%dsIIIHH" % result.maxpath, dirent)
-        ret.name = ret.name[:ret.name.index('\x00')]
+        ret.name = ret.name[:ret.name.index(b"\0")].decode("utf_8")
         self.logger.debug("Read directory entry:\n")
         self.logger.debug("Name: %s\n" % ret.name)
         self.logger.debug("Attributes: 0x%X\n" % ret.attributes)
