@@ -24,9 +24,10 @@
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_WINNT 0x500
 #include <windows.h>
-#include <ntddscsi.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <ddk/ntddscsi.h>
+#include "build/version.h"
 
 
 struct scsi_cmd
@@ -205,6 +206,10 @@ int cmd_ipod6g(HANDLE dev, int argc, char const* const* argv)
 
 int main(int argc, char const* const* argv)
 {
+    printf("iPodSCSI v. " VERSION " r" VERSION_SVN " - Copyright 2011 by Michael Sparmann (TheSeven)\r\n"
+           "This is free software; see the source for copying conditions.  There is NO\r\n"
+           "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\r\n"
+           "\r\n");
     if (argc < 4) return usage("Not enough arguments specified", NULL, argc, argv);
 
     if (strlen(argv[1]) != 2 || argv[1][1] != ':') return usage("Bad drive letter: %s", argv[1], argc, argv);
