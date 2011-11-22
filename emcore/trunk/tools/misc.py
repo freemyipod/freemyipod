@@ -235,13 +235,25 @@ class c_enum(_SimpleCData):
         else:
             return self.value != other
 
-
 class ExtendedCStruct(LittleEndianStructure):
     """
         This is a subclass of the LittleEndianStructure.
         It implements functions to easily convert
         structures to/from strings and Bunches.
     """
+    def __init__(self, data = None, base = 0, address = 0):
+        LittleEndianStructure.__init__(self)
+        if data != None:
+            self._data_ = data
+            self._base_ = base
+            self._address_ = address
+            if address < base or address + sizeof(self) > base + len(data):
+                raise Exception("Range 0x%08X+0x%X out of bounds [0x%08X:0x%08X]" % (address, sizeof(self), base, base + len(data)))
+            memmove(addressof(self), data[address - base : address - base + sizeof(self)], sizeof(self))
+
+    def __int__(self):
+        return self._address_
+    
     def _from_bunch(self, bunch):
         for field, _ in self._fields_:
             if field in bunch:
