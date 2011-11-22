@@ -60,8 +60,8 @@ struct library_handle* library_register(void* image, struct emcorelib_header* he
     }
     struct library_handle* handle = (struct library_handle*)malloc(sizeof(struct library_handle));
     memset(handle, 0, sizeof(struct library_handle));
-    reownalloc(handle, (struct scheduler_thread*)handle);
-    reownalloc(image, (struct scheduler_thread*)handle);
+    reownalloc(handle, OWNER_TYPE(OWNER_LIBRARY, handle));
+    reownalloc(image, OWNER_TYPE(OWNER_LIBRARY, handle));
     handle->next = library_list_head;
     handle->lib = header;
     handle->alloc = image;
@@ -109,15 +109,15 @@ int library_unload(struct emcorelib_header* lib)
     }
     if (library_list_head == h) library_list_head = h->next;
     else prev->next = h->next;
-    library_release_all_of_thread((struct scheduler_thread*)h);
+    library_release_all_of_thread(OWNER_TYPE(OWNER_LIBRARY, h));
 #ifdef HAVE_STORAGE
-    close_all_of_process((struct scheduler_thread*)h);
-    closedir_all_of_process((struct scheduler_thread*)h);
+    close_all_of_process(OWNER_TYPE(OWNER_LIBRARY, h));
+    closedir_all_of_process(OWNER_TYPE(OWNER_LIBRARY, h));
 #endif
 #ifdef HAVE_BUTTON
-    button_unregister_all_of_thread((struct scheduler_thread*)h);
+    button_unregister_all_of_thread(OWNER_TYPE(OWNER_LIBRARY, h));
 #endif
-    free_all_of_thread((struct scheduler_thread*)h);
+    free_all_of_thread(OWNER_TYPE(OWNER_LIBRARY, h));
     mutex_unlock(&library_mutex);
     return 0;
 }

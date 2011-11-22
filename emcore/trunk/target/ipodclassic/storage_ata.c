@@ -1068,7 +1068,7 @@ void ata_bbt_reload()
                         break;
                     }
                 }
-                if (ata_bbt) reownalloc(ata_bbt, NULL);
+                if (ata_bbt) reownalloc(ata_bbt, KERNEL_OWNER(KERNEL_OWNER_ATA_BBT));
             }
         }
         else ata_virtual_sectors = ata_total_sectors;

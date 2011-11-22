@@ -124,7 +124,7 @@ struct scheduler_thread* execimage(void* image, bool copy)
                                stacksize, USER_THREAD, 127, false);
         if (thread)
         {
-            reownalloc(image, thread);
+            reownalloc(image, OWNER_TYPE(OWNER_THREAD, thread));
             thread_resume(thread);
         }
         else free(image);

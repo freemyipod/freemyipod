@@ -68,6 +68,7 @@ char *get_volume_name(int volume);
 #endif
 
 extern DIR* opendir(const char* name);
+extern void reown_dir(DIR* dir, struct scheduler_thread* owner);
 extern int closedir(DIR* dir);
 extern int closedir_all_of_process(struct scheduler_thread* process);
 extern int mkdir(const char* name);

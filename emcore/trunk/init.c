@@ -268,8 +268,8 @@ void init()
     size -= (size_t)(bootalloc) - (size_t)(&_poolstart);
     realloc(bootalloc, size);
     ib = (struct initbss*)malloc(sizeof(struct initbss));
-    reownalloc(ib, &(ib->initthread));
-    reownalloc(bootalloc, &(ib->initthread));
+    reownalloc(ib, OWNER_TYPE(OWNER_THREAD, &(ib->initthread)));
+    reownalloc(bootalloc, OWNER_TYPE(OWNER_THREAD, &(ib->initthread)));
     ib->bootalloc = bootalloc;
     thread_create(&(ib->initthread), initthreadname, initthread, ib->initstack,
                   sizeof(ib->initstack), OS_THREAD, 127, true);

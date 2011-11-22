@@ -844,6 +844,7 @@ void dbgthread(void)
                 {
                     dbgasyncsendbuf[0] = 1;
                     int fd = file_open((char*)(&dbgasyncsendbuf[4]), (int)(dbgasyncsendbuf[1]));
+                    if (fd > 0) reown_file(fd, KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
                     dbgasyncsendbuf[1] = (uint32_t)fd;
                     usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                     break;
@@ -892,7 +893,8 @@ void dbgthread(void)
                     break;
                 case 38:  // CLOSE_MONITOR_FILES
                     dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)close_all_of_process(current_thread);
+                    int rc = close_all_of_process(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    dbgasyncsendbuf[1] = (uint32_t)rc;
                     usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                     break;
                 case 39:  // RELEASE_FILES
@@ -913,7 +915,9 @@ void dbgthread(void)
                     break;
                 case 42:  // OPENDIR
                     dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)opendir((char*)(&dbgasyncsendbuf[4]));
+                    DIR* dir = opendir((char*)(&dbgasyncsendbuf[4]));
+                    if (dir > 0) reown_dir(dir, KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    dbgasyncsendbuf[1] = (uint32_t)dir;
                     usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                     break;
                 case 43:  // READDIR
@@ -930,7 +934,8 @@ void dbgthread(void)
                     break;
                 case 45:  // CLOSE_MONITOR_DIRS
                     dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)closedir_all_of_process(current_thread);
+                    rc = closedir_all_of_process(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    dbgasyncsendbuf[1] = (uint32_t)rc;
                     usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                     break;
                 case 46:  // RELEASE_DIRS
@@ -981,12 +986,16 @@ void dbgthread(void)
             case DBGACTION_MALLOC:
                 dbgasyncsendbuf[0] = 1;
                 dbgasyncsendbuf[1] = (uint32_t)malloc((size_t)dbgactionlength);
+                if (dbgasyncsendbuf[1])
+                    reownalloc(dbgasyncsendbuf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_MEMALIGN:
                 dbgasyncsendbuf[0] = 1;
                 dbgasyncsendbuf[1] = (uint32_t)memalign((size_t)dbgactionoffset,
                                                         (size_t)dbgactionlength);
+                if (dbgasyncsendbuf[1])
+                    reownalloc(dbgasyncsendbuf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_REALLOC:
@@ -1007,7 +1016,8 @@ void dbgthread(void)
                 break;
             case DBGACTION_FREEMONITOR:
                 dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = (uint32_t)free_all_of_thread(current_thread);
+                int rc = free_all_of_thread(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                dbgasyncsendbuf[1] = (uint32_t)rc;
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
 #ifdef HAVE_RTC

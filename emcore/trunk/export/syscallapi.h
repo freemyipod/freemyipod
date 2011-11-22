@@ -73,7 +73,7 @@
 #endif
 
 /* increase this every time the api struct changes */
-#define EMCORE_API_VERSION 5
+#define EMCORE_API_VERSION 6
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
@@ -285,6 +285,8 @@ struct emcore_syscall_table
     typeof(rtc_read_datetime) *rtc_read_datetime;
     typeof(rtc_write_datetime) *rtc_write_datetime;
     typeof(accel_read_force_vector) *accel_read_force_vector;
+    typeof(reown_file) *reown_file;
+    typeof(reown_dir) *reown_dir;
 };
 
 

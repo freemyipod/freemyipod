@@ -225,6 +225,8 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define rtc_read_datetime __emcore_syscall->rtc_read_datetime
 #define rtc_write_datetime __emcore_syscall->rtc_write_datetime
 #define accel_read_force_vector __emcore_syscall->accel_read_force_vector
+#define reown_file __emcore_syscall->reown_file
+#define reown_dir __emcore_syscall->reown_dir
 
 
 #endif

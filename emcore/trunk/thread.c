@@ -379,8 +379,8 @@ struct scheduler_thread* thread_create(struct scheduler_thread* thread, const ch
         if (stack_alloced) free(stack);
         return NULL;
     }
-    if (thread_alloced) reownalloc(thread, thread);
-    if (stack_alloced) reownalloc(stack, thread);
+    if (thread_alloced) reownalloc(thread, OWNER_TYPE(OWNER_THREAD, thread));
+    if (stack_alloced) reownalloc(stack, OWNER_TYPE(OWNER_THREAD, thread));
 
     int i;
     for (i = 0; i < stacksize >> 2; i ++) ((uint32_t*)stack)[i] = 0xaffebeaf;
@@ -512,15 +512,15 @@ int thread_terminate_internal(struct scheduler_thread* thread, uint32_t mode)
 
     leave_critical_section(mode);
 
-    library_release_all_of_thread(thread);
+    library_release_all_of_thread(OWNER_TYPE(OWNER_THREAD, thread));
 #ifdef HAVE_STORAGE
-    close_all_of_process(thread);
-    closedir_all_of_process(thread);
+    close_all_of_process(OWNER_TYPE(OWNER_THREAD, thread));
+    closedir_all_of_process(OWNER_TYPE(OWNER_THREAD, thread));
 #endif
 #ifdef HAVE_BUTTON
-    button_unregister_all_of_thread(thread);
+    button_unregister_all_of_thread(OWNER_TYPE(OWNER_THREAD, thread));
 #endif
-    free_all_of_thread(thread);
+    free_all_of_thread(OWNER_TYPE(OWNER_THREAD, thread));
 
     mode = enter_critical_section();
     for (t = head_thread; t && t->thread_next != thread; t = t->thread_next);

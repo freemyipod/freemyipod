@@ -84,6 +84,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
         errno = EMFILE;
         return -2;
     }
+    reownalloc(file, KERNEL_OWNER(KERNEL_OWNER_FILE_HANDLE));
     memset(file, 0, sizeof(struct filedesc));
     file->process = current_thread;
     if (flags & (O_RDWR | O_WRONLY)) {
@@ -192,6 +193,12 @@ int file_open(const char* pathname, int flags)
 {
     /* By default, use the dircache if available. */
     return open_internal(pathname, flags, true);
+}
+
+void reown_file(int fd, struct scheduler_thread* owner)
+{
+    struct filedesc* f = (struct filedesc*)fd;
+    f->process = owner;
 }
 
 int close(int fd)

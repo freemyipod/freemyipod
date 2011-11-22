@@ -55,6 +55,7 @@ typedef void (*qsort_func)(void *base, size_t nmemb,  size_t size,
                            int(*_compar)(const void *, const void *));
 
 extern int file_open(const char* pathname, int flags);
+extern void reown_file(int fd, struct scheduler_thread* owner);
 extern int close(int fd);
 extern int close_all_of_process(struct scheduler_thread* process);
 extern int fsync(int fd);

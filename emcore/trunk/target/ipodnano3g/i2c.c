@@ -25,6 +25,7 @@
 #include "i2c.h"
 #include "thread.h"
 #include "s5l8702.h"
+#include "clockgates.h"
 
 
 static struct mutex i2cmutex;

@@ -29,6 +29,27 @@
 #include "contextswitch.h"
 
 
+enum owner_type
+{
+    OWNER_THREAD = 0,
+    OWNER_LIBRARY = 1,
+    OWNER_KERNEL = 2,
+    OWNER_RESERVED = 3
+};
+
+enum kernel_owner_type
+{
+    KERNEL_OWNER_UNKNOWN = 0,
+    KERNEL_OWNER_USB_MONITOR = 1,
+    KERNEL_OWNER_FILE_HANDLE = 2,
+    KERNEL_OWNER_DIR_HANDLE = 3,
+    KERNEL_OWNER_ATA_BBT = 4
+};
+
+#define OWNER_TYPE(x, y) ((struct scheduler_thread*)((((int)(y)) & ~3) | x))
+#define KERNEL_OWNER(x) ((struct scheduler_thread*)(((x) << 2) | OWNER_KERNEL))
+
+
 #define TIMEOUT_NONE 0
 #define TIMEOUT_BLOCK -1
 

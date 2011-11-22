@@ -90,6 +90,7 @@ DIR* opendir(const char* name)
         DEBUGF("Failed to allocate directory handle");
         return NULL;
     }
+    reownalloc(pdir, KERNEL_OWNER(KERNEL_OWNER_DIR_HANDLE));
     pdir->process = current_thread;
 
 #ifdef HAVE_MULTIVOLUME
@@ -151,6 +152,11 @@ DIR* opendir(const char* name)
     mutex_unlock(&dir_mutex);
 
     return pdir;
+}
+
+void reown_dir(DIR* dir, struct scheduler_thread* owner)
+{
+    dir->process = owner;
 }
 
 int closedir(DIR* dir)
