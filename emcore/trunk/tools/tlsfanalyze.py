@@ -24,7 +24,8 @@
 
 import sys
 import struct
-from misc import ExtendedCStruct
+from misc import ExtendedCStruct, string_from_image
+from libemcoredata import scheduler_thread
 from ctypes import *
 
 
@@ -132,13 +133,45 @@ while True:
     break
   blocks.append(prev_addr)
   if prev_free:
+    try:
+      nfa = block.get_next_free().get_address()
+      if nfa >= prev_addr and nfa < prev_addr + block.get_size() + 4:
+        print("%08X: Next free block (%08X) lies within the block itself" % (prev_addr, nfa))
+    except: print("%08X: Invalid next free block pointer: %08X" % (prev_addr, block.next_free))
+    try:
+      pfa = block.get_prev_free().get_address()
+      if pfa >= prev_addr and pfa < prev_addr + block.get_size() + 4:
+        print("%08X: Previous free block (%08X) lies within the block itself" % (prev_addr, pfa))
+    except:
+      print("%08X: Invalid previous free block pointer: %08X" % (prev_addr, block.prev_free))
     print("%08X: %08X bytes free" % (prev_addr + 4, block.get_size() + 4))
     free_blocks.append(prev_addr)
     bytes_free = bytes_free + block.get_size() + 4
   else:
-    owner_address = prev_addr - image_base + block.get_size() - 4
+    owner_address = prev_addr - image_base + block.get_size() + 4
     owner = struct.unpack("<I", data[owner_address : owner_address + 4])[0]
-    print("%08X: %08X+8 bytes owned by %08X" % (prev_addr + 8, block.get_size() - 4, owner))
+    if (owner & 3) == 0:
+      if (owner & 0xfffc0000) == 0x22000000: name = "<KERNEL_THREAD>"
+      else:
+        try:
+          thread = scheduler_thread(data, image_base, owner & ~3)
+          name = "Thread: " + string_from_image(data, image_base, thread.name, 128)
+        except: name = "<BAD_THREAD>"
+    elif (owner & 3) == 1:
+      try:
+        handle = struct.unpack("<I", data[(owner & ~3) - image_base + 4 : (owner & ~3) - image_base + 8])[0]
+        lib = struct.unpack("<4sI", data[(handle & ~3) - image_base + 4 : (handle & ~3) - image_base + 12])
+        name = "Library: " + lib[0].decode("latin_1") + "_v%d" % lib[1]
+      except: name = "<BAD_LIBRARY>"
+    elif (owner & 3) == 2:
+      if (owner >> 2) == 0: name = "<KERNEL_UNKNOWN>";
+      elif (owner >> 2) == 1: name = "<KERNEL_USB_MONITOR>";
+      elif (owner >> 2) == 2: name = "<KERNEL_FILE_HANDLE>";
+      elif (owner >> 2) == 3: name = "<KERNEL_DIR_HANDLE>";
+      elif (owner >> 2) == 4: name = "<KERNEL_ATA_BBT>";
+      else: name = "<KERNEL_UNKNOWN_TYPE>";
+    else: name = "<UNKNOWN_TYPE>"
+    print("%08X: %08X+8 bytes owned by %08X (%s)" % (prev_addr + 8, block.get_size() - 4, owner, name))
     bytes_used = bytes_used + block.get_size() + 4
   try: block = block.get_next_phys()
   except:
@@ -166,6 +199,7 @@ for i in range(FL_INDEX_COUNT):
     elif block.is_null():
       print("[%d:%d:%08X] Block list is null, but second-level map indicates there are free blocks" % (i, j, ba))
     blocks = []
+    prev = None
     while not block.is_null():
       fatal = False
       addr = block.get_address()
@@ -173,6 +207,8 @@ for i in range(FL_INDEX_COUNT):
         print("[%d:%d:%08X] Detected block loop" % (i, j, addr))
         break
       blocks.append(addr)
+      size = block.get_size()
+      print("[%d:%d] Block at %08X (%08X bytes)" % (i, j, addr, size + 4))
       if not block.is_free():
         print("[%d:%d:%08X] Non-free block on free list" % (i, j, addr))
         fatal = True
@@ -183,8 +219,6 @@ for i in range(FL_INDEX_COUNT):
           print("[%d:%d:%08X] Block should have coalesced with next one" % (i, j, addr))
       except:
         print("Block %08X has invalid size: %08X" % (addr, block.get_size()))
-        fatal = True
-      size = block.get_size()
       if size < block_size_min:
         print("[%d:%d:%08X] Block violates minimum size: %d (should be at least %d)" % (i, j, addr, size, block_size_min))
       if size > block_size_max:
@@ -209,7 +243,8 @@ for i in range(FL_INDEX_COUNT):
         if (size & 0x80000000) == 0:
           size = size << 1
           fl = fl - 1
-        sl = (block.get_size() >> (fl - SL_INDEX_COUNT_LOG2 + FL_INDEX_SHIFT - 1)) ^ (1 << SL_INDEX_COUNT_LOG2)
+        size = block.get_size()
+        sl = (size >> (fl - SL_INDEX_COUNT_LOG2 + FL_INDEX_SHIFT - 1)) ^ (1 << SL_INDEX_COUNT_LOG2)
       if fl != i or sl != j:
         print("Block %08X is in wrong free list: [%d:%d] (should be [%d:%d])" % (addr, i, j, fl, sl))
       if free_blocks.count(addr) != 1:
@@ -217,9 +252,28 @@ for i in range(FL_INDEX_COUNT):
       if handled_blocks.count(addr) > 0:
         print("[%d:%d:%08X] Block appears in multiple free lists" % (i, j, addr))
       else: handled_blocks.append(addr)
+      try:
+        nfa = block.get_next_free().get_address()
+        if nfa >= addr and nfa < addr + size + 4:
+          print("[%d:%d:%08X] Next free block (%08X) lies within the block itself" % (i, j, addr, nfa))
+          fatal = True
+      except:
+        print("[%d:%d:%08X] Invalid next free block pointer: %08X" % (i, j, addr, block.next_free))
+        fatal = True
+      try:
+        pfa = block.get_prev_free().get_address()
+        if pfa >= addr and pfa < addr + size + 4:
+          print("[%d:%d:%08X] Previous free block (%08X) lies within the block itself" % (i, j, addr, pfa))
+        if prev == None and not block.get_prev_free().is_null():
+          print("[%d:%d:%08X] Previous free block pointer is broken: %08X (should be NULL)" % (i, j, addr, pfa))
+        if prev != None and prev != pfa:
+          print("[%d:%d:%08X] Previous free block pointer is broken: %08X (should be %08X)" % (i, j, addr, pfa, prev))
+      except:
+        print("[%d:%d:%08X] Invalid previous free block pointer: %08X" % (i, j, addr, block.prev_free))
       if fatal:
         print("Fatal error in block chain, continuing with next chain")
         break
+      prev = addr
       block = block.get_next_free()
       
 for addr in free_blocks:

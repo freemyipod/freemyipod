@@ -284,6 +284,22 @@ def getthread(address, threads):
     thread = scheduler_thread()._to_bunch()
     thread.name = "[Invalid Thread 0x%08X]" % address
     return thread
+    
+    
+def string_from_image(data, base, ptr, maxlen):
+  if ptr == 0: name = "<NULL>"
+  try:
+    string = ""
+    end = data.find(b"\0", ptr - base, ptr - base + maxlen)
+    if end < 0: return "<BAD_STRING>"
+    else:
+      d = data[ptr - base : end]
+      for i in range(len(d)):
+        byte = ord(d[i : i + 1])
+        if byte < 0x20: return "<BAD_STRING>"
+        else: string = string + chr(byte)
+  except: return "<BAD_PTR>"
+  return string
 
 
 def gethwname(id):
@@ -446,3 +462,4 @@ def majorver():
     """
     import sys
     return sys.hexversion // 0x1000000
+    
