@@ -24,6 +24,7 @@
 #include "storage.h"
 #include "storage_ata-target.h"
 #include "timer.h"
+#include "malloc.h"
 #include "constants/mmc.h"
 #include "../ipodnano3g/s5l8702.h"
 
@@ -474,18 +475,19 @@ int ceata_rw_multiple_block(bool write, void* buf, uint32_t count, long timeout)
         cmdtype = SDCI_CMD_CMD_TYPE_ADTC | SDCI_CMD_CMD_RD_WR;
         responsetype = SDCI_CMD_RES_TYPE_R1 | SDCI_CMD_RES_BUSY;
         direction = MMC_CMD_CEATA_RW_MULTIPLE_BLOCK_DIRECTION_WRITE;
+        clean_dcache();
     }
     else
     {
         cmdtype = SDCI_CMD_CMD_TYPE_ADTC;
         responsetype = SDCI_CMD_RES_TYPE_R1;
         direction = MMC_CMD_CEATA_RW_MULTIPLE_BLOCK_DIRECTION_READ;
+        invalidate_dcache();
     }
     SDCI_DMASIZE = 0x200;
     SDCI_DMAADDR = buf;
     SDCI_DMACOUNT = count;
     SDCI_DCTRL = SDCI_DCTRL_TXFIFORST | SDCI_DCTRL_RXFIFORST;
-    invalidate_dcache();
     PASS_RC(mmc_send_command(SDCI_CMD_CMD_NUM(MMC_CMD_CEATA_RW_MULTIPLE_BLOCK)
                            | SDCI_CMD_CMD_TYPE_ADTC | cmdtype | responsetype
                            | SDCI_CMD_RES_SIZE_48 | SDCI_CMD_NCR_NID_NCR,
@@ -746,12 +748,14 @@ int ata_rw_chunk(uint64_t sector, uint32_t cnt, void* buffer, bool write)
             PASS_RC(ata_wait_for_start_of_transfer(500000), 2, 1);
             if (write)
             {
+                clean_dcache();
                 ATA_SBUF_START = buffer;
                 ATA_SBUF_SIZE = SECTOR_SIZE * cnt;
                 ATA_CFG |= BIT(4);
             }
             else
             {
+                invalidate_dcache();
                 ATA_TBUF_START = buffer;
                 ATA_TBUF_SIZE = SECTOR_SIZE * cnt;
                 ATA_CFG &= ~BIT(4);
