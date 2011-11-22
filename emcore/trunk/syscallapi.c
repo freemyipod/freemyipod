@@ -254,6 +254,8 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
 #ifdef HAVE_ACCELEROMETER
     .accel_read_force_vector = accel_read_force_vector,
 #endif
+#ifdef HAVE_STORAGE
     .reown_file = reown_file,
-    .reown_dir = reown_dir
+    .reown_dir = reown_dir,
+#endif
 };
