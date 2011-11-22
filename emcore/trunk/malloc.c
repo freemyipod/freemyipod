@@ -26,7 +26,7 @@
 #include "libc/tlsf/tlsf.h"
 
 
-extern char _poolstart;   // These aren't ints at all, but gcc complains about void types being
+extern char _poolstart;   // These aren't chars at all, but gcc complains about void types being
 extern char _poolend;     // used here, and we only need the address, so just make it happy...
 
 struct mutex malloc_mutex;
@@ -37,8 +37,12 @@ void* malloc(size_t size)
 {
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
     void* ptr = tlsf_malloc(global_mallocpool, size + 4);
-    size = tlsf_block_size(ptr);
-    *((struct scheduler_thread**)(ptr + size - 4)) = current_thread;
+    if (ptr)
+    {
+        size = tlsf_block_size(ptr);
+        *((struct scheduler_thread**)(ptr + size - 4)) = current_thread;
+    }
+    DEBUGF("malloc(%08X) => %08X (thread: %08X)", size, ptr, current_thread);
     mutex_unlock(&malloc_mutex);
     return ptr;
 }
@@ -47,8 +51,12 @@ void* memalign(size_t align, size_t size)
 {
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
     void* ptr = tlsf_memalign(global_mallocpool, align, size + 4);
-    size = tlsf_block_size(ptr);
-    *((struct scheduler_thread**)(ptr + size - 4)) = current_thread;
+    if (ptr)
+    {
+        size = tlsf_block_size(ptr);
+        *((struct scheduler_thread**)(ptr + size - 4)) = current_thread;
+    }
+    DEBUGF("memalign(%X, %08X) => %08X (thread: %08X)", align, size, ptr, current_thread);
     mutex_unlock(&malloc_mutex);
     return ptr;
 }
@@ -58,14 +66,16 @@ void* realign(void* ptr, size_t align, size_t size)
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
     size_t oldsize = tlsf_block_size(ptr);
     struct scheduler_thread* owner = *((struct scheduler_thread**)(ptr + oldsize - 4));
-    ptr = tlsf_realign(global_mallocpool, ptr, align, size + 4);
-    if (ptr)
+    void* ptr_new = tlsf_realign(global_mallocpool, ptr, align, size + 4);
+    if (ptr_new)
     {
-        size = tlsf_block_size(ptr);
-        *((struct scheduler_thread**)(ptr + size - 4)) = owner;
+        size = tlsf_block_size(ptr_new);
+        *((struct scheduler_thread**)(ptr_new + size - 4)) = owner;
     }
+    DEBUGF("realign(%08X, %X, %08X) => %08X (old size: %08X, owner: %08X, thread: %08X)",
+           ptr, align, size, ptr_new, owner, current_thread);
     mutex_unlock(&malloc_mutex);
-    return ptr;
+    return ptr_new;
 }
 
 void* realloc(void* ptr, size_t size)
@@ -77,6 +87,8 @@ void reownalloc(void* ptr, struct scheduler_thread* owner)
 {
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
     size_t size = tlsf_block_size(ptr);
+    DEBUGF("reownalloc(%08X, %08X) (size: %08X, old owner: %08X, thread: %08X)",
+           ptr, size, owner, *((struct scheduler_thread**)(ptr + size - 4)), current_thread);
     *((struct scheduler_thread**)(ptr + size - 4)) = owner;
     mutex_unlock(&malloc_mutex);
 }
@@ -84,6 +96,9 @@ void reownalloc(void* ptr, struct scheduler_thread* owner)
 void free(void* ptr)
 {
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
+    size_t size = tlsf_block_size(ptr);
+    DEBUGF("free(%08X) (size: %08X, owner: %08X, thread: %08X)", ptr, size,
+           *((struct scheduler_thread**)(ptr + size - 4)), current_thread);
     tlsf_free(global_mallocpool, ptr);
     mutex_unlock(&malloc_mutex);
 }
@@ -97,6 +112,7 @@ void free_if_thread(void* ptr, size_t size, int used, void* owner)
 void free_all_of_thread(struct scheduler_thread* owner)
 {
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
+    DEBUGF("free_all_of_thread(%08X) (thread: %08X)", owner, current_thread);
     tlsf_walk_heap(global_mallocpool, free_if_thread, owner);
     mutex_unlock(&malloc_mutex);
 }
