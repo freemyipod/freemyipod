@@ -88,7 +88,7 @@ void reownalloc(void* ptr, struct scheduler_thread* owner)
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
     size_t size = tlsf_block_size(ptr);
     DEBUGF("reownalloc(%08X, %08X) (size: %08X, old owner: %08X, thread: %08X)",
-           ptr, size, owner, *((struct scheduler_thread**)(ptr + size - 4)), current_thread);
+           ptr, owner, size, *((struct scheduler_thread**)(ptr + size - 4)), current_thread);
     *((struct scheduler_thread**)(ptr + size - 4)) = owner;
     mutex_unlock(&malloc_mutex);
 }
@@ -105,8 +105,7 @@ void free(void* ptr)
 
 void free_if_thread(void* ptr, size_t size, int used, void* owner)
 {
-    if (*((void**)(ptr + size - 4)) == owner)
-        tlsf_free(global_mallocpool, ptr);
+    if (*((void**)(ptr + size - 4)) == owner) free(ptr);
 }
 
 void free_all_of_thread(struct scheduler_thread* owner)
@@ -121,6 +120,16 @@ void malloc_walk(void (*walker), void* user)
 {
     mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
     tlsf_walk_heap(global_mallocpool, walker, user);
+    mutex_unlock(&malloc_mutex);
+}
+
+void malloc_lock()
+{
+    mutex_lock(&malloc_mutex, TIMEOUT_BLOCK);
+}
+
+void malloc_unlock()
+{
     mutex_unlock(&malloc_mutex);
 }
 

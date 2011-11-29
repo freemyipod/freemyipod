@@ -520,14 +520,15 @@ int thread_terminate_internal(struct scheduler_thread* thread, uint32_t mode)
 #ifdef HAVE_BUTTON
     button_unregister_all_of_thread(OWNER_TYPE(OWNER_THREAD, thread));
 #endif
-    free_all_of_thread(OWNER_TYPE(OWNER_THREAD, thread));
 
+    malloc_lock();
     mode = enter_critical_section();
     for (t = head_thread; t && t->thread_next != thread; t = t->thread_next);
     if (t) t->thread_next = thread->thread_next;
+    free_all_of_thread(OWNER_TYPE(OWNER_THREAD, thread));
+    malloc_unlock();
+    if (needsswitch) leave_thread();
     leave_critical_section(mode);
-
-    if (needsswitch) yield();
 
     return THREAD_OK;
 }
