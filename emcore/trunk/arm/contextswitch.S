@@ -38,11 +38,20 @@ yield:
 	msr	cpsr_c, #0xd2
 	mov	r4, r0
 	bl	scheduler_pause_accounting
+switch_thread:
 	adr	lr, resume_thread
 	mov	r0, #0
 	mov	r1, r4
 	b	scheduler_switch
 .size yield, .-yield
+
+.global leave_thread
+.type leave_thread, %function
+leave_thread:
+	msr	cpsr_c, #0xd2
+	mov	r4, #0
+	b	switch_thread
+.size leave_thread, .-leave_thread
 
 .global syscall_handler
 .type syscall_handler, %function
