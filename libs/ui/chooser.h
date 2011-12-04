@@ -83,7 +83,7 @@ struct chooser_info
     long tickinterval;
     int itemcount;
     int defaultitem;
-    const struct chooser_item items[];
+    struct chooser_item items[];
 };
 
 struct chooser_data

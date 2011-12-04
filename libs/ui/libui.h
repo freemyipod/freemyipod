@@ -35,6 +35,7 @@ struct libui_buffer
     .addr = a,             \
     .stride = b            \
 }
+#define LIBUI_BUFFER_NULL LIBUI_BUFFER(NULL, 0)
 
 struct libui_point
 {
@@ -46,6 +47,7 @@ struct libui_point
     .x = a,               \
     .y = b                \
 }
+#define LIBUI_POINT_NULL LIBUI_POINT(0, 0)
 
 struct libui_box
 {
@@ -57,6 +59,7 @@ struct libui_box
     .pos = a,           \
     .size = b           \
 }
+#define LIBUI_BOX_NULL LIBUI_BOX(LIBUI_POINT_NULL, LIBUI_POINT_NULL)
 
 struct libui_location
 {
@@ -68,6 +71,7 @@ struct libui_location
     .buf = a,                \
     .pos = b                 \
 }
+#define LIBUI_LOCATION_NULL LIBUI_LOCATION(LIBUI_BUFFER_NULL, LIBUI_POINT_NULL)
 
 struct libui_surface
 {
@@ -79,5 +83,6 @@ struct libui_surface
     .loc = a,               \
     .size = b               \
 }
+#define LIBUI_SURFACE_NULL LIBUI_SURFACE(LIBUI_LOCATION_NULL, LIBUI_POINT_NULL)
 
 #endif

@@ -31,18 +31,19 @@
 #include "../chooser_action_handler_wheel.h"
 #include "../chooser_renderer_list.h"
 #include "../chooser_renderer_iconflow.h"
+#include "../settingchooser.h"
 
 
 /* emCORE library identifier */
 #define LIBUI_IDENTIFIER 0x49554365
 
 /* increase this every time the api struct changes */
-#define LIBUI_API_VERSION 2
+#define LIBUI_API_VERSION 3
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
    new function which are "waiting" at the end of the function table) */
-#define LIBUI_MIN_API_VERSION 2
+#define LIBUI_MIN_API_VERSION 3
 
 /* NOTE: To support backwards compatibility, only add new functions at
          the end of the structure.  Every time you add a new function,
@@ -61,6 +62,10 @@ struct libui_api
     typeof(chooser_action_handler_wheel)* chooser_action_handler_wheel;
     typeof(chooser_renderer_list)* chooser_renderer_list;
     typeof(chooser_renderer_iconflow)* chooser_renderer_iconflow;
+    typeof(chooser_renderer_list_render_attached_text)* chooser_renderer_list_render_attached_text;
+    typeof(chooser_renderer_list_show_arrow_right)* chooser_renderer_list_show_arrow_right;
+    typeof(chooser_renderer_list_show_arrow_left)* chooser_renderer_list_show_arrow_left;
+    typeof(settingchooser_run)* settingchooser_run;
 };
 
 #endif

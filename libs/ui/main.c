@@ -36,7 +36,11 @@ static struct libui_api apitable =
     .chooser_run = chooser_run,
     .chooser_action_handler_wheel = &chooser_action_handler_wheel,
     .chooser_renderer_list = &chooser_renderer_list,
-    .chooser_renderer_iconflow = &chooser_renderer_iconflow
+    .chooser_renderer_iconflow = &chooser_renderer_iconflow,
+    .chooser_renderer_list_render_attached_text = &chooser_renderer_list_render_attached_text,
+    .chooser_renderer_list_show_arrow_right = &chooser_renderer_list_show_arrow_right,
+    .chooser_renderer_list_show_arrow_left = &chooser_renderer_list_show_arrow_left,
+    .settingchooser_run = &settingchooser_run
 };
 
 EMCORE_LIB_HEADER(LIBUI_IDENTIFIER, LIBUI_API_VERSION, LIBUI_MIN_API_VERSION, NULL, NULL, apitable)

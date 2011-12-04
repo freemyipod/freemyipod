@@ -55,35 +55,36 @@ static enum chooser_result chooser_action_handler_wheel_handleevent(struct choos
     int spi = params->stepsperitem;
     switch (event)
     {
-    case BUTTON_PRESS:
-        if (which < params->buttoncount)
-            switch (params->buttonmap[which])
-            {
-            case CHOOSER_ACTION_HANDLER_WHEEL_ACTION_PREV:
-                mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
-                data->position = MIN(data->info->itemcount * spi,
-                                     MAX(spi, data->position & ~(spi - 1))) - spi / 2;
-                data->selected = &data->info->items[data->position / spi];
-                mutex_unlock(&data->statemutex);
-                return CHOOSER_RESULT_REDRAW;
-            case CHOOSER_ACTION_HANDLER_WHEEL_ACTION_NEXT:
-                mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
-                data->position = MIN(data->info->itemcount * spi,
-                                     MAX(spi, (data->position & ~(spi - 1)) + 2 * spi)) - spi / 2;
-                data->selected = &data->info->items[data->position / spi];
-                mutex_unlock(&data->statemutex);
-                return CHOOSER_RESULT_REDRAW;
-            case CHOOSER_ACTION_HANDLER_WHEEL_ACTION_SELECT:
-                return CHOOSER_RESULT_FINISHED;
-            case CHOOSER_ACTION_HANDLER_WHEEL_ACTION_CANCEL:
-                return CHOOSER_RESULT_CANCEL;
-            }
-    case WHEEL_MOVED_ACCEL:
-        mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
-        data->position = MIN(data->info->itemcount * spi - 1, MAX(0, data->position + value));
-        data->selected = &data->info->items[data->position / spi];
-        mutex_unlock(&data->statemutex);
-        return CHOOSER_RESULT_REDRAW;
+        case BUTTON_PRESS:
+            if (which < params->buttoncount)
+                switch (params->buttonmap[which])
+                {
+                    case CHOOSER_ACTION_HANDLER_WHEEL_ACTION_PREV:
+                        mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
+                        data->position = MIN(data->info->itemcount * spi,
+                                             MAX(spi, data->position & ~(spi - 1))) - spi / 2;
+                        data->selected = &data->info->items[data->position / spi];
+                        mutex_unlock(&data->statemutex);
+                        return CHOOSER_RESULT_REDRAW;
+                    case CHOOSER_ACTION_HANDLER_WHEEL_ACTION_NEXT:
+                        mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
+                        data->position = MIN(data->info->itemcount * spi,
+                                             MAX(spi, (data->position & ~(spi - 1)) + 2 * spi))
+                                                    - spi / 2;
+                        data->selected = &data->info->items[data->position / spi];
+                        mutex_unlock(&data->statemutex);
+                        return CHOOSER_RESULT_REDRAW;
+                    case CHOOSER_ACTION_HANDLER_WHEEL_ACTION_SELECT:
+                        return CHOOSER_RESULT_FINISHED;
+                    case CHOOSER_ACTION_HANDLER_WHEEL_ACTION_CANCEL:
+                        return CHOOSER_RESULT_CANCEL;
+                }
+        case WHEEL_MOVED_ACCEL:
+            mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
+            data->position = MIN(data->info->itemcount * spi - 1, MAX(0, data->position + value));
+            data->selected = &data->info->items[data->position / spi];
+            mutex_unlock(&data->statemutex);
+            return CHOOSER_RESULT_REDRAW;
     }
     return CHOOSER_RESULT_OK;
 }

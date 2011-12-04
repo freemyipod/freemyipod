@@ -29,7 +29,7 @@
 #include "chooser.h"
 
 
-#define CHOOSER_RENDERER_LIST_PARAMS_VERSION 1
+#define CHOOSER_RENDERER_LIST_PARAMS_VERSION 2
 
 struct chooser_renderer_list_params
 {
@@ -59,10 +59,12 @@ struct chooser_renderer_list_itemdata
     int icon_opacity;
     struct libui_surface icon_selected;
     int icon_selected_opacity;
-    char* text;
+    const char* text;
     struct libui_point text_pos;
     uint32_t text_color;
     uint32_t text_color_selected;
+    void (*render)(struct chooser_data* data, const struct chooser_item* item,
+                   bool selected, int x, int y);
 };
 
 struct chooser_renderer_list_data
@@ -73,6 +75,17 @@ struct chooser_renderer_list_data
 
 
 extern const struct chooser_renderer chooser_renderer_list;
+
+extern void chooser_renderer_list_render_attached_text(struct chooser_data* data,
+                                                       const struct chooser_item* item,
+                                                       bool selected, int x, int y,
+                                                       const char* text);
+extern void chooser_renderer_list_show_arrow_right(struct chooser_data* data,
+                                                   const struct chooser_item* item,
+                                                   bool selected, int x, int y);
+extern void chooser_renderer_list_show_arrow_left(struct chooser_data* data,
+                                                  const struct chooser_item* item,
+                                                  bool selected, int x, int y);
 
 
 #endif

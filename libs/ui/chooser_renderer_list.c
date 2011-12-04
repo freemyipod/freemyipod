@@ -187,6 +187,7 @@ static enum chooser_result chooser_renderer_list_render(struct chooser_data* dat
         if (iparams->text && iparams->text_color)
             rendertext(buf, x + iparams->text_pos.x, y + iparams->text_pos.y,
                        stride, text_color, 0, iparams->text);
+        if (iparams->render) iparams->render(data, item, item == selected, x, y);
         y += iparams->size.y;
         item++;
     }
@@ -223,6 +224,36 @@ static const struct chooser_item* chooser_renderer_list_itematpixel(struct choos
 static void chooser_renderer_list_destroy(struct chooser_data* data)
 {
     free(data->rendererdata);
+}
+
+void chooser_renderer_list_render_attached_text(struct chooser_data* data,
+                                                const struct chooser_item* item,
+                                                bool selected, int x, int y, const char* text)
+{
+    struct chooser_renderer_list_params* rparams;
+    rparams = (struct chooser_renderer_list_params*)data->info->rendererparams;
+    struct chooser_renderer_list_itemdata* ritem;
+    ritem = (struct chooser_renderer_list_itemdata*)item->renderparams;
+    void* buf = rparams->viewport.loc.buf.addr;
+    int stride = rparams->viewport.loc.buf.stride;
+    x += ritem->size.x - ritem->text_pos.x - strlen(text) * get_font_width();
+    y += ritem->text_pos.y;
+    uint32_t color = selected ? ritem->text_color_selected : ritem->text_color;
+    rendertext(buf, x, y, stride, color, 0, text);
+}
+
+void chooser_renderer_list_show_arrow_right(struct chooser_data* data,
+                                            const struct chooser_item* item,
+                                            bool selected, int x, int y)
+{
+    chooser_renderer_list_render_attached_text(data, item, selected, x, y, ">");
+}
+
+void chooser_renderer_list_show_arrow_left(struct chooser_data* data,
+                                           const struct chooser_item* item,
+                                           bool selected, int x, int y)
+{
+    chooser_renderer_list_render_attached_text(data, item, selected, x, y, "<");
 }
 
 

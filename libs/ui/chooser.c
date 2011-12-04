@@ -31,24 +31,24 @@ void chooser_button_handler(void* user, enum button_event event, int which, int 
     struct chooser_data* data = (struct chooser_data*)user;
     switch (data->info->actionhandler->handleevent(data, event, which, value))
     {
-    case CHOOSER_RESULT_REDRAW:
-        mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
-        data->redrawneeded = true;
-        wakeup_signal(&data->eventwakeup);
-        mutex_unlock(&data->statemutex);
-        break;
-    case CHOOSER_RESULT_CANCEL:
-        mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
-        data->canceled = true;
-        wakeup_signal(&data->eventwakeup);
-        mutex_unlock(&data->statemutex);
-        break;
-    case CHOOSER_RESULT_FINISHED:
-        mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
-        data->finished = true;
-        wakeup_signal(&data->eventwakeup);
-        mutex_unlock(&data->statemutex);
-        break;
+        case CHOOSER_RESULT_REDRAW:
+            mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
+            data->redrawneeded = true;
+            wakeup_signal(&data->eventwakeup);
+            mutex_unlock(&data->statemutex);
+            break;
+        case CHOOSER_RESULT_CANCEL:
+            mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
+            data->canceled = true;
+            wakeup_signal(&data->eventwakeup);
+            mutex_unlock(&data->statemutex);
+            break;
+        case CHOOSER_RESULT_FINISHED:
+            mutex_lock(&data->statemutex, TIMEOUT_BLOCK);
+            data->finished = true;
+            wakeup_signal(&data->eventwakeup);
+            mutex_unlock(&data->statemutex);
+            break;
     }
 }
 
@@ -99,13 +99,13 @@ const struct chooser_item* chooser_run(const struct chooser_info* info)
             if (info->actionhandler->handletick)
                 switch (info->actionhandler->handletick(&data))
                 {
-                case CHOOSER_RESULT_REDRAW:
-                    redrawneeded = true;
-                    break;
-                case CHOOSER_RESULT_CANCEL:
-                    goto cancel;
-                case CHOOSER_RESULT_FINISHED:
-                    goto finished;
+                    case CHOOSER_RESULT_REDRAW:
+                        redrawneeded = true;
+                        break;
+                    case CHOOSER_RESULT_CANCEL:
+                        goto cancel;
+                    case CHOOSER_RESULT_FINISHED:
+                        goto finished;
                 }
             lasttick = USEC_TIMER;
         }

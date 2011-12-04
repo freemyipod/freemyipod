@@ -158,20 +158,24 @@ static enum chooser_result chooser_renderer_iconflow_render(struct chooser_data*
         const struct libui_surface* icon;
         if (item == selected) icon = &iparams->icon_selected;
         else icon = &iparams->icon;
-        int ix, iy, io;
+        int ix, iy, io, tx = 0, ty = 0;
         int dist = pos - vpos;
         chooser_renderer_iconflow_geticondata(x, y, w, h, spi * iiv, dist, icon, &ix, &iy, &io);
         if (item == selected)
         {
             io = 255;
             if (iparams->text && iparams->text_color)
-                rendertext(buf, params->text_pos.x - strlen(iparams->text) * get_font_width() / 2,
-                           params->text_pos.y, stride, iparams->text_color, 0, iparams->text);
+            {
+                tx = params->text_pos.x - strlen(iparams->text) * get_font_width() / 2;
+                ty = params->text_pos.y;
+                rendertext(buf, tx, ty, stride, iparams->text_color, 0, iparams->text);
+           }
         }
         if (icon->loc.buf.addr && io && ix >= x && iy >= y
          && ix + icon->size.x <= x + w && iy + icon->size.y <= y + h)
             blenda(icon->size.x, icon->size.y, io, buf, ix, iy, stride, buf, ix, iy, stride,
                    icon->loc.buf.addr, icon->loc.pos.x, icon->loc.pos.y, icon->loc.buf.stride);
+        if (iparams->render) iparams->render(data, item, item == selected, ix, iy, io, tx, ty);
         if (item == selected) break;
         item += dir;
         pos += dir * spi;

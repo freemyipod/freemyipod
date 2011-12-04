@@ -29,7 +29,7 @@
 #include "chooser.h"
 
 
-#define CHOOSER_RENDERER_ICONFLOW_PARAMS_VERSION 1
+#define CHOOSER_RENDERER_ICONFLOW_PARAMS_VERSION 2
 
 struct chooser_renderer_iconflow_params
 {
@@ -56,8 +56,10 @@ struct chooser_renderer_iconflow_itemdata
 {
     struct libui_surface icon;
     struct libui_surface icon_selected;
-    char* text;
+    const char* text;
     uint32_t text_color;
+    void (*render)(struct chooser_data* data, const struct chooser_item* item,
+                   bool selected, int x, int y, int opacity, int textx, int texty);
 };
 
 struct chooser_renderer_iconflow_data
