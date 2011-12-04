@@ -46,6 +46,7 @@ static bool settingchooser_event_filter(struct chooser_data* data, enum button_e
             switch (which)
             {
                 case 0:
+                case 1:
                     switch (item->type)
                     {
                         case SETTINGCHOOSER_TYPE_INTEGER:
@@ -136,7 +137,7 @@ static struct chooser_action_handler_wheel_params settingchooser_aparams =
     .buttonmap =
     {
         CHOOSER_ACTION_HANDLER_WHEEL_ACTION_SELECT,
-        CHOOSER_ACTION_HANDLER_WHEEL_ACTION_NONE,
+        CHOOSER_ACTION_HANDLER_WHEEL_ACTION_SELECT,
         CHOOSER_ACTION_HANDLER_WHEEL_ACTION_CANCEL,
         CHOOSER_ACTION_HANDLER_WHEEL_ACTION_NEXT,
         CHOOSER_ACTION_HANDLER_WHEEL_ACTION_PREV
@@ -155,7 +156,7 @@ static struct chooser_action_handler_wheel_params settingchooser_aparams2 =
     .buttonmap =
     {
         CHOOSER_ACTION_HANDLER_WHEEL_ACTION_SELECT,
-        CHOOSER_ACTION_HANDLER_WHEEL_ACTION_NONE,
+        CHOOSER_ACTION_HANDLER_WHEEL_ACTION_SELECT,
         CHOOSER_ACTION_HANDLER_WHEEL_ACTION_CANCEL,
         CHOOSER_ACTION_HANDLER_WHEEL_ACTION_NEXT,
         CHOOSER_ACTION_HANDLER_WHEEL_ACTION_PREV
