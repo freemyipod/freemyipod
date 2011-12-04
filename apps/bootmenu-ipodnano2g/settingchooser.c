@@ -37,11 +37,13 @@ int settingchooser_time_to_str(char* buf, int buflen, void* setting, int value)
 
 static struct settingchooser_select_options settings_timeout_item_options =
 {
-    .optioncount = 4,
+    .optioncount = 6,
     .options =
     {
         SETTINGCHOOSER_SELECT_OPTION("Power off", "Power off", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Apple", "Apple firmware", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Rockbox", "Rockbox", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Disk mode", "Disk mode", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("UMSboot", "UMSboot", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Console", "emCORE console", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL)
     }
@@ -49,11 +51,13 @@ static struct settingchooser_select_options settings_timeout_item_options =
 
 static struct settingchooser_select_options settings_default_item_options =
 {
-    .optioncount = 4,
+    .optioncount = 6,
     .options =
     {
         SETTINGCHOOSER_SELECT_OPTION("Power off", "Power off", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Apple", "Apple firmware", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Rockbox", "Rockbox", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Disk mode", "Disk mode", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Console", "emCORE console", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Tools", "Tools", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL)
     }
@@ -61,11 +65,13 @@ static struct settingchooser_select_options settings_default_item_options =
 
 static struct settingchooser_select_options settings_fastboot_item_options =
 {
-    .optioncount = 4,
+    .optioncount = 6,
     .options =
     {
         SETTINGCHOOSER_SELECT_OPTION("Disabled", "Disabled", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Apple", "Apple firmware", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Rockbox", "Rockbox", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Disk mode", "Disk mode", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("UMSboot", "UMSboot", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Console", "emCORE console", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL)
     }
@@ -77,27 +83,26 @@ static struct settingchooser_info settingchooser =
     .rendererparams = 
     {
         .version = CHOOSER_RENDERER_LIST_PARAMS_VERSION,
-        .copy_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
-        .copy_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
-                                  LIBUI_POINT(320, 240)),
+        .copy_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 176), LIBUI_POINT(0, 0)),
+        .copy_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 176), LIBUI_POINT(0, 0)),
+                                  LIBUI_POINT(176, 132)),
         .bg_dest = LIBUI_LOCATION_NULL,
         .bg_src = LIBUI_SURFACE_NULL,
         .bg_opacity = 0,
-        .fill_dest = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
+        .fill_dest = LIBUI_SURFACE_NULL,
         .fill_color = 0,
-        .viewport = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(30, 50)),
-                                  LIBUI_POINT(260, 160)),
+        .viewport = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 176), LIBUI_POINT(6, 30)),
+                                  LIBUI_POINT(164, 90)),
         .blit_dest = LIBUI_POINT(0, 0),
-        .blit_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
-                                  LIBUI_POINT(320, 240)),
+        .blit_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 176), LIBUI_POINT(0, 0)),
+                                  LIBUI_POINT(176, 132)),
         .preblit = update_display,
         .postblit = NULL
     },
     .itemparams =
     {
-        .size = LIBUI_POINT(260, 10),
-        .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
+        .size = LIBUI_POINT(164, 10),
+        .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(164, 10)),
         .fill_color = 0xa0000000,
         .fill_color_selected = 0x60ffffff,
         .fill_color_active = 0x60003f3f,
@@ -189,8 +194,8 @@ void run_settingchooser(void** firmware, void** app, int* size)
     bool changes = ui->settingchooser_run(&settingchooser);
     if (changes)
     {
-        rendertext(framebuf, 106, 140, 320, 0xff33ffff, 0xa0000000, "Saving settings...");
-        displaylcd(0, 0, 320, 240, framebuf, 0, 0, 320);
+        rendertext(framebuf, 34, 110, 176, 0xff33ffff, 0xa0000000, "Saving settings...");
+        displaylcd(0, 0, 176, 132, framebuf, 0, 0, 176);
         settings_validate_all();
         settings_save();
         settings_apply();

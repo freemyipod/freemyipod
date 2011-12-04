@@ -1,2 +1,9 @@
 main.c
+mainchooser.c
+toolchooser.c
+settingchooser.c
+boot.c
+tools.c
+util.c
+settings.c
 resources.S
