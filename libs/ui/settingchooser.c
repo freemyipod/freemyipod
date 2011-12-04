@@ -37,6 +37,7 @@ static bool settingchooser_event_filter(struct chooser_data* data, enum button_e
     struct settingchooser_item* item = (struct settingchooser_item*)data->selected->user;
     struct chooser_renderer_list_itemdata* rp;
     rp = (struct chooser_renderer_list_itemdata*)data->selected->renderparams;
+    int change = 0;
     bool redraw = false;
     bool handled = false;
     bool setcolors = false;
@@ -66,6 +67,22 @@ static bool settingchooser_event_filter(struct chooser_data* data, enum button_e
                         state->editing = false;
                     }
                     break;
+                    
+                case 3:
+                    if (state->editing)
+                    {
+                        handled = true;
+                        change = -128;
+                    }
+                    break;
+                    
+                case 4:
+                    if (state->editing)
+                    {
+                        handled = true;
+                        change = 128;
+                    }
+                    break;
 
                 default:
                     handled = state->editing;
@@ -80,23 +97,29 @@ static bool settingchooser_event_filter(struct chooser_data* data, enum button_e
                 {
                     case SETTINGCHOOSER_TYPE_INTEGER:
                         handled = true;
-                        state->collect += value;
-                        int change = (state->collect * item->config.integer.step) / 128;
-                        if (!change) break;
-                        state->collect -= (change * 128) / item->config.integer.step;
-                        int* setting = (int*)item->setting;
-                        if (*setting + change < item->config.integer.min)
-                            *setting = item->config.integer.min;
-                        else if (*setting + change > item->config.integer.max)
-                            *setting = item->config.integer.max;
-                        else *setting += change;
-                        if (item->validator) item->validator(item->setting);
-                        state->changed = true;
-                        redraw = true;
+                        change = value;
                         break;
                 }
             }
             break;
+    }
+    if (change)
+    {
+        state->collect += change;
+        change = (state->collect * item->config.integer.step) / 128;
+        if (change)
+        {
+            state->collect -= (change * 128) / item->config.integer.step;
+            int* setting = (int*)item->setting;
+            if (*setting + change < item->config.integer.min)
+                *setting = item->config.integer.min;
+            else if (*setting + change > item->config.integer.max)
+                *setting = item->config.integer.max;
+            else *setting += change;
+            if (item->validator) item->validator(item->setting);
+            state->changed = true;
+            redraw = true;
+        }
     }
     if (setcolors)
     {
