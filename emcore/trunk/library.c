@@ -229,6 +229,7 @@ struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t version,
         mutex_unlock(&library_mutex);
         return NULL;
     }
+    reownalloc(newalloc, OWNER_TYPE(OWNER_LIBRARY, lib));
     lib->moreusers = (void**)newalloc;
     lib->moreusers[lib->moreusers_size / 4] = owner;
     lib->moreusers_size += 64;
