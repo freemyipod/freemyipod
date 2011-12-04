@@ -2,7 +2,6 @@ main.c
 mainchooser.c
 toolchooser.c
 settingchooser.c
-bootoptionchooser.c
 boot.c
 tools.c
 util.c

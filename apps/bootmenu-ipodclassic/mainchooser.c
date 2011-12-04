@@ -53,6 +53,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_powerdown =
                                    LIBUI_POINT(80, 80)),
     .text = "Power off",
     .text_color = 0xffffcccc,
+    .render = NULL
 };
 
 static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_rockbox =
@@ -63,6 +64,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_rockbox =
                                    LIBUI_POINT(80, 80)),
     .text = "Rockbox",
     .text_color = 0xffffcccc,
+    .render = NULL
 };
 
 static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
@@ -73,6 +75,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
                                    LIBUI_POINT(80, 80)),
     .text = "emCORE console",
     .text_color = 0xffffcccc,
+    .render = NULL
 };
 
 static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_toolchooser =
@@ -83,6 +86,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_toolchooser
                                    LIBUI_POINT(80, 80)),
     .text = "Tools",
     .text_color = 0xffffcccc,
+    .render = NULL
 };
 
 static struct chooser_renderer_iconflow_params mainchooser_rparams =
@@ -91,12 +95,10 @@ static struct chooser_renderer_iconflow_params mainchooser_rparams =
     .copy_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
     .copy_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
                               LIBUI_POINT(320, 240)),
-    .bg_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-    .bg_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                            LIBUI_POINT(0, 0)),
+    .bg_dest = LIBUI_LOCATION_NULL,
+    .bg_src = LIBUI_SURFACE_NULL,
     .bg_opacity = 0,
-    .fill_dest = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                               LIBUI_POINT(0, 0)),
+    .fill_dest = LIBUI_SURFACE_NULL,
     .fill_color = 0,
     .viewport = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 30)),
                               LIBUI_POINT(320, 130)),
@@ -216,8 +218,10 @@ void mainchooser_init()
 void mainchooser_apply_settings()
 {
     mainchooser.defaultitem = settings.default_item;
-    if (settings.timeout_initial < 3000000) mainchooser_aparams.timeout_initial = TIMEOUT_BLOCK;
+    if (settings.timeout_initial < SETTINGS_TIMEOUT_CUTOFF)
+        mainchooser_aparams.timeout_initial = TIMEOUT_BLOCK;
     else mainchooser_aparams.timeout_initial = settings.timeout_initial + 500000;
-    if (settings.timeout_idle < 3000000) mainchooser_aparams.timeout_idle = TIMEOUT_BLOCK;
+    if (settings.timeout_idle < SETTINGS_TIMEOUT_CUTOFF)
+        mainchooser_aparams.timeout_idle = TIMEOUT_BLOCK;
     else mainchooser_aparams.timeout_idle = settings.timeout_idle + 500000;
 }

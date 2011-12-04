@@ -31,6 +31,8 @@
 #define SETTINGS_VERSION 1
 struct settingdata
 {
+    char magic[8];
+    char app[8];
     uint32_t version;
     long timeout_initial;
     long timeout_idle;
@@ -39,6 +41,21 @@ struct settingdata
     int fastboot_item;
 };
 
+#define SETTINGS_TIMEOUT_INITIAL_MIN 0
+#define SETTINGS_TIMEOUT_INITIAL_MAX 2000000000
+#define SETTINGS_TIMEOUT_INITIAL_STEP 1000000
+#define SETTINGS_TIMEOUT_IDLE_MIN 0
+#define SETTINGS_TIMEOUT_IDLE_MAX 2000000000
+#define SETTINGS_TIMEOUT_IDLE_STEP 1000000
+#define SETTINGS_TIMEOUT_ITEM_MIN 0
+#define SETTINGS_TIMEOUT_ITEM_MAX 3
+#define SETTINGS_DEFAULT_ITEM_MIN 0
+#define SETTINGS_DEFAULT_ITEM_MAX 3
+#define SETTINGS_FASTBOOT_ITEM_MIN 0
+#define SETTINGS_FASTBOOT_ITEM_MAX 3
+
+#define SETTINGS_TIMEOUT_CUTOFF 3000000
+
 
 extern struct settingdata settings_default;
 extern struct settingdata settings;
@@ -46,6 +63,7 @@ extern struct settingdata settings;
 
 extern void settings_init();
 extern void settings_reset();
+extern void setting_validate(void* setting);
 extern void settings_validate_all();
 extern void settings_apply();
 extern void settings_save();

@@ -37,17 +37,16 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_mainchooser =
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
     .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
+    .icon_pos = LIBUI_POINT_NULL,
+    .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
+    .icon_selected = LIBUI_SURFACE_NULL,
     .icon_selected_opacity = 0,
     .text = "Return to main menu",
     .text_pos = LIBUI_POINT(1, 1),
     .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
+    .text_color_selected = 0xff7fffff,
+    .render = NULL
 };
 
 static struct chooser_renderer_list_itemdata toolchooser_rparams_umsboot =
@@ -56,17 +55,16 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_umsboot =
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
     .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
+    .icon_pos = LIBUI_POINT_NULL,
+    .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
+    .icon_selected = LIBUI_SURFACE_NULL,
     .icon_selected_opacity = 0,
     .text = "Run UMSboot",
     .text_pos = LIBUI_POINT(1, 1),
     .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
+    .text_color_selected = 0xff7fffff,
+    .render = NULL
 };
 
 static struct chooser_renderer_list_itemdata toolchooser_rparams_rockbox_fallback =
@@ -75,17 +73,16 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_rockbox_fallbac
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
     .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
+    .icon_pos = LIBUI_POINT_NULL,
+    .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
+    .icon_selected = LIBUI_SURFACE_NULL,
     .icon_selected_opacity = 0,
     .text = "Run Rockbox fallback image",
     .text_pos = LIBUI_POINT(1, 1),
     .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
+    .text_color_selected = 0xff7fffff,
+    .render = NULL
 };
 
 static struct chooser_renderer_list_itemdata toolchooser_rparams_clearcfg =
@@ -94,17 +91,16 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_clearcfg =
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
     .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
+    .icon_pos = LIBUI_POINT_NULL,
+    .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
+    .icon_selected = LIBUI_SURFACE_NULL,
     .icon_selected_opacity = 0,
     .text = "Clear Rockbox configuration",
     .text_pos = LIBUI_POINT(1, 1),
     .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
+    .text_color_selected = 0xff7fffff,
+    .render = NULL
 };
 
 static struct chooser_renderer_list_itemdata toolchooser_rparams_cleardb =
@@ -113,17 +109,16 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_cleardb =
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
     .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
+    .icon_pos = LIBUI_POINT_NULL,
+    .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
+    .icon_selected = LIBUI_SURFACE_NULL,
     .icon_selected_opacity = 0,
     .text = "Clear Rockbox database",
     .text_pos = LIBUI_POINT(1, 1),
     .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
+    .text_color_selected = 0xff7fffff,
+    .render = NULL
 };
 
 static struct chooser_renderer_list_itemdata toolchooser_rparams_reformat =
@@ -132,17 +127,16 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_reformat =
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
     .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
+    .icon_pos = LIBUI_POINT_NULL,
+    .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
+    .icon_selected = LIBUI_SURFACE_NULL,
     .icon_selected_opacity = 0,
     .text = "Reformat data partition",
     .text_pos = LIBUI_POINT(1, 1),
     .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
+    .text_color_selected = 0xff7fffff,
+    .render = NULL
 };
 
 static struct chooser_renderer_list_itemdata toolchooser_rparams_settingchooser =
@@ -151,17 +145,16 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_settingchooser 
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
     .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
+    .icon_pos = LIBUI_POINT_NULL,
+    .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
+    .icon_selected = LIBUI_SURFACE_NULL,
     .icon_selected_opacity = 0,
     .text = "Settings",
     .text_pos = LIBUI_POINT(1, 1),
     .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
+    .text_color_selected = 0xff7fffff,
+    .render = NULL
 };
 
 static struct chooser_renderer_list_params toolchooser_rparams =
@@ -170,12 +163,10 @@ static struct chooser_renderer_list_params toolchooser_rparams =
     .copy_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
     .copy_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
                               LIBUI_POINT(320, 240)),
-    .bg_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-    .bg_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                            LIBUI_POINT(0, 0)),
+    .bg_dest = LIBUI_LOCATION_NULL,
+    .bg_src = LIBUI_SURFACE_NULL,
     .bg_opacity = 0,
-    .fill_dest = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                               LIBUI_POINT(0, 0)),
+    .fill_dest = LIBUI_SURFACE_NULL,
     .fill_color = 0,
     .viewport = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(30, 50)),
                               LIBUI_POINT(260, 160)),
@@ -194,7 +185,7 @@ static struct chooser_action_handler_wheel_params toolchooser_aparams =
     .timeout_initial = TIMEOUT_BLOCK,
     .timeout_idle = TIMEOUT_BLOCK,
     .timeout_item = 0,
-    .tick_force_redraw = false,
+    .tick_force_redraw = true,
     .buttoncount = 5,
     .buttonmap =
     {
@@ -277,4 +268,6 @@ void toolchooser_init()
     toolchooser_rparams.copy_src.loc.buf.addr = bg;
     toolchooser_rparams.viewport.loc.buf.addr = framebuf;
     toolchooser_rparams.blit_src.loc.buf.addr = framebuf;
+    toolchooser_rparams_mainchooser.render = ui->chooser_renderer_list_show_arrow_left;
+    toolchooser_rparams_settingchooser.render = ui->chooser_renderer_list_show_arrow_right;
 }

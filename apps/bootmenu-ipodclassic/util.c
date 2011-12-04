@@ -68,7 +68,8 @@ bool update_display(struct chooser_data* data)
     // remaining battery level
     ui->blendcolor(batt_level, 6, 0xc0ffcccc, framebuf, 5, 5, 320, framebuf, 5, 5, 320);
     // background of the rest space
-    ui->blendcolor(22 - batt_level, 6, 0x40000000, framebuf, 5 + batt_level, 5, 320, framebuf, 5 + batt_level, 5, 320);
+    ui->blendcolor(22 - batt_level, 6, 0x40000000, framebuf, 5 + batt_level,
+                   5, 320, framebuf, 5 + batt_level, 5, 320);
     return false;
 }
 

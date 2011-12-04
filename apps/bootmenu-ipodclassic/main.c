@@ -87,9 +87,9 @@ static void main()
         mainchooser_init();
         toolchooser_init();
         settingchooser_init();
-        bootoptionchooser_init();
         
         run_mainchooser(&firmware, &app, &size);
+        
         free(framebuf);
         free(rbxlogo);
         free(icons);

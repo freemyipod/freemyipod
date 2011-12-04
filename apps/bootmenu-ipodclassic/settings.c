@@ -28,6 +28,8 @@
 
 struct settingdata settings_default =
 {
+    .magic = "emCOsett",
+    .app = "bootmenu",
     .version = SETTINGS_VERSION,
     .timeout_initial = 30000000,
     .timeout_idle = 300000000,
@@ -43,19 +45,56 @@ void settings_reset()
     memcpy(&settings, &settings_default, sizeof(settings));
 }
 
+void setting_validate(void* setting)
+{
+    if (setting == &settings.timeout_initial)
+    {
+        if (settings.timeout_initial < SETTINGS_TIMEOUT_INITIAL_MIN)
+            settings.timeout_initial = SETTINGS_TIMEOUT_INITIAL_MIN;
+        if (settings.timeout_initial > SETTINGS_TIMEOUT_INITIAL_MAX)
+            settings.timeout_initial = SETTINGS_TIMEOUT_INITIAL_MAX;
+    }
+    else if (setting == &settings.timeout_idle)
+    {
+        if (settings.timeout_idle < SETTINGS_TIMEOUT_IDLE_MIN)
+            settings.timeout_idle = SETTINGS_TIMEOUT_IDLE_MIN;
+        if (settings.timeout_idle > SETTINGS_TIMEOUT_IDLE_MAX)
+            settings.timeout_idle = SETTINGS_TIMEOUT_IDLE_MAX;
+    }
+    else if (setting == &settings.timeout_item)
+    {
+            if (settings.timeout_item < SETTINGS_TIMEOUT_ITEM_MIN)
+                settings.timeout_item = SETTINGS_TIMEOUT_ITEM_MIN;
+            if (settings.timeout_item > SETTINGS_TIMEOUT_ITEM_MAX)
+                settings.timeout_item = SETTINGS_TIMEOUT_ITEM_MAX;
+    }
+    else if (setting == &settings.default_item)
+    {
+            if (settings.default_item < SETTINGS_DEFAULT_ITEM_MIN)
+                settings.default_item = SETTINGS_DEFAULT_ITEM_MIN;
+            if (settings.default_item > SETTINGS_DEFAULT_ITEM_MAX)
+                settings.default_item = SETTINGS_DEFAULT_ITEM_MAX;
+    }
+    else if (setting == &settings.fastboot_item)
+    {
+            if (settings.fastboot_item < SETTINGS_FASTBOOT_ITEM_MIN)
+                settings.fastboot_item = SETTINGS_FASTBOOT_ITEM_MIN;
+            if (settings.fastboot_item > SETTINGS_FASTBOOT_ITEM_MAX)
+                settings.fastboot_item = SETTINGS_FASTBOOT_ITEM_MAX;
+    }
+}
+
 void settings_validate_all()
 {
-    if (settings.version != SETTINGS_VERSION) settings_reset();
-    if (settings.timeout_initial < 0) settings.timeout_initial = 0;
-    if (settings.timeout_initial > 2000000000) settings.timeout_initial = 2000000000;
-    if (settings.timeout_idle < 0) settings.timeout_idle = 0;
-    if (settings.timeout_idle > 2000000000) settings.timeout_idle = 2000000000;
-    if (settings.timeout_item < 0) settings.timeout_item = 0;
-    if (settings.timeout_item > 3) settings.timeout_item = 3;
-    if (settings.default_item < 0) settings.default_item = 0;
-    if (settings.default_item > 3) settings.default_item = 3;
-    if (settings.fastboot_item < 0) settings.fastboot_item = 0;
-    if (settings.fastboot_item > 3) settings.fastboot_item = 3;
+    if (memcmp(settings.magic, settings_default.magic, sizeof(settings.magic))
+     || memcmp(settings.app, settings_default.app, sizeof(settings.app))
+     || settings.version != SETTINGS_VERSION)
+        settings_reset();
+    setting_validate(&settings.timeout_initial);
+    setting_validate(&settings.timeout_idle);
+    setting_validate(&settings.timeout_item);
+    setting_validate(&settings.default_item);
+    setting_validate(&settings.fastboot_item);
 }
 
 void settings_apply()

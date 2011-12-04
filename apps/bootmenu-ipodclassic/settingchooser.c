@@ -29,249 +29,179 @@
 #include "settings.h"
 
 
-static struct chooser_renderer_list_itemdata settingchooser_rparams_toolchooser =
+int settingchooser_time_to_str(char* buf, int buflen, void* setting, int value)
 {
-    .size = LIBUI_POINT(260, 10),
-    .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
-    .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
-    .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
-    .icon_selected_opacity = 0,
-    .text = "Return to tools menu",
-    .text_pos = LIBUI_POINT(1, 1),
-    .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
-};
+    if (value < SETTINGS_TIMEOUT_CUTOFF) return snprintf(buf, buflen, "%s", "Never");
+    return snprintf(buf, buflen, "%dsec", value / 1000000);
+}
 
-static struct chooser_renderer_list_itemdata settingchooser_rparams_timeout_initial =
+static struct settingchooser_select_options settings_timeout_item_options =
 {
-    .size = LIBUI_POINT(260, 10),
-    .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
-    .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
-    .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
-    .icon_selected_opacity = 0,
-    .text = "Initial timeout",
-    .text_pos = LIBUI_POINT(1, 1),
-    .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
-};
-
-static struct chooser_renderer_list_itemdata settingchooser_rparams_timeout_idle =
-{
-    .size = LIBUI_POINT(260, 10),
-    .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
-    .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
-    .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
-    .icon_selected_opacity = 0,
-    .text = "Idle timeout",
-    .text_pos = LIBUI_POINT(1, 1),
-    .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
-};
-
-static struct chooser_renderer_list_itemdata settingchooser_rparams_timeout_item =
-{
-    .size = LIBUI_POINT(260, 10),
-    .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
-    .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
-    .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
-    .icon_selected_opacity = 0,
-    .text = "Timeout boot option",
-    .text_pos = LIBUI_POINT(1, 1),
-    .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
-};
-
-static struct chooser_renderer_list_itemdata settingchooser_rparams_default_item =
-{
-    .size = LIBUI_POINT(260, 10),
-    .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
-    .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
-    .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
-    .icon_selected_opacity = 0,
-    .text = "Default boot option",
-    .text_pos = LIBUI_POINT(1, 1),
-    .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
-};
-
-static struct chooser_renderer_list_itemdata settingchooser_rparams_fastboot_item =
-{
-    .size = LIBUI_POINT(260, 10),
-    .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
-    .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60ffffff,
-    .icon_pos = LIBUI_POINT(0, 0),
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                          LIBUI_POINT(0, 0)),
-    .icon_opacity = 0,
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                                   LIBUI_POINT(0, 0)),
-    .icon_selected_opacity = 0,
-    .text = "Fastboot boot option",
-    .text_pos = LIBUI_POINT(1, 1),
-    .text_color = 0xffffffff,
-    .text_color_selected = 0xff7fffff
-};
-
-static struct chooser_renderer_list_params settingchooser_rparams =
-{
-    .version = CHOOSER_RENDERER_LIST_PARAMS_VERSION,
-    .copy_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
-    .copy_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
-                              LIBUI_POINT(320, 240)),
-    .bg_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-    .bg_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                            LIBUI_POINT(0, 0)),
-    .bg_opacity = 0,
-    .fill_dest = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
-                               LIBUI_POINT(0, 0)),
-    .fill_color = 0,
-    .viewport = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(30, 50)),
-                              LIBUI_POINT(260, 160)),
-    .blit_dest = LIBUI_POINT(0, 0),
-    .blit_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
-                              LIBUI_POINT(320, 240)),
-    .preblit = update_display,
-    .postblit = NULL
-};
-
-static struct chooser_action_handler_wheel_params settingchooser_aparams =
-{
-    .version = CHOOSER_ACTION_HANDLER_WHEEL_PARAMS_VERSION,
-    .stepsperitem = 128,
-    .eventfilter = NULL,
-    .timeout_initial = TIMEOUT_BLOCK,
-    .timeout_idle = TIMEOUT_BLOCK,
-    .timeout_item = 0,
-    .tick_force_redraw = false,
-    .buttoncount = 5,
-    .buttonmap =
+    .optioncount = 4,
+    .options =
     {
-        CHOOSER_ACTION_HANDLER_WHEEL_ACTION_SELECT,
-        CHOOSER_ACTION_HANDLER_WHEEL_ACTION_NONE,
-        CHOOSER_ACTION_HANDLER_WHEEL_ACTION_CANCEL,
-        CHOOSER_ACTION_HANDLER_WHEEL_ACTION_NEXT,
-        CHOOSER_ACTION_HANDLER_WHEEL_ACTION_PREV
+        SETTINGCHOOSER_SELECT_OPTION("Power off", "Power off", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Rockbox", "Rockbox", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("UMSboot", "UMSboot", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Console", "emCORE console", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL)
     }
 };
 
-static struct chooser_info settingchooser =
+static struct settingchooser_select_options settings_default_item_options =
 {
-    .version = CHOOSER_INFO_VERSION,
-    .actionhandler = NULL,
-    .actionhandlerparams = &settingchooser_aparams,
-    .renderer = NULL,
-    .rendererparams = &settingchooser_rparams,
-    .userparams = NULL,
+    .optioncount = 4,
+    .options =
+    {
+        SETTINGCHOOSER_SELECT_OPTION("Power off", "Power off", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Rockbox", "Rockbox", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Console", "emCORE console", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Tools", "Tools", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL)
+    }
+};
+
+static struct settingchooser_select_options settings_fastboot_item_options =
+{
+    .optioncount = 4,
+    .options =
+    {
+        SETTINGCHOOSER_SELECT_OPTION("Disabled", "Disabled", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Rockbox", "Rockbox", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("UMSboot", "UMSboot", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Console", "emCORE console", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL)
+    }
+};
+
+static struct settingchooser_info settingchooser =
+{
+    .version = SETTINGCHOOSER_INFO_VERSION,
+    .rendererparams = 
+    {
+        .version = CHOOSER_RENDERER_LIST_PARAMS_VERSION,
+        .copy_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
+        .copy_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
+                                  LIBUI_POINT(320, 240)),
+        .bg_dest = LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
+        .bg_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
+                                LIBUI_POINT(0, 0)),
+        .bg_opacity = 0,
+        .fill_dest = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 0), LIBUI_POINT(0, 0)),
+                                   LIBUI_POINT(0, 0)),
+        .fill_color = 0,
+        .viewport = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(30, 50)),
+                                  LIBUI_POINT(260, 160)),
+        .blit_dest = LIBUI_POINT(0, 0),
+        .blit_src = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 320), LIBUI_POINT(0, 0)),
+                                  LIBUI_POINT(320, 240)),
+        .preblit = update_display,
+        .postblit = NULL
+    },
+    .itemparams =
+    {
+        .size = LIBUI_POINT(260, 10),
+        .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
+        .fill_color = 0xa0000000,
+        .fill_color_selected = 0x60ffffff,
+        .fill_color_active = 0x60003f3f,
+        .icon_pos = LIBUI_POINT_NULL,
+        .icon_opacity = 0,
+        .icon_selected_opacity = 0,
+        .icon_active_opacity = 0,
+        .text_pos = LIBUI_POINT(1, 1),
+        .text_color = 0xffffffff,
+        .text_color_selected = 0xff7fffff,
+        .text_color_active = 0xffff7f7f
+    },
+    .returntext = "Return to tools menu",
     .tickinterval = 10000000,
-    .itemcount = 6,
-    .defaultitem = 0,
+    .itemcount = 5,
     .items =
     {
         {
-            .user = (void*)0,
-            .actionparams = NULL,
-            .renderparams = &settingchooser_rparams_toolchooser
+            .text = "Initial timeout",
+            .icon = LIBUI_SURFACE_NULL,
+            .icon_selected = LIBUI_SURFACE_NULL,
+            .type = SETTINGCHOOSER_TYPE_INTEGER,
+            .setting = &settings.timeout_initial,
+            .validator = setting_validate,
+            .config.integer =
+            {
+                .min = SETTINGS_TIMEOUT_INITIAL_MIN,
+                .max = SETTINGS_TIMEOUT_INITIAL_MAX,
+                .step = SETTINGS_TIMEOUT_INITIAL_STEP,
+                .tostring = settingchooser_time_to_str
+            }
         },
         {
-            .user = (void*)1,
-            .actionparams = NULL,
-            .renderparams = &settingchooser_rparams_timeout_initial
+            .text = "Idle timeout",
+            .icon = LIBUI_SURFACE_NULL,
+            .icon_selected = LIBUI_SURFACE_NULL,
+            .type = SETTINGCHOOSER_TYPE_INTEGER,
+            .setting = &settings.timeout_idle,
+            .validator = setting_validate,
+            .config.integer =
+            {
+                .min = SETTINGS_TIMEOUT_IDLE_MIN,
+                .max = SETTINGS_TIMEOUT_IDLE_MAX,
+                .step = SETTINGS_TIMEOUT_IDLE_STEP,
+                .tostring = settingchooser_time_to_str
+            }
         },
         {
-            .user = (void*)2,
-            .actionparams = NULL,
-            .renderparams = &settingchooser_rparams_timeout_idle
+            .text = "Timeout action",
+            .icon = LIBUI_SURFACE_NULL,
+            .icon_selected = LIBUI_SURFACE_NULL,
+            .type = SETTINGCHOOSER_TYPE_SELECT,
+            .setting = &settings.timeout_item,
+            .validator = setting_validate,
+            .config.select =
+            {
+                .options = &settings_timeout_item_options
+            }
         },
         {
-            .user = (void*)3,
-            .actionparams = NULL,
-            .renderparams = &settingchooser_rparams_timeout_item
+            .text = "Default action",
+            .icon = LIBUI_SURFACE_NULL,
+            .icon_selected = LIBUI_SURFACE_NULL,
+            .type = SETTINGCHOOSER_TYPE_SELECT,
+            .setting = &settings.default_item,
+            .validator = setting_validate,
+            .config.select =
+            {
+                .options = &settings_default_item_options
+            }
         },
         {
-            .user = (void*)4,
-            .actionparams = NULL,
-            .renderparams = &settingchooser_rparams_default_item
-        },
-        {
-            .user = (void*)5,
-            .actionparams = NULL,
-            .renderparams = &settingchooser_rparams_fastboot_item
+            .text = "Fastboot action",
+            .icon = LIBUI_SURFACE_NULL,
+            .icon_selected = LIBUI_SURFACE_NULL,
+            .type = SETTINGCHOOSER_TYPE_SELECT,
+            .setting = &settings.fastboot_item,
+            .validator = setting_validate,
+            .config.select =
+            {
+                .options = &settings_fastboot_item_options
+            }
         }
     }
 };
 
 void run_settingchooser(void** firmware, void** app, int* size)
 {
-    while (true)
+    bool changes = ui->settingchooser_run(&settingchooser);
+    if (changes)
     {
-        const struct chooser_item* result = ui->chooser_run(&settingchooser);
-        if (!result || !result->user)
-        {
-            rendertext(framebuf, 106, 140, 320, 0xff33ffff, 0xa0000000, "Saving settings...");
-            displaylcd(0, 0, 320, 240, framebuf, 0, 0, 320);
-            settings_validate_all();
-            settings_save();
-            settings_apply();
-            return;
-        }
-        int new;
-        switch ((int)result->user)
-        {
-            case 3:
-                new = run_bootoptionchooser(settings.timeout_item, "Power off", "Rockbox", "UMSboot", "emCORE console");
-                if (new != -1) settings.timeout_item = new;
-                break;
-                
-            case 4:
-                new = run_bootoptionchooser(settings.default_item, "Power off", "Rockbox", "emCORE console", "Tools");
-                if (new != -1) settings.default_item = new;
-                break;
-                
-            case 5:
-                new = run_bootoptionchooser(settings.fastboot_item, "Disabled", "Rockbox", "UMSboot", "emCORE console");
-                if (new != -1) settings.fastboot_item = new;
-                break;
-        }
+        rendertext(framebuf, 106, 140, 320, 0xff33ffff, 0xa0000000, "Saving settings...");
+        displaylcd(0, 0, 320, 240, framebuf, 0, 0, 320);
+        settings_validate_all();
+        settings_save();
+        settings_apply();
     }
 }
 
 void settingchooser_init()
 {
-    settingchooser.actionhandler = ui->chooser_action_handler_wheel;
-    settingchooser.renderer = ui->chooser_renderer_list;
-    settingchooser_rparams.copy_dest.buf.addr = framebuf;
-    settingchooser_rparams.copy_src.loc.buf.addr = bg;
-    settingchooser_rparams.viewport.loc.buf.addr = framebuf;
-    settingchooser_rparams.blit_src.loc.buf.addr = framebuf;
+    settingchooser.rendererparams.copy_dest.buf.addr = framebuf;
+    settingchooser.rendererparams.copy_src.loc.buf.addr = bg;
+    settingchooser.rendererparams.viewport.loc.buf.addr = framebuf;
+    settingchooser.rendererparams.blit_src.loc.buf.addr = framebuf;
 }
