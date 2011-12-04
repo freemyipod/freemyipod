@@ -257,6 +257,7 @@ void run_toolchooser(void** firmware, void** app, int* size)
         void (*selected_function)(void** firmware, void** app, int* size);
         selected_function = (void(*)(void** firmware, void** app, int* size))(result->user);
         selected_function(firmware, app, size);
+        if (firmware || app) return;
     }
 }
 
