@@ -13,10 +13,10 @@ For communication with the device, this application uses libusb 1.0.
 Building
 --------
 You need:
-1. GCC/Make (Xcode on OS X)
+1. GCC(<4.5) and GNU Make on Linux // Xcode on OS X
 2. pkg-config
 3. libusb >= 1.0
-4. libfuse >= 2.8 (or fuse4x on x64 OS X)
+4. libfuse >= 2.8 on Linux // fuse4x on x64 OS X
 5. all dependencies of the above
 
 Compiling:
@@ -56,6 +56,9 @@ Known bugs/issues
 * Most errors are not handled properly, EIO (Input/output error) is
     given in many cases where there's a more descriptive error
     message available. Will be fixed in the future.
+* Linking using gcc-4.5+ doesn't seem to work properly. You can set
+    the desired GCC version with the GCC Makefile viariable.
+    For example: GCC=gcc-4.4 make debug
 
 Future plans
 ------------
