@@ -168,7 +168,7 @@ static enum chooser_result chooser_renderer_iconflow_render(struct chooser_data*
             {
                 tx = params->text_pos.x - strlen(iparams->text) * get_font_width() / 2;
                 ty = params->text_pos.y;
-                rendertext(buf, tx, ty, stride, iparams->text_color, 0, iparams->text);
+                rendertext(buf, tx, ty, stride, iparams->text_color, iparams->text_bgcolor, iparams->text);
            }
         }
         if (icon->loc.buf.addr && io && ix >= x && iy >= y
