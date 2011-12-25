@@ -39,7 +39,7 @@ static bool mainchooser_preblit(struct chooser_data* data)
     if (adata->timeout_remaining != TIMEOUT_BLOCK)
     {
         snprintf(buf, sizeof(buf), "%3d", adata->timeout_remaining / 1000000);
-        rendertext(framebuf, 299, 229, 320, 0xffffcccc, 0, buf);
+        rendertext(framebuf, 299, 229, 320, 0xcf7f0000, 0, buf);
     }
     update_display(data);
     return false;
@@ -53,6 +53,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_powerdown =
                                    LIBUI_POINT(80, 80)),
     .text = "Power off",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -64,6 +65,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_rockbox =
                                    LIBUI_POINT(80, 80)),
     .text = "Rockbox",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -75,6 +77,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
                                    LIBUI_POINT(80, 80)),
     .text = "emCORE console",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -86,6 +89,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_toolchooser
                                    LIBUI_POINT(80, 80)),
     .text = "Tools",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -218,6 +222,8 @@ void mainchooser_init()
 void mainchooser_apply_settings()
 {
     mainchooser.defaultitem = settings.default_item;
+    if (settings.snow) mainchooser.tickinterval = 50000;
+    else mainchooser.tickinterval = 990000;
     if (settings.timeout_initial < SETTINGS_TIMEOUT_CUTOFF)
         mainchooser_aparams.timeout_initial = TIMEOUT_BLOCK;
     else mainchooser_aparams.timeout_initial = settings.timeout_initial + 500000;

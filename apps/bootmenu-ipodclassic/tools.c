@@ -73,7 +73,7 @@ void run_reformat(void** firmware, void** app, int* size)
 {
     if (!run_confirmchooser("Really reformat data partition?")) return;
     memcpy(framebuf, bg, 320 * 240 * 3);
-    rendertext(framebuf, 70, 125, 320, 0xff7fffff, 0, "Reformatting data partition...");
+    rendertext(framebuf, 70, 125, 320, 0xff7fffff, 0xa0000000, "Reformatting data partition...");
     update_display(NULL);
     displaylcd(0, 0, 320, 240, framebuf, 0, 0, 320);
     struct emcorelib_header* libmkfat32 = loadlib(LIBMKFAT32_IDENTIFIER,

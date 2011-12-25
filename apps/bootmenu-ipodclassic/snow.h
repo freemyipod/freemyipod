@@ -21,16 +21,15 @@
 //
 
 
-#ifndef __APP_CONFIRMCHOOSER_H__
-#define __APP_CONFIRMCHOOSER_H__
+#ifndef __APP_SNOW_H__
+#define __APP_SNOW_H__
 
 
 #include "emcoreapp.h"
 
 
-extern bool run_confirmchooser(const char* message);
-extern void confirmchooser_init();
-extern void confirmchooser_apply_settings();
+extern void snow_init();
+extern void render_snow();
 
 
 #endif

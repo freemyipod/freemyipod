@@ -99,8 +99,8 @@ static struct settingchooser_info settingchooser =
         .size = LIBUI_POINT(260, 10),
         .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
         .fill_color = 0xa0000000,
-        .fill_color_selected = 0x60ffffff,
-        .fill_color_active = 0x60003f3f,
+        .fill_color_selected = 0x60000000,
+        .fill_color_active = 0xa0003f3f,
         .icon_pos = LIBUI_POINT_NULL,
         .icon_opacity = 0,
         .icon_selected_opacity = 0,
@@ -112,7 +112,7 @@ static struct settingchooser_info settingchooser =
     },
     .returntext = "Return to tools menu",
     .tickinterval = 10000000,
-    .itemcount = 5,
+    .itemcount = 6,
     .items =
     {
         {
@@ -180,6 +180,21 @@ static struct settingchooser_info settingchooser =
             {
                 .options = &settings_fastboot_item_options
             }
+        },
+        {
+            .text = "Snow",
+            .icon = LIBUI_SURFACE_NULL,
+            .icon_selected = LIBUI_SURFACE_NULL,
+            .type = SETTINGCHOOSER_TYPE_INTEGER,
+            .setting = &settings.snow,
+            .validator = setting_validate,
+            .config.integer =
+            {
+                .min = SETTINGS_SNOW_MIN,
+                .max = SETTINGS_SNOW_MAX,
+                .step = SETTINGS_SNOW_STEP,
+                .tostring = NULL
+            }
         }
     }
 };
@@ -203,4 +218,10 @@ void settingchooser_init()
     settingchooser.rendererparams.copy_src.loc.buf.addr = bg;
     settingchooser.rendererparams.viewport.loc.buf.addr = framebuf;
     settingchooser.rendererparams.blit_src.loc.buf.addr = framebuf;
+}
+
+void settingchooser_apply_settings()
+{
+    if (settings.snow) settingchooser.tickinterval = 50000;
+    else settingchooser.tickinterval = 10000000;
 }

@@ -52,24 +52,25 @@ bool update_display(struct chooser_data* data)
     rtc_read_datetime(&dt);
     snprintf(buf, sizeof(buf), "%02d:%02d", dt.hour, dt.minute);
     // clock
-    rendertext(framebuf, 287, 4, 320, 0xffffcccc, 0, buf);
+    rendertext(framebuf, 287, 4, 320, 0xff3f0000, 0x3fffffff, buf);
     // draw the battery meter box
     // top line
-    ui->blendcolor(24, 1, 0xffffcccc, framebuf, 4, 4, 320, framebuf, 4, 4, 320);
+    ui->blendcolor(24, 1, 0xcf7f0000, framebuf, 4, 4, 320, framebuf, 4, 4, 320);
     // bottom line
-    ui->blendcolor(24, 1, 0xffffcccc, framebuf, 4, 11, 320, framebuf, 4, 11, 320);
+    ui->blendcolor(24, 1, 0xcf7f0000, framebuf, 4, 11, 320, framebuf, 4, 11, 320);
     // left line
-    ui->blendcolor(1, 6, 0xffffcccc, framebuf, 4, 5, 320, framebuf, 4, 5, 320);
+    ui->blendcolor(1, 6, 0xcf7f0000, framebuf, 4, 5, 320, framebuf, 4, 5, 320);
     // right line
-    ui->blendcolor(1, 6, 0xffffcccc, framebuf, 27, 5, 320, framebuf, 27, 5, 320);
+    ui->blendcolor(1, 6, 0xcf7f0000, framebuf, 27, 5, 320, framebuf, 27, 5, 320);
     // tip - right
-    ui->blendcolor(1, 4, 0xffffcccc, framebuf, 28, 6, 320, framebuf, 28, 6, 320);
+    ui->blendcolor(1, 4, 0xcf7f0000, framebuf, 28, 6, 320, framebuf, 28, 6, 320);
     unsigned int batt_level = 22 * read_battery_mwh_current(0) / read_battery_mwh_full(0);
     // remaining battery level
-    ui->blendcolor(batt_level, 6, 0xc0ffcccc, framebuf, 5, 5, 320, framebuf, 5, 5, 320);
+    ui->blendcolor(batt_level, 6, 0x7f3f0000, framebuf, 5, 5, 320, framebuf, 5, 5, 320);
     // background of the rest space
-    ui->blendcolor(22 - batt_level, 6, 0x40000000, framebuf, 5 + batt_level,
+    ui->blendcolor(22 - batt_level, 6, 0x3f7f0000, framebuf, 5 + batt_level,
                    5, 320, framebuf, 5 + batt_level, 5, 320);
+    render_snow();
     return false;
 }
 

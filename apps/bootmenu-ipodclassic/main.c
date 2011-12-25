@@ -91,6 +91,7 @@ static void main()
         toolchooser_init();
         settingchooser_init();
         confirmchooser_init();
+        snow_init();
         
         run_mainchooser(&firmware, &app, &size);
         

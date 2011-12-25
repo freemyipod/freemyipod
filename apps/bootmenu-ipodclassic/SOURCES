@@ -7,4 +7,5 @@ boot.c
 tools.c
 util.c
 settings.c
+snow.c
 resources.S

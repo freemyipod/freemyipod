@@ -26,6 +26,7 @@
 #include "confirmchooser.h"
 #include "main.h"
 #include "util.h"
+#include "settings.h"
 
 
 static struct chooser_renderer_list_itemdata confirmchooser_rparams_yes =
@@ -51,7 +52,7 @@ static struct chooser_renderer_list_itemdata confirmchooser_rparams_no =
     .size = LIBUI_POINT(260, 10),
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60ffffff,
+    .fill_color_selected = 0x60000000,
     .icon_pos = LIBUI_POINT_NULL,
     .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
@@ -210,4 +211,10 @@ void confirmchooser_init()
     confirmchooser_rparams.blit_src.loc.buf.addr = framebuf;
     confirmchooser_rparams_yes.render = ui->chooser_renderer_list_show_arrow_right;
     confirmchooser_rparams_no.render = ui->chooser_renderer_list_show_arrow_left;
+}
+
+void confirmchooser_apply_settings()
+{
+    if (settings.snow) confirmchooser.tickinterval = 50000;
+    else confirmchooser.tickinterval = 10000000;
 }

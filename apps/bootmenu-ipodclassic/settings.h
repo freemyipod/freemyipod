@@ -39,6 +39,7 @@ struct settingdata
     int timeout_item;
     int default_item;
     int fastboot_item;
+    int snow;
 };
 
 #define SETTINGS_TIMEOUT_INITIAL_MIN 0
@@ -53,6 +54,9 @@ struct settingdata
 #define SETTINGS_DEFAULT_ITEM_MAX 3
 #define SETTINGS_FASTBOOT_ITEM_MIN 0
 #define SETTINGS_FASTBOOT_ITEM_MAX 3
+#define SETTINGS_SNOW_MIN 0
+#define SETTINGS_SNOW_MAX 10
+#define SETTINGS_SNOW_STEP 1
 
 #define SETTINGS_TIMEOUT_CUTOFF 3000000
 

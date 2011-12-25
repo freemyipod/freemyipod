@@ -30,6 +30,7 @@
 
 extern void run_settingchooser(void** firmware, void** app, int* size);
 extern void settingchooser_init();
+extern void settingchooser_apply_settings();
 
 
 #endif
