@@ -40,7 +40,7 @@ SRC := $(call preprocesspaths,SOURCES,-I. -I..)
 OBJ := $(SRC:%.c=build/%.o)
 OBJ := $(OBJ:%.S=build/%.o) $(HELPERS)
 
-all: $(NAME)
+all: #$(NAME)
 
 -include $(OBJ:%=%.dep)
 
