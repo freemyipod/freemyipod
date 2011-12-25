@@ -25,7 +25,7 @@
 #include "libboot.h"
 
 
-void main();
+void main(int argc, const char** argv);
 EMCORE_APP_HEADER("emCORE uninstaller", main, 127)
 
 
@@ -107,7 +107,7 @@ uint32_t readfw(const char* filename, void** address, uint32_t* size)
     return 0;
 }
 
-void main(void)
+void main(int argc, const char** argv)
 {
     uint32_t i, j, k;
     uint8_t* aupd;

@@ -54,7 +54,7 @@ struct emcoreapp_header
 
 
 #ifndef _TOOL
-struct scheduler_thread* execimage(void* image, bool copy);
+struct scheduler_thread* execimage(void* image, bool copy, int argc, const char** argv);
 #endif
 
 

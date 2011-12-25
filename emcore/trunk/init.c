@@ -88,7 +88,6 @@ struct initbss
 {
     struct scheduler_thread initthread;
     uint32_t initstack[0x400];
-    void* bootalloc;
 #ifdef HAVE_STORAGE
     struct scheduler_thread storagethread;
     uint32_t storagestack[0x400];
@@ -97,7 +96,6 @@ struct initbss
 };
 
 
-static struct initbss* ib INITDATA_ATTR = NULL;
 static const char welcomestring[] INITCONST_ATTR = "emCORE v" VERSION " r" VERSION_SVN "\n\n";
 static const char initthreadname[] INITCONST_ATTR = "Initialization thread";
 static const char unknownboottypestr[] INITCONST_ATTR = "Skipping boot option with unknown type %d\n";
@@ -117,9 +115,10 @@ struct bootinfo bootinfo INITTAIL_ATTR =
 
 
 #ifdef HAVE_STORAGE
-void storageinitthread() INITCODE_ATTR;
-void storageinitthread()
+void storageinitthread(void* arg0, void* arg1, void* arg2, void* arg3) INITCODE_ATTR;
+void storageinitthread(void* arg0, void* arg1, void* arg2, void* arg3)
 {
+    struct initbss* ib = (struct initbss*)arg0;
     DEBUGF("Initializing storage drivers...");
     storage_init();
     DEBUGF("Initializing storage subsystem...");
@@ -133,9 +132,10 @@ void storageinitthread()
 }
 #endif
 
-void initthread() INITCODE_ATTR;
-void initthread()
+void initthread(void* arg0, void* arg1, void* arg2, void* arg3) INITCODE_ATTR;
+void initthread(void* arg0, void* bootalloc, void* arg2, void* arg3)
 {
+    struct initbss* ib = (struct initbss*)arg0;
 #ifdef HAVE_I2C
     i2c_init();
 #endif
@@ -143,8 +143,8 @@ void initthread()
     cputs(CONSOLE_BOOT, welcomestring);
 #ifdef HAVE_STORAGE
     wakeup_init(&(ib->storagewakeup));
-    thread_create(&(ib->storagethread), storagethreadname, storageinitthread,
-                  ib->storagestack, sizeof(ib->storagestack), USER_THREAD, 127, true);
+    thread_create(&(ib->storagethread), storagethreadname, storageinitthread, ib->storagestack,
+                  sizeof(ib->storagestack), USER_THREAD, 127, true, ib, NULL, NULL, NULL);
 #endif
 #ifdef HAVE_USB
     usb_init();
@@ -184,7 +184,7 @@ void initthread()
         switch (option->type)
         {
         case BOOTTYPE_PIGGYBACKED:
-            success = execimage(option->source, true) != NULL;
+            success = execimage(option->source, true, 0, NULL) != NULL;
             break;
 
 #ifdef HAVE_BOOTFLASH
@@ -199,7 +199,7 @@ void initthread()
                 free(buffer);
                 break;
             }
-            success = execimage(buffer, false) != NULL;
+            success = execimage(buffer, false, 0, NULL) != NULL;
             break;
         }
 #endif
@@ -228,7 +228,7 @@ void initthread()
                 break;
             }
             close(fd);
-            success = execimage(buffer, false) != NULL;
+            success = execimage(buffer, false, 0, NULL) != NULL;
             break;
         }
 #endif
@@ -244,7 +244,7 @@ void initthread()
         else option = option->fail_next;
     }
     if (!success) cputs(CONSOLE_BOOT, nobootoptionsstr);
-    free(ib->bootalloc);
+    free(bootalloc);
 }
 
 void init() INITCODE_ATTR;
@@ -267,12 +267,11 @@ void init()
     void* bootalloc = malloc(size);
     size -= (size_t)(bootalloc) - (size_t)(&_poolstart);
     realloc(bootalloc, size);
-    ib = (struct initbss*)malloc(sizeof(struct initbss));
+    struct initbss* ib = (struct initbss*)malloc(sizeof(struct initbss));
     reownalloc(ib, OWNER_TYPE(OWNER_THREAD, &(ib->initthread)));
     reownalloc(bootalloc, OWNER_TYPE(OWNER_THREAD, &(ib->initthread)));
-    ib->bootalloc = bootalloc;
     thread_create(&(ib->initthread), initthreadname, initthread, ib->initstack,
-                  sizeof(ib->initstack), OS_THREAD, 127, true);
+                  sizeof(ib->initstack), OS_THREAD, 127, true, ib, bootalloc, NULL, NULL);
     timer_init();
     interrupt_init();
 }

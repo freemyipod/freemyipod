@@ -161,7 +161,7 @@ void draw()
 }
 
 
-static void main()
+static void main(int argc, const char** argv)
 {
     int i;
 

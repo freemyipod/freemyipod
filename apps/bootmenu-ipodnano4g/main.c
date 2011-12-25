@@ -673,7 +673,7 @@ static void run_mainchooser(void** firmware, void** app, int* size)
     }
 }
 
-static void main()
+static void main(int argc, const char** argv)
 {
     struct emcorelib_header* libpng = loadlib(LIBPNG_IDENTIFIER, LIBPNG_API_VERSION, "libpng  ");
     png = (struct libpng_api*)libpng->api;

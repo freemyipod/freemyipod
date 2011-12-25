@@ -141,8 +141,10 @@ void scheduler_resume_accounting() ICODE_ATTR;
 void scheduler_switch(struct scheduler_thread* thread, struct scheduler_thread* block) ICODE_ATTR;
 bool scheduler_freeze(bool value);
 struct scheduler_thread* thread_create(struct scheduler_thread* thread, const char* name,
-                                       const void* code, void* stack, int stacksize,
-                                       enum thread_type type, int priority, bool run);
+                                       void (*const code)(void*, void*, void*, void*),
+                                       void* stack, int stacksize,
+                                       enum thread_type type, int priority, bool run,
+                                       void* arg0, void* arg1, void* arg2, void* arg3);
 int thread_suspend(struct scheduler_thread* thread);
 int thread_resume(struct scheduler_thread* thread);
 void thread_set_name(struct scheduler_thread* thread, char* name);

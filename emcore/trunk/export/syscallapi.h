@@ -73,12 +73,12 @@
 #endif
 
 /* increase this every time the api struct changes */
-#define EMCORE_API_VERSION 6
+#define EMCORE_API_VERSION 7
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
    new function which are "waiting" at the end of the function table) */
-#define EMCORE_MIN_API_VERSION 4
+#define EMCORE_MIN_API_VERSION 7
 
 /* NOTE: To support backwards compatibility, only add new functions at
          the end of the structure.  Every time you add a new function,

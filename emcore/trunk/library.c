@@ -42,7 +42,8 @@ static struct library_handle* library_list_head;
 static struct mutex library_mutex;
 
 
-struct library_handle* library_register(void* image, struct emcorelib_header* header)
+struct library_handle* library_register(void* image, struct emcorelib_header* header,
+                                        int argc, const char** argv)
 {
     mutex_lock(&library_mutex, TIMEOUT_BLOCK);
     struct library_handle* h;
@@ -53,7 +54,7 @@ struct library_handle* library_register(void* image, struct emcorelib_header* he
             return NULL;
         }
     if ((header->setupfunc && header->setupfunc() < 0)
-     || (header->initfunc && header->initfunc() < 0))
+     || (header->initfunc && header->initfunc(argc, argv) < 0))
     {
         mutex_unlock(&library_mutex);
         return NULL;
@@ -143,13 +144,13 @@ struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t version,
         {
         case LIBSOURCE_RAM_ALLOCED:
         {
-            lib = (struct library_handle*)execimage(source, false);
+            lib = (struct library_handle*)execimage(source, false, 0, NULL);
             break;
         }
 
         case LIBSOURCE_RAM_NEEDCOPY:
         {
-            lib = (struct library_handle*)execimage(source, true);
+            lib = (struct library_handle*)execimage(source, true, 0, NULL);
             break;
         }
 
@@ -165,7 +166,7 @@ struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t version,
                 free(buffer);
                 break;
             }
-            lib = (struct library_handle*)execimage(buffer, false);
+            lib = (struct library_handle*)execimage(buffer, false, 0, NULL);
             break;
         }
 #endif
@@ -194,7 +195,7 @@ struct emcorelib_header* get_library_ext(uint32_t identifier, uint32_t version,
                 break;
             }
             close(fd);
-            lib = (struct library_handle*)execimage(buffer, false);
+            lib = (struct library_handle*)execimage(buffer, false, 0, NULL);
             break;
         }
 #endif

@@ -49,7 +49,7 @@ struct bootinfo_t bootinfo =
 };
 
 
-static void main()
+static void main(int argc, const char** argv)
 {
     settings_init();
     

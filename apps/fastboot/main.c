@@ -25,7 +25,7 @@
 #include "libboot.h"
 
 
-static void main()
+static void main(int argc, const char** argv)
 {
     void* firmware = NULL;
     int size;

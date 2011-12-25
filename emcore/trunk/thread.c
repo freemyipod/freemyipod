@@ -358,8 +358,10 @@ void scheduler_switch(struct scheduler_thread* thread, struct scheduler_thread* 
 }
 
 struct scheduler_thread* thread_create(struct scheduler_thread* thread, const char* name,
-                                       const void* code, void* stack, int stacksize,
-                                       enum thread_type type, int priority, bool run)
+                                       void (*const code)(void*, void*, void*, void*),
+                                       void* stack, int stacksize,
+                                       enum thread_type type, int priority, bool run,
+                                       void* arg0, void* arg1, void* arg2, void* arg3)
 {
     bool stack_alloced = false;
     bool thread_alloced = false;
@@ -391,6 +393,10 @@ struct scheduler_thread* thread_create(struct scheduler_thread* thread, const ch
     thread->name = name;
     thread->priority = priority;
     thread->cpsr = 0x1f;
+    thread->regs[0] = (uint32_t)arg0;
+    thread->regs[1] = (uint32_t)arg1;
+    thread->regs[2] = (uint32_t)arg2;
+    thread->regs[3] = (uint32_t)arg3;
     thread->regs[15] = (uint32_t)code;
     thread->regs[14] = (uint32_t)thread_exit;
     thread->regs[13] = (uint32_t)stack + stacksize;

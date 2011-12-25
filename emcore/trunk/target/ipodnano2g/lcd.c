@@ -64,21 +64,21 @@ int lcd_get_format()
     return LCD_FORMAT;
 }
 
-static void lcd_send_cmd(uint16_t cmd) ICODE_ATTR __attribute__((noinline));
-static void lcd_send_cmd(uint16_t cmd)
+static void lcd_send_cmd(uint32_t cmd) ICODE_ATTR __attribute__((noinline));
+static void lcd_send_cmd(uint32_t cmd)
 {
     while (LCDSTATUS & 0x10);
     LCDWCMD = cmd;
 }
 
-static void lcd_send_data(uint16_t data) ICODE_ATTR __attribute__((noinline));
-static void lcd_send_data(uint16_t data)
+static void lcd_send_data(uint32_t data) ICODE_ATTR __attribute__((noinline));
+static void lcd_send_data(uint32_t data)
 {
     while (LCDSTATUS & 0x10);
     LCDWDATA = data;
 }
 
-static uint32_t lcd_detect() ICODE_ATTR;
+static uint32_t lcd_detect() ICODE_ATTR __attribute__((noinline));
 static uint32_t lcd_detect()
 {
     return (PDAT13 & 1) | (PDAT14 & 2);

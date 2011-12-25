@@ -43,8 +43,8 @@ static int collect IBSS_ATTR;
 static int lastdiff IBSS_ATTR;
 
 
-void clickwheel_thread(void) ICODE_ATTR;
-void clickwheel_thread()
+void clickwheel_thread(void* arg0, void* arg1, void* arg2, void* arg3) ICODE_ATTR;
+void clickwheel_thread(void* arg0, void* arg1, void* arg2, void* arg3)
 {
     int i;
     while (true)
@@ -154,7 +154,8 @@ void clickwheel_init()
     while (WHEEL0C & 4);
     thread_create(&clickwheel_thread_handle, "Clickwheel dispatcher",
                   clickwheel_thread, clickwheel_stack,
-                  sizeof(clickwheel_stack), OS_THREAD, 200, true);
+                  sizeof(clickwheel_stack), OS_THREAD, 200, true,
+                  NULL, NULL, NULL, NULL);
 }
 
 void INT_WHEEL(void) ICODE_ATTR;

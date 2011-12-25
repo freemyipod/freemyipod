@@ -24,7 +24,7 @@
 #include "emcoreapp.h"
 
 
-static void main()
+static void main(int argc, const char** argv)
 {
     cputs(2, "Memory map:\n");
     malloc_walk(NULL, (void*)2);

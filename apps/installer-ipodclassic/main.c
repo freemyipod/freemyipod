@@ -27,7 +27,7 @@
 #include "libmkfat32.h"
 
 
-void main();
+void main(int argc, const char** argv);
 EMCORE_APP_HEADER("emCORE installer", main, 127)
 
 
@@ -125,7 +125,7 @@ void fat32_progressbar_update(void* user, int current)
     progressbar_setpos((struct progressbar_state*)user, current, false);
 }
 
-void main(void)
+void main(int argc, const char** argv)
 {
     uint32_t i, j, k, rc;
     uint32_t dummy;
@@ -344,7 +344,6 @@ void main(void)
     backlight_set_brightness(177);
     backlight_on(true);
 
-    remove("/.boot/init.emcoreapp");
     int cost;
     if (updating)
     {

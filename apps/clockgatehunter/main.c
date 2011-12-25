@@ -75,7 +75,7 @@ static void renderline(void* framebuf, int width, int fontwidth,
                     *("01X" + state[i + line * 16]));
 }
 
-static void main()
+static void main(int argc, const char** argv)
 {
     int i, j;
     char buf[9];

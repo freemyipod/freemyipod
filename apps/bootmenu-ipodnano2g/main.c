@@ -41,7 +41,7 @@ void* rbxlogo;
 void* crapple;
 
 
-static void main()
+static void main(int argc, const char** argv)
 {
     settings_init();
     
@@ -103,6 +103,7 @@ static void main()
         
         run_mainchooser(&firmware, &app, &size);
         
+        free(framebuf2);
         free(framebuf);
         free(rbxlogo);
         free(icons);

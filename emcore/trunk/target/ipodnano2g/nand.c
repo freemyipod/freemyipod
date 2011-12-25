@@ -735,7 +735,7 @@ const struct nand_device_info_type* nand_get_device_type(uint32_t bank)
     return &nand_deviceinfotable[nand_type[bank]];
 }
 
-static void nand_thread(void)
+static void nand_thread(void* arg0, void* arg1, void* arg2, void* arg3)
 {
     while (1)
     {
@@ -796,7 +796,7 @@ int nand_device_init(void)
 
     nand_last_activity_value = USEC_TIMER;
     thread_create(&nand_thread_handle, "NAND idle monitor", nand_thread, nand_stack,
-                  sizeof(nand_stack), OS_THREAD, 1, true);
+                  sizeof(nand_stack), OS_THREAD, 1, true, NULL, NULL, NULL, NULL);
 
     return 0;
 }

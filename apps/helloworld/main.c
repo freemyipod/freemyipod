@@ -24,7 +24,7 @@
 #include "emcoreapp.h"
 
 
-static void main()
+static void main(int argc, const char** argv)
 {
     cputs(3, "Hello, world!\n");
 }

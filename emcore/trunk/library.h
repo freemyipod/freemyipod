@@ -67,7 +67,8 @@ enum library_sourcetype
 
 
 #ifndef _TOOL
-struct library_handle* library_register(void* image, struct emcorelib_header* header);
+struct library_handle* library_register(void* image, struct emcorelib_header* header,
+                                        int argc, const char** argv);
 int library_unload(struct emcorelib_header* lib);
 struct emcorelib_header* get_library(uint32_t identifier, uint32_t version,
                                      enum library_sourcetype sourcetype, void* source);

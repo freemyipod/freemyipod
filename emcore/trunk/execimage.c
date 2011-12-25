@@ -28,8 +28,9 @@
 #include "malloc.h"
 
 
-struct scheduler_thread* execimage(void* image, bool copy)
+struct scheduler_thread* execimage(void* image, bool copy, int argc, const char** argv)
 {
+    int i;
     struct emcoreapp_header* header = (struct emcoreapp_header*)image;
     if (memcmp(header, "emCOexec", 8))
     {
@@ -56,9 +57,14 @@ struct scheduler_thread* execimage(void* image, bool copy)
 	uint32_t reloccount = header->reloccount;
 	bool compressed = header->flags & EMCOREAPP_FLAG_COMPRESSED;
 	bool lib = header->flags & EMCOREAPP_FLAG_LIBRARY;
+    uint32_t argsize = 0;
+    if (argv)
+        for (i = 0; i < argc; i++)
+            argsize += 5 + strlen(argv[i]);
+    else argc = 0;
     size_t finalsize;
     if (lib) finalsize = textsize + bsssize;
-    else finalsize = textsize + bsssize + stacksize;
+    else finalsize = textsize + bsssize + argsize + stacksize;
     size_t datasize = relocstart + reloccount * 4;
     size_t tempsize = MAX(finalsize, datasize);
     if (compressed)
@@ -113,15 +119,29 @@ struct scheduler_thread* execimage(void* image, bool copy)
         *((void**)(image + reloc)) = image + data;
     }
     if (tempsize != finalsize) realloc(image, finalsize); /* Can only shrink => safe */
-    memset(image + textsize, 0, bsssize);
+    void* ptr = image + textsize;
+    memset(ptr, 0, bsssize);
+    ptr += bsssize;
+    if (argv)
+    {
+        memcpy(image + textsize + bsssize, argv, argc * 4);
+        ptr += argc * 4;
+        for (i = 0; i < argc; i++)
+        {
+            uint32_t len = strlen(argv[i]);
+            memcpy(ptr, argv[i], len);
+            ptr += len;
+        }
+    }
     clean_dcache();
     invalidate_icache();
     struct scheduler_thread* thread;
-    if (lib) thread = (struct scheduler_thread*)library_register(image, image + entrypoint);
+    if (lib)
+        thread = (struct scheduler_thread*)library_register(image, image + entrypoint, argc, argv);
     else
     {
-        thread = thread_create(NULL, NULL, image + entrypoint, image + textsize + bsssize,
-                               stacksize, USER_THREAD, 127, false);
+        thread = thread_create(NULL, NULL, image + entrypoint, ptr, stacksize,
+                               USER_THREAD, 127, false, (void*)argc, argv, NULL, NULL);
         if (thread)
         {
             reownalloc(image, OWNER_TYPE(OWNER_THREAD, thread));

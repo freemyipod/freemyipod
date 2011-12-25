@@ -379,7 +379,7 @@ void usb_drv_power_down(void)
     clockgate_enable(CLOCKGATE_USB_2, false);
 }
 
-void usb_check_vbus()
+void usb_check_vbus(void* arg0, void* arg1, void* arg2, void* arg3)
 {
     bool oldstate = false;
     while (true)
@@ -410,7 +410,8 @@ void usb_drv_init(void)
     interrupt_enable(IRQ_USB_FUNC, true);
 
     thread_create(&synopsysotg_thread_handle, "synopsysotg", usb_check_vbus,
-                  synopsysotg_stack, sizeof(synopsysotg_stack), OS_THREAD, 63, true);
+                  synopsysotg_stack, sizeof(synopsysotg_stack), OS_THREAD, 63, true,
+                  NULL, NULL, NULL, NULL);
 
     usb_drv_power_down();
 }

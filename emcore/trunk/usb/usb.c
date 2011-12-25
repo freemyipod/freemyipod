@@ -558,7 +558,9 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
                                                     (const void*)(dbgsendbuf[2]),
                                                     (char*)(dbgsendbuf[3]),
                                                     dbgsendbuf[4], (enum thread_type)dbgsendbuf[5],
-                                                    dbgsendbuf[6], dbgsendbuf[7]);
+                                                    dbgsendbuf[6], dbgsendbuf[7],
+                                                    (void*)dbgsendbuf[8], (void*)dbgsendbuf[9],
+                                                    (void*)dbgsendbuf[10], (void*)dbgsendbuf[11]);
             size = 16;
             break;
         case 20:  // FLUSH CACHE
@@ -571,6 +573,8 @@ void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
             if (set_dbgaction(DBGACTION_EXECIMAGE, 0)) break;
             dbgactionaddr = dbgrecvbuf[1];
             dbgactiontype = dbgrecvbuf[2];
+            dbgactionlength = dbgrecvbuf[3];
+            memcpy(dbgasyncsendbuf, &dbgrecvbuf[4], 0x1f0);
             break;
 #ifdef HAVE_BOOTFLASH
         case 22:  // READ BOOT FLASH
@@ -700,7 +704,7 @@ void usb_handle_bus_reset(void)
     usb_setup_dbg_listener();
 }
 
-void dbgthread(void)
+void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
 {
     struct scheduler_thread* t;
     while (1)
@@ -759,8 +763,17 @@ void dbgthread(void)
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_EXECIMAGE:
+                if (dbgactionlength & 0x80000000)
+                {
+                    dbgactionlength &= ~0x80000000;
+                    int i;
+                    for (i = 0; i < dbgactionlength; i++)
+                        dbgasyncsendbuf[i] += (uint32_t)dbgasyncsendbuf;
+                }
+                dbgasyncsendbuf[1] = (uint32_t)execimage((void*)dbgactionaddr, dbgactiontype,
+                                                         (int)dbgactionlength,
+                                                         (const char**)dbgasyncsendbuf);
                 dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = (uint32_t)execimage((void*)dbgactionaddr, dbgactiontype);
                 usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
                 break;
             case DBGACTION_EXECFIRMWARE:
@@ -1050,7 +1063,7 @@ void usb_init(void)
     wakeup_init(&dbgconrecvwakeup);
     dbgconsoleattached = false;
     thread_create(&dbgthread_handle, "monitor worker", dbgthread, dbgstack,
-                  sizeof(dbgstack), CORE_THREAD, 255, true);
+                  sizeof(dbgstack), CORE_THREAD, 255, true, NULL, NULL, NULL, NULL);
     usb_drv_init();
 }
 

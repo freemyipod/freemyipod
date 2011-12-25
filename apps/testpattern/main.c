@@ -24,7 +24,7 @@
 #include "emcoreapp.h"
 
 
-static void main()
+static void main(int argc, const char** argv)
 {
     int x, y, r;
     int width = lcd_get_width();

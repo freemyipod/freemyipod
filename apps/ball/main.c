@@ -29,7 +29,7 @@
 // 24-bit FB (rgb888)
 #define DBPP 3
 
-static void main()
+static void main(int argc, const char** argv)
 {
     unsigned int run_cycles = 5000,
     dw = lcd_get_width(),

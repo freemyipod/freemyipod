@@ -46,7 +46,7 @@ static char uart_rx()
     return URXH;
 }
 
-static void main()
+static void main(int argc, const char** argv)
 {
     int i;
     clockgate_enable(41, true);

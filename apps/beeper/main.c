@@ -30,7 +30,7 @@ struct note
     unsigned int length;
 };
 
-static void main()
+static void main(int argc, const char** argv)
 {
     if (0x47324e49 != get_platform_id()) // IN2G
     {

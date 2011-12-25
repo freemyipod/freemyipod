@@ -31,7 +31,7 @@
 #define BOOTNOTE_FILENAME "/Notes/" STR(BASENAME) ".bootnote"
 
 
-void main();
+void main(int argc, const char** argv);
 EMCORE_APP_HEADER("emCORE installer", main, 127)
 
 

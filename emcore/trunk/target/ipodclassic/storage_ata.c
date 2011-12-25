@@ -918,7 +918,7 @@ int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool 
     return 0;
 }
 
-static void ata_thread(void)
+static void ata_thread(void* arg0, void* arg1, void* arg2, void* arg3)
 {
     while (true)
     {
@@ -1109,7 +1109,7 @@ int ata_init(void)
     ata_bbt_reload();
 #endif
     thread_create(&ata_thread_handle, "ATA idle monitor", ata_thread, ata_stack,
-                  sizeof(ata_stack), OS_THREAD, 1, true);
+                  sizeof(ata_stack), OS_THREAD, 1, true, NULL, NULL, NULL, NULL);
     return 0;
 }
 
