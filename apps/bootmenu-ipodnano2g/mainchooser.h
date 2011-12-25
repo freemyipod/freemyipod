@@ -28,7 +28,7 @@
 #include "emcoreapp.h"
 
 
-extern void run_mainchooser(void** firmware, void** app, int* size);
+extern void run_mainchooser();
 extern void mainchooser_init();
 extern void mainchooser_apply_settings();
 

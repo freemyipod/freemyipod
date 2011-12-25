@@ -36,7 +36,8 @@ struct settingdata settings_default =
     .timeout_item = 0,
     .default_item = 1,
     .fastboot_item = 0,
-    .snow = 5
+    .snow = 5,
+    .brightness = 100
 };
 
 struct settingdata settings;
@@ -91,6 +92,14 @@ void setting_validate(void* setting)
             settings.snow = SETTINGS_SNOW_MAX;
         settingchooser_apply_settings();
     }
+    else if (setting == &settings.brightness)
+    {
+        if (settings.brightness < SETTINGS_BRIGHTNESS_MIN)
+            settings.brightness = SETTINGS_BRIGHTNESS_MIN;
+        if (settings.brightness > SETTINGS_BRIGHTNESS_MAX)
+            settings.brightness = SETTINGS_BRIGHTNESS_MAX;
+        backlight_set_brightness(settings.brightness);
+    }
 }
 
 void settings_validate_all()
@@ -105,6 +114,7 @@ void settings_validate_all()
     setting_validate(&settings.default_item);
     setting_validate(&settings.fastboot_item);
     setting_validate(&settings.snow);
+    setting_validate(&settings.brightness);
 }
 
 void settings_apply()
@@ -113,6 +123,7 @@ void settings_apply()
     toolchooser_apply_settings();
     settingchooser_apply_settings();
     confirmchooser_apply_settings();
+    backlight_set_brightness(settings.brightness);
 }
 
 void settings_init()

@@ -39,7 +39,7 @@ static bool mainchooser_preblit(struct chooser_data* data)
     if (adata->timeout_remaining != TIMEOUT_BLOCK)
     {
         snprintf(buf, sizeof(buf), "%3d", adata->timeout_remaining / 1000000);
-        rendertext(framebuf, 155, 121, 176, 0xffffcccc, 0, buf);
+        rendertext(framebuf, 155, 121, 176, 0xcf7f0000, 0, buf);
     }
     update_display(data);
     return false;
@@ -53,6 +53,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_powerdown =
                                    LIBUI_POINT(44, 44)),
     .text = "Power off",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -64,6 +65,7 @@ struct chooser_renderer_iconflow_itemdata mainchooser_rparams_crapple =
                                    LIBUI_POINT(44, 44)),
     .text = "Original firmware",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -75,6 +77,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_rockbox =
                                    LIBUI_POINT(44, 44)),
     .text = "Rockbox",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -86,6 +89,7 @@ struct chooser_renderer_iconflow_itemdata mainchooser_rparams_diskmode =
                                    LIBUI_POINT(44, 44)),
     .text = "Disk mode",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -97,6 +101,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
                                    LIBUI_POINT(44, 44)),
     .text = "emCORE console",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -108,6 +113,7 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_toolchooser
                                    LIBUI_POINT(44, 44)),
     .text = "Tools",
     .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
     .render = NULL
 };
 
@@ -199,41 +205,39 @@ static struct chooser_info mainchooser =
     }
 };
 
-void run_mainchooser(void** firmware, void** app, int* size)
+void run_mainchooser()
 {
-    while (!*firmware && !*app)
+    while (!bootinfo.valid)
     {
         const struct chooser_item* result = ui->chooser_run(&mainchooser);
         if (!result)
             switch(settings.timeout_item)
             {
                 case 0:
-                    run_powerdown(firmware, app, size);
+                    run_powerdown();
                     break;
                 
                 case 1:
-                    run_crapple(firmware, app, size);
+                    run_crapple();
                     break;
                 
                 case 2:
-                    run_rockbox(firmware, app, size);
+                    run_rockbox();
                     break;
                 
                 case 3:
-                    run_diskmode(firmware, app, size);
+                    run_diskmode();
                     break;
                 
                 case 4:
-                    run_umsboot(firmware, app, size);
+                    run_umsboot();
                     break;
                 
                 case 5:
                     return;
             }
         if (!result->user) return;
-        void (*selected_function)(void** firmware, void** app, int* size);
-        selected_function = (void(*)(void** firmware, void** app, int* size))(result->user);
-        selected_function(firmware, app, size);
+        ((void(*)())(result->user))();
     }
 }
 
@@ -262,6 +266,8 @@ void mainchooser_init()
 void mainchooser_apply_settings()
 {
     mainchooser.defaultitem = settings.default_item;
+    if (settings.snow) mainchooser.tickinterval = 50000;
+    else mainchooser.tickinterval = 990000;
     if (settings.timeout_initial < SETTINGS_TIMEOUT_CUTOFF)
         mainchooser_aparams.timeout_initial = TIMEOUT_BLOCK;
     else mainchooser_aparams.timeout_initial = settings.timeout_initial + 500000;

@@ -474,7 +474,7 @@ uint32_t fat32_init()
     return 0;
 }
 
-void main(void)
+void main(int argc, const char** argv)
 {
     uint32_t i, j, k, rc;
     uint32_t dummy;

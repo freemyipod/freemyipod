@@ -21,16 +21,16 @@
 //
 
 
-#ifndef __APP_TOOLS_H__
-#define __APP_TOOLS_H__
+#ifndef __APP_CONFIRMCHOOSER_H__
+#define __APP_CONFIRMCHOOSER_H__
 
 
 #include "emcoreapp.h"
 
 
-extern void run_clearcfg();
-extern void run_cleardb();
-extern void run_reformat();
+extern bool run_confirmchooser(const char* message);
+extern void confirmchooser_init();
+extern void confirmchooser_apply_settings();
 
 
 #endif

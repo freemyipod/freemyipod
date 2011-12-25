@@ -57,7 +57,6 @@ static void main(int argc, const char** argv)
                                                LIBBOOT_API_VERSION, "libboot ");
     boot = (struct libboot_api*)libboot->api;
 
-
     if (!(clickwheel_get_state() & 0x1f))
         switch (settings.fastboot_item)
         {

@@ -26,19 +26,21 @@
 #include "main.h"
 
 
-void run_powerdown(void** firmware, void** app, int* size)
+void run_powerdown()
 {
     shutdown(true);
     power_off();
 }
 
-void fastboot_crapple(void** firmware, void** app, int* size)
+void fastboot_crapple()
 {
-    boot->load_from_file(firmware, size, false, "/.boot/appleos.ucl", 0x800000);
-    if (!*firmware) boot->load_from_file(firmware, size, false, "/.boot/appleos.bin", 0);
+    boot->load_from_file(&bootinfo.firmware, &bootinfo.size, false, "/.boot/appleos.ucl", 0x800000);
+    if (!&bootinfo.firmware)
+        boot->load_from_file(&bootinfo.firmware, &bootinfo.size, false, "/.boot/appleos.bin", 0);
+    if (bootinfo.firmware) bootinfo.valid = true;
 }
 
-void run_crapple(void** firmware, void** app, int* size)
+void run_crapple()
 {
     int i;
     for (i = 23; i <= 115; i += 23)
@@ -52,26 +54,28 @@ void run_crapple(void** firmware, void** app, int* size)
                    framebuf2, 32, 0, 176, crapple, 0, 115 - i, 111);
         displaylcd(0, 0, 176, 132, framebuf2, 0, 0, 176);
     }
-    fastboot_crapple(firmware, app, size);
-    if (!*firmware) message(7, "Loading appleos.bin failed!", "  Returning to main menu.  ");
+    fastboot_crapple();
+    if (!bootinfo.valid) message(7, "Loading appleos.bin failed!", "  Returning to main menu.  ");
 }
 
-void fastboot_rockbox(void** firmware, void** app, int* size)
+void fastboot_rockbox()
 {
-    boot->load_from_file(firmware, size, true, "/.rockbox/rockbox.ipod", 0);
+    boot->load_from_file(&bootinfo.firmware, &bootinfo.size, true, "/.rockbox/rockbox.ipod", 0);
+    if (bootinfo.firmware) bootinfo.valid = true;
 }
 
-void run_rockbox_fallback(void** firmware, void** app, int* size)
+void run_rockbox_fallback()
 {
-    boot->load_from_flash(firmware, size, true, "rockbox ", 0x100000);
-    if (!*firmware)
+    boot->load_from_flash(&bootinfo.firmware, &bootinfo.size, true, "rockbox ", 0x100000);
+    if (bootinfo.firmware) bootinfo.valid = true;
+    else
     {
         memcpy(framebuf, bg, 176 * 132 * 3);
         message(19, "Loading Rockbox failed!", "Returning to main menu.");
     }
 }
 
-void run_rockbox(void** firmware, void** app, int* size)
+void run_rockbox()
 {
     int i;
     for (i = 2; i <= 52; i += 10)
@@ -84,58 +88,62 @@ void run_rockbox(void** firmware, void** app, int* size)
                  rbxlogo, 0, MAX(0, 47 - i), 154);
         displaylcd(0, 0, 176, 132, framebuf, 0, 0, 176);
     }
-    fastboot_rockbox(firmware, app, size);
-    if (!*firmware)
+    fastboot_rockbox();
+    if (!bootinfo.valid)
     {
         message(4, "Loading rockbox.ipod failed!", "  Trying fallback image...  ");
-        run_rockbox_fallback(firmware, app, size);
+        run_rockbox_fallback();
     }
 }
 
-void fastboot_diskmode(void** firmware, void** app, int* size)
+void fastboot_diskmode()
 {
-    boot->load_from_flash(firmware, size, false, "diskmode", 0x100000);
+    boot->load_from_flash(&bootinfo.firmware, &bootinfo.size, false, "diskmode", 0x100000);
+    if (bootinfo.firmware) bootinfo.valid = true;
 }
 
-void run_diskmode(void** firmware, void** app, int* size)
+void run_diskmode()
 {
-    fastboot_diskmode(firmware, app, size);
-    if (!*firmware)
+    fastboot_diskmode();
+    if (!bootinfo.valid)
     {
         memcpy(framebuf, bg, 176 * 132 * 3);
         message(13, "Loading disk mode failed!", " Returning to main menu. ");
     }
 }
 
-void run_diagmode(void** firmware, void** app, int* size)
+void run_diagmode()
 {
-    boot->load_from_flash(firmware, size, false, "diagmode", 0x100000);
-    if (!*firmware)
+    boot->load_from_flash(&bootinfo.firmware, &bootinfo.size, false, "diagmode", 0x100000);
+    if (bootinfo.firmware) bootinfo.valid = true;
+    else
     {
         memcpy(framebuf, bg, 176 * 132 * 3);
         message(16, "Loading diag mode failed!", " Returning to main menu. ");
     }
 }
 
-void fastboot_umsboot(void** firmware, void** app, int* size)
+void fastboot_umsboot()
 {
-    boot->load_from_flash(firmware, size, false, "umsboot ", 0x10000);
+    boot->load_from_flash(&bootinfo.firmware, &bootinfo.size, false, "umsboot ", 0x10000);
+    if (bootinfo.firmware) bootinfo.valid = true;
 }
 
-void run_umsboot(void** firmware, void** app, int* size)
+void run_umsboot()
 {
-    fastboot_umsboot(firmware, app, size);
-    if (!*firmware)
+    fastboot_umsboot();
+    if (!bootinfo.valid)
     {
         memcpy(framebuf, bg, 176 * 132 * 3);
         message(19, "Loading UMSboot failed!", "Returning to main menu.");
     }
 }
 
-void run_uninstaller(void** firmware, void** app, int* size)
+void run_uninstaller()
 {
-    boot->load_from_flash(app, size, false, "uninst  ", 0);
-    if (!*app)
+    boot->load_from_flash(&bootinfo.app, &bootinfo.size, false, "uninst  ", 0);
+    if (bootinfo.app) bootinfo.valid = true;
+    else
     {
         memcpy(framebuf, bg, 176 * 132 * 3);
         message(7, "Loading uninstaller failed!", "  Returning to main menu.  ");

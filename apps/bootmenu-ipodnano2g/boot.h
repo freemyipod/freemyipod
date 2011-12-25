@@ -28,17 +28,17 @@
 #include "emcoreapp.h"
 
 
-extern void run_powerdown(void** firmware, void** app, int* size);
-extern void fastboot_crapple(void** firmware, void** app, int* size);
-extern void run_crapple(void** firmware, void** app, int* size);
-extern void fastboot_rockbox(void** firmware, void** app, int* size);
-extern void run_rockbox_fallback(void** firmware, void** app, int* size);
-extern void run_rockbox(void** firmware, void** app, int* size);
-extern void fastboot_umsboot(void** firmware, void** app, int* size);
-extern void run_diskmode(void** firmware, void** app, int* size);
-extern void run_diagmode(void** firmware, void** app, int* size);
-extern void run_umsboot(void** firmware, void** app, int* size);
-extern void run_uninstaller(void** firmware, void** app, int* size);
+extern void run_powerdown();
+extern void fastboot_crapple();
+extern void run_crapple();
+extern void fastboot_rockbox();
+extern void run_rockbox_fallback();
+extern void run_rockbox();
+extern void fastboot_umsboot();
+extern void run_diskmode();
+extern void run_diagmode();
+extern void run_umsboot();
+extern void run_uninstaller();
 
 
 #endif

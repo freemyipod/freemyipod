@@ -112,7 +112,7 @@ static struct settingchooser_info settingchooser =
     },
     .returntext = "Return to tools menu",
     .tickinterval = 10000000,
-    .itemcount = 6,
+    .itemcount = 7,
     .items =
     {
         {
@@ -193,6 +193,21 @@ static struct settingchooser_info settingchooser =
                 .min = SETTINGS_SNOW_MIN,
                 .max = SETTINGS_SNOW_MAX,
                 .step = SETTINGS_SNOW_STEP,
+                .tostring = NULL
+            }
+        },
+        {
+            .text = "Backlight brightness",
+            .icon = LIBUI_SURFACE_NULL,
+            .icon_selected = LIBUI_SURFACE_NULL,
+            .type = SETTINGCHOOSER_TYPE_INTEGER,
+            .setting = &settings.brightness,
+            .validator = setting_validate,
+            .config.integer =
+            {
+                .min = SETTINGS_BRIGHTNESS_MIN,
+                .max = SETTINGS_BRIGHTNESS_MAX,
+                .step = SETTINGS_BRIGHTNESS_STEP,
                 .tostring = NULL
             }
         }

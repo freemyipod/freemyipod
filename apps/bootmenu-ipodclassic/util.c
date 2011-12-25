@@ -62,13 +62,13 @@ bool update_display(struct chooser_data* data)
     ui->blendcolor(1, 6, 0xcf7f0000, framebuf, 4, 5, 320, framebuf, 4, 5, 320);
     // right line
     ui->blendcolor(1, 6, 0xcf7f0000, framebuf, 27, 5, 320, framebuf, 27, 5, 320);
-    // tip - right
+    // top - right
     ui->blendcolor(1, 4, 0xcf7f0000, framebuf, 28, 6, 320, framebuf, 28, 6, 320);
     unsigned int batt_level = 22 * read_battery_mwh_current(0) / read_battery_mwh_full(0);
     // remaining battery level
-    ui->blendcolor(batt_level, 6, 0x7f3f0000, framebuf, 5, 5, 320, framebuf, 5, 5, 320);
+    ui->blendcolor(batt_level, 6, 0x7fff7f7f, framebuf, 5, 5, 320, framebuf, 5, 5, 320);
     // background of the rest space
-    ui->blendcolor(22 - batt_level, 6, 0x3f7f0000, framebuf, 5 + batt_level,
+    ui->blendcolor(22 - batt_level, 6, 0x7f7f0000, framebuf, 5 + batt_level,
                    5, 320, framebuf, 5 + batt_level, 5, 320);
     render_snow();
     return false;

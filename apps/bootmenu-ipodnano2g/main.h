@@ -31,6 +31,18 @@
 #include "libui.h"
 
 
+struct bootinfo_t
+{
+    bool valid;
+    void* firmware;
+    int size;
+    void* app;
+    int argc;
+    const char** argv;
+};
+
+
+extern struct bootinfo_t bootinfo;
 extern struct libpng_api* png;
 extern struct libboot_api* boot;
 extern struct libui_api* ui;

@@ -35,7 +35,9 @@ struct settingdata settings_default =
     .timeout_idle = 300000000,
     .timeout_item = 0,
     .default_item = 2,
-    .fastboot_item = 0
+    .fastboot_item = 0,
+    .snow = 5,
+    .brightness = 100
 };
 
 struct settingdata settings;
@@ -63,24 +65,40 @@ void setting_validate(void* setting)
     }
     else if (setting == &settings.timeout_item)
     {
-            if (settings.timeout_item < SETTINGS_TIMEOUT_ITEM_MIN)
-                settings.timeout_item = SETTINGS_TIMEOUT_ITEM_MIN;
-            if (settings.timeout_item > SETTINGS_TIMEOUT_ITEM_MAX)
-                settings.timeout_item = SETTINGS_TIMEOUT_ITEM_MAX;
+        if (settings.timeout_item < SETTINGS_TIMEOUT_ITEM_MIN)
+            settings.timeout_item = SETTINGS_TIMEOUT_ITEM_MIN;
+        if (settings.timeout_item > SETTINGS_TIMEOUT_ITEM_MAX)
+            settings.timeout_item = SETTINGS_TIMEOUT_ITEM_MAX;
     }
     else if (setting == &settings.default_item)
     {
-            if (settings.default_item < SETTINGS_DEFAULT_ITEM_MIN)
-                settings.default_item = SETTINGS_DEFAULT_ITEM_MIN;
-            if (settings.default_item > SETTINGS_DEFAULT_ITEM_MAX)
-                settings.default_item = SETTINGS_DEFAULT_ITEM_MAX;
+        if (settings.default_item < SETTINGS_DEFAULT_ITEM_MIN)
+            settings.default_item = SETTINGS_DEFAULT_ITEM_MIN;
+        if (settings.default_item > SETTINGS_DEFAULT_ITEM_MAX)
+            settings.default_item = SETTINGS_DEFAULT_ITEM_MAX;
     }
     else if (setting == &settings.fastboot_item)
     {
-            if (settings.fastboot_item < SETTINGS_FASTBOOT_ITEM_MIN)
-                settings.fastboot_item = SETTINGS_FASTBOOT_ITEM_MIN;
-            if (settings.fastboot_item > SETTINGS_FASTBOOT_ITEM_MAX)
-                settings.fastboot_item = SETTINGS_FASTBOOT_ITEM_MAX;
+        if (settings.fastboot_item < SETTINGS_FASTBOOT_ITEM_MIN)
+            settings.fastboot_item = SETTINGS_FASTBOOT_ITEM_MIN;
+        if (settings.fastboot_item > SETTINGS_FASTBOOT_ITEM_MAX)
+            settings.fastboot_item = SETTINGS_FASTBOOT_ITEM_MAX;
+    }
+    else if (setting == &settings.snow)
+    {
+        if (settings.snow < SETTINGS_SNOW_MIN)
+            settings.snow = SETTINGS_SNOW_MIN;
+        if (settings.snow > SETTINGS_SNOW_MAX)
+            settings.snow = SETTINGS_SNOW_MAX;
+        settingchooser_apply_settings();
+    }
+    else if (setting == &settings.brightness)
+    {
+        if (settings.brightness < SETTINGS_BRIGHTNESS_MIN)
+            settings.brightness = SETTINGS_BRIGHTNESS_MIN;
+        if (settings.brightness > SETTINGS_BRIGHTNESS_MAX)
+            settings.brightness = SETTINGS_BRIGHTNESS_MAX;
+        backlight_set_brightness(settings.brightness);
     }
 }
 
@@ -95,11 +113,17 @@ void settings_validate_all()
     setting_validate(&settings.timeout_item);
     setting_validate(&settings.default_item);
     setting_validate(&settings.fastboot_item);
+    setting_validate(&settings.snow);
+    setting_validate(&settings.brightness);
 }
 
 void settings_apply()
 {
     mainchooser_apply_settings();
+    toolchooser_apply_settings();
+    settingchooser_apply_settings();
+    confirmchooser_apply_settings();
+    backlight_set_brightness(settings.brightness);
 }
 
 void settings_init()
