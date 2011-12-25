@@ -28,7 +28,7 @@
 #include "emcoreapp.h"
 
 
-extern void run_toolchooser(void** firmware, void** app, int* size);
+extern void run_toolchooser();
 extern void toolchooser_init();
 extern void toolchooser_apply_settings();
 

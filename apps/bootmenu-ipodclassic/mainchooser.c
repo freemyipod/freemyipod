@@ -171,33 +171,31 @@ static struct chooser_info mainchooser =
     }
 };
 
-void run_mainchooser(void** firmware, void** app, int* size)
+void run_mainchooser()
 {
-    while (!*firmware && !*app)
+    while (!bootinfo.valid)
     {
         const struct chooser_item* result = ui->chooser_run(&mainchooser);
         if (!result)
             switch(settings.timeout_item)
             {
                 case 0:
-                    run_powerdown(firmware, app, size);
+                    run_powerdown();
                     break;
                 
                 case 1:
-                    run_rockbox(firmware, app, size);
+                    run_rockbox();
                     break;
                 
                 case 2:
-                    run_umsboot(firmware, app, size);
+                    run_umsboot();
                     break;
                 
                 case 3:
                     return;
             }
         if (!result->user) return;
-        void (*selected_function)(void** firmware, void** app, int* size);
-        selected_function = (void(*)(void** firmware, void** app, int* size))(result->user);
-        selected_function(firmware, app, size);
+        ((void(*)())(result->user))();
     }
 }
 

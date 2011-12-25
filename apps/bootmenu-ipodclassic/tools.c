@@ -29,7 +29,7 @@
 #include "confirmchooser.h"
 
 
-void run_clearcfg(void** firmware, void** app, int* size)
+void run_clearcfg()
 {
     if (!run_confirmchooser("Really clear Rockbox config?")) return;
     remove("/.rockbox/config.cfg");
@@ -37,7 +37,7 @@ void run_clearcfg(void** firmware, void** app, int* size)
     message(97, "Rockbox configuration", "  has been cleared.  ");
 }
 
-void run_cleardb(void** firmware, void** app, int* size)
+void run_cleardb()
 {
     if (!run_confirmchooser("Really clear Rockbox database?")) return;
     remove("/.rockbox/database_0.tcd");
@@ -69,7 +69,7 @@ static void fat32_progressbar_update(void* user, int current)
     progressbar_setpos((struct progressbar_state*)user, current, false);
 }
 
-void run_reformat(void** firmware, void** app, int* size)
+void run_reformat()
 {
     if (!run_confirmchooser("Really reformat data partition?")) return;
     memcpy(framebuf, bg, 320 * 240 * 3);

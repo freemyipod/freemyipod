@@ -38,6 +38,15 @@ void* framebuf2;
 void* bg;
 void* icons;
 void* rbxlogo;
+struct bootinfo_t bootinfo =
+{
+    .valid = false,
+    .firmware = NULL,
+    .size = 0,
+    .app = NULL,
+    .argc = 0,
+    .argv = NULL
+};
 
 
 static void main()
@@ -48,28 +57,24 @@ static void main()
                                                LIBBOOT_API_VERSION, "libboot ");
     boot = (struct libboot_api*)libboot->api;
 
-    bool terminate = false;
-    void* firmware = NULL;
-    void* app = NULL;
-    int size;
 
     if (!(clickwheel_get_state() & 0x1f))
         switch (settings.fastboot_item)
         {
             case 1:
-                fastboot_rockbox(&firmware, &app, &size);
+                fastboot_rockbox();
                 break;
             
             case 2:
-                fastboot_umsboot(&firmware, &app, &size);
+                fastboot_umsboot();
                 break;
             
             case 3:
-                terminate = true;
+                bootinfo.valid = true;
                 break;
         }
 
-    if (!firmware && !app && !terminate)
+    if (!bootinfo.valid)
     {
         struct emcorelib_header* libpng = loadlib(LIBPNG_IDENTIFIER, LIBPNG_API_VERSION, "libpng  ");
         struct libpng_api* png = (struct libpng_api*)libpng->api;
@@ -93,7 +98,7 @@ static void main()
         confirmchooser_init();
         snow_init();
         
-        run_mainchooser(&firmware, &app, &size);
+        run_mainchooser();
         
         free(framebuf2);
         free(framebuf);
@@ -107,12 +112,12 @@ static void main()
     release_library(libboot);
     library_unload(libboot);
 
-    if (firmware)
+    if (bootinfo.firmware)
     {
         shutdown(false);
-        execfirmware((void*)0x08000000, firmware, size);
+        execfirmware((void*)0x08000000, bootinfo.firmware, bootinfo.size);
     }
-    else if (app) execimage(app, false);
+    else if (bootinfo.app) execimage(bootinfo.app, false, bootinfo.argc, bootinfo.argv);
     else cputs(3, "Dropped into emCORE console.\n");
 }
 

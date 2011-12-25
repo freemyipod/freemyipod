@@ -199,7 +199,7 @@ static struct settingchooser_info settingchooser =
     }
 };
 
-void run_settingchooser(void** firmware, void** app, int* size)
+void run_settingchooser()
 {
     bool changes = ui->settingchooser_run(&settingchooser);
     if (changes)

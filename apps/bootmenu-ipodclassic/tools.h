@@ -28,9 +28,9 @@
 #include "emcoreapp.h"
 
 
-extern void run_clearcfg(void** firmware, void** app, int* size);
-extern void run_cleardb(void** firmware, void** app, int* size);
-extern void run_reformat(void** firmware, void** app, int* size);
+extern void run_clearcfg();
+extern void run_cleardb();
+extern void run_reformat();
 
 
 #endif

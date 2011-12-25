@@ -28,7 +28,7 @@
 #include "emcoreapp.h"
 
 
-extern void run_settingchooser(void** firmware, void** app, int* size);
+extern void run_settingchooser();
 extern void settingchooser_init();
 extern void settingchooser_apply_settings();
 

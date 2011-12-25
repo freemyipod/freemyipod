@@ -249,15 +249,13 @@ static struct chooser_info toolchooser =
     }
 };
 
-void run_toolchooser(void** firmware, void** app, int* size)
+void run_toolchooser()
 {
-    while (!*firmware && !*app)
+    while (!bootinfo.valid)
     {
         const struct chooser_item* result = ui->chooser_run(&toolchooser);
         if (!result || !result->user) return;
-        void (*selected_function)(void** firmware, void** app, int* size);
-        selected_function = (void(*)(void** firmware, void** app, int* size))(result->user);
-        selected_function(firmware, app, size);
+        ((void(*)())(result->user))();
     }
 }
 

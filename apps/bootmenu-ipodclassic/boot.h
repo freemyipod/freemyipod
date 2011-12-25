@@ -28,12 +28,12 @@
 #include "emcoreapp.h"
 
 
-extern void run_powerdown(void** firmware, void** app, int* size);
-extern void fastboot_rockbox(void** firmware, void** app, int* size);
-extern void run_rockbox_fallback(void** firmware, void** app, int* size);
-extern void run_rockbox(void** firmware, void** app, int* size);
-extern void fastboot_umsboot(void** firmware, void** app, int* size);
-extern void run_umsboot(void** firmware, void** app, int* size);
+extern void run_powerdown();
+extern void fastboot_rockbox();
+extern void run_rockbox_fallback();
+extern void run_rockbox();
+extern void fastboot_umsboot();
+extern void run_umsboot();
 
 
 #endif
