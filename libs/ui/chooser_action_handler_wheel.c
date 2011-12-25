@@ -91,11 +91,13 @@ static enum chooser_result chooser_action_handler_wheel_handleevent(struct choos
 
 static enum chooser_result chooser_action_handler_wheel_handletick(struct chooser_data* data)
 {
+    enum chooser_result rc = CHOOSER_RESULT_OK;
     const struct chooser_action_handler_wheel_params* params;
     params = (const struct chooser_action_handler_wheel_params*)(data->info->actionhandlerparams);
     struct chooser_action_handler_wheel_data* adata;
     adata = (struct chooser_action_handler_wheel_data*)(data->actionhandlerdata);
-    if (adata->timeout_remaining == TIMEOUT_BLOCK) return CHOOSER_RESULT_OK;
+    if (params->tick_force_redraw) rc = CHOOSER_RESULT_REDRAW;
+    if (adata->timeout_remaining == TIMEOUT_BLOCK) return rc;
     long time = USEC_TIMER;
     adata->timeout_remaining -= time - adata->lasttick;
     adata->lasttick = time;
@@ -107,8 +109,7 @@ static enum chooser_result chooser_action_handler_wheel_handletick(struct choose
             data->selected = &data->info->items[params->timeout_item];
         return CHOOSER_RESULT_FINISHED;
     }
-    if (params->tick_force_redraw) return CHOOSER_RESULT_REDRAW;
-    return CHOOSER_RESULT_OK;
+    return rc;
 }
 
 static int chooser_action_handler_wheel_stepsperitem(struct chooser_data* data)

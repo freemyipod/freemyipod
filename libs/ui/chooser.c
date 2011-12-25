@@ -92,8 +92,6 @@ const struct chooser_item* chooser_run(const struct chooser_info* info)
         mutex_lock(&data.statemutex, TIMEOUT_BLOCK);
         if (data.canceled) goto cancel;
         if (data.finished) goto finished;
-        redrawneeded |= data.redrawneeded;
-        data.redrawneeded = false;
         if ((long)(lasttick + info->tickinterval - USEC_TIMER) < 0)
         {
             if (info->actionhandler->handletick)
@@ -109,6 +107,8 @@ const struct chooser_item* chooser_run(const struct chooser_info* info)
                 }
             lasttick = USEC_TIMER;
         }
+        redrawneeded |= data.redrawneeded;
+        data.redrawneeded = false;
         mutex_unlock(&data.statemutex);
         if (redrawneeded) redrawneeded = info->renderer->render(&data) == CHOOSER_RESULT_REDRAW;
     }
