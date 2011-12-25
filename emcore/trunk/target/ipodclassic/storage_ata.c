@@ -526,11 +526,7 @@ int ata_identify(uint16_t* buf)
         ata_write_cbr(&ATA_PIO_DVR, 0);
         ata_write_cbr(&ATA_PIO_CSD, 0xec);
         PASS_RC(ata_wait_for_start_of_transfer(10000000), 1, 1);
-        for (i = 0; i < 0x100; i++)
-        {
-            uint16_t word = ata_read_cbr(&ATA_PIO_DTR);
-            buf[i] = (word >> 8) | (word << 8);
-        }
+        for (i = 0; i < 0x100; i++) buf[i] = ata_read_cbr(&ATA_PIO_DTR);
     }
     return 0;
 }
@@ -594,6 +590,7 @@ int ata_power_up()
         sleep(200000);
         ATA_PIO_TIME = 0x191f7;
         ATA_PIO_LHR = 0;
+        ATA_CFG = BIT(6);
         while (!(ATA_PIO_READY & BIT(1))) sleep(100);
         PASS_RC(ata_identify(ata_identify_data), 2, 0);
         uint32_t piotime = 0x11f3;
