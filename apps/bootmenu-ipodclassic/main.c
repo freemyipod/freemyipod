@@ -34,6 +34,7 @@
 struct libboot_api* boot;
 struct libui_api* ui;
 void* framebuf;
+void* framebuf2;
 void* bg;
 void* icons;
 void* rbxlogo;
@@ -83,13 +84,17 @@ static void main()
         
         framebuf = malloc(320 * 240 * 3);
         if (!framebuf) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer!");
+        framebuf2 = malloc(320 * 240 * 3);
+        if (!framebuf2) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer 2!");
 
         mainchooser_init();
         toolchooser_init();
         settingchooser_init();
+        confirmchooser_init();
         
         run_mainchooser(&firmware, &app, &size);
         
+        free(framebuf2);
         free(framebuf);
         free(rbxlogo);
         free(icons);

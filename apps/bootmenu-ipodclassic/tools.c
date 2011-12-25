@@ -26,10 +26,12 @@
 #include "tools.h"
 #include "util.h"
 #include "main.h"
+#include "confirmchooser.h"
 
 
 void run_clearcfg(void** firmware, void** app, int* size)
 {
+    if (!run_confirmchooser("Really clear Rockbox config?")) return;
     remove("/.rockbox/config.cfg");
     memcpy(framebuf, bg, 320 * 240 * 3);
     message(97, "Rockbox configuration", "  has been cleared.  ");
@@ -37,6 +39,7 @@ void run_clearcfg(void** firmware, void** app, int* size)
 
 void run_cleardb(void** firmware, void** app, int* size)
 {
+    if (!run_confirmchooser("Really clear Rockbox database?")) return;
     remove("/.rockbox/database_0.tcd");
     remove("/.rockbox/database_1.tcd");
     remove("/.rockbox/database_2.tcd");
@@ -68,6 +71,7 @@ static void fat32_progressbar_update(void* user, int current)
 
 void run_reformat(void** firmware, void** app, int* size)
 {
+    if (!run_confirmchooser("Really reformat data partition?")) return;
     memcpy(framebuf, bg, 320 * 240 * 3);
     rendertext(framebuf, 70, 125, 320, 0xff7fffff, 0, "Reformatting data partition...");
     update_display(NULL);

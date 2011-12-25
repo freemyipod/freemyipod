@@ -250,14 +250,13 @@ static struct chooser_info toolchooser =
 
 void run_toolchooser(void** firmware, void** app, int* size)
 {
-    while (true)
+    while (!*firmware && !*app)
     {
         const struct chooser_item* result = ui->chooser_run(&toolchooser);
         if (!result || !result->user) return;
         void (*selected_function)(void** firmware, void** app, int* size);
         selected_function = (void(*)(void** firmware, void** app, int* size))(result->user);
         selected_function(firmware, app, size);
-        if (firmware || app) return;
     }
 }
 

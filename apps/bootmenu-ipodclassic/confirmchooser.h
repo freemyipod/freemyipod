@@ -21,24 +21,15 @@
 //
 
 
-#ifndef __APP_MAIN_H__
-#define __APP_MAIN_H__
+#ifndef __APP_CONFIRMCHOOSER_H__
+#define __APP_CONFIRMCHOOSER_H__
 
 
 #include "emcoreapp.h"
-#include "libboot.h"
-#include "libpng.h"
-#include "libui.h"
 
 
-extern struct libpng_api* png;
-extern struct libboot_api* boot;
-extern struct libui_api* ui;
-extern void* framebuf;
-extern void* framebuf2;
-extern void* bg;
-extern void* icons;
-extern void* rbxlogo;
+extern bool run_confirmchooser(const char* message);
+extern void confirmchooser_init();
 
 
 #endif
