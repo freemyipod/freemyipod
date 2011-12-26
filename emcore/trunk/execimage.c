@@ -28,7 +28,7 @@
 #include "malloc.h"
 
 
-struct scheduler_thread* execimage(void* image, bool copy, int argc, const char** argv)
+struct scheduler_thread* execimage(void* image, bool copy, int argc, const char* const* argv)
 {
     int i;
     struct emcoreapp_header* header = (struct emcoreapp_header*)image;
@@ -62,6 +62,7 @@ struct scheduler_thread* execimage(void* image, bool copy, int argc, const char*
         for (i = 0; i < argc; i++)
             argsize += 5 + strlen(argv[i]);
     else argc = 0;
+    argsize = (argsize + 3) & ~3;
     size_t finalsize;
     if (lib) finalsize = textsize + bsssize;
     else finalsize = textsize + bsssize + argsize + stacksize;
@@ -122,6 +123,7 @@ struct scheduler_thread* execimage(void* image, bool copy, int argc, const char*
     void* ptr = image + textsize;
     memset(ptr, 0, bsssize);
     ptr += bsssize;
+    void* argv_copy = ptr;
     if (argv)
     {
         memcpy(image + textsize + bsssize, argv, argc * 4);
@@ -133,6 +135,7 @@ struct scheduler_thread* execimage(void* image, bool copy, int argc, const char*
             ptr += len;
         }
     }
+    ptr = (void*)(((int)ptr + 3) & ~3);
     clean_dcache();
     invalidate_icache();
     struct scheduler_thread* thread;
@@ -141,7 +144,7 @@ struct scheduler_thread* execimage(void* image, bool copy, int argc, const char*
     else
     {
         thread = thread_create(NULL, NULL, image + entrypoint, ptr, stacksize,
-                               USER_THREAD, 127, false, (void*)argc, argv, NULL, NULL);
+                               USER_THREAD, 127, false, (void*)argc, argv_copy, NULL, NULL);
         if (thread)
         {
             reownalloc(image, OWNER_TYPE(OWNER_THREAD, thread));

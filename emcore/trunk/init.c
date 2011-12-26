@@ -133,7 +133,7 @@ void storageinitthread(void* arg0, void* arg1, void* arg2, void* arg3)
 #endif
 
 void initthread(void* arg0, void* arg1, void* arg2, void* arg3) INITCODE_ATTR;
-void initthread(void* arg0, void* bootalloc, void* arg2, void* arg3)
+void initthread(void* arg0, void* arg1, void* arg2, void* arg3)
 {
     struct initbss* ib = (struct initbss*)arg0;
 #ifdef HAVE_I2C
@@ -244,7 +244,6 @@ void initthread(void* arg0, void* bootalloc, void* arg2, void* arg3)
         else option = option->fail_next;
     }
     if (!success) cputs(CONSOLE_BOOT, nobootoptionsstr);
-    free(bootalloc);
 }
 
 void init() INITCODE_ATTR;
@@ -271,7 +270,7 @@ void init()
     reownalloc(ib, OWNER_TYPE(OWNER_THREAD, &(ib->initthread)));
     reownalloc(bootalloc, OWNER_TYPE(OWNER_THREAD, &(ib->initthread)));
     thread_create(&(ib->initthread), initthreadname, initthread, ib->initstack,
-                  sizeof(ib->initstack), OS_THREAD, 127, true, ib, bootalloc, NULL, NULL);
+                  sizeof(ib->initstack), OS_THREAD, 127, true, ib, NULL, NULL, NULL);
     timer_init();
     interrupt_init();
 }
