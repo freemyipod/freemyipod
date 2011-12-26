@@ -137,21 +137,22 @@ void clickwheel_init()
     lastpacket = 0;
     collect = 0;
     lastdiff = 0;
-    INTMSK |= 1 << IRQ_WHEEL;
     PWRCON(1) &= ~1;
     PCON15 = (PCON15 & ~0xFFFF0000) | 0x22220000;
     PUNK15 = 0xF0;
+    PCON10 = (PCON10 & ~0xFF0) | 0x10;
+    WHEELINT = 7;
+    WHEEL10 = 1;
+    INTMSK |= 1 << IRQ_WHEEL;
     WHEEL08 = 0x3A980;
     WHEEL00 = 0x280000;
-    WHEEL10 = 3;
-    PCON10 = (PCON10 & ~0xFF0) | 0x10;
+    while (WHEEL0C & 4) yield();
     PDAT10 |= 2;
     WHEELTX = 0x8000023A;
     WHEEL04 |= 1;
     PDAT10 &= ~2;
-    thread_create(&clickwheel_thread_handle, "Clickwheel dispatcher",
-                  clickwheel_thread, clickwheel_stack,
-                  sizeof(clickwheel_stack), OS_THREAD, 200, true,
+    thread_create(&clickwheel_thread_handle, "Clickwheel dispatcher", clickwheel_thread,
+                  clickwheel_stack, sizeof(clickwheel_stack), OS_THREAD, 200, true,
                   NULL, NULL, NULL, NULL);
 }
 
@@ -159,14 +160,12 @@ void INT_WHEEL(void) ICODE_ATTR;
 void INT_WHEEL()
 {
     uint32_t events = WHEELINT;
-    if (events & 4) WHEELINT = 4;
-    if (events & 2) WHEELINT = 2;
     if (events & 1)
     {
         clickwheel_packet = WHEELRX;
         wakeup_signal(&clickwheel_wakeup);
-        WHEELINT = 1;
     }
+    WHEELINT = events;
 }
 
 uint32_t clickwheel_get_state()

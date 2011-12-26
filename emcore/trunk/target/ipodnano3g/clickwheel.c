@@ -137,24 +137,18 @@ void clickwheel_init()
     lastpacket = 0;
     collect = 0;
     lastdiff = 0;
-    interrupt_enable(IRQ_WHEEL, true);
-    PUNA(2) &= ~2;
     PCON(14) = (PCON(14) & ~0xffff0000) | 0x22220000;
+    PUNA(2) &= ~2;
     WHEELINT = 7;
-    WHEEL10 = 7;
-    WHEEL00 = 0x380000;
+    WHEEL10 = 1;
+    interrupt_enable(IRQ_WHEEL, true);
     WHEEL08 = 0x20000;
-    do
-    {
-        WHEELTX = 0x8001052A;
-        while (WHEEL0C & 4) yield();
-        WHEEL04 = 1;
-        sleep(20000);
-    }
-    while (WHEEL0C & 4);
-    thread_create(&clickwheel_thread_handle, "Clickwheel dispatcher",
-                  clickwheel_thread, clickwheel_stack,
-                  sizeof(clickwheel_stack), OS_THREAD, 200, true,
+    WHEEL00 = 0x380000;
+    while (WHEEL0C & 4) yield();
+    WHEELTX = 0x8000023A;
+    WHEEL04 |= 1;
+    thread_create(&clickwheel_thread_handle, "Clickwheel dispatcher", clickwheel_thread,
+                  clickwheel_stack, sizeof(clickwheel_stack), OS_THREAD, 200, true,
                   NULL, NULL, NULL, NULL);
 }
 
@@ -162,14 +156,12 @@ void INT_WHEEL(void) ICODE_ATTR;
 void INT_WHEEL()
 {
     uint32_t events = WHEELINT;
-    if (events & 4) WHEELINT = 4;
-    if (events & 2) WHEELINT = 2;
     if (events & 1)
     {
         clickwheel_packet = WHEELRX;
         wakeup_signal(&clickwheel_wakeup);
-        WHEELINT = 1;
     }
+    WHEELINT = events;
 }
 
 uint32_t clickwheel_get_state()
