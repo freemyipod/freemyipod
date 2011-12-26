@@ -577,6 +577,7 @@ int ata_power_up()
     }
     else
     {
+        sleep(1000);
         clockgate_enable(5, true);
         ATA_CFG = BIT(0);
         sleep(1000);
