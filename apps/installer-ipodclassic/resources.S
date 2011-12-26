@@ -131,10 +131,24 @@ flashscript:
 firstinstcost:
 .word 0
 commoncost:
-.word 0
+.word 5
 
 firstinstscript:
 commonscript:
+.word 1
+.word apps_dirname
+.word 1
+
+.word 1
+.word bootmenu_dirname
+.word 1
+
+.word 4
+.word theme_emcoreapp_filename
+.word f_theme_emcoreapp
+.word f_theme_emcoreapp_end - f_theme_emcoreapp
+.word 3
+
 .word 0
 
 
@@ -153,6 +167,15 @@ disclaimer_png_end:
 actions_png:
 .incbin "oobe/actions.png"
 actions_png_end:
+
+apps_dirname:
+.ascii "/.apps\0"
+
+bootmenu_dirname:
+.ascii "/.apps/bootmenu\0"
+
+theme_emcoreapp_filename:
+.ascii "/.apps/bootmenu/theme.emcoreapp\0"
 
 .align 4
 f_boot_emcorelib:
@@ -198,5 +221,10 @@ f_emcore_ipodclassic_ucl_end:
 f_emcoreldr_ipodclassic_bin:
 .incbin "flashfiles/emcoreldr-ipodclassic.bin"
 f_emcoreldr_ipodclassic_bin_end:
+
+.align 4
+f_theme_emcoreapp:
+.incbin "fsfiles/.apps/bootmenu/theme.emcoreapp"
+f_theme_emcoreapp_end:
 
 .align 2

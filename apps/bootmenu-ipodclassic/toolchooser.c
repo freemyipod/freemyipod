@@ -37,7 +37,7 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_mainchooser =
     .size = LIBUI_POINT(260, 10),
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60000000,
+    .fill_color_selected = 0x60ffffff,
     .icon_pos = LIBUI_POINT_NULL,
     .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
@@ -55,7 +55,7 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_umsboot =
     .size = LIBUI_POINT(260, 10),
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60000000,
+    .fill_color_selected = 0x60ffffff,
     .icon_pos = LIBUI_POINT_NULL,
     .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
@@ -73,7 +73,7 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_rockbox_fallbac
     .size = LIBUI_POINT(260, 10),
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60000000,
+    .fill_color_selected = 0x60ffffff,
     .icon_pos = LIBUI_POINT_NULL,
     .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
@@ -91,7 +91,7 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_clearcfg =
     .size = LIBUI_POINT(260, 10),
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60000000,
+    .fill_color_selected = 0x60ffffff,
     .icon_pos = LIBUI_POINT_NULL,
     .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
@@ -109,7 +109,7 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_cleardb =
     .size = LIBUI_POINT(260, 10),
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60000000,
+    .fill_color_selected = 0x60ffffff,
     .icon_pos = LIBUI_POINT_NULL,
     .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
@@ -127,7 +127,7 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_reformat =
     .size = LIBUI_POINT(260, 10),
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60000000,
+    .fill_color_selected = 0x60ffffff,
     .icon_pos = LIBUI_POINT_NULL,
     .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
@@ -145,7 +145,7 @@ static struct chooser_renderer_list_itemdata toolchooser_rparams_settingchooser 
     .size = LIBUI_POINT(260, 10),
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60000000,
+    .fill_color_selected = 0x60ffffff,
     .icon_pos = LIBUI_POINT_NULL,
     .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
@@ -273,6 +273,4 @@ void toolchooser_init()
 
 void toolchooser_apply_settings()
 {
-    if (settings.snow) toolchooser.tickinterval = 50000;
-    else toolchooser.tickinterval = 10000000;
 }

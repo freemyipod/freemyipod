@@ -90,7 +90,6 @@ void setting_validate(void* setting)
             settings.snow = SETTINGS_SNOW_MIN;
         if (settings.snow > SETTINGS_SNOW_MAX)
             settings.snow = SETTINGS_SNOW_MAX;
-        settingchooser_apply_settings();
     }
     else if (setting == &settings.brightness)
     {

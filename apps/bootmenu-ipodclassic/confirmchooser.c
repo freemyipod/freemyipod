@@ -52,7 +52,7 @@ static struct chooser_renderer_list_itemdata confirmchooser_rparams_no =
     .size = LIBUI_POINT(260, 10),
     .fill_box = LIBUI_BOX(LIBUI_POINT(0, 0), LIBUI_POINT(260, 10)),
     .fill_color = 0xa0000000,
-    .fill_color_selected = 0x60000000,
+    .fill_color_selected = 0x60ffffff,
     .icon_pos = LIBUI_POINT_NULL,
     .icon = LIBUI_SURFACE_NULL,
     .icon_opacity = 0,
@@ -215,6 +215,4 @@ void confirmchooser_init()
 
 void confirmchooser_apply_settings()
 {
-    if (settings.snow) confirmchooser.tickinterval = 50000;
-    else confirmchooser.tickinterval = 10000000;
 }

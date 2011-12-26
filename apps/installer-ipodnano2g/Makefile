@@ -2,12 +2,14 @@ NAME := installer-ipodnano2g
 STACKSIZE := 4096
 COMPRESS := false
 AUTOBUILD_FLASHFILES ?= true
+AUTOBUILD_FSFILES ?= true
 BASENAME ?= $(NAME)
 FATNAME ?= INSTAL~1BOO
 
 EMCOREDIR ?= ../../emcore/trunk/
 UNINSTDIR ?= ../uninstaller-ipodnano2g/
 BOOTMENUDIR ?= ../bootmenu-ipodnano2g/
+BOOTMENUTHEMEDIR ?= ../bootmenu-ipodnano2g-wintertheme/
 LIBBOOTDIR ?= ../../libs/boot/
 LIBPNGDIR ?= ../../libs/png/
 LIBUIDIR ?= ../../libs/ui/
@@ -17,8 +19,10 @@ NOTEBOOTDIR ?= ../../noteboot/
 TOOLSDIR ?= ../../tools/
 
 FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib flashfiles/mkfat32.emcorelib \
-             flashfiles/uninstaller-ipodnano2g.emcoreapp flashfiles/bootmenu-ipodnano2g.emcoreapp \
-	     flashfiles/emcoreldr-ipodnano2g.dfu flashfiles/emcore-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
+             flashfiles/uninstaller-ipodnano2g.emcoreapp flashfiles/bootmenu-ipodnano2g.emcoreapp flashfiles/rockbox.ipod.ucl \
+	         flashfiles/emcoreldr-ipodnano2g.dfu flashfiles/emcore-ipodnano2g.ucl flashfiles/umsboot-ipodnano2g.ucl
+
+FSFILES = fsfiles/.apps/bootmenu/theme.emcoreapp
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -40,7 +44,7 @@ CRYPTFW := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8701-cryptfirmware
 GENNOTE := python $(NOTEBOOTDIR)/gennote.py
 SCRAMBLE := python $(TOOLSDIR)/scramble.py
 
-LIBINCLUDES := -I$(LIBBOOTDIR)/export -I$(LIBPNGDIR)/export -I$(LIBUIDIR)/export
+LIBINCLUDES := -I$(LIBPNGDIR)/export -I$(LIBUIDIR)/export
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4 -DBASENAME=$(BASENAME)
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
@@ -105,6 +109,16 @@ build/resources.o: $(FLASHFILES)
 else
 build/resources.o: flashfiles.built
 endif
+
+ifeq ($(AUTOBUILD_FSFILES),true)
+build/resources.o: $(FSFILES)
+else
+build/resources.o: fsfiles.built
+endif
+
+build/$(NAME).elf: ls.x $(OBJ)
+	@echo [LD]     $@
+	@$(LD) $(LDFLAGS) -o $@ -T ls.x $(OBJ)
 
 build/$(NAME).elf: ls.x $(OBJ) $(LIBS)
 	@echo [LD]     $@
@@ -227,6 +241,18 @@ flashfiles/bootmenu-ipodnano2g.emcoreapp: $(BOOTMENUDIR)/build/bootmenu-ipodnano
 	@echo [CP]     $@
 	@cp $< $@
 
+$(BOOTMENUTHEMEDIR)/build/bootmenu-ipodnano2g.emcoreapp: bootmenu-ipodnano2g-theme
+	@$(MAKE) -C $(BOOTMENUTHEMEDIR)
+
+fsfiles/.apps/bootmenu/theme.emcoreapp: $(BOOTMENUTHEMEDIR)/build/bootmenu-ipodnano2g.emcoreapp
+	@echo [CP]     $@
+ifeq ($(shell uname),WindowsNT)
+	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
+else
+	@-mkdir -p $(dir $@)
+endif
+	@cp $< $@
+
 $(EMCOREDIR)/loader/ipodnano2g/build/emcoreldr-ipodnano2g.dfu: emcoreldr-ipodnano2g
 	@$(MAKE) -C $(EMCOREDIR)/loader/ipodnano2g
 
@@ -248,4 +274,4 @@ flashfiles/emcore-ipodnano2g.bin: $(EMCOREDIR)/build/ipodnano2g/emcore.bin
 clean:
 	@rm -rf build
 
-.PHONY: all clean emcore emcoreldr-ipodnano2g bootmenu-ipodnano2g uninstaller-ipodnano2g libboot libpng libui libmkfat32 umsboot libucl flashfiles $(NAME)
+.PHONY: all clean emcore emcoreldr-ipodnano2g bootmenu-ipodnano2g bootmenu-ipodnano2g-theme uninstaller-ipodnano2g libboot libpng libui libmkfat32 umsboot libucl flashfiles $(NAME)

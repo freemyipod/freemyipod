@@ -73,7 +73,7 @@ void run_reformat()
 {
     if (!run_confirmchooser("Reformat data partition?")) return;
     memcpy(framebuf, bg, 176 * 132 * 3);
-    rendertext(framebuf, 7, 65, 176, 0xff7fffff, 0xa0000000, "Reformatting data partition");
+    rendertext(framebuf, 7, 65, 176, 0xff7fffff, 0, "Reformatting data partition");
     update_display(NULL);
     displaylcd(0, 0, 176, 132, framebuf, 0, 0, 176);
     struct emcorelib_header* libmkfat32 = loadlib(LIBMKFAT32_IDENTIFIER,

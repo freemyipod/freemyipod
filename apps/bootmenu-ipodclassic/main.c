@@ -47,70 +47,103 @@ struct bootinfo_t bootinfo =
     .argc = 0,
     .argv = NULL
 };
+static const char* theme_arg = "--run-as-theme";
 
 
 static void main(int argc, const char** argv)
 {
-    settings_init();
+    int buttons = clickwheel_get_state() & 0x1f;
     
-    struct emcorelib_header* libboot = loadlib(LIBBOOT_IDENTIFIER,
-                                               LIBBOOT_API_VERSION, "libboot ");
-    boot = (struct libboot_api*)libboot->api;
-
-    if (!(clickwheel_get_state() & 0x1f))
-        switch (settings.fastboot_item)
+    if (buttons != 6)
+    {
+        bool success = false;
+        void* buffer = NULL;
+        int fd = file_open("/.apps/bootmenu/theme.emcoreapp", O_RDONLY);
+        if (fd > 0)
         {
-            case 1:
-                fastboot_rockbox();
-                break;
-            
-            case 2:
-                fastboot_umsboot();
-                break;
-            
-            case 3:
-                bootinfo.valid = true;
-                break;
+            int size = filesize(fd);
+            if (size > 0)
+            {
+                buffer = memalign(0x10, size);
+                if (buffer)
+                {
+                    if (read(fd, buffer, size) == size) success = true;
+                    else free(buffer);
+                }
+            }
+            close(fd);
         }
+        if (success && execimage(buffer, false, 1, &theme_arg) != NULL)
+            bootinfo.valid = true;
+    }
 
     if (!bootinfo.valid)
     {
-        struct emcorelib_header* libpng = loadlib(LIBPNG_IDENTIFIER, LIBPNG_API_VERSION, "libpng  ");
-        struct libpng_api* png = (struct libpng_api*)libpng->api;
-        bg = loadpng(png, background_png, background_png_size, (void* (*)(struct png_info*))(png->png_decode_rgb));
-        icons = loadpng(png, icons_png, icons_png_size, (void* (*)(struct png_info*))(png->png_decode_rgba));
-        rbxlogo = loadpng(png, rockbox_png, rockbox_png_size, (void* (*)(struct png_info*))(png->png_decode_rgb));
-        release_library(libpng);
-        library_unload(libpng);
+        settings_init();
         
-        struct emcorelib_header* libui = loadlib(LIBUI_IDENTIFIER, LIBUI_API_VERSION, "libui   ");
-        ui = (struct libui_api*)libui->api;
+        struct emcorelib_header* libboot = loadlib(LIBBOOT_IDENTIFIER,
+                                                   LIBBOOT_API_VERSION, "libboot ");
+        boot = (struct libboot_api*)libboot->api;
         
-        framebuf = malloc(320 * 240 * 3);
-        if (!framebuf) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer!");
-        framebuf2 = malloc(320 * 240 * 3);
-        if (!framebuf2) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer 2!");
+        if (!buttons)
+            switch (settings.fastboot_item)
+            {
+                case 1:
+                    fastboot_rockbox();
+                    break;
+                
+                case 2:
+                    fastboot_umsboot();
+                    break;
+                
+                case 3:
+                    bootinfo.valid = true;
+                    break;
+            }
 
-        mainchooser_init();
-        toolchooser_init();
-        settingchooser_init();
-        confirmchooser_init();
-        snow_init();
-        
-        run_mainchooser();
-        
-        free(framebuf2);
-        free(framebuf);
-        free(rbxlogo);
-        free(icons);
-        free(bg);
-        release_library(libui);
-        library_unload(libui);
+        if (!bootinfo.valid)
+        {
+            struct emcorelib_header* libpng = loadlib(LIBPNG_IDENTIFIER,
+                                                      LIBPNG_API_VERSION, "libpng  ");
+            struct libpng_api* png = (struct libpng_api*)libpng->api;
+            bg = loadpng(png, background_png, background_png_size,
+                         (void* (*)(struct png_info*))(png->png_decode_rgb));
+            icons = loadpng(png, icons_png, icons_png_size,
+                            (void* (*)(struct png_info*))(png->png_decode_rgba));
+            rbxlogo = loadpng(png, rockbox_png, rockbox_png_size,
+                              (void* (*)(struct png_info*))(png->png_decode_rgb));
+            release_library(libpng);
+            library_unload(libpng);
+            
+            struct emcorelib_header* libui = loadlib(LIBUI_IDENTIFIER,
+                                                     LIBUI_API_VERSION, "libui   ");
+            ui = (struct libui_api*)libui->api;
+            
+            framebuf = malloc(320 * 240 * 3);
+            if (!framebuf) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer!");
+            framebuf2 = malloc(320 * 240 * 3);
+            if (!framebuf2) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer 2!");
+
+            mainchooser_init();
+            toolchooser_init();
+            settingchooser_init();
+            confirmchooser_init();
+            
+            run_mainchooser();
+            
+            free(framebuf2);
+            free(framebuf);
+            free(rbxlogo);
+            free(icons);
+            free(bg);
+            release_library(libui);
+            library_unload(libui);
+        }
+
+        release_library(libboot);
+        library_unload(libboot);
     }
-
-    release_library(libboot);
-    library_unload(libboot);
-
+    
     if (bootinfo.firmware)
     {
         shutdown(false);

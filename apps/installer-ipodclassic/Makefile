@@ -2,9 +2,11 @@ NAME := installer-ipodclassic
 STACKSIZE := 4096
 COMPRESS := false
 AUTOBUILD_FLASHFILES ?= true
+AUTOBUILD_FSFILES ?= true
 
 EMCOREDIR ?= ../../emcore/trunk/
 BOOTMENUDIR ?= ../bootmenu-ipodclassic/
+BOOTMENUTHEMEDIR ?= ../bootmenu-ipodclassic-wintertheme/
 LIBBOOTDIR ?= ../../libs/boot/
 LIBPNGDIR ?= ../../libs/png/
 LIBUIDIR ?= ../../libs/ui/
@@ -14,7 +16,9 @@ TOOLSDIR ?= ../../tools/
 
 FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib flashfiles/mkfat32.emcorelib \
              flashfiles/bootmenu-ipodclassic.emcoreapp flashfiles/emcoreldr-ipodclassic.bin \
-             flashfiles/emcore-ipodclassic.ucl flashfiles/umsboot-ipodclassic.ucl
+             flashfiles/emcore-ipodclassic.ucl flashfiles/umsboot-ipodclassic.ucl flashfiles/rockbox.ipod.ucl
+
+FSFILES = fsfiles/.apps/bootmenu/theme.emcoreapp
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -89,6 +93,12 @@ ifeq ($(AUTOBUILD_FLASHFILES),true)
 build/resources.o: $(FLASHFILES)
 else
 build/resources.o: flashfiles.built
+endif
+
+ifeq ($(AUTOBUILD_FSFILES),true)
+build/resources.o: $(FSFILES)
+else
+build/resources.o: fsfiles.built
 endif
 
 build/$(NAME).elf: ls.x $(OBJ)
@@ -202,6 +212,18 @@ flashfiles/bootmenu-ipodclassic.emcoreapp: $(BOOTMENUDIR)/build/bootmenu-ipodcla
 	@echo [CP]     $@
 	@cp $< $@
 
+$(BOOTMENUTHEMEDIR)/build/bootmenu-ipodclassic.emcoreapp: bootmenu-ipodclassic-theme
+	@$(MAKE) -C $(BOOTMENUTHEMEDIR)
+
+fsfiles/.apps/bootmenu/theme.emcoreapp: $(BOOTMENUTHEMEDIR)/build/bootmenu-ipodclassic.emcoreapp
+	@echo [CP]     $@
+ifeq ($(shell uname),WindowsNT)
+	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
+else
+	@-mkdir -p $(dir $@)
+endif
+	@cp $< $@
+
 $(EMCOREDIR)/loader/ipodclassic/build/emcoreldr-ipodclassic.bin: emcoreldr-ipodclassic
 	@$(MAKE) -C $(EMCOREDIR)/loader/ipodclassic
 
@@ -223,4 +245,4 @@ flashfiles/emcore-ipodclassic.bin: $(EMCOREDIR)/build/ipodclassic/emcore.bin
 clean:
 	@rm -rf build
 
-.PHONY: all clean emcore emcoreldr-ipodclassic bootmenu-ipodclassic libboot libpng libui libmkfat32 umsboot libucl flashfiles $(NAME)
+.PHONY: all clean emcore emcoreldr-ipodclassic bootmenu-ipodclassic bootmenu-ipodclassic-theme libboot libpng libui libmkfat32 umsboot libucl flashfiles $(NAME)
