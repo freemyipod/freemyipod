@@ -115,7 +115,7 @@ int read_input_mw(int input)
     return -1;
 }
 
-enum input_state read_battery_state(int input)
+enum input_state read_input_state(int input)
 {
     if (input != 0) return INPUT_STATE_INVALID;
     return INPUT_STATE_UNKNOWN;
