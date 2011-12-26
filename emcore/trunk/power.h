@@ -38,6 +38,16 @@ enum battery_state
     BATTERY_STATE_DISCHARGING
 };
 
+enum input_state
+{
+    INPUT_STATE_UNKNOWN,
+    INPUT_STATE_INVALID,
+    INPUT_STATE_NONPRESENT,
+    INPUT_STATE_OUTOFRANGE,
+    INPUT_STATE_IDLE,
+    INPUT_STATE_ACTIVE
+};
+
 
 void power_off(void);
 void power_init(void) INITCODE_ATTR;
@@ -50,8 +60,11 @@ int read_battery_mwh_design(int battery);
 int read_battery_mwh_full(int battery);
 int read_battery_mwh_current(int battery);
 int read_battery_mw(int battery);
-int read_input_mw(int battery);
 enum battery_state read_battery_state(int battery);
+int read_input_voltage(int input);
+int read_input_current(int input);
+int read_input_mw(int input);
+enum input_state read_input_state(int input);
 
 
 #endif

@@ -217,8 +217,11 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define read_battery_mwh_full __emcore_syscall->read_battery_mwh_full
 #define read_battery_mwh_current __emcore_syscall->read_battery_mwh_current
 #define read_battery_mw __emcore_syscall->read_battery_mw
-#define read_input_mw __emcore_syscall->read_input_mw
 #define read_battery_state __emcore_syscall->read_battery_state
+#define read_input_voltage __emcore_syscall->read_input_voltage
+#define read_input_current __emcore_syscall->read_input_current
+#define read_input_mw __emcore_syscall->read_input_mw
+#define read_input_state __emcore_syscall->read_input_state
 #define tlsf_realign __emcore_syscall->tlsf_realign
 #define realign __emcore_syscall->realign
 #define fat_size_mv __emcore_syscall->fat_size_mv

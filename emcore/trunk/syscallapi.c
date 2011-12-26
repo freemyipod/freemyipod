@@ -240,8 +240,11 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .read_battery_mwh_full = read_battery_mwh_full,
     .read_battery_mwh_current = read_battery_mwh_current,
     .read_battery_mw = read_battery_mw,
-    .read_input_mw = read_input_mw,
     .read_battery_state = read_battery_state,
+    .read_input_voltage = read_input_voltage,
+    .read_input_current = read_input_current,
+    .read_input_mw = read_input_mw,
+    .read_input_state = read_input_state,
     .tlsf_realign = tlsf_realign,
     .realign = realign,
 #ifdef HAVE_STORAGE

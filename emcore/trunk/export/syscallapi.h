@@ -277,8 +277,11 @@ struct emcore_syscall_table
     typeof(read_battery_mwh_full) *read_battery_mwh_full;
     typeof(read_battery_mwh_current) *read_battery_mwh_current;
     typeof(read_battery_mw) *read_battery_mw;
-    typeof(read_input_mw) *read_input_mw;
     typeof(read_battery_state) *read_battery_state;
+    typeof(read_input_voltage) *read_input_voltage;
+    typeof(read_input_current) *read_input_current;
+    typeof(read_input_mw) *read_input_mw;
+    typeof(read_input_state) *read_input_state;
     typeof(tlsf_realign) *tlsf_realign;
     typeof(realign) *realign;
     typeof(fat_size_mv) *fat_size_mv;
