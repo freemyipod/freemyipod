@@ -74,86 +74,82 @@ static void main(int argc, const char** argv)
             }
             close(fd);
         }
-        if (success && execimage(buffer, false, 1, &theme_arg) != NULL)
-            bootinfo.valid = true;
+        if (success && execimage(buffer, false, 1, &theme_arg) != NULL) return;
     }
+
+    settings_init();
+        
+    struct emcorelib_header* libboot = loadlib(LIBBOOT_IDENTIFIER,
+                                               LIBBOOT_API_VERSION, "libboot ");
+    boot = (struct libboot_api*)libboot->api;
+        
+    if (!buttons)
+        switch (settings.fastboot_item)
+        {
+            case 1:
+                fastboot_crapple();
+                break;
+            
+            case 2:
+                fastboot_rockbox();
+                break;
+                
+            case 3:
+                fastboot_diskmode();
+                break;
+            
+            case 4:
+                fastboot_umsboot();
+                break;
+                
+            case 5:
+                bootinfo.valid = true;
+                break;
+        }
 
     if (!bootinfo.valid)
     {
-        settings_init();
-        
-        struct emcorelib_header* libboot = loadlib(LIBBOOT_IDENTIFIER,
-                                                   LIBBOOT_API_VERSION, "libboot ");
-        boot = (struct libboot_api*)libboot->api;
-        
-        if (!buttons)
-            switch (settings.fastboot_item)
-            {
-                case 1:
-                    fastboot_crapple();
-                    break;
+        struct emcorelib_header* libpng = loadlib(LIBPNG_IDENTIFIER,
+                                                  LIBPNG_API_VERSION, "libpng  ");
+        struct libpng_api* png = (struct libpng_api*)libpng->api;
+        bg = loadpng(png, background_png, background_png_size,
+                     (void* (*)(struct png_info*))(png->png_decode_rgb));
+        icons = loadpng(png, icons_png, icons_png_size,
+                        (void* (*)(struct png_info*))(png->png_decode_rgba));
+        rbxlogo = loadpng(png, rockbox_png, rockbox_png_size,
+                          (void* (*)(struct png_info*))(png->png_decode_rgb));
+        crapple = loadpng(png, crapple_png, crapple_png_size,
+                          (void* (*)(struct png_info*))(png->png_decode_rgba));
+        release_library(libpng);
+        library_unload(libpng);
             
-                case 2:
-                    fastboot_rockbox();
-                    break;
-                
-                case 3:
-                    fastboot_diskmode();
-                    break;
+        struct emcorelib_header* libui = loadlib(LIBUI_IDENTIFIER,
+                                                 LIBUI_API_VERSION, "libui   ");
+        ui = (struct libui_api*)libui->api;
             
-                case 4:
-                    fastboot_umsboot();
-                    break;
-                
-                case 5:
-                    bootinfo.valid = true;
-                    break;
-            }
+        framebuf = malloc(176 * 132 * 3);
+        if (!framebuf) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer!");
+        framebuf2 = malloc(176 * 132 * 3);
+        if (!framebuf2) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer 2!");
 
-        if (!bootinfo.valid)
-        {
-            struct emcorelib_header* libpng = loadlib(LIBPNG_IDENTIFIER,
-                                                      LIBPNG_API_VERSION, "libpng  ");
-            struct libpng_api* png = (struct libpng_api*)libpng->api;
-            bg = loadpng(png, background_png, background_png_size,
-                         (void* (*)(struct png_info*))(png->png_decode_rgb));
-            icons = loadpng(png, icons_png, icons_png_size,
-                            (void* (*)(struct png_info*))(png->png_decode_rgba));
-            rbxlogo = loadpng(png, rockbox_png, rockbox_png_size,
-                              (void* (*)(struct png_info*))(png->png_decode_rgb));
-            crapple = loadpng(png, crapple_png, crapple_png_size,
-                              (void* (*)(struct png_info*))(png->png_decode_rgba));
-            release_library(libpng);
-            library_unload(libpng);
+        mainchooser_init();
+        toolchooser_init();
+        settingchooser_init();
+        confirmchooser_init();
             
-            struct emcorelib_header* libui = loadlib(LIBUI_IDENTIFIER,
-                                                     LIBUI_API_VERSION, "libui   ");
-            ui = (struct libui_api*)libui->api;
+        run_mainchooser();
             
-            framebuf = malloc(176 * 132 * 3);
-            if (!framebuf) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer!");
-            framebuf2 = malloc(176 * 132 * 3);
-            if (!framebuf2) panicf(PANIC_KILLTHREAD, "Could not allocate framebuffer 2!");
-
-            mainchooser_init();
-            toolchooser_init();
-            settingchooser_init();
-            confirmchooser_init();
-            
-            run_mainchooser();
-            
-            free(framebuf2);
-            free(framebuf);
-            free(rbxlogo);
-            free(icons);
-            free(bg);
-            release_library(libui);
-            library_unload(libui);
-        }
-
-        release_library(libboot);
-        library_unload(libboot);
+        free(framebuf2);
+        free(framebuf);
+        free(rbxlogo);
+        free(icons);
+        free(bg);
+        release_library(libui);
+        library_unload(libui);
     }
+
+    release_library(libboot);
+    library_unload(libboot);
     
     if (bootinfo.firmware)
     {
