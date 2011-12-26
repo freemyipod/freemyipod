@@ -94,13 +94,29 @@ int read_battery_mw(int battery)
     return -1;
 }
 
-int read_input_mw(int battery)
-{
-    return -1;
-}
-
 enum battery_state read_battery_state(int battery)
 {
     if (battery != 0) return BATTERY_STATE_INVALID;
     return BATTERY_STATE_UNKNOWN;
+}
+
+int read_input_voltage(int input)
+{
+    return -1;
+}
+
+int read_input_current(int input)
+{
+    return -1;
+}
+
+int read_input_mw(int input)
+{
+    return -1;
+}
+
+enum input_state read_battery_state(int input)
+{
+    if (input != 0) return INPUT_STATE_INVALID;
+    return INPUT_STATE_UNKNOWN;
 }
