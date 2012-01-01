@@ -296,7 +296,7 @@ class Commandline(object):
                 if i >= 0 and i < size:
                     w = 0
                     for b in range(wordsize):
-                        w = w | (struct.unpack("B", data[i + b])[0] << (8 * b))
+                        w = w | (struct.unpack("B", data[i + b : i + b + 1])[0] << (8 * b))
                     sys.stdout.write(((" %%0%dX" if zeropad else " %%%dX") % (wordsize * 2)) % w)
                 else: sys.stdout.write(" " * (wordsize * 2 + 1))
             if ascii:
@@ -304,7 +304,8 @@ class Commandline(object):
                 for i in range(r, r + wordsize * width):
                     if i - r > 0 and (i - r) % asciisep == 0: sys.stdout.write(" ")
                     if i >= 0 and i < size:
-                        if ord(data[i]) > 0x1f: sys.stdout.write(data[i])
+                        if ord(data[i : i + 1]) > 0x1f and ord(data[i : i + 1]) < 0x80:
+                            sys.stdout.write(data[i : i + 1].decode("latin1"))
                         else: sys.stdout.write(asciirep)
                     else: sys.stdout.write(" ")
                 sys.stdout.write("|")
