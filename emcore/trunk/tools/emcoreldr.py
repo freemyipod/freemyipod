@@ -30,29 +30,29 @@ from misc import to_int
 
 
 def usage():
-  print ""
-  print "Please provide a command and (if needed) parameters as command line arguments"
-  print ""
-  print "Available commands:"
-  print ""
-  print "  upload <address> <file>"
-  print "    Uploads the specified file to the specified memory address on the device."
-  print ""
-  print "  download <address> <size> <file>"
-  print "    Downloads <size> bytes of data from the specified address on the device,"
-  print "    and stores it in the specified file."
-  print ""
-  print "  execute <address> <stack>"
-  print "    Executes code at the specified address in the device's memory."
-  print "    The stack pointer will be set to <stack> before jumping to <address>."
-  print "    iBugger will probably lose control of the device,"
-  print "    if the code isn't explicitly written for it."
-  print ""
-  print "  run <file>"
-  print "    Loads the specified file to 0x08000000 (SDRAM) and executes it."
-  print "    This is what you usually want to do."
-  print ""
-  print "All numbers can be provided as either hex (0x prefix), binary (0b prefix) or decimal (no prefix)"
+  print("")
+  print("Please provide a command and (if needed) parameters as command line arguments")
+  print("")
+  print("Available commands:")
+  print("")
+  print("  upload <address> <file>")
+  print("    Uploads the specified file to the specified memory address on the device.")
+  print("")
+  print("  download <address> <size> <file>")
+  print("    Downloads <size> bytes of data from the specified address on the device,")
+  print("    and stores it in the specified file.")
+  print("")
+  print("  execute <address> <stack>")
+  print("    Executes code at the specified address in the device's memory.")
+  print("    The stack pointer will be set to <stack> before jumping to <address>.")
+  print("    iBugger will probably lose control of the device,")
+  print("    if the code isn't explicitly written for it.")
+  print("")
+  print("  run <file>")
+  print("    Loads the specified file to 0x08000000 (SDRAM) and executes it.")
+  print("    This is what you usually want to do.")
+  print("")
+  print("All numbers can be provided as either hex (0x prefix), binary (0b prefix) or decimal (no prefix)")
   exit(2)
 
 

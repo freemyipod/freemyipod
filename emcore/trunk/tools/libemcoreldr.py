@@ -147,7 +147,7 @@ class emcoreldr:
 
     while True:
       data = f.read(65536)
-      if data == "": break
+      if data == b"": break
       self.write(offset, data)
       offset += len(data)
       self.__myprint(".")
