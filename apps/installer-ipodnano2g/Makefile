@@ -116,10 +116,6 @@ else
 build/resources.o: fsfiles.built
 endif
 
-build/$(NAME).elf: ls.x $(OBJ)
-	@echo [LD]     $@
-	@$(LD) $(LDFLAGS) -o $@ -T ls.x $(OBJ)
-
 build/$(NAME).elf: ls.x $(OBJ) $(LIBS)
 	@echo [LD]     $@
 	@$(LD) $(LDFLAGS) -o $@ -T ls.x $(OBJ) $(LIBS)
