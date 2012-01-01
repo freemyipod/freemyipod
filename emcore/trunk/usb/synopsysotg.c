@@ -77,22 +77,22 @@ static void reset_endpoints(int reinit)
     {
         /* The size is getting set to zero, because we don't know
            whether we are Full Speed or High Speed at this stage */
-        /* EP1 DISABLED IN ACTIVE DATA0 SIZE=0 NEXT=3 */
-        DIEPCTL1 = 0x50009800;
-        /* EP2 DISABLED OUT ACTIVE DATA0 SIZE=0 */
-        DOEPCTL2 = 0x50008000;
-        /* EP3 DISABLED IN ACTIVE DATA0 SIZE=0 NEXT=0 */
-        DIEPCTL3 = 0x50008000;
-        /* EP4 DISABLED OUT ACTIVE DATA0 SIZE=0 */
-        DOEPCTL4 = 0x50008000;
+        /* EP1 IN INACTIVE DATA0 SIZE=0 NEXT=3 */
+        DIEPCTL1 = 0x10001800;
+        /* EP2 OUT INACTIVE DATA0 SIZE=0 */
+        DOEPCTL2 = 0x10000000;
+        /* EP3 IN INACTIVE DATA0 SIZE=0 NEXT=0 */
+        DIEPCTL3 = 0x10000000;
+        /* EP4 OUT INACTIVE DATA0 SIZE=0 */
+        DOEPCTL4 = 0x10000000;
     }
     else
     {
-        /* DISABLED ACTIVE DATA0 */
-        DIEPCTL1 = DIEPCTL1 | 0x50008000;
-        DOEPCTL2 = DOEPCTL2 | 0x50008000;
-        DIEPCTL3 = DIEPCTL3 | 0x50008000;
-        DOEPCTL4 = DOEPCTL4 | 0x50008000;
+        /* INACTIVE DATA0 */
+        DIEPCTL1 = (DIEPCTL1 & ~0x00008000) | 0x10000000;
+        DOEPCTL2 = (DOEPCTL2 & ~0x00008000) | 0x10000000;
+        DIEPCTL3 = (DIEPCTL3 & ~0x00008000) | 0x10000000;
+        DOEPCTL4 = (DOEPCTL4 & ~0x00008000) | 0x10000000;
     }
     DAINTMSK = 0xFFFFFFFF;  /* Enable interrupts on all EPs */
 }
@@ -288,6 +288,7 @@ static void ep_recv(int ep, void *ptr, int length)
     endpoints[ep].busy = true;
     endpoints[ep].size = length;
     DOEPCTL(ep) &= ~0x20000;  /* EPx UNSTALL */
+    DOEPCTL(ep) |= 0x8000;  /* EPx OUT ACTIVE */
     int blocksize = usb_drv_port_speed() ? 512 : 64;
     int packets = (length + blocksize - 1) / blocksize;
     if (!length)
