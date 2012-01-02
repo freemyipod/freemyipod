@@ -344,6 +344,7 @@ void main(int argc, const char** argv)
     backlight_set_brightness(177);
     backlight_on(true);
 
+    remove("/.boot/init.emcoreapp");
     int cost;
     if (updating)
     {
