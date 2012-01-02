@@ -144,74 +144,42 @@ def s5l8720genpwnage(data):
     emcore.free(addr)
     return data
 
+def fileoperation(infilepath, outfilepath, function):
+    with open(infilepath, "rb") as infile:
+        infiledata = infile.read()
+    
+    try:
+        outfiledata = function(infiledata)
+    except:
+        os.remove(outfilepath)
+        raise
+    
+    with open(outfilepath, "wb") as outfile:
+        outfile.write(outfiledata)
 
 def s5l8701cryptdfufile(infile, outfile):
-    infile = open(infile, "rb")
-    outfile = open(outfile, "wb")
-    outfile.write(s5l8701cryptdfu(infile.read()))
-    infile.close()
-    outfile.close()
-
+    fileoperation(infile, outfile, s5l8701cryptdfu)
 
 def s5l8701decryptdfufile(infile, outfile):
-    infile = open(infile, "rb")
-    outfile = open(outfile, "wb")
-    outfile.write(s5l8701decryptdfu(infile.read()))
-    infile.close()
-    outfile.close()
-
+    fileoperation(infile, outfile, s5l8701decryptdfu)
 
 def s5l8701cryptfirmwarefile(infile, outfile):
-    infile = open(infile, "rb")
-    outfile = open(outfile, "wb")
-    outfile.write(s5l8701cryptfirmware(infile.read()))
-    infile.close()
-    outfile.close()
-
+    fileoperation(infile, outfile, s5l8701cryptfirmware)
 
 def s5l8701decryptfirmwarefile(infile, outfile):
-    infile = open(infile, "rb")
-    outfile = open(outfile, "wb")
-    outfile.write(s5l8701decryptfirmware(infile.read()))
-    infile.close()
-    outfile.close()
-
+    fileoperation(infile, outfile, s5l8701decryptfirmware)
 
 def s5l8702cryptnorfile(infile, outfile):
-    infile = open(infile, "rb")
-    outfile = open(outfile, "wb")
-    outfile.write(s5l8702cryptnor(infile.read()))
-    infile.close()
-    outfile.close()
-
+    fileoperation(infile, outfile, s5l8702cryptnor)
 
 def s5l8702decryptnorfile(infile, outfile):
-    infile = open(infile, "rb")
-    outfile = open(outfile, "wb")
-    outfile.write(s5l8702decryptnor(infile.read()))
-    infile.close()
-    outfile.close()
-
+    fileoperation(infile, outfile, s5l8702decryptnor)
 
 def s5l8702genpwnagefile(infile, outfile):
-    infile = open(infile, "rb")
-    outfile = open(outfile, "wb")
-    outfile.write(s5l8702genpwnage(infile.read()))
-    infile.close()
-    outfile.close()
-
+    fileoperation(infile, outfile, s5l8702genpwnage)
 
 def s5l8702genpwnagefile800(infile, outfile):
-    infile = open(infile, "rb")
-    outfile = open(outfile, "wb")
-    outfile.write(s5l8702genpwnage800(infile.read()))
-    infile.close()
-    outfile.close()
-
+    fileoperation(infile, outfile, s5l8702genpwnage800)
 
 def s5l8720genpwnagefile(infile, outfile):
-    infile = open(infile, "rb")
-    outfile = open(outfile, "wb")
-    outfile.write(s5l8720genpwnage(infile.read()))
-    infile.close()
-    outfile.close()
+    fileoperation(infile, outfile, s5l8720genpwnage)
