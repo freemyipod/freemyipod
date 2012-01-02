@@ -25,10 +25,10 @@
 #define __VERSION_H__
 
 
-#define VERSION "0.4.0"
+#define VERSION "0.4.1"
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 4
-#define VERSION_PATCH 0
+#define VERSION_PATCH 1
 #define VERSION_SVN "$REVISION$"
 #define VERSION_SVN_INT $REVISIONINT$
 
