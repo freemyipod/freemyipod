@@ -35,7 +35,7 @@ void run_powerdown()
 void fastboot_crapple()
 {
     boot->load_from_file(&bootinfo.firmware, &bootinfo.size, false, "/.boot/appleos.ucl", 0x800000);
-    if (!&bootinfo.firmware)
+    if (!bootinfo.firmware)
         boot->load_from_file(&bootinfo.firmware, &bootinfo.size, false, "/.boot/appleos.bin", 0);
     if (bootinfo.firmware) bootinfo.valid = true;
 }
