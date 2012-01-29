@@ -148,11 +148,7 @@ def fileoperation(infilepath, outfilepath, function):
     with open(infilepath, "rb") as infile:
         infiledata = infile.read()
     
-    try:
-        outfiledata = function(infiledata)
-    except:
-        os.remove(outfilepath)
-        raise
+    outfiledata = function(infiledata)
     
     with open(outfilepath, "wb") as outfile:
         outfile.write(outfiledata)
