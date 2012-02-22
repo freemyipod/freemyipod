@@ -1762,10 +1762,10 @@ int fat_create_dir(const char* name,
             memcpy(&buf[0x20], "..         \x10", 12);
             ((uint16_t*)buf)[0xd] = newdir.firstcluster;
             ((uint16_t*)buf)[0xa] = newdir.firstcluster >> 16;
-            if(dir->file.firstcluster == fat_bpb->bpb_rootclus)
+            if(dir->file.firstcluster != fat_bpb->bpb_rootclus)
             {
-                ((uint16_t*)buf)[0x1d] = fat_bpb->bpb_rootclus;
-                ((uint16_t*)buf)[0x1a] = fat_bpb->bpb_rootclus >> 16;
+                ((uint16_t*)buf)[0x1d] = dir->file.firstcluster;
+                ((uint16_t*)buf)[0x1a] = dir->file.firstcluster >> 16;
             }
         }
         rc = transfer(IF_MV2(fat_bpb,) sector + i, 1, buf, true );
