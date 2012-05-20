@@ -275,7 +275,7 @@ int cread(unsigned int consoles, char* buffer, size_t length, int timeout)
     if ((consoles & 2) && (result = dbgconsole_read(buffer, length, timeout))) return result;
 #endif
 #ifdef HAVE_UART
-    if ((consoles & 2) && (result = uart_read(buffer, length, timeout))) return result;
+    if ((consoles & 4) && (result = uart_read(buffer, length, timeout))) return result;
 #endif
     mutex_unlock(&console_readmutex);
 }
