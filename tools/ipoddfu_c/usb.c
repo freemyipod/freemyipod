@@ -97,7 +97,7 @@ int usb_find(unsigned char *reattach)
         if (0x05ac == dev_desc.idVendor && (
             // DFU
             0x1220 == dev_desc.idProduct || // iPod Nano 2G
-            0x1223 == dev_desc.idProduct || // iPod Classic 1G
+            0x1223 == dev_desc.idProduct || // iPod Nano 3G and iPod Classic 1G/2G/3G
             0x1224 == dev_desc.idProduct || // iPod Nano 3G
             0x1225 == dev_desc.idProduct || // iPod Nano 4G
             0x1231 == dev_desc.idProduct || // iPod Nano 5G
