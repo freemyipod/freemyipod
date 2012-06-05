@@ -41,6 +41,7 @@ STUBEMBED := python tools/stubembed.py
 EMCOREBOOTCFG := python $(EMCOREDIR)/tools/emcorebootcfg.py
 EMCOREEMBEDAPP := python $(EMCOREDIR)/tools/emcoreembedapp.py
 CRYPTFW := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8701-cryptfirmware
+CRYPTDFU := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8701-cryptdfu
 GENNOTE := python $(NOTEBOOTDIR)/gennote.py
 SCRAMBLE := python $(TOOLSDIR)/scramble.py
 
@@ -66,7 +67,11 @@ all: $(NAME)
 
 -include $(OBJ:%=%.dep)
 
-$(NAME): build/$(BASENAME).bootnote build/$(BASENAME).ipodx
+$(NAME): build/$(BASENAME).bootnote build/$(BASENAME).ipodx build/$(BASENAME).dfu
+
+build/$(NAME).dfu: build/$(NAME).bin
+	@echo [CDFU]    $<
+	@$(CRYPTDFU) $< $@
 
 build/$(BASENAME).ipodx: build/$(NAME).fw
 	@echo [SCRAMB] $<
