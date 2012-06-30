@@ -52,6 +52,13 @@ void console_init()
 #endif
 }
 
+void console_set_speed(unsigned int consoles, unsigned int cps)
+{
+#ifdef HAVE_UART
+    if (consoles & 4) uart_set_baud(cps * 10);
+#endif
+}
+
 void cputc_internal(unsigned int consoles, char string) ICODE_ATTR;
 void cputc_internal(unsigned int consoles, char string)
 {
@@ -254,17 +261,23 @@ void csflush(unsigned int consoles)
     leave_critical_section(mode);
 }
 
+static inline int cread_unlock_return(unsigned int rc)
+{
+    mutex_unlock(&console_readmutex);
+    return rc;
+}
+
 int cgetc(unsigned int consoles, int timeout)
 {
     int result;
     mutex_lock(&console_readmutex, TIMEOUT_BLOCK);
 #ifdef HAVE_USB
-    if ((consoles & 2) && (result = dbgconsole_getc(timeout)) != -1) return result;
+    if ((consoles & 2) && (result = dbgconsole_getc(timeout)) != -1) return cread_unlock_return(result);
 #endif
 #ifdef HAVE_UART
-    if ((consoles & 4) && (result = uart_getc(timeout)) != -1) return result;
+    if ((consoles & 4) && (result = uart_getc(timeout)) != -1) return cread_unlock_return(result);
 #endif
-    mutex_unlock(&console_readmutex);
+    return cread_unlock_return(-1);
 }
 
 int cread(unsigned int consoles, char* buffer, size_t length, int timeout)
@@ -272,12 +285,12 @@ int cread(unsigned int consoles, char* buffer, size_t length, int timeout)
     int result;
     mutex_lock(&console_readmutex, TIMEOUT_BLOCK);
 #ifdef HAVE_USB
-    if ((consoles & 2) && (result = dbgconsole_read(buffer, length, timeout))) return result;
+    if ((consoles & 2) && (result = dbgconsole_read(buffer, length, timeout))) return cread_unlock_return(result);
 #endif
 #ifdef HAVE_UART
-    if ((consoles & 4) && (result = uart_read(buffer, length, timeout))) return result;
+    if ((consoles & 4) && (result = uart_read(buffer, length, timeout))) return cread_unlock_return(result);
 #endif
-    mutex_unlock(&console_readmutex);
+    return cread_unlock_return(-1);
 }
 
 void creada(unsigned int consoles, char* buffer, size_t length, int timeout)
