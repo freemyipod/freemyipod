@@ -147,10 +147,11 @@ static void displaylcd_dma(void* data, int pixels)
         LCDWDATA = *in++;
         pixels--;
 	}
+    if (!pixels) return;
     lcd_dma_busy = true;
     DMABASE8 = in;
     DMACON8 = 0x20590000;
-    DMATCNT8 = pixels / 4;
+    DMATCNT8 = (pixels / 4) - 1;
     clean_dcache();
     DMACOM8 = 4;
 }
