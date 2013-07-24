@@ -13,7 +13,7 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -Iexport -ffunction-sections -fdata-sections
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -Iexport -ffunction-sections -fdata-sections -marm
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
@@ -86,7 +86,7 @@ all: $(TARGETS)
 
 $(foreach target,$(TARGETS),$(eval $(call TARGET_template,$(target))))
 
-build/version.h: version.h .svn/entries
+build/version.h: version.h ../.svn/entries
 	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist build md build

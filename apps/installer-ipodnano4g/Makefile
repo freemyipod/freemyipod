@@ -36,7 +36,7 @@ GENPWN := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8720-genpwnage
 
 LIBINCLUDES := -I$(LIBPNGDIR)/export -I$(LIBUIDIR)/export -I$(LIBMKFAT32DIR)/export
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm1176jz-s -DARM_ARCH=6
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm1176jz-s -DARM_ARCH=6 -marm
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
@@ -147,7 +147,7 @@ else
 endif
 	@$(CC) -c $(CFLAGS) -o $@ $<
 
-build/version.h: version.h .svn/entries
+build/version.h: version.h ../../.svn/entries
 	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist build md build

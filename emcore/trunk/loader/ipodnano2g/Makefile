@@ -16,7 +16,7 @@ OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
 CRYPTDFU := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8701-cryptdfu
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -mcpu=arm940t
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -mcpu=arm940t -marm
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
@@ -90,7 +90,7 @@ else
 endif
 	@$(CC) -c $(CFLAGS) -o $@ $<
 
-build/version.h: version.h .svn/entries
+build/version.h: version.h ../../../../.svn/entries
 	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist build md build

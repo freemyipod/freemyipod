@@ -19,7 +19,7 @@ ELF2ECA := $(CROSS)elf2emcoreapp
 
 LIBINCLUDES := 
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4 -marm
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
@@ -104,7 +104,7 @@ else
 endif
 	@$(CC) -c $(CFLAGS) -o $@ $<
 
-build/version.h: version.h .svn/entries
+build/version.h: version.h ../../.svn/entries
 	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist build md build

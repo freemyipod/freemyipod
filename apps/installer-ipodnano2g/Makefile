@@ -41,13 +41,12 @@ STUBEMBED := python tools/stubembed.py
 EMCOREBOOTCFG := python $(EMCOREDIR)/tools/emcorebootcfg.py
 EMCOREEMBEDAPP := python $(EMCOREDIR)/tools/emcoreembedapp.py
 CRYPTFW := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8701-cryptfirmware
-CRYPTDFU := python $(EMCOREDIR)/tools/ipodcrypt.py s5l8701-cryptdfu
 GENNOTE := python $(NOTEBOOTDIR)/gennote.py
 SCRAMBLE := python $(TOOLSDIR)/scramble.py
 
 LIBINCLUDES := -I$(LIBPNGDIR)/export -I$(LIBUIDIR)/export
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4 -DBASENAME=$(BASENAME)
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4 -DBASENAME=$(BASENAME) -marm
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
@@ -67,11 +66,7 @@ all: $(NAME)
 
 -include $(OBJ:%=%.dep)
 
-$(NAME): build/$(BASENAME).bootnote build/$(BASENAME).ipodx build/$(BASENAME).dfu
-
-build/$(NAME).dfu: build/$(NAME).bin
-	@echo [CDFU]    $<
-	@$(CRYPTDFU) $< $@
+$(NAME): build/$(BASENAME).bootnote build/$(BASENAME).ipodx
 
 build/$(BASENAME).ipodx: build/$(NAME).fw
 	@echo [SCRAMB] $<
@@ -180,7 +175,7 @@ endif
 build/libucl.a: libucl
 	@$(MAKE) -C libucl CFLAGS="$(CFLAGS) -I../$(EMCOREDIR)/export"
 
-build/version.h: version.h .svn/entries
+build/version.h: version.h ../../.svn/entries
 	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist build md build

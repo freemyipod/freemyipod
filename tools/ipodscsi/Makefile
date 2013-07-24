@@ -78,7 +78,7 @@ else
 endif
 	@windres -i $< -o $@ 
 
-build/version.h: version.h .svn/entries
+build/version.h: version.h ../../.svn/entries
 	@echo [PP]     $<
 ifeq ($(shell uname),WindowsNT)
 	@-if not exist build md build

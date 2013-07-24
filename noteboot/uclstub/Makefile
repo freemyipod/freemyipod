@@ -12,7 +12,7 @@ AS      := $(CROSS)as
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -mcpu=arm940t
+CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -ffunction-sections -fdata-sections -mcpu=arm940t -marm
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
 
 SRC := ucl.S
