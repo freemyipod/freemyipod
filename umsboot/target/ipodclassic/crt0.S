@@ -135,13 +135,13 @@ reset_handler:
 	b	panic
 .size reset_handler, .-reset_handler
 
-.type swi, %function
+.type swi_handler, %function
 swi_handler:
 	mov	r0, #0
 	adr	r1, swi_text
 	sub	r2, lr, #4
 	b	panicf
-.size swi, .-swi
+.size swi_handler, .-swi_handler
 
 .type undef_instr_handler, %function
 undef_instr_handler:
