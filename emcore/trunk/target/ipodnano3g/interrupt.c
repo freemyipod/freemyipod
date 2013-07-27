@@ -132,13 +132,12 @@ static void (* timervector[])(void) IDATA_ATTR =
 void INT_TIMER(void) ICODE_ATTR;
 void INT_TIMER()
 {
-    if (TACON & (TACON >> 4) & 0x7000) timervector[0]();
-    if (TBCON & (TBCON >> 4) & 0x7000) timervector[1]();
-    if (TCCON & (TCCON >> 4) & 0x7000) timervector[2]();
-    if (TDCON & (TDCON >> 4) & 0x7000) timervector[3]();
-    if (TFCON & (TFCON >> 4) & 0x7000) timervector[5]();
-    if (TGCON & (TGCON >> 4) & 0x7000) timervector[6]();
-    if (THCON & (THCON >> 4) & 0x7000) timervector[7]();
+    int i;
+    for (i = 0; i < ARRAYLEN(timervector); i++)
+    {
+        int tcon = TCON(i);
+        if (tcon & (tcon >> 4) & 0x7000) timervector[i]();
+    }
 }
 
 static void (* dmavector[])(void) IDATA_ATTR =

@@ -248,6 +248,7 @@
 
 
 /////TIMER/////
+#define TCON(x)      (*((uint32_t volatile*)(0x3C700000 + 0x20 * (x))))
 #define TACON        (*((uint32_t volatile*)(0x3C700000)))
 #define TACMD        (*((uint32_t volatile*)(0x3C700004)))
 #define TADATA0      (*((uint32_t volatile*)(0x3C700008)))
