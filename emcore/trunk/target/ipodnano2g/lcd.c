@@ -108,7 +108,7 @@ void displaylcd_setup(unsigned int startx, unsigned int endx,
         mutex_lock(&lcd_mutex, TIMEOUT_BLOCK);
         displaylcd_sync();
     }
-    else while (DMAALLST2 & 0x70000);
+    else while (DMAALLST2 & 0x40000);
     if (lcd_detect() == 2)
     {
         lcd_send_cmd(0x50);
