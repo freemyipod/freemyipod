@@ -772,7 +772,7 @@ dump_symbols(symbols, number_of_symbols);
 				sym_reloc_size = bfd_get_reloc_size(q->howto);
 
 #if !defined(TARGET_h8300) && !defined(TARGET_e1) && !defined(TARGET_bfin) && !defined(TARGET_m68k)
-				if ((*p)->howto->type && sym_reloc_size != 4) {
+				if (sym_reloc_size != 4) {
 					printf("ERROR: bad reloc type %d size=%d for symbol=%s\n",
 							(*p)->howto->type, sym_reloc_size, sym_name);
 					bad_relocs++;
@@ -798,8 +798,6 @@ dump_symbols(symbols, number_of_symbols);
 #endif
 
 #if defined(TARGET_arm)
-				case 0:
-				    if (!sym_section->flags) break;
 				case R_ARM_ABS32:
 					relocation_needed = 1;
 					sym_vma = bfd_section_vma(abs_bfd, sym_section);
