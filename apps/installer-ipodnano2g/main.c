@@ -31,7 +31,7 @@
 #define BOOTNOTE_FILENAME "/Notes/" STR(BASENAME) ".bootnote"
 
 
-void main(int argc, const char** argv);
+static void main(int argc, const char** argv);
 EMCORE_APP_HEADER("emCORE installer", main, 127)
 
 
@@ -52,27 +52,27 @@ extern uint32_t commoncost;
 extern uint32_t commonscript[];
 
 
-uint32_t fat32_ok;
-uint32_t fat32_startsector;
-uint32_t fat32_secperclus;
-uint32_t fat32_database;
-uint32_t fat32_fatbase;
-uint32_t fat32_fatsize;
-uint32_t fat32_fatcount;
-uint32_t fat32_sectorcount;
-uint32_t fat32_clustercount;
-uint32_t fat32_rootdirclus;
+static uint32_t fat32_ok;
+static uint32_t fat32_startsector;
+static uint32_t fat32_secperclus;
+static uint32_t fat32_database;
+static uint32_t fat32_fatbase;
+static uint32_t fat32_fatsize;
+static uint32_t fat32_fatcount;
+static uint32_t fat32_sectorcount;
+static uint32_t fat32_clustercount;
+static uint32_t fat32_rootdirclus;
 
-struct wakeup eventwakeup;
-volatile int button;
-volatile int scrollpos;
+static struct wakeup eventwakeup;
+static volatile int button;
+static volatile int scrollpos;
 
 
 #define nor ((uint8_t*)0x24000000)
 #define norword ((uint32_t*)0x24000000)
 
 
-void handler(void* user, enum button_event eventtype, int which, int value)
+static void handler(void* user, enum button_event eventtype, int which, int value)
 {
     if (eventtype == BUTTON_PRESS) button |= 1 << which;
     if (eventtype == BUTTON_RELEASE) button &= ~(1 << which);
@@ -81,13 +81,13 @@ void handler(void* user, enum button_event eventtype, int which, int value)
     wakeup_signal(&eventwakeup);
 }
 
-uint32_t freeret(uint32_t rc, void* ptr)
+static uint32_t freeret(uint32_t rc, void* ptr)
 {
     free(ptr);
     return rc;
 }
 
-int decryptfw(void* image, uint32_t offset)
+static int decryptfw(void* image, uint32_t offset)
 {
     uint32_t size = ((uint32_t*)image)[5];
     if (size > 0x800000) return 0;
@@ -97,7 +97,7 @@ int decryptfw(void* image, uint32_t offset)
     return size;
 }
 
-uint32_t getfw(const char* filename, uint32_t* sector, int* size)
+static uint32_t getfw(const char* filename, uint32_t* sector, int* size)
 {
     uint32_t i;
     uint32_t* buffer = memalign(0x10, 0x800);
@@ -131,7 +131,7 @@ uint32_t getfw(const char* filename, uint32_t* sector, int* size)
     return freeret(2, buffer);
 }
 
-uint32_t readfw(const char* filename, void** address, int* size)
+static uint32_t readfw(const char* filename, void** address, int* size)
 {
     uint32_t sector;
     uint32_t rc = getfw(filename, &sector, size);
@@ -145,7 +145,7 @@ uint32_t readfw(const char* filename, void** address, int* size)
     return 0;
 }
 
-uint32_t getapplenor(const char* filename, void** address, int* size)
+static uint32_t getapplenor(const char* filename, void** address, int* size)
 {
     uint32_t i;
     for (i = 0xffe00; i < 0x100000; i += 0x28)
@@ -158,7 +158,7 @@ uint32_t getapplenor(const char* filename, void** address, int* size)
     return 1;
 }
 
-uint32_t readapplenor(const char* filename, void** address, int* size)
+static uint32_t readapplenor(const char* filename, void** address, int* size)
 {
     void* noraddr;
     uint32_t rc = getapplenor(filename, &noraddr, size);
@@ -171,8 +171,8 @@ uint32_t readapplenor(const char* filename, void** address, int* size)
     return 0;
 }
 
-uint32_t fat32_resize_patchdirs(uint32_t clusterchain, uint32_t clustoffset,
-                                struct progressbar_state* progressbar, int min, int len)
+static uint32_t fat32_resize_patchdirs(uint32_t clusterchain, uint32_t clustoffset,
+                                       struct progressbar_state* progressbar, int min, int len)
 {
     uint32_t i, j,  rc;
     uint32_t* buffer = (uint32_t*)memalign(0x10, 0x800);
@@ -236,7 +236,7 @@ uint32_t fat32_resize_patchdirs(uint32_t clusterchain, uint32_t clustoffset,
     return 0;
 }
 
-uint32_t fat32_resize_fulldisk(struct progressbar_state* progressbar)
+static uint32_t fat32_resize_fulldisk(struct progressbar_state* progressbar)
 {
     uint32_t i, j, rc;
     uint32_t fatsectors = 1;
@@ -418,7 +418,7 @@ uint32_t fat32_resize_fulldisk(struct progressbar_state* progressbar)
     return 0;
 }
 
-uint32_t fat32_init()
+static uint32_t fat32_init()
 {
     uint32_t i;
     fat32_ok = 0;
@@ -474,7 +474,7 @@ uint32_t fat32_init()
     return 0;
 }
 
-void main(int argc, const char** argv)
+static void main(int argc, const char** argv)
 {
     uint32_t i, j, k, rc;
     uint32_t dummy;

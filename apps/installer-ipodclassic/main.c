@@ -27,7 +27,7 @@
 #include "libmkfat32.h"
 
 
-void main(int argc, const char** argv);
+static void main(int argc, const char** argv);
 EMCORE_APP_HEADER("emCORE installer", main, 127)
 
 
@@ -49,9 +49,9 @@ extern uint32_t commoncost;
 extern uint32_t commonscript[];
 
 
-struct wakeup eventwakeup;
-volatile int button;
-volatile int scrollpos;
+static struct wakeup eventwakeup;
+static volatile int button;
+static volatile int scrollpos;
 
 
 #define SHA1CONFIG    (*((volatile uint32_t*)(0x38000000)))
@@ -59,7 +59,7 @@ volatile int scrollpos;
 #define SHA1RESULT      ((volatile uint32_t*)(0x38000020))
 #define SHA1DATAIN      ((volatile uint32_t*)(0x38000040))
 
-void sha1(void* data, uint32_t size, void* hash)
+static void sha1(void* data, uint32_t size, void* hash)
 {
     int i, space;
     bool done = false;
@@ -105,7 +105,7 @@ void sha1(void* data, uint32_t size, void* hash)
 }
 
 
-void handler(void* user, enum button_event eventtype, int which, int value)
+static void handler(void* user, enum button_event eventtype, int which, int value)
 {
     if (eventtype == BUTTON_PRESS) button |= 1 << which;
     if (eventtype == BUTTON_RELEASE) button &= ~(1 << which);
@@ -114,18 +114,18 @@ void handler(void* user, enum button_event eventtype, int which, int value)
     wakeup_signal(&eventwakeup);
 }
 
-void fat32_progressbar_init(void* user, int max)
+static void fat32_progressbar_init(void* user, int max)
 {
     progressbar_init((struct progressbar_state*)user,
                      15, 304, 135, 159, 0x77ff, 0xe8, 0x125f, 0, max);
 }
 
-void fat32_progressbar_update(void* user, int current)
+static void fat32_progressbar_update(void* user, int current)
 {
     progressbar_setpos((struct progressbar_state*)user, current, false);
 }
 
-void main(int argc, const char** argv)
+static void main(int argc, const char** argv)
 {
     uint32_t i, j, k, rc;
     uint32_t dummy;
