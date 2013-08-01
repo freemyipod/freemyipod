@@ -6,7 +6,7 @@ CROSS   := arm-elf-eabi-
 endif
 
 FLTO    ?= -flto -flto-partition=none
-ifneq ($(shell LC_ALL=C $(CROSS)gcc -flto 2>&1 | grep 'unrecognized command line option'),)
+ifneq ($(shell $(CROSS)gcc -flto 2>&1 | grep '-flto'),)
 FLTO    :=
 endif
 
