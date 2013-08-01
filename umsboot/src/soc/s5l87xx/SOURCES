@@ -1,0 +1,16 @@
+#include "global.h"
+
+startup.S
+clockgate.c
+init.c
+time.c
+lcdif.c
+i2c.c
+
+#ifndef SOC_S5L8701
+irq.c
+#endif
+
+#ifdef S5L87XX_SYNOPSYSOTG_ENABLE
+synopsysotg.c
+#endif

@@ -1,0 +1,6 @@
+#include "global.h"
+
+..
+../../../board/ipodnano4g
+../../../core/synopsysotg
+../../../device/d1759

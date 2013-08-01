@@ -61,7 +61,7 @@ build/bootstrap-ipodnano4g.dfu: build/bootstrap.bin
 	@echo [GENPWN] $<
 	@$(GENPWN) $< $@
 
-build/bootstrap.bin: build/bootstub.bin $(UMSBOOTDIR)/build/ipodnano4g/umsboot.bin
+build/bootstrap.bin: build/bootstub.bin $(UMSBOOTDIR)/build/umsboot/ipodnano4g/release/umsboot.bin
 	@echo [STUBEM] $@
 	@$(STUBEMBED) $^ $@
 
@@ -188,12 +188,12 @@ flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
-$(UMSBOOTDIR)/build/ipodnano4g/umsboot-ipodnano4g.ucl $(UMSBOOTDIR)/build/ipodnano4g/umsboot.bin: umsboot
-	@$(MAKE) -C $(UMSBOOTDIR) ipodnano4g
+$(UMSBOOTDIR)/build/umsboot/ipodnano4g/release/umsboot.bin: umsboot
+	@$(MAKE) -C $(UMSBOOTDIR) TYPE=release TARGET=umsboot/ipodnano4g
 
-flashfiles/umsboot-ipodnano4g.ucl: $(UMSBOOTDIR)/build/ipodnano4g/umsboot-ipodnano4g.ucl
-	@echo [CP]     $@
-	@cp $< $@
+flashfiles/umsboot-ipodnano4g.ucl: $(UMSBOOTDIR)/build/umsboot/ipodnano4g/release/umsboot.bin
+	@echo [UCL]    $@
+	@$(UCLPACK) $< $@
 
 $(BOOTMENUDIR)/build/bootmenu-ipodnano4g.emcoreapp: bootmenu-ipodnano4g
 	@$(MAKE) -C $(BOOTMENUDIR)

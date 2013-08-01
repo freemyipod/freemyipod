@@ -216,12 +216,12 @@ flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
-$(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl $(UMSBOOTDIR)/build/ipodnano2g/umsboot.bin: umsboot
-	@$(MAKE) -C $(UMSBOOTDIR) ipodnano2g
+$(UMSBOOTDIR)/build/umsboot/ipodnano2g/release/umsboot.bin: umsboot
+	@$(MAKE) -C $(UMSBOOTDIR) TYPE=release TARGET=umsboot/ipodnano2g
 
-flashfiles/umsboot-ipodnano2g.ucl: $(UMSBOOTDIR)/build/ipodnano2g/umsboot-ipodnano2g.ucl
-	@echo [CP]     $@
-	@cp $< $@
+flashfiles/umsboot-ipodnano2g.ucl: $(UMSBOOTDIR)/build/umsboot/ipodnano2g/release/umsboot.bin
+	@echo [UCL]    $@
+	@$(UCLPACK) $< $@
 
 $(UNINSTDIR)/build/uninstaller-ipodnano2g.emcoreapp: uninstaller-ipodnano2g
 	@$(MAKE) -C $(UNINSTDIR)

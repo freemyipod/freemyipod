@@ -1,0 +1,6 @@
+#include "global.h"
+
+..
+../../../board/ipodnano2g
+../../../core/synopsysotg
+../../../device/pcf50635

@@ -1,0 +1,16 @@
+#ifndef __SOC_S5L87XX_8702_TARGET_H__
+#define __SOC_S5L87XX_8702_TARGET_H__
+
+#include "soc/s5l87xx/target.h"
+#include "cpu/arm/old/v5/arm926ejs/target.h"
+
+#define CACHEALIGN_BITS 4
+#define DMAALIGN_BITS 4
+#define DEFAULT_SRAM_SIZE 0x3c000
+#define DEFAULT_SDRAM_SIZE 0x04000000
+#define DEFAULT_PAGETABLE_BASEADDR 0x2203c000
+#define SYNOPSYSOTG_TURNAROUND 5
+#define SYNOPSYSOTG_AHB_BURST_LEN 5
+#define SYNOPSYSOTG_CLOCK 0
+
+#endif

@@ -1,0 +1,1 @@
+_CFLAGS += -mcpu=arm926ej-s -marm

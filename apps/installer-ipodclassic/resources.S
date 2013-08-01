@@ -58,14 +58,6 @@ flashscript:
 .byte 0
 .byte 0
 .byte 1
-.word f_boot_emcorelib
-.word f_boot_emcorelib_end - f_boot_emcorelib
-.ascii "libboot "
-
-.byte 0
-.byte 0
-.byte 0
-.byte 1
 .word f_png_emcorelib
 .word f_png_emcorelib_end - f_png_emcorelib
 .ascii "libpng  "
@@ -92,6 +84,14 @@ flashscript:
 .word f_emcore_ipodclassic_ucl
 .word f_emcore_ipodclassic_ucl_end - f_emcore_ipodclassic_ucl
 .ascii "emcore  "
+
+.byte 0
+.byte 0
+.byte 0
+.byte 1
+.word f_boot_emcorelib
+.word f_boot_emcorelib_end - f_boot_emcorelib
+.ascii "libboot "
 
 .byte 0
 .byte 0

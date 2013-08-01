@@ -65,7 +65,7 @@ build/bootstrap-ipodclassic.dfu: build/bootstrap.bin
 	@echo [GENPWN] $<
 	@$(GENPWN) $< $@
 
-build/bootstrap.bin: build/bootstub.bin $(UMSBOOTDIR)/build/ipodclassic/umsboot.bin
+build/bootstrap.bin: build/bootstub.bin $(UMSBOOTDIR)/build/umsboot/ipodclassic/release/umsboot.bin
 	@echo [STUBEM] $@
 	@$(STUBEMBED) $^ $@
 
@@ -198,12 +198,12 @@ flashfiles/mkfat32.emcorelib: $(LIBMKFAT32DIR)/build/mkfat32.emcorelib
 	@echo [CP]     $@
 	@cp $< $@
 
-$(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl $(UMSBOOTDIR)/build/ipodclassic/umsboot.bin: umsboot
-	@$(MAKE) -C $(UMSBOOTDIR) ipodclassic
+$(UMSBOOTDIR)/build/umsboot/ipodclassic/release/umsboot.bin: umsboot
+	@$(MAKE) -C $(UMSBOOTDIR) TYPE=release TARGET=umsboot/ipodclassic
 
-flashfiles/umsboot-ipodclassic.ucl: $(UMSBOOTDIR)/build/ipodclassic/umsboot-ipodclassic.ucl
-	@echo [CP]     $@
-	@cp $< $@
+flashfiles/umsboot-ipodclassic.ucl: $(UMSBOOTDIR)/build/umsboot/ipodclassic/release/umsboot.bin
+	@echo [UCL]    $@
+	@$(UCLPACK) $< $@
 
 $(BOOTMENUDIR)/build/bootmenu-ipodclassic.emcoreapp: bootmenu-ipodclassic
 	@$(MAKE) -C $(BOOTMENUDIR)
