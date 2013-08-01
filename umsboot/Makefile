@@ -1,5 +1,15 @@
 CCACHE  ?= $(shell which ccache)
-CROSS   ?= arm-elf-eabi-
+
+CROSS   ?= arm-none-eabi-
+ifeq ($(shell which $(CROSS)gcc),)
+CROSS   := arm-elf-eabi-
+endif
+
+FLTO    ?= -flto -flto-partition=none
+ifneq ($(shell LC_ALL=C $(CROSS)gcc -flto 2>&1 | grep 'unrecognized command line option'),)
+FLTO    :=
+endif
+
 CC      := $(CCACHE) $(CROSS)gcc
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
@@ -8,10 +18,10 @@ OBJDUMP := $(CROSS)objdump
 CFLAGS_GENERAL  := -c -ffunction-sections -fdata-sections -fmessage-length=0 -Wall $(CFLAGS_GENERAL)
 CFLAGS_ASM      := -x assembler-with-cpp $(CFLAGS_ASM)
 CFLAGS_debug    := -O0 -g3 -gdwarf-2 $(CFLAGS_DEBUG)
-CFLAGS_release  := -flto -flto-partition=none -Os -fno-pie -fno-stack-protector -fomit-frame-pointer $(CFLAGS_RELEASE)
+CFLAGS_release  := $(FLTO) -Os -fno-pie -fno-stack-protector -fomit-frame-pointer $(CFLAGS_RELEASE)
 LDFLAGS_GENERAL := -nostdlib --gc-sections $(LDFLAGS_GENERAL)
 LDFLAGS_debug   := -O0 $(LDFLAGS_DEBUG)
-LDFLAGS_release := -flto -flto-partition=none -Os $(LDFLAGS_RELEASE)
+LDFLAGS_release := $(FLTO) -Os $(LDFLAGS_RELEASE)
 PPFLAGS_GENERAL := -DTARGET_$(subst /,_,$(TARGET)) -DTARGET=$(TARGET) -DCONFIG_H=target/$(TARGET)/config.h -DTARGET_H=target/$(TARGET)/target.h -Isrc
 PPFLAGS_debug   := -DDEBUG
 PPFLAGS_release := -DRELEASE
