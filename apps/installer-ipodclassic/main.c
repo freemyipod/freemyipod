@@ -94,13 +94,12 @@ static void sha1(void* data, uint32_t size, void* hash)
             }
             for (i = 0; i < 16; i++) SHA1DATAIN[i] = tmp32[i];
         }
-        else for (i = 0; i < 16; i++) SHA1DATAIN[i] = databuf[i];
-        databuf += 16;
+        else for (i = 0; i < 16; i++) SHA1DATAIN[i] = *databuf++;
         SHA1CONFIG |= 2;
         while (SHA1CONFIG & 1) sleep(0);
         SHA1CONFIG |= 8;
     }
-    for (i = 0; i < 5; i++) hashbuf[i] = SHA1RESULT[i];
+    for (i = 0; i < 5; i++) *hashbuf++ = SHA1RESULT[i];
     clockgate_enable(0, false);
 }
 
