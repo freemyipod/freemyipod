@@ -15,7 +15,7 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
 
-CFLAGS_GENERAL  := -c -ffunction-sections -fdata-sections -fmessage-length=0 -Wall -I=include $(CFLAGS_GENERAL)
+CFLAGS_GENERAL  := -c -ffunction-sections -fdata-sections -fmessage-length=0 -Wall -I/usr/include $(CFLAGS_GENERAL)
 CFLAGS_ASM      := -x assembler-with-cpp $(CFLAGS_ASM)
 CFLAGS_debug    := -O0 -g3 -gdwarf-2 $(CFLAGS_DEBUG)
 CFLAGS_release  := $(FLTO) -Os -fno-pie -fno-stack-protector -fomit-frame-pointer $(CFLAGS_RELEASE)
