@@ -6,7 +6,7 @@ CROSS   := arm-elf-eabi-
 endif
 
 FLTO    ?= -flto -flto-partition=none
-ifneq ($(shell $(CROSS)gcc -flto 2>&1 | grep -- -flto),)
+ifeq ($(shell $(CROSS)gcc -v --help 2>/dev/null | grep -- -flto),)
 FLTO    :=
 endif
 
