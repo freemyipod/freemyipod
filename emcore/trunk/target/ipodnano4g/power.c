@@ -56,6 +56,7 @@ bool external_power_state(void)
 
 bool vbus_state(void)
 {
+    return true;
     if (TIMEOUT_EXPIRED(power_last_update, 200000))
     {
         power_last_update = USEC_TIMER;
