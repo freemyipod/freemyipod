@@ -26,6 +26,11 @@
 #include "main.h"
 
 
+static struct rtc_datetime datetime;
+static unsigned int batt_level;
+static long next_refresh = 0;
+
+
 struct emcorelib_header* loadlib(uint32_t identifier, uint32_t version, char* filename)
 {
     struct emcorelib_header* lib = get_library(identifier, version, LIBSOURCE_BOOTFLASH, filename);
@@ -48,9 +53,13 @@ void* loadpng(struct libpng_api* libpng, const char* buf, const uint32_t size,
 bool update_display(struct chooser_data* data)
 {
     char buf[6];
-    struct rtc_datetime dt;
-    rtc_read_datetime(&dt);
-    snprintf(buf, sizeof(buf), "%02d:%02d", dt.hour, dt.minute);
+    if (!next_refresh || TIMEOUT_EXPIRED(next_refresh, 10000000))
+    {
+        rtc_read_datetime(&datetime);
+        batt_level = 22 * read_battery_mwh_current(0) / read_battery_mwh_full(0);
+        next_refresh = USEC_TIMER;
+    }
+    snprintf(buf, sizeof(buf), "%02d:%02d", datetime.hour, datetime.minute);
     // clock
     rendertext(framebuf, 287, 4, 320, 0xff3f0000, 0x3fffffff, buf);
     // draw the battery meter box
@@ -64,7 +73,6 @@ bool update_display(struct chooser_data* data)
     ui->blendcolor(1, 6, 0xcf7f0000, framebuf, 27, 5, 320, framebuf, 27, 5, 320);
     // top - right
     ui->blendcolor(1, 4, 0xcf7f0000, framebuf, 28, 6, 320, framebuf, 28, 6, 320);
-    unsigned int batt_level = 22 * read_battery_mwh_current(0) / read_battery_mwh_full(0);
     // remaining battery level
     ui->blendcolor(batt_level, 6, 0x7fff7f7f, framebuf, 5, 5, 320, framebuf, 5, 5, 320);
     // background of the rest space
