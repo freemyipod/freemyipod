@@ -134,7 +134,7 @@ static void usbglue_bus_reset(const struct usb_instance* data, int highspeed)
     usb_config1_descriptors.c1_i0_a0_e1in.wMaxPacketSize = highspeed ? 512 : 64;
 }
 
-static struct usb_interface usb_c1_i0 =
+static const struct usb_interface usb_c1_i0 =
 {
     .bus_reset = ums_bus_reset,
     .ctrl_request = ums_ctrl_request,
@@ -162,7 +162,10 @@ static UMSBOOT_USB_DRIVER_CONFIG_TYPE usb_driver_config = UMSBOOT_USB_DRIVER_CON
 
 static UMSBOOT_USB_DRIVER_STATE_TYPE usb_driver_state = UMSBOOT_USB_DRIVER_STATE;
 
-static struct usb_state usb_state;
+static struct usb_state usb_state =
+{
+    .interface_altsetting = { 0 },
+};
 
 static union usb_ep0_buffer usb_buffer __attribute__((section(".dmabss.usb_buffer"),aligned(CACHEALIGN_SIZE)));
 
@@ -175,7 +178,6 @@ const struct usb_instance usb_data =
     .buffer = &usb_buffer,
     .bus_reset = usbglue_bus_reset,
     .ep0_setup_hook = NULL,
-    .ep0_data_hook = NULL,
     .configuration_count = 1,
     .stringdescriptor_count = 3,
     .devicedescriptor = &usb_devicedescriptor,

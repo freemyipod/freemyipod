@@ -562,8 +562,7 @@ int ums_ctrl_request(const struct usb_instance* data, int interface, union usb_e
         switch (request->setup.bRequest.raw)
         {
         case 0xfe:  // GET_MAX_LUN
-            request->raw[0] = 0;
-            *response = request;
+            data->buffer->raw[0] = 0;
             size = 1;
             break;
         case 0xff:  // STORAGE_RESET

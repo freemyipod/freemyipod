@@ -1,5 +1,6 @@
 #include "global.h"
 #include "protocol/usb/usb.h"
+#include "sys/util.h"
 
 void usb_start_rx(const struct usb_instance* data, union usb_endpoint_number ep, void* buf, int size)
 {
@@ -16,27 +17,35 @@ void usb_set_stall(const struct usb_instance* data, union usb_endpoint_number ep
     data->driver->set_stall(data, ep, stall);
 }
 
-void usb_ep0_start_rx(const struct usb_instance* data, int non_setup)
+void usb_ep0_start_rx(const struct usb_instance* data, int non_setup, bool (*callback)(const struct usb_instance* data, int bytesleft))
 {
+    data->state->ep0_rx_callback = callback;
     data->driver->ep0_start_rx(data, non_setup);
 }
 
-void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len)
+bool usb_ep0_rx_callback(const struct usb_instance* data, int bytesleft)
+{
+    usb_ep0_start_rx(data, 0, NULL);
+    return true;
+}
+
+void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len, bool last, bool (*callback)(const struct usb_instance* data, int bytesleft))
 {
     // Expect zero-length ACK if we are about to actually send data, otherwise expect SETUP.
-    usb_ep0_start_rx(data, !!len);
+    if (last) usb_ep0_start_rx(data, !!len, usb_ep0_rx_callback);
 
+    data->state->ep0_tx_callback = callback;
     data->driver->ep0_start_tx(data, buf, len);
 }
 
-void usb_ep0_expect_setup(const struct usb_instance* data)
+bool usb_ep0_tx_callback(const struct usb_instance* data, int bytesleft)
 {
-    // The next packet needs to be a SETUP, so lock out everything on the IN pipe.
-    union usb_endpoint_number ep = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
-    usb_set_stall(data, ep, 1);
-
-    // Set up the OUT pipe for the SETUP packet, STALLing everything else.
-    usb_ep0_start_rx(data, 0);
+    if (bytesleft || !data->state->ep0_tx_len) return false;
+    int len = MIN(64, data->state->ep0_tx_len);
+    data->state->ep0_tx_ptr += 64;
+    data->state->ep0_tx_len -= len;
+    usb_ep0_start_tx(data, data->state->ep0_tx_ptr, len, !!data->state->ep0_tx_len, usb_ep0_tx_callback);
+    return true;
 }
 
 void usb_unconfigure_ep(const struct usb_instance* data, union usb_endpoint_number ep)
@@ -68,10 +77,10 @@ static void usb_unconfigure(const struct usb_instance* data)
     int i;
     for (i = 0; i < configuration->interface_count; i++)
     {
-        struct usb_interface* interface = configuration->interfaces[i];
-        const struct usb_altsetting* altsetting = interface->altsettings[interface->current_altsetting];
+        const struct usb_interface* interface = configuration->interfaces[i];
+        const struct usb_altsetting* altsetting = interface->altsettings[data->state->interface_altsetting[i]];
         if (altsetting->unset_altsetting)
-            altsetting->unset_altsetting(data, i, interface->current_altsetting);
+            altsetting->unset_altsetting(data, i, data->state->interface_altsetting[i]);
     }
     if (configuration->unset_configuration)
         configuration->unset_configuration(data, configid);
@@ -91,7 +100,7 @@ static const struct usb_endpoint* usb_find_endpoint(const struct usb_instance* d
     for (*ifidx = 0; *ifidx < configuration->interface_count; (*ifidx)++)
     {
         const struct usb_interface* interface = configuration->interfaces[*ifidx];
-        const struct usb_altsetting* altsetting = interface->altsettings[interface->current_altsetting];
+        const struct usb_altsetting* altsetting = interface->altsettings[data->state->interface_altsetting[*ifidx]];
         for (*epidx = 0; *epidx < altsetting->endpoint_count; (*epidx)++)
         {
             const struct usb_endpoint* endpoint = altsetting->endpoints[*epidx];
@@ -108,7 +117,7 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
     // size == -1: try to run default handler, or send STALL if none exists
     // size == 0: send ACK
     // size > 0: send <size> bytes at <addr>, then expect ACK
-    const void* addr = NULL;
+    const void* addr = data->buffer;
     int size = -1;
     switch (buffer->setup.bmRequestType.recipient)
     {
@@ -125,7 +134,6 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
                  || !data->state->current_address || buffer->setup.wValue) break;
                 data->buffer->raw[0] = 0;
                 data->buffer->raw[1] = 1;
-                addr = data->buffer;
                 size = 2;
                 break;
             case USB_SETUP_BREQUEST_SET_ADDRESS:
@@ -162,7 +170,6 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
                 if (buffer->setup.wLength != 1 || buffer->setup.wIndex
                  || !data->state->current_address || buffer->setup.wValue) break;
                 data->buffer->raw[0] = data->state->current_configuration;
-                addr = data->buffer;
                 size = 1;
                 break;
             case USB_SETUP_BREQUEST_SET_CONFIGURATION:
@@ -180,8 +187,8 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
                     int i;
                     for (i = 0; i < configuration->interface_count; i++)
                     {
-                        struct usb_interface* interface = configuration->interfaces[i];
-                        interface->current_altsetting = 0;
+                        const struct usb_interface* interface = configuration->interfaces[i];
+                        data->state->interface_altsetting[i] = 0;
                         const struct usb_altsetting* altsetting = interface->altsettings[0];
                         if (altsetting->set_altsetting) altsetting->set_altsetting(data, i, 0);
                     }
@@ -198,9 +205,9 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
         if (!data->state->current_configuration) break;
         int configid = data->state->current_configuration;
         const struct usb_configuration* configuration = data->configurations[configid - 1];
-        if (buffer->setup.wIndex >= configuration->interface_count) break;
         int intfid = buffer->setup.wIndex;
-        struct usb_interface* interface = configuration->interfaces[intfid];
+        if (intfid >= configuration->interface_count) break;
+        const struct usb_interface* interface = configuration->interfaces[intfid];
         if (interface->ctrl_request) size = interface->ctrl_request(data, intfid, buffer, &addr);
         if (size != -1) break;
         switch (buffer->setup.bmRequestType.type)
@@ -212,26 +219,24 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
                 if (buffer->setup.wLength != 2 || buffer->setup.wValue) break;
                 data->buffer->raw[0] = 0;
                 data->buffer->raw[1] = 0;
-                addr = data->buffer;
                 size = 2;
                 break;
             case USB_SETUP_BREQUEST_GET_INTERFACE:
                 if (buffer->setup.wLength != 1 || buffer->setup.wValue) break;
-                data->buffer->raw[0] = interface->current_altsetting;
-                addr = data->buffer;
+                data->buffer->raw[0] = data->state->interface_altsetting[intfid];
                 size = 1;
                 break;
             case USB_SETUP_BREQUEST_SET_INTERFACE:
             {
                 if (buffer->setup.wLength
                  || buffer->setup.wValue > interface->altsetting_count) break;
-                const struct usb_altsetting* altsetting = interface->altsettings[interface->current_altsetting];
+                const struct usb_altsetting* altsetting = interface->altsettings[data->state->interface_altsetting[intfid]];
                 if (altsetting->unset_altsetting)
-                    altsetting->unset_altsetting(data, intfid, interface->current_altsetting);
-                interface->current_altsetting = buffer->setup.wValue;
-                altsetting = interface->altsettings[interface->current_altsetting];
+                    altsetting->unset_altsetting(data, intfid, data->state->interface_altsetting[intfid]);
+                data->state->interface_altsetting[intfid] = buffer->setup.wValue;
+                altsetting = interface->altsettings[data->state->interface_altsetting[intfid]];
                 if (altsetting->set_altsetting)
-                    altsetting->set_altsetting(data, intfid, interface->current_altsetting);
+                    altsetting->set_altsetting(data, intfid, data->state->interface_altsetting[intfid]);
                 break;
             }
             default: break;
@@ -283,15 +288,22 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
     }
     }
     // See comment at the top of this function
-    if (size == 0) usb_ep0_start_tx(data, NULL, 0);
-    else if (size > 0) usb_ep0_start_tx(data, addr, size);
-    else if (size >= -2) usb_ep0_expect_setup(data);
-}
-
-static void usb_handle_ep0_data(const struct usb_instance* data, union usb_ep0_buffer* buffer, int size)
-{
-    // We don't accept any commands that have an OUT payload. Just STALL it, no matter what it was.
-    usb_ep0_expect_setup(data);
+    if (size == 0) usb_ep0_start_tx(data, NULL, 0, true, NULL);
+    else if (size > 0)
+    {
+        usb_ep0_start_rx(data, 0, NULL);
+        int len = MIN(64, size);
+        data->state->ep0_tx_ptr = addr;
+        data->state->ep0_tx_len = size - len;
+        usb_ep0_start_tx(data, addr, len, !data->state->ep0_tx_len, usb_ep0_tx_callback);
+    }
+    else if (size >= -2)
+    {
+        union usb_endpoint_number ep = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
+        usb_set_stall(data, ep, 1);
+        ep.direction = USB_ENDPOINT_DIRECTION_OUT;
+        usb_set_stall(data, ep, 1);
+    }
 }
 
 void usb_handle_bus_reset(const struct usb_instance* data, int highspeed)
@@ -305,18 +317,20 @@ void usb_handle_bus_reset(const struct usb_instance* data, int highspeed)
         const struct usb_configuration* configuration = data->configurations[c];
         for (i = 0; i < configuration->interface_count; i++)
         {
-            struct usb_interface* interface = configuration->interfaces[i];
+            const struct usb_interface* interface = configuration->interfaces[i];
             if (interface->bus_reset) interface->bus_reset(data, c, i, highspeed);
         }
     }
+
+    // Prime EP0 for the first setup packet.
+    usb_ep0_start_rx(data, 0, NULL);
 }
 
 void usb_handle_timeout(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
 {
-    // Hm, the host didn't fetch our EP0 IN packet, so we feel a bit offended.
-    // Refuse to accept any transfers, until we get a new SETUP token.
-    if (!epnum.number) usb_ep0_expect_setup(data);
-    else
+    // If the host doesn't fetch an EP0 IN packet, we can't do much about it.
+    // This will be recovered by the next SETUP packet.
+    if (epnum.number)
     {
         int epidx;
         int ifidx;
@@ -330,11 +344,18 @@ void usb_handle_xfer_complete(const struct usb_instance* data, union usb_endpoin
 {
     if (!epnum.number)
     {
-        // If this was EP0 IN, stall the pipe. There will only ever be one transfer for each
-        // SETUP transaction, and the next SETUP packet will clear the stall.
-        if (epnum.direction == USB_ENDPOINT_DIRECTION_IN) usb_set_stall(data, epnum, 1);
-        else if (!data->ep0_data_hook || !data->ep0_data_hook(data, data->buffer, 64 - bytesleft))
-            usb_handle_ep0_data(data, data->buffer, 64 - bytesleft);
+        bool (*callback)(const struct usb_instance* data, int size);
+        if (epnum.direction == USB_ENDPOINT_DIRECTION_OUT)
+        {
+            callback = data->state->ep0_rx_callback;
+            data->state->ep0_rx_callback = NULL;
+        }
+        else
+        {
+            callback = data->state->ep0_tx_callback;
+            data->state->ep0_tx_callback = NULL;
+        }
+        if (callback) callback(data, bytesleft);
     }
     else
     {
@@ -346,16 +367,11 @@ void usb_handle_xfer_complete(const struct usb_instance* data, union usb_endpoin
     }
 }
 
-void usb_handle_setup_received(const struct usb_instance* data, union usb_endpoint_number epnum, int back2back)
+void usb_handle_setup_received(const struct usb_instance* data, union usb_endpoint_number epnum)
 {
     if (!epnum.number)
     {
-        // Figure out the location of the newest SETUP packet if there were
-        // multiple back to back ones. If there were more than 3 SETUP packets
-        // in a row, the OTG will take care of it, so we're on the safe side here.
-        void* addr = &data->buffer->raw[8 * (back2back - 1)];
-        union usb_ep0_buffer* buffer = (union usb_ep0_buffer*)addr;
-        if (!data->ep0_setup_hook || !data->ep0_setup_hook(data, buffer)) usb_handle_ep0_setup(data, buffer);
+        if (!data->ep0_setup_hook || !data->ep0_setup_hook(data, data->buffer)) usb_handle_ep0_setup(data, data->buffer);
     }
     else
     {
@@ -363,7 +379,7 @@ void usb_handle_setup_received(const struct usb_instance* data, union usb_endpoi
         int ifidx;
         const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &epidx, &ifidx);
         if (!endpoint) usb_unconfigure_ep(data, epnum);
-        else if (endpoint->setup_received) endpoint->setup_received(data, ifidx, epidx, back2back);
+        else if (endpoint->setup_received) endpoint->setup_received(data, ifidx, epidx);
     }
 }
 

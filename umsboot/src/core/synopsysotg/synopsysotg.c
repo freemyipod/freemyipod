@@ -229,10 +229,6 @@ void synopsysotg_ep0_start_rx(const struct usb_instance* instance, int non_setup
     const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
     struct synopsysotg_state* state = (struct synopsysotg_state*)instance->driver_state;
 
-    // If we don't expect a non-SETUP packet, we can stall the OUT pipe,
-    // SETUP packets will ignore that.
-    if (!non_setup) data->core->outep_regs[0].doepctl.b.stall = 1;
-
     // Set up data destination
     if (data->use_dma) data->core->outep_regs[0].doepdma = instance->buffer;
     else state->endpoints[0].rxaddr = (uint32_t*)instance->buffer;
@@ -245,7 +241,7 @@ void synopsysotg_ep0_start_rx(const struct usb_instance* instance, int non_setup
     // Enable the endpoint
     union synopsysotg_depctl depctl = data->core->outep_regs[0].doepctl;
     depctl.b.epena = 1;
-    depctl.b.cnak = 1;
+    depctl.b.cnak = non_setup;
     data->core->outep_regs[0].doepctl = depctl;
 }
 
@@ -295,9 +291,6 @@ static void synopsysotg_ep0_init(const struct usb_instance* instance)
     union synopsysotg_depctl depctl = { .b = { .usbactep = 1, .nextep = data->core->inep_regs[0].diepctl.b.nextep } };
     data->core->outep_regs[0].doepctl = depctl;
     data->core->inep_regs[0].diepctl = depctl;
-
-    // Prime EP0 for the first setup packet.
-    usb_ep0_expect_setup(instance);
 }
 
 void synopsysotg_irq(const struct usb_instance* instance)
@@ -315,8 +308,8 @@ void synopsysotg_irq(const struct usb_instance* instance)
 
     if (gintsts.b.enumdone)
     {
-        synopsysotg_ep0_init(instance);
         usb_handle_bus_reset(instance, data->core->dregs.dsts.b.enumspd == 0);
+        synopsysotg_ep0_init(instance);
     }
 
     if (gintsts.b.rxstsqlvl)
@@ -389,10 +382,8 @@ void synopsysotg_irq(const struct usb_instance* instance)
                 if (epints.b.setup)
                 {
                     if (data->use_dma) invalidate_dcache(instance->buffer, sizeof(instance->buffer));
-                    union synopsysotg_dep0xfrsiz deptsiz = { .d32 = data->core->outep_regs[0].doeptsiz.d32 };
-                    int back2back = 3 - deptsiz.b.supcnt;
                     synopsysotg_flush_in_endpoint(instance, ep);
-                    usb_handle_setup_received(instance, epnum, back2back);
+                    usb_handle_setup_received(instance, epnum);
                 }
                 else if (epints.b.xfercompl)
                 {

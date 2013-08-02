@@ -194,7 +194,7 @@ struct __attribute__((packed,aligned(4))) usb_endpoint
     void (*xfer_complete)(const struct usb_instance* data, int interface, int endpoint, int bytesleft);
     union __attribute__((packed))
     {
-        void (*setup_received)(const struct usb_instance* data, int interface, int endpoint, int back2back);
+        void (*setup_received)(const struct usb_instance* data, int interface, int endpoint);
         void (*timeout)(const struct usb_instance* data, int interface, int endpoint, int bytesleft);
     };
 };
@@ -216,7 +216,7 @@ struct __attribute__((packed,aligned(4))) usb_interface
     int (*ctrl_request)(const struct usb_instance* data, int interface, union usb_ep0_buffer* request, const void** response);
     uint8_t reserved1;
     uint8_t reserved2;
-    uint8_t current_altsetting;
+    uint8_t reserved3;
     uint8_t altsetting_count;
     const struct usb_altsetting* altsettings[];
 };
@@ -230,15 +230,18 @@ struct __attribute__((packed,aligned(4))) usb_configuration
     uint8_t reserved2;
     uint8_t reserved3;
     uint8_t interface_count;
-    struct usb_interface* interfaces[];
+    const struct usb_interface* interfaces[];
 };
 
 struct __attribute__((packed,aligned(4))) usb_state
 {
+    bool (*ep0_rx_callback)(const struct usb_instance* data, int bytesleft);
+    bool (*ep0_tx_callback)(const struct usb_instance* data, int bytesleft);
+    const void* ep0_tx_ptr;
+    uint16_t ep0_tx_len;
     uint8_t current_address;
     uint8_t current_configuration;
-    uint8_t reserved1;
-    uint8_t reserved2;
+    uint8_t interface_altsetting[];
 };
 
 struct __attribute__((packed,aligned(4))) usb_driver
@@ -267,7 +270,6 @@ struct __attribute__((packed,aligned(4))) usb_instance
     void (*bus_reset)(const struct usb_instance* data, int highspeed);
     int (*ctrl_request)(const struct usb_instance* data, union usb_ep0_buffer* request, const void** response);
     int (*ep0_setup_hook)(const struct usb_instance* data, union usb_ep0_buffer* buf);
-    int (*ep0_data_hook)(const struct usb_instance* data, union usb_ep0_buffer* buf, int size);
     uint8_t configuration_count;
     uint8_t stringdescriptor_count;
     uint8_t reserved1;
@@ -282,9 +284,9 @@ extern void usb_exit(const struct usb_instance* data);
 extern void usb_handle_bus_reset(const struct usb_instance* data, int highspeed);
 extern void usb_handle_timeout(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft);
 extern void usb_handle_xfer_complete(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft);
-extern void usb_handle_setup_received(const struct usb_instance* data, union usb_endpoint_number epnum, int back2back);
-extern void usb_ep0_start_rx(const struct usb_instance* data, int non_setup);
-extern void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len);
+extern void usb_handle_setup_received(const struct usb_instance* data, union usb_endpoint_number epnum);
+extern void usb_ep0_start_rx(const struct usb_instance* data, int non_setup, bool (*callback)(const struct usb_instance* data, int bytesleft));
+extern void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len, bool last, bool (*callback)(const struct usb_instance* data, int bytesleft));
 extern void usb_ep0_expect_setup(const struct usb_instance* data);
 extern void usb_start_rx(const struct usb_instance* data, union usb_endpoint_number ep, void* buf, int size);
 extern void usb_start_tx(const struct usb_instance* data, union usb_endpoint_number ep, const void* buf, int size);
