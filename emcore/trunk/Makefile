@@ -13,8 +13,9 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 UCLPACK := ucl2e10singleblk
 
-CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -Iexport -ffunction-sections -fdata-sections -marm
-LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
+CFLAGS   += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -Iexport -ffunction-sections -fdata-sections -marm
+LDFLAGS  += "$(shell $(CC) -print-libgcc-file-name)" --gc-sections
+PPCFLAGS += -DASM_FILE
 
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
 preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:" | sed -e "s:^\\./::")
@@ -27,7 +28,7 @@ TARGETS := $(call preprocess,TARGETS,-I.)
 define TARGET_template
 -include target/$(1)/target.mk
 
-SRC_$(1) := $$(call preprocesspaths,SOURCES,-DTARGET_$(1) -Itarget/$(1) -I.)
+SRC_$(1) := $$(call preprocesspaths,SOURCES,-DTARGET_$(1) -DTARGET=\"$(1)\" -DCONFIG_H=\"target/$(1)/config.h\" -DTARGET_H=\"target/$(1)/target.h\" -Itarget/$(1) -I.)
 OBJ_$(1) := $$(SRC_$(1):%.c=build/$(1)/%.o)
 OBJ_$(1) := $$(OBJ_$(1):%.S=build/$(1)/%.o)
 

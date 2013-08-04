@@ -39,7 +39,7 @@
 #include "i2c.h"
 #endif
 #ifdef HAVE_USB
-#include "usb/usb.h"
+#include "usb/usbglue.h"
 #endif
 #ifdef HAVE_STORAGE
 #include "storage.h"
@@ -147,7 +147,7 @@ void initthread(void* arg0, void* arg1, void* arg2, void* arg3)
                   sizeof(ib->storagestack), USER_THREAD, 127, true, ib, NULL, NULL, NULL);
 #endif
 #ifdef HAVE_USB
-    usb_init();
+    usbmanager_init();
 #endif
 #ifdef HAVE_BACKLIGHT
     backlight_init();

@@ -23,98 +23,93 @@
 
 #include "global.h"
 #include "usb/usbtarget.h"
-#include "usb/usbdrv.h"
+#include "usb/usb.h"
 #include "nand.h"
 
 
-int usb_target_handle_request(uint32_t* buffer, int bufsize)
+int usb_target_handle_request(uint32_t* buf, int bufsize, void** addr)
 {
-    int size = 0;
-    switch (buffer[0])
+    int len = 0;
+    switch (buf[0])
     {
         case 0xffff0001:  // GET NAND INFO
         {
-            int banks = 1;
+            int banks;
             const struct nand_device_info_type* type = nand_get_device_type(0);
-            for (; banks < 4; banks++)
+            for (banks = 1; banks < 4; banks++)
                 if (!nand_get_device_type(banks))
                     break;
-            buffer[0] = 1;
-            buffer[1] = type->id;
-            buffer[2] = (banks << 16) | type->pagesperblock;
-            buffer[3] = (type->blocks << 16) | type->userblocks;
-            size = 16;
+            buf[0] = 1;
+            buf[1] = type->id;
+            buf[2] = (banks << 16) | type->pagesperblock;
+            buf[3] = (type->blocks << 16) | type->userblocks;
             break;
         }
         case 0xffff0002:  // READ NAND PAGES
         case 0xffff0003:  // WRITE NAND PAGES
         {
-            int banks = 1;
+            int banks;
             const struct nand_device_info_type* type = nand_get_device_type(0);
-            for (; banks < 4; banks++)
+            for (banks = 1; banks < 4; banks++)
                 if (!nand_get_device_type(banks))
                     break;
             uint32_t pagecount = banks * type->blocks * type->pagesperblock;
-            if (buffer[2] + buffer[3] > pagecount)
+            if (buf[2] + buf[3] > pagecount)
             {
-                buffer[0] = 0xffff0001;
-                size = 16;
+                buf[0] = 0xffff0001;
                 break;
             }
             int i;
-            uint32_t database = buffer[1] & ~0xc0000000;
-            uint32_t sparebase = database + buffer[3] * 2048;
-            uint32_t resultbase = sparebase + buffer[3] * 64;
-            int doecc = buffer[1] & 0x80000000;
-            int checkempty = buffer[1] & 0x40000000;
-            for (i = 0; i < buffer[3]; i++)
+            uint32_t database = buf[1] & ~0xc0000000;
+            uint32_t sparebase = database + buf[3] * 2048;
+            uint32_t resultbase = sparebase + buf[3] * 64;
+            int doecc = buf[1] & 0x80000000;
+            int checkempty = buf[1] & 0x40000000;
+            for (i = 0; i < buf[3]; i++)
             {
-                int lpage = buffer[2] + i;
+                int lpage = buf[2] + i;
                 int bank = lpage % banks;
                 int page = lpage / banks;
                 int result;
-                if (buffer[0] == 0xffff0002)
+                if (buf[0] == 0xffff0002)
                     result = nand_read_page(bank, page, (void*)(database + i * 2048),
                                             (void*)(sparebase + i * 64), doecc, checkempty);
-                else if (buffer[0] == 0xffff0003)
+                else if (buf[0] == 0xffff0003)
                     result = nand_write_page(bank, page, (void*)(database + i * 2048),
                                              (void*)(sparebase + i * 64), doecc);
                 *((int*)(resultbase + i * 4)) = result;
             }
-            buffer[0] = 1;
-            size = 16;
+            buf[0] = 1;
             break;
         }
         case 0xffff0004:  // ERASE NAND PAGES
         {
-            int banks = 1;
+            int banks;
             const struct nand_device_info_type* type = nand_get_device_type(0);
-            for (; banks < 4; banks++)
+            for (banks = 1; banks < 4; banks++)
                 if (!nand_get_device_type(banks))
                     break;
             uint32_t blockcount = banks * type->blocks;
-            if (buffer[2] + buffer[3] > blockcount)
+            if (buf[2] + buf[3] > blockcount)
             {
-                buffer[0] = 0xffff0001;
-                size = 16;
+                buf[0] = 0xffff0001;
                 break;
             }
             int i;
-            for (i = 0; i < buffer[3]; i++)
+            for (i = 0; i < buf[3]; i++)
             {
-                int lblock = buffer[2] + i;
+                int lblock = buf[2] + i;
                 int bank = lblock % banks;
                 int block = lblock / banks;
                 int result = nand_block_erase(bank, block * type->pagesperblock); 
-                *((int*)(buffer[1] + i * 4)) = result;
+                *((int*)(buf[1] + i * 4)) = result;
             }
-            buffer[0] = 1;
-            size = 16;
+            buf[0] = 1;
             break;
         }
         default:
-            buffer[0] = 2;
-            size = 16;
+            buf[0] = 2;
+            break;
     }
-    return size;
+    return len;
 }

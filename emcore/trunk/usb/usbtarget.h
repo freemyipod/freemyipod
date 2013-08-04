@@ -28,7 +28,7 @@
 #include "global.h"
 
 
-int usb_target_handle_request(uint32_t* buffer, int bufsize);
+int usb_target_handle_request(uint32_t* buffer, int bufsize, void** addr);
 
 
 #endif

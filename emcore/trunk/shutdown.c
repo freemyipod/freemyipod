@@ -31,7 +31,7 @@ void shutdown(bool shutdownhw)
     DEBUGF("Shutting down...");
     thread_killlevel(USER_THREAD, false);
 #ifdef HAVE_USB
-    usb_exit();
+    usbmanager_exit();
 #endif
 #ifdef HAVE_STORAGE_FLUSH
     storage_flush();

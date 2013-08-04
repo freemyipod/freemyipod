@@ -24,7 +24,7 @@
 #include "global.h"
 #include "console.h"
 #include "lcdconsole.h"
-#include "usb/dbgconsole.h"
+#include "usb/usbdebug.h"
 #include "uart.h"
 #include "format.h"
 #include "thread.h"

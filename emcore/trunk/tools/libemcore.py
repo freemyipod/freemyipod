@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #
-#    Copyright 2010 TheSeven, benedikt93, Farthen
+#    Copyright 2013 TheSeven, benedikt93, Farthen
 #
 #
 #    This file is part of emCORE.
@@ -108,32 +108,14 @@ class Emcore(object):
         
         self.getversioninfo()
         if self.lib.dev.swtypeid != 2:
-            if self.lib.dev.swtypeid == 1:
-                raise DeviceError("Connected to emBIOS. emBIOS is not supported by libemcore")
-            else:
-                raise DeviceError("Connected to unknown software type. Exiting")
+            raise DeviceError("Connected to unknown software type. Exiting")
         
-        self.getpacketsizeinfo()
         self.getmallocpoolbounds()
-    
-    @staticmethod
-    def _alignsplit(addr, size, blksize, align):
-        if size <= blksize: return (size, 0, 0)
-        end = addr + size
-        if addr & (align - 1):
-            bodyaddr = (addr + min(size, blksize)) & ~(align - 1)
-        else: bodyaddr = addr
-        headsize = bodyaddr - addr
-        if (size - headsize) & (align - 1):
-            tailaddr = (end - min(end - bodyaddr, blksize) + align - 1) & ~(align - 1)
-        else: tailaddr = end
-        tailsize = end - tailaddr
-        return (headsize, tailaddr - bodyaddr, tailsize)
     
     @command()
     def _readmem(self, addr, size):
         """ Reads the memory from location 'addr' with size 'size'
-            from the device.
+            from the device. Can handle up to 0xff0 bytes.
         """
         resp = self.lib.monitorcommand(struct.pack("<IIII", 4, addr, size, 0), "III%ds" % size, (None, None, None, "data"))
         return resp.data
@@ -141,25 +123,9 @@ class Emcore(object):
     @command()
     def _writemem(self, addr, data):
         """ Writes the data in 'data' to the location 'addr'
-            in the memory of the device.
+            in the memory of the device. Can handle up to 0xff0 bytes.
         """
         return self.lib.monitorcommand(struct.pack("<IIII%ds" % len(data), 5, addr, len(data), 0, data), "III", (None, None, None))
-    
-    @command()
-    def _readdma(self, addr, size):
-        """ Reads the memory from location 'addr' with size 'size'
-            from the device. This uses DMA and the data in endpoint.
-        """
-        self.lib.monitorcommand(struct.pack("<IIII", 6, addr, size, 0), "III", (None, None, None))
-        return struct.unpack("<%ds" % size, self.lib.dev.din(size))[0]
-    
-    @command()
-    def _writedma(self, addr, data):
-        """ Writes the data in 'data' to the location 'addr'
-            in the memory of the device. This uses DMA and the data out endpoint.
-        """
-        self.lib.monitorcommand(struct.pack("<IIII", 7, addr, len(data), 0), "III", (None, None, None))
-        return self.lib.dev.dout(data)
     
     @command()
     def getversioninfo(self):
@@ -176,25 +142,9 @@ class Emcore(object):
         return resp
     
     @command()
-    def getpacketsizeinfo(self):
-        """ This returns the emCORE max packet size information.
-            It also sets the properties of the device object accordingly.
-        """
-        resp = self.lib.monitorcommand(struct.pack("<IIII", 1, 1, 0, 0), "HHII", ("coutmax", "cinmax", "doutmax", "dinmax"))
-        self.logger.debug("Device cout packet size limit = %d\n" % resp.coutmax)
-        self.lib.dev.packetsizelimit.cout = resp.coutmax
-        self.logger.debug("Device cin packet size limit = %d\n" % resp.cinmax)
-        self.lib.dev.packetsizelimit.cin = resp.cinmax
-        self.logger.debug("Device din packet size limit = %d\n" % resp.doutmax)
-        self.lib.dev.packetsizelimit.din = resp.dinmax
-        self.logger.debug("Device dout packet size limit = %d\n" % resp.dinmax)
-        self.lib.dev.packetsizelimit.dout = resp.doutmax
-        return resp
-    
-    @command()
     def getmallocpoolbounds(self):
         """ This returns the memory range of the malloc pool """
-        resp = self.lib.monitorcommand(struct.pack("<IIII", 1, 2, 0, 0), "III", ("lower", "upper", None))
+        resp = self.lib.monitorcommand(struct.pack("<IIII", 1, 1, 0, 0), "III", ("lower", "upper", None))
         self.logger.debug("Malloc pool bounds = 0x%X - 0x%X\n" % (resp.lower, resp.upper))
         self.lib.dev.mallocpool.lower = resp.lower
         self.lib.dev.mallocpool.upper = resp.upper
@@ -203,73 +153,40 @@ class Emcore(object):
     @command()
     def reset(self, force=False):
         """ Reboot the device """
-        if force:
-            return self.lib.monitorcommand(struct.pack("<IIII", 2, 0, 0, 0))
-        else:
-            return self.lib.monitorcommand(struct.pack("<IIII", 2, 1, 0, 0), "III", (None, None, None))
+        return self.lib.monitorcommand(struct.pack("<IIII", 2, 0 if force else 1, 0, 0))
     
     @command()
     def poweroff(self, force=False):
         """ Powers the device off. """
-        if force:
-            return self.lib.monitorcommand(struct.pack("<IIII", 3, 0, 0, 0))
-        else:
-            return self.lib.monitorcommand(struct.pack("<IIII", 3, 1, 0, 0), "III", (None, None, None))
+        return self.lib.monitorcommand(struct.pack("<IIII", 3, 0 if force else 1, 0, 0))
     
     @command()
     def read(self, addr, size):
         """ Reads the memory from location 'addr' with size 'size'
-            from the device. This cares about too long packages
-            and decides whether to use DMA or not.
+            from the device. This takes care of splitting long requests.
         """
-        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
-        din_maxsize = self.lib.dev.packetsizelimit.din
         data = b""
-        (headsize, bodysize, tailsize) = self._alignsplit(addr, size, cin_maxsize, 16)
-        self.logger.debug("Downloading %d bytes from 0x%X, split as (%d/%d/%d)\n" % (size, addr, headsize, bodysize, tailsize))
-        if headsize != 0:
-            data += self._readmem(addr, headsize)
-            addr += headsize
-        while bodysize > 0:
-            if bodysize >= 2 * cin_maxsize:
-                readsize = min(bodysize, din_maxsize)
-                data += self._readdma(addr, readsize)
-            else:
-                readsize = min(bodysize, cin_maxsize)
-                data += self._readmem(addr, readsize)
+        self.logger.debug("Downloading %d bytes from 0x%X\n" % (size, addr))
+        while size > 0:
+            readsize = min(size, 0xf00)
+            data += self._readmem(addr, readsize)
             addr += readsize
-            bodysize -= readsize
-        if tailsize != 0:
-            data += self._readmem(addr, tailsize)
+            size -= readsize
         return data
     
     @command()
     def write(self, addr, data):
         """ Writes the data in 'data' to the location 'addr'
-            in the memory of the device. This cares about too long packages
-            and decides whether to use DMA or not.
+            in the memory of the device. This takes care of splitting long requests.
         """
-        cout_maxsize = self.lib.dev.packetsizelimit.cout - self.lib.headersize
-        dout_maxsize = self.lib.dev.packetsizelimit.dout
-        (headsize, bodysize, tailsize) = self._alignsplit(addr, len(data), cout_maxsize, 16)
-        self.logger.debug("Uploading %d bytes to 0x%X, split as (%d/%d/%d)\n" % (len(data), addr, headsize, bodysize, tailsize))
+        self.logger.debug("Uploading %d bytes to 0x%X\n" % (len(data), addr))
         offset = 0
-        if headsize != 0:
-            self._writemem(addr, data[offset:offset+headsize])
-            offset += headsize
-            addr += headsize
-        while bodysize > 0:
-            if bodysize >= 2 * cout_maxsize:
-                writesize = min(bodysize, dout_maxsize)
-                self._writedma(addr, data[offset:offset+writesize])
-            else:
-                writesize = min(bodysize, cout_maxsize)
-                self._writemem(addr, data[offset:offset+writesize])
+        while size > 0:
+            writesize = min(size, 0xf00)
+            self._writemem(addr, data[offset:offset+writesize])
             offset += writesize
             addr += writesize
-            bodysize -= writesize
-        if tailsize != 0:
-            self._writemem(addr, data[offset:offset+tailsize])
+            size -= writesize
         return data
     
     @command()
@@ -287,7 +204,7 @@ class Emcore(object):
             Reads only a maximum of 'maxlength' chars.
         """
         if addr == 0: return "<NULL>"
-        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
+        cin_maxsize = 1024
         string = ""
         done = False
         while not done and (len(string) < maxlength or maxlength < 0):
@@ -316,16 +233,14 @@ class Emcore(object):
     def i2cwrite(self, index, slaveaddr, startaddr, data):
         """ Writes data to an i2c slave """
         size = len(data)
-        if size > 256 or size < 1:
-            raise ArgumentError("Size must be a number between 1 and 256")
-        if size == 256:
-            size = 0
+        if size > 48 or size < 1:
+            raise ArgumentError("Size must be a number between 1 and 48")
         return self.lib.monitorcommand(struct.pack("<IBBBBII%ds" % size, 9, index, slaveaddr, startaddr, size, 0, 0, data), "III", (None, None, None))
     
     @command()
     def usbcread(self):
         """ Reads one packet with the maximal cin size from the console """
-        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
+        cin_maxsize = 48
         resp = self.lib.monitorcommand(struct.pack("<IIII", 10, cin_maxsize, 0, 0), "III%ds" % cin_maxsize, ("validsize", "buffersize", "queuesize", "data"))
         resp.data = resp.data[:resp.validsize].decode("latin_1")
         resp.maxsize = cin_maxsize
@@ -334,7 +249,7 @@ class Emcore(object):
     @command()
     def usbcwrite(self, data):
         """ Writes data to the USB console """
-        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
+        cin_maxsize = 48
         size = len(data)
         while len(data) > 0:
             writesize = min(cin_maxsize, len(data))
@@ -347,7 +262,7 @@ class Emcore(object):
         """ Reads one packet with the maximal cin size from the device consoles
             identified with the specified bitmask
         """
-        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
+        cin_maxsize = 48
         resp = self.lib.monitorcommand(struct.pack("<IIII", 13, bitmask, cin_maxsize, 0), "III%ds" % cin_maxsize, ("size", None, None))
         resp.data = resp.data[size:]
         resp.maxsize = cin_maxsize
@@ -358,7 +273,7 @@ class Emcore(object):
         """ Writes data to the device consoles 
             identified with the specified bitmask.
         """
-        cin_maxsize = self.lib.dev.packetsizelimit.cin - self.lib.headersize
+        cin_maxsize = 48
         size = len(data)
         while len(data) > 0:
             writesize = min(cin_maxsize, len(data))
@@ -385,7 +300,7 @@ class Emcore(object):
         while structptr != 0:
             threadstruct = scheduler_thread()
             self.logger.debug("Reading thread struct of thread at 0x%X\n" % structptr)
-            threaddata = self.read(structptr, ctypes.sizeof(scheduler_thread))
+            threaddata = self._readmem(structptr, ctypes.sizeof(scheduler_thread))
             threadstruct._from_string(threaddata)
             threadstruct = threadstruct._to_bunch()
             threadstruct.id = id # only for the purpose of detecting the idle thread as it is always the first one
@@ -474,18 +389,35 @@ class Emcore(object):
         return self.lib.monitorcommand(struct.pack("<IIII", 20, 0, 0, 0), "III", (None, None, None))
     
     @command()
-    def execimage(self, addr):
-        """ Runs the emCORE app at 'addr' """
-        return self.lib.monitorcommand(struct.pack("<IIII", 21, addr, 0, 0), "III", ("thread", None, None))
+    def execimage(self, addr, args = [], copy = False):
+        """ Runs the emCORE app at 'addr' with command line arguments 'args' """
+        flags = 1 if copy else 0
+        argptr = b""
+        argdata = b""
+        ptr = len(args) * 4
+        for arg in args:
+           arg = arg.encode("utf_8") + "\0"
+           argptr += struct.pack("<I", ptr);
+           argdata += arg
+           ptr += len(arg)
+        if ptr > 48:
+            buf = self.malloc(ptr)
+            try:
+                self._writemem(buf, argptr + argdata)
+                result = self.lib.monitorcommand(struct.pack("<IIBBBBI", 21, addr, 0, 0, flags, len(args), buf), "III", ("thread", None, None))
+            finally: self.free(buf)
+        else: return self.lib.monitorcommand(struct.pack("<IIBBBBI", 21, addr, 0, 0, flags, len(args), 0) + argptr + argdata, "III", ("thread", None, None))
     
     @command()
-    def run(self, app):
-        """ Uploads and runs the emCORE app in the string 'app' """
+    def run(self, app, args = []):
+        """ Uploads and runs the emCORE app in the string 'app'
+            with command line arguments 'args'
+        """
         if app[:8].decode("latin_1") != "emCOexec":
             raise ArgumentError("The specified app is not an emCORE application")
         baseaddr = self.malloc(len(app))
         self.write(baseaddr, app)
-        result = self.execimage(baseaddr)
+        result = self.execimage(baseaddr, args)
         return Bunch(thread=result.thread)
     
     @command(timeout = 5000)
@@ -719,7 +651,14 @@ class Emcore(object):
         """ Opens a file and returns the handle """
         fn = filename.encode("utf_8")
         self.logger.debug("Opening remote file %s with mode %d\n" % (filename, mode))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(fn), 30, mode, 0, 0, fn, 0), "III", ("fd", None, None))
+        bytes = len(fn) + 1
+        if bytes > 48:
+            buf = self.malloc(bytes)
+            try:
+                self._writemem(buf, fn + b"\0")
+                result = self.lib.monitorcommand(struct.pack("<IIII", 30, mode, 0, buf), "III", ("fd", None, None))
+            finally: self.free(buf)
+        else: result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(fn), 30, mode, 0, 0, fn, 0), "III", ("fd", None, None))
         if result.fd > 0x80000000:
             raise DeviceError("file_open(filename=\"%s\", mode=0x%X) failed with RC=0x%08X, errno=%d" % (filename, mode, result.fd, self.errno()))
         self.logger.debug("Opened file as handle 0x%X\n" % result.fd)
@@ -830,7 +769,14 @@ class Emcore(object):
         """ Removes a file """
         fn = filename.encode("utf_8")
         self.logger.debug("Deleting file %s\n" % (filename))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(fn), 40, 0, 0, 0, fn, 0), "III", ("rc", None, None))
+        bytes = len(fn)
+        if bytes > 48:
+            buf = self.malloc(bytes)
+            try:
+                self._writemem(buf, fn + b"\0")
+                result = self.lib.monitorcommand(struct.pack("<IIII", 40, 0, 0, buf), "III", ("rc", None, None))
+            finally: self.free(buf)
+        else: result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(fn), 40, 0, 0, 0, fn, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("file_unlink(filename=\"%s\") failed with RC=0x%08X, errno=%d" % (filename, result.rc, self.errno()))
         self.logger.debug("Delete file result: 0x%X\n" % (result.rc))
@@ -842,7 +788,13 @@ class Emcore(object):
         on = oldname.encode("utf_8")
         nn = newname.encode("utf_8")
         self.logger.debug("Renaming file %s to %s\n" % (on, nn))
-        result = self.lib.monitorcommand(struct.pack("<IIII248s%dsB" % min(247, len(nn)), 41, 0, 0, 0, on, nn, 0), "III", ("rc", None, None))
+        obytes = len(on) + 1
+        nbytes = len(nn) + 1
+        buf = self.malloc(obytes + nbytes)
+        try:
+            self._writemem(buf, on + b"\0" + nn + b"\0")
+            result = self.lib.monitorcommand(struct.pack("<IIII", 41, 0, buf, buf + obytes), "III", ("rc", None, None))
+        finally: self.free(buf)
         if result.rc > 0x80000000:
             raise DeviceError("file_rename(oldname=\"%s\", newname=\"%s\") failed with RC=0x%08X, errno=%d" % (oldname, newname, result.rc, self.errno()))
         self.logger.debug("Rename file result: 0x%X\n" % (result.rc))
@@ -853,7 +805,14 @@ class Emcore(object):
         """ Opens a directory and returns the handle """
         dn = dirname.encode("utf_8")
         self.logger.debug("Opening directory %s\n" % (dirname))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dn), 42, 0, 0, 0, dn, 0), "III", ("handle", None, None))
+        bytes = len(dn)
+        if bytes > 48:
+            buf = self.malloc(bytes)
+            try:
+                self._writemem(buf, dn + b"\0")
+                result = self.lib.monitorcommand(struct.pack("<IIII", 42, 0, 0, buf), "III", ("handle", None, None))
+            finally: self.free(buf)
+        else: result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dn), 42, 0, 0, 0, dn, 0), "III", ("handle", None, None))
         if result.handle == 0:
             raise DeviceError("dir_open(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.handle, self.errno()))
         self.logger.debug("Opened directory as handle 0x%X\n" % (result.handle))
@@ -916,7 +875,14 @@ class Emcore(object):
         """ Creates a directory """
         dn = dirname.encode("utf_8")
         self.logger.debug("Creating directory %s\n" % (dirname))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dn), 47, 0, 0, 0, dn, 0), "III", ("rc", None, None))
+        bytes = len(dn)
+        if bytes > 48:
+            buf = self.malloc(bytes)
+            try:
+                self._writemem(buf, dn + b"\0")
+                result = self.lib.monitorcommand(struct.pack("<IIII", 47, 0, 0, buf), "III", ("rc", None, None))
+            finally: self.free(buf)
+        else: result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dn), 47, 0, 0, 0, dn, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_create(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
         self.logger.debug("Create directory result: 0x%X\n" % (result.rc))
@@ -927,7 +893,14 @@ class Emcore(object):
         """ Removes an (empty) directory """
         dn = dirname.encode("utf_8")
         self.logger.debug("Removing directory %s\n" % (dirname))
-        result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dn), 48, 0, 0, 0, dn, 0), "III", ("rc", None, None))
+        bytes = len(dn)
+        if bytes > 48:
+            buf = self.malloc(bytes)
+            try:
+                self._writemem(buf, dn + b"\0")
+                result = self.lib.monitorcommand(struct.pack("<IIII", 48, 0, 0, buf), "III", ("rc", None, None))
+            finally: self.free(buf)
+        else: result = self.lib.monitorcommand(struct.pack("<IIII%dsB" % len(dn), 48, 0, 0, 0, dn, 0), "III", ("rc", None, None))
         if result.rc > 0x80000000:
             raise DeviceError("dir_remove(dirname=\"%s\") failed with RC=0x%08X, errno=%d" % (dirname, result.rc, self.errno()))
         self.logger.debug("Remove directory result: 0x%X\n" % (result.rc))
@@ -1041,10 +1014,10 @@ class Lib(object):
     
     def monitorcommand(self, cmd, rcvdatatypes=None, rcvstruct=None):
         self.logger.debug("Sending monitorcommand [0x%s]\n" % base64.b16encode(cmd[3::-1]).decode("ascii"))
-        writelen = self.dev.cout(cmd)
+        writelen = self.dev.send(cmd)
         if rcvdatatypes:
             rcvdatatypes = "I" + rcvdatatypes # add the response
-            data = self.dev.cin(struct.calcsize(rcvdatatypes))
+            data = self.dev.receive(struct.calcsize(rcvdatatypes))
             data = struct.unpack(rcvdatatypes, data)
             try:
                 response = responsecode(data[0])
@@ -1084,20 +1057,13 @@ class Dev(object):
         self.logger = logger
         self.logger.debug("Initializing Dev object\n")
         
-        self.interface = 0
+        self.interface = None
+        self.claimed = False
         self.timeout = 1000
         
         self.connect()
-        self.findEndpoints()
         
         self.logger.debug("Successfully connected to device\n")
-        
-        # Device properties
-        self.packetsizelimit = Bunch()
-        self.packetsizelimit.cout = None
-        self.packetsizelimit.cin = None
-        self.packetsizelimit.dout = None
-        self.packetsizelimit.din = None
         
         self.version = Bunch()
         self.version.revision = None
@@ -1112,79 +1078,45 @@ class Dev(object):
         self.mallocpool.upper = None
     
     def __del__(self):
-        self.disconnect()
-    
-    def findEndpoints(self):
-        self.logger.debug("Searching for device endpoints:\n")
-        epcounter = 0
-        self.endpoint = Bunch()
-        for cfg in self.dev:
-            for intf in cfg:
-                for ep in intf:
-                    if epcounter == 0:
-                        self.logger.debug("Found cout endpoint at 0x%X\n" % ep.bEndpointAddress)
-                        self.endpoint.cout = ep.bEndpointAddress
-                    elif epcounter == 1:
-                        self.logger.debug("Found cin endpoint at 0x%X\n" % ep.bEndpointAddress)
-                        self.endpoint.cin = ep.bEndpointAddress
-                    elif epcounter == 2:
-                        self.logger.debug("Found dout endpoint at 0x%X\n" % ep.bEndpointAddress)
-                        self.endpoint.dout = ep.bEndpointAddress
-                    elif epcounter == 3:
-                        self.logger.debug("Found din endpoint at 0x%X\n" % ep.bEndpointAddress)
-                        self.endpoint.din = ep.bEndpointAddress
-                    epcounter += 1
-        if epcounter <= 3:
-            raise DeviceError("Not all endpoints found in the descriptor. Only %d endpoints found, at least 4 endpoints were expeceted" % epcounter)
+        if self.claimed: self.disconnect()
     
     def connect(self):
         self.logger.debug("Looking for emCORE device\n")
         self.dev = usb.core.find(idVendor=self.idVendor, idProduct=self.idProduct)
         if self.dev is None:
             raise DeviceNotFoundError()
-        self.logger.debug("Device Found!\n")
-        self.logger.debug("Setting first configuration\n")
-        self.dev.set_configuration()
+        self.logger.debug("Device found!\n")
+        self.logger.debug("Searching for device interface:\n")
+        for cfg in self.dev:
+            for intf in cfg:
+                if intf.bInterfaceClass == 0xff and intf.bInterfaceSubClass == 0 and intf.bInterfaceProtocol == 0:
+                    self.interface = intf.bInterfaceNumber
+                    break
+        if self.interface is None:
+            raise DeviceNotFoundError()
+        self.logger.debug("Debugger interface found!\n")
+        self.logger.debug("Claiming interface...\n")
+        usb.util.claim_interface(self.dev, self.interface)
+        self.claimed = True
     
     def disconnect(self):
-        pass
+        usb.util.release_interface(self.dev, self.interface)
+        self.claimed = False
     
-    def send(self, endpoint, data):
-        size = self.dev.write(endpoint, data, self.interface, self.timeout)
+    def send(self, data):
+        if len(data) > 0x1000: raise DeviceError("Attempting to send a message that is too big!")
+        size = self.dev.ctrl_transfer(0x41, 0x00, 0, self.interface, data, self.timeout)
         if size != len(data):
             raise SendError("Not all data was written!")
         return len
     
-    def receive(self, endpoint, size):
-        read = self.dev.read(endpoint, size, self.interface, self.timeout)
+    def receive(self, size):
+        if size > 0x1000: raise DeviceError("Attempting to receive a message that is too big!")
+        read = self.dev.ctrl_transfer(0xc1, 0x00, 0, self.interface, size, self.timeout)
         if len(read) != size:
             raise ReceiveError("Requested size and read size don't match!")
         return read
     
-    def cout(self, data):
-        self.logger.debug("Sending data to cout endpoint with the size %d\n" % len(data))
-        if self.packetsizelimit.cout and len(data) > self.packetsizelimit.cout:
-            raise SendError("Packet too big")
-        return self.send(self.endpoint.cout, data)
-    
-    def cin(self, size):
-        self.logger.debug("Receiving data on the cin endpoint with the size %d\n" % size)
-        if self.packetsizelimit.cin and size > self.packetsizelimit.cin:
-            raise ReceiveError("Packet too big")
-        return self.receive(self.endpoint.cin, size)
-    
-    def dout(self, data):
-        self.logger.debug("Sending data to cout endpoint with the size %d\n" % len(data))
-        if self.packetsizelimit.dout and len(data) > self.packetsizelimit.dout:
-            raise SendError("Packet too big")
-        return self.send(self.endpoint.dout, data)
-    
-    def din(self, size):
-        self.logger.debug("Receiving data on the din endpoint with the size %d\n" % size)
-        if self.packetsizelimit.din and size > self.packetsizelimit.din:
-            raise ReceiveError("Packet too big")
-        return self.receive(self.endpoint.din, size)
-
 
 if __name__ == "__main__":
     from misc import Logger

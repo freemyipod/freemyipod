@@ -1,1224 +1,410 @@
-//
-//
-//    Copyright 2010 TheSeven
-//
-//
-//    This file is part of emCORE.
-//
-//    emCORE is free software: you can redistribute it and/or
-//    modify it under the terms of the GNU General Public License as
-//    published by the Free Software Foundation, either version 2 of the
-//    License, or (at your option) any later version.
-//
-//    emCORE is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-//    See the GNU General Public License for more details.
-//
-//    You should have received a copy of the GNU General Public License along
-//    with emCORE.  If not, see <http://www.gnu.org/licenses/>.
-//
-//
-
-
 #include "global.h"
-#include "panic.h"
 #include "usb.h"
-#include "usb_ch9.h"
-#include "usbdrv.h"
-#include "thread.h"
-#include "console.h"
 #include "util.h"
-#include "contextswitch.h"
-#include "power.h"
-#include "mmu.h"
-#include "shutdown.h"
-#include "execimage.h"
-#include "dbgconsole.h"
-#ifdef HAVE_I2C
-#include "i2c.h"
-#endif
-#ifdef HAVE_BOOTFLASH
-#include "bootflash.h"
-#endif
-#ifdef HAVE_HWKEYAES
-#include "hwkeyaes.h"
-#endif
-#ifdef HAVE_HMACSHA1
-#include "hmacsha1.h"
-#endif
-#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
-#include "usbtarget.h"
-#endif
-#ifdef HAVE_STORAGE
-#include "storage.h"
-#include "disk.h"
-#include "file.h"
-#include "dir.h"
-#include "libc/include/errno.h"
-#endif
 
-
-static uint8_t ctrlresp[2] CACHEALIGN_ATTR;
-static uint32_t dbgrecvbuf[0x80] CACHEALIGN_ATTR;
-static uint32_t dbgsendbuf[0x80] CACHEALIGN_ATTR;
-static uint32_t dbgasyncsendbuf[0x80] CACHEALIGN_ATTR;
-static char dbgendpoints[4] IBSS_ATTR;
-
-enum dbgaction_t
+void usb_start_rx(const struct usb_instance* data, union usb_endpoint_number ep, void* buf, int size)
 {
-    DBGACTION_IDLE = 0,
-    DBGACTION_I2CSEND,
-    DBGACTION_I2CRECV,
-    DBGACTION_RESET,
-    DBGACTION_POWEROFF,
-    DBGACTION_CWRITE,
-    DBGACTION_CREAD,
-    DBGACTION_CFLUSH,
-    DBGACTION_EXECIMAGE,
-    DBGACTION_EXECFIRMWARE,
-    DBGACTION_READBOOTFLASH,
-    DBGACTION_WRITEBOOTFLASH,
-    DBGACTION_HWKEYAES,
-    DBGACTION_HMACSHA1,
-    DBGACTION_TARGETSPECIFIC,
-    DBGACTION_STORAGE,
-    DBGACTION_MALLOC,
-    DBGACTION_MEMALIGN,
-    DBGACTION_REALLOC,
-    DBGACTION_REOWNALLOC,
-    DBGACTION_FREE,
-    DBGACTION_FREEMONITOR,
-    DBGACTION_RTCREAD,
-    DBGACTION_RTCWRITE,
-};
-
-static struct scheduler_thread dbgthread_handle IBSS_ATTR;
-static uint32_t dbgstack[0x200] STACK_ATTR;
-struct wakeup dbgwakeup IBSS_ATTR;
-static enum dbgaction_t dbgaction IBSS_ATTR;
-static int dbgi2cbus;
-static int dbgi2cslave;
-static int dbgactionaddr;
-static int dbgactionoffset;
-static int dbgactionlength;
-static int dbgactionconsoles;
-static int dbgactiontype;
-static char dbgconsendbuf[4096];
-static char dbgconrecvbuf[1024];
-static int dbgconsendreadidx IBSS_ATTR;
-static int dbgconsendwriteidx IBSS_ATTR;
-static int dbgconrecvreadidx IBSS_ATTR;
-static int dbgconrecvwriteidx IBSS_ATTR;
-static struct wakeup dbgconsendwakeup IBSS_ATTR;
-static struct wakeup dbgconrecvwakeup IBSS_ATTR;
-static bool dbgconsoleattached IBSS_ATTR;
-
-static const char dbgconoverflowstr[] = "\n\n[overflowed]\n\n";
-
-extern int _poolstart;   // These aren't ints at all, but gcc complains about void types being
-extern int _poolend;     // used here, and we only need the address, so just make it happy...
-
-
-static struct usb_device_descriptor device_descriptor CACHEALIGN_ATTR =
-{
-    .bLength            = sizeof(struct usb_device_descriptor),
-    .bDescriptorType    = USB_DT_DEVICE,
-    .bcdUSB             = 0x0200,
-    .bDeviceClass       = USB_CLASS_VENDOR_SPEC,
-    .bDeviceSubClass    = 0xff,
-    .bDeviceProtocol    = 0xff,
-    .bMaxPacketSize0    = 64,
-    .idVendor           = 0xffff,
-    .idProduct          = 0xe000,
-    .bcdDevice          = 0x0001,
-    .iManufacturer      = 1,
-    .iProduct           = 2,
-    .iSerialNumber      = 0,
-    .bNumConfigurations = 1
-};
-
-static struct usb_config_bundle
-{
-    struct usb_config_descriptor config_descriptor;
-    struct usb_interface_descriptor interface_descriptor;
-    struct usb_endpoint_descriptor endpoint1_descriptor;
-    struct usb_endpoint_descriptor endpoint2_descriptor;
-    struct usb_endpoint_descriptor endpoint3_descriptor;
-    struct usb_endpoint_descriptor endpoint4_descriptor;
-} __attribute__((packed)) config_bundle CACHEALIGN_ATTR =
-{
-    .config_descriptor =
-    {
-        .bLength             = sizeof(struct usb_config_descriptor),
-        .bDescriptorType     = USB_DT_CONFIG,
-        .wTotalLength        = sizeof(struct usb_config_descriptor)
-                             + sizeof(struct usb_interface_descriptor)
-                             + sizeof(struct usb_endpoint_descriptor) * 4,
-        .bNumInterfaces      = 1,
-        .bConfigurationValue = 1,
-        .iConfiguration      = 0,
-        .bmAttributes        = USB_CONFIG_ATT_ONE,
-        .bMaxPower           = 250
-    },
-    .interface_descriptor =
-    {
-        .bLength             = sizeof(struct usb_interface_descriptor),
-        .bDescriptorType     = USB_DT_INTERFACE,
-        .bInterfaceNumber    = 0,
-        .bAlternateSetting   = 0,
-        .bNumEndpoints       = 4,
-        .bInterfaceClass     = USB_CLASS_VENDOR_SPEC,
-        .bInterfaceSubClass  = 0xff,
-        .bInterfaceProtocol  = 0xff,
-        .iInterface          = 0
-    },
-    .endpoint1_descriptor =
-    {
-        .bLength             = sizeof(struct usb_endpoint_descriptor),
-        .bDescriptorType     = USB_DT_ENDPOINT,
-        .bEndpointAddress    = 0,
-        .bmAttributes        = USB_ENDPOINT_XFER_BULK,
-        .wMaxPacketSize      = 0,
-        .bInterval           = 1
-    },
-    .endpoint2_descriptor =
-    {
-        .bLength             = sizeof(struct usb_endpoint_descriptor),
-        .bDescriptorType     = USB_DT_ENDPOINT,
-        .bEndpointAddress    = 0,
-        .bmAttributes        = USB_ENDPOINT_XFER_BULK,
-        .wMaxPacketSize      = 0,
-        .bInterval           = 1
-    },
-    .endpoint3_descriptor =
-    {
-        .bLength             = sizeof(struct usb_endpoint_descriptor),
-        .bDescriptorType     = USB_DT_ENDPOINT,
-        .bEndpointAddress    = 0,
-        .bmAttributes        = USB_ENDPOINT_XFER_BULK,
-        .wMaxPacketSize      = 0,
-        .bInterval           = 1
-    },
-    .endpoint4_descriptor =
-    {
-        .bLength             = sizeof(struct usb_endpoint_descriptor),
-        .bDescriptorType     = USB_DT_ENDPOINT,
-        .bEndpointAddress    = 0,
-        .bmAttributes        = USB_ENDPOINT_XFER_BULK,
-        .wMaxPacketSize      = 0,
-        .bInterval           = 1
-    }
-};
-
-static struct usb_string_descriptor string_vendor CACHEALIGN_ATTR =
-{
-    30,
-    USB_DT_STRING,
-    {'f', 'r', 'e', 'e', 'm', 'y', 'i', 'p', 'o', 'd', '.', 'o', 'r', 'g'}
-};
-
-static struct usb_string_descriptor string_product CACHEALIGN_ATTR =
-{
-    32,
-    USB_DT_STRING,
-    {'e', 'm', 'C', 'O', 'R', 'E', ' ', 'D', 'e', 'b', 'u', 'g', 'g', 'e', 'r'}
-};
-
-static const struct usb_string_descriptor lang_descriptor CACHEALIGN_ATTR =
-{
-    4,
-    USB_DT_STRING,
-    {0x0409}
-};
-
-
-void usb_setup_dbg_listener()
-{
-    usb_drv_recv(dbgendpoints[0], dbgrecvbuf, 512);
+    data->driver->start_rx(data, ep, buf, size);
 }
 
-void usb_handle_control_request(struct usb_ctrlrequest* req)
+void usb_start_tx(const struct usb_instance* data, union usb_endpoint_number ep, const void* buf, int size)
 {
-    const void* addr;
-    int size = -1;
-    switch (req->bRequest)
-    {
-    case USB_REQ_GET_STATUS:
-        if (req->bRequestType == USB_DIR_IN) ctrlresp[0] = 1;
-        else ctrlresp[0] = 0;
-        ctrlresp[1] = 0;
-        addr = ctrlresp;
-        size = 2;
-        break;
-    case USB_REQ_CLEAR_FEATURE:
-        if (req->bRequestType == USB_RECIP_ENDPOINT && req->wValue == USB_ENDPOINT_HALT)
-            usb_drv_stall(req->wIndex & 0xf, false, req->wIndex >> 7);
-        size = 0;
-        break;
-    case USB_REQ_SET_FEATURE:
-        size = 0;
-        break;
-    case USB_REQ_SET_ADDRESS:
-        size = 0;
-        usb_drv_cancel_all_transfers();
-        usb_drv_set_address(req->wValue);
-        usb_setup_dbg_listener();
-        break;
-    case USB_REQ_GET_DESCRIPTOR:
-        switch (req->wValue >> 8)
-        {
-        case USB_DT_DEVICE:
-            addr = &device_descriptor;
-            size = sizeof(device_descriptor);
-            break;
-        case USB_DT_OTHER_SPEED_CONFIG:
+    data->driver->start_tx(data, ep, buf, size);
+}
 
-        case USB_DT_CONFIG:
-            if ((req->wValue >> 8) == USB_DT_CONFIG)
+void usb_set_stall(const struct usb_instance* data, union usb_endpoint_number ep, int stall)
+{
+    data->driver->set_stall(data, ep, stall);
+}
+
+void usb_ep0_start_rx(const struct usb_instance* data, int non_setup, bool (*callback)(const struct usb_instance* data, int bytesleft))
+{
+    data->state->ep0_rx_callback = callback;
+    data->driver->ep0_start_rx(data, non_setup);
+}
+
+bool usb_ep0_rx_callback(const struct usb_instance* data, int bytesleft)
+{
+    usb_ep0_start_rx(data, 0, NULL);
+    return true;
+}
+
+void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len, bool last, bool (*callback)(const struct usb_instance* data, int bytesleft))
+{
+    // Expect zero-length ACK if we are about to actually send data, otherwise expect SETUP.
+    if (last) usb_ep0_start_rx(data, !!len, usb_ep0_rx_callback);
+
+    if (((uint32_t)buf) & (CACHEALIGN_SIZE - 1))
+    {
+        memcpy(data->buffer->raw, buf, len);
+        buf = data->buffer->raw;
+    }
+
+    data->state->ep0_tx_callback = callback;
+    data->driver->ep0_start_tx(data, buf, len);
+}
+
+bool usb_ep0_tx_callback(const struct usb_instance* data, int bytesleft)
+{
+    if (bytesleft || !data->state->ep0_tx_len) return false;
+    int len = MIN(64, data->state->ep0_tx_len);
+    data->state->ep0_tx_ptr += 64;
+    data->state->ep0_tx_len -= len;
+    usb_ep0_start_tx(data, data->state->ep0_tx_ptr, len, !data->state->ep0_tx_len, usb_ep0_tx_callback);
+    return true;
+}
+
+void usb_unconfigure_ep(const struct usb_instance* data, union usb_endpoint_number ep)
+{
+    data->driver->unconfigure_ep(data, ep);
+}
+
+void usb_configure_ep(const struct usb_instance* data, union usb_endpoint_number ep, enum usb_endpoint_type type, int maxpacket)
+{
+    // Reset the endpoint, just in case someone left it in a dirty state.
+    usb_unconfigure_ep(data, ep);
+
+    // Write the new configuration for the endpoint.
+    // This resets the data toggle to DATA0, as required by the USB specification.
+    data->driver->configure_ep(data, ep, type, maxpacket);
+}
+
+int usb_get_max_transfer_size(const struct usb_instance* data, union usb_endpoint_number ep)
+{
+    return data->driver->get_max_transfer_size(data, ep);
+}
+
+static void usb_unconfigure(const struct usb_instance* data)
+{
+    // Notify a configuration and its active interface altsettings that it was just kicked out.
+    int configid = data->state->current_configuration;
+    if (!configid) return;
+    const struct usb_configuration* configuration = data->configurations[configid - 1];
+    int i;
+    for (i = 0; i < configuration->interface_count; i++)
+    {
+        const struct usb_interface* interface = configuration->interfaces[i];
+        const struct usb_altsetting* altsetting = interface->altsettings[data->state->interface_altsetting[i]];
+        if (altsetting->unset_altsetting)
+            altsetting->unset_altsetting(data, i, data->state->interface_altsetting[i]);
+    }
+    if (configuration->unset_configuration)
+        configuration->unset_configuration(data, configid);
+    data->state->current_configuration = 0;
+}
+
+static const struct usb_endpoint* usb_find_endpoint(const struct usb_instance* data,
+                                                    union usb_endpoint_number ep, int* ifidx, int* epidx)
+{
+    // Figure out who's currently owning a (hardware) endpoint.
+    // Returns a pointer to the usb_endpoint struct, and sets *epidx to its index within its altsetting.
+    // *ifidx will be set to the interface number within the current configuration that the altsetting belongs to.
+    // If nobody currently owns the specified endpoint, return NULL (*epidx and *ifidx will contain garbage).
+    int configid = data->state->current_configuration;
+    if (!configid) return NULL;
+    const struct usb_configuration* configuration = data->configurations[configid - 1];
+    for (*ifidx = 0; *ifidx < configuration->interface_count; (*ifidx)++)
+    {
+        const struct usb_interface* interface = configuration->interfaces[*ifidx];
+        const struct usb_altsetting* altsetting = interface->altsettings[data->state->interface_altsetting[*ifidx]];
+        for (*epidx = 0; *epidx < altsetting->endpoint_count; (*epidx)++)
+        {
+            const struct usb_endpoint* endpoint = altsetting->endpoints[*epidx];
+            if (endpoint->number.byte == ep.byte) return endpoint;
+        }
+    }
+    return NULL;
+}
+
+static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_buffer* buffer)
+{
+    // size < -2: do nothing at all (dangerous, you need to take care of priming EP0 yourself!)
+    // size == -2: send STALL
+    // size == -1: try to run default handler, or send STALL if none exists
+    // size == 0: send ACK
+    // size > 0: send <size> bytes at <addr>, then expect ACK
+    const void* addr = data->buffer;
+    int size = -1;
+    switch (buffer->setup.bmRequestType.recipient)
+    {
+    case USB_SETUP_BMREQUESTTYPE_RECIPIENT_DEVICE:
+        if (data->ctrl_request) size = data->ctrl_request(data, buffer, &addr);
+        if (size != -1) break;
+        switch (buffer->setup.bmRequestType.type)
+        {
+        case USB_SETUP_BMREQUESTTYPE_TYPE_STANDARD:
+            switch (buffer->setup.bRequest.req)
             {
-                int maxpacket = usb_drv_port_speed() ? 512 : 64;
-                config_bundle.endpoint1_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint2_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint3_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint4_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.config_descriptor.bDescriptorType = USB_DT_CONFIG;
-            }
-            else
-            {
-                int maxpacket = usb_drv_port_speed() ? 64 : 512;
-                config_bundle.endpoint1_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint2_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint3_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.endpoint4_descriptor.wMaxPacketSize = maxpacket;
-                config_bundle.config_descriptor.bDescriptorType = USB_DT_OTHER_SPEED_CONFIG;
-            }
-            addr = &config_bundle;
-            size = sizeof(config_bundle);
-            break;
-        case USB_DT_STRING:
-            switch (req->wValue & 0xff)
-            {
-            case 0:
-                addr = &lang_descriptor;
-                size = lang_descriptor.bLength;
+            case USB_SETUP_BREQUEST_GET_STATUS:
+                if (buffer->setup.wLength != 2 || buffer->setup.wIndex
+                 || !data->state->current_address || buffer->setup.wValue) break;
+                data->buffer->raw[0] = 0;
+                data->buffer->raw[1] = 1;
+                size = 2;
                 break;
-            case 1:
-                addr = &string_vendor;
-                size = string_vendor.bLength;
+            case USB_SETUP_BREQUEST_SET_ADDRESS:
+                if (buffer->setup.wLength || buffer->setup.wIndex || buffer->setup.wValue > 127) break;
+                data->state->current_address = buffer->setup.wValue;
+                // We can already set the address here, the driver has to take care to send the ACK with the old address.
+                data->driver->set_address(data, data->state->current_address);
+                size = 0;
                 break;
-            case 2:
-                addr = &string_product;
-                size = string_product.bLength;
+            case USB_SETUP_BREQUEST_GET_DESCRIPTOR:
+                if (!buffer->setup.wLength) break;
+                switch (buffer->setup.wValue >> 8)
+                {
+                case USB_DESCRIPTOR_TYPE_DEVICE:
+                    if ((buffer->setup.wValue & 0xff) || buffer->setup.wIndex) break;
+                    addr = data->devicedescriptor;
+                    size = data->devicedescriptor->bLength;
+                    break;
+                case USB_DESCRIPTOR_TYPE_CONFIGURATION:
+                    if (buffer->setup.wIndex
+                     || (buffer->setup.wValue & 0xff) >= data->configuration_count) break;
+                    addr = data->configurations[buffer->setup.wValue & 0xff]->descriptor;
+                    size = data->configurations[buffer->setup.wValue & 0xff]->descriptor->wTotalLength;
+                    break;
+                case USB_DESCRIPTOR_TYPE_STRING:
+                    if ((buffer->setup.wValue & 0xff) > data->stringdescriptor_count) break;
+                    addr = data->stringdescriptors[buffer->setup.wValue & 0xff];
+                    size = data->stringdescriptors[buffer->setup.wValue & 0xff]->bLength;
+                    break;
+                }
+                if (size > buffer->setup.wLength) size = buffer->setup.wLength;
                 break;
+            case USB_SETUP_BREQUEST_GET_CONFIGURATION:
+                if (buffer->setup.wLength != 1 || buffer->setup.wIndex
+                 || !data->state->current_address || buffer->setup.wValue) break;
+                data->buffer->raw[0] = data->state->current_configuration;
+                size = 1;
+                break;
+            case USB_SETUP_BREQUEST_SET_CONFIGURATION:
+                if (buffer->setup.wLength || buffer->setup.wIndex || !data->state->current_address
+                 || buffer->setup.wValue > data->configuration_count) break;
+                usb_unconfigure(data);
+                data->state->current_configuration = buffer->setup.wValue;
+                if (data->state->current_configuration)
+                {
+                    // Notify the configuration and its interface default altsettings that it should set up stuff
+                    int configid = data->state->current_configuration;
+                    const struct usb_configuration* configuration = data->configurations[configid - 1];
+                    if (configuration->set_configuration)
+                        configuration->set_configuration(data, configid);
+                    int i;
+                    for (i = 0; i < configuration->interface_count; i++)
+                    {
+                        const struct usb_interface* interface = configuration->interfaces[i];
+                        data->state->interface_altsetting[i] = 0;
+                        const struct usb_altsetting* altsetting = interface->altsettings[0];
+                        if (altsetting->set_altsetting) altsetting->set_altsetting(data, i, 0);
+                    }
+                }
+                size = 0;
+                break;
+            default: break;
             }
             break;
         }
         break;
-    case USB_REQ_GET_CONFIGURATION:
-        ctrlresp[0] = 1;
-        addr = ctrlresp;
-        size = 1;
-        break;
-    case USB_REQ_SET_CONFIGURATION:
-        usb_drv_cancel_all_transfers();
-        usb_setup_dbg_listener();
-        size = 0;
-        break;
-    }
-    if (!size) usb_drv_send_nonblocking(0, NULL, 0);
-    else if (size == -1)
+    case USB_SETUP_BMREQUESTTYPE_RECIPIENT_INTERFACE:
     {
-        usb_drv_stall(0, true, true);
-        usb_drv_stall(0, true, false);
+        if (!data->state->current_configuration) break;
+        int configid = data->state->current_configuration;
+        const struct usb_configuration* configuration = data->configurations[configid - 1];
+        int intfid = buffer->setup.wIndex;
+        if (intfid >= configuration->interface_count) break;
+        const struct usb_interface* interface = configuration->interfaces[intfid];
+        if (interface->ctrl_request) size = interface->ctrl_request(data, intfid, buffer, &addr);
+        if (size != -1) break;
+        switch (buffer->setup.bmRequestType.type)
+        {
+        case USB_SETUP_BMREQUESTTYPE_TYPE_STANDARD:
+            switch (buffer->setup.bRequest.req)
+            {
+            case USB_SETUP_BREQUEST_GET_STATUS:
+                if (buffer->setup.wLength != 2 || buffer->setup.wValue) break;
+                data->buffer->raw[0] = 0;
+                data->buffer->raw[1] = 0;
+                size = 2;
+                break;
+            case USB_SETUP_BREQUEST_GET_INTERFACE:
+                if (buffer->setup.wLength != 1 || buffer->setup.wValue) break;
+                data->buffer->raw[0] = data->state->interface_altsetting[intfid];
+                size = 1;
+                break;
+            case USB_SETUP_BREQUEST_SET_INTERFACE:
+            {
+                if (buffer->setup.wLength
+                 || buffer->setup.wValue > interface->altsetting_count) break;
+                const struct usb_altsetting* altsetting = interface->altsettings[data->state->interface_altsetting[intfid]];
+                if (altsetting->unset_altsetting)
+                    altsetting->unset_altsetting(data, intfid, data->state->interface_altsetting[intfid]);
+                data->state->interface_altsetting[intfid] = buffer->setup.wValue;
+                altsetting = interface->altsettings[data->state->interface_altsetting[intfid]];
+                if (altsetting->set_altsetting)
+                    altsetting->set_altsetting(data, intfid, data->state->interface_altsetting[intfid]);
+                break;
+            }
+            default: break;
+            }
+            break;
+            default: break;
+        }
+        break;
+        case USB_SETUP_BMREQUESTTYPE_RECIPIENT_ENDPOINT:
+        {
+            if (!data->state->current_configuration) break;
+            union usb_endpoint_number ep = { .byte = buffer->setup.wIndex };
+            int intfid;
+            int epid;
+            const struct usb_endpoint* endpoint = usb_find_endpoint(data, ep, &intfid, &epid);
+            if (!endpoint) break;
+            if (endpoint->ctrl_request) size = endpoint->ctrl_request(data, intfid, epid, buffer, &addr);
+            if (size != -1) break;
+            switch (buffer->setup.bmRequestType.type)
+            {
+            case USB_SETUP_BMREQUESTTYPE_TYPE_STANDARD:
+                switch (buffer->setup.bRequest.req)
+                {
+                case USB_SETUP_BREQUEST_GET_STATUS:
+                    if (buffer->setup.wLength != 2 || buffer->setup.wValue) break;
+                    data->buffer->raw[0] = 0;
+                    data->buffer->raw[1] = data->driver->get_stall(data, ep);
+                    addr = data->buffer;
+                    size = 2;
+                    break;
+                case USB_SETUP_BREQUEST_CLEAR_FEATURE:
+                    if (buffer->setup.wLength || buffer->setup.wValue) break;
+                    data->driver->set_stall(data, ep, false);
+                    size = 0;
+                    break;
+                case USB_SETUP_BREQUEST_SET_FEATURE:
+                    if (buffer->setup.wLength || buffer->setup.wValue) break;
+                    data->driver->set_stall(data, ep, true);
+                    size = 0;
+                    break;
+                default: break;
+                }
+                break;
+                default: break;
+            }
+            break;
+        }
+        default: break;
+    }
+    }
+    // See comment at the top of this function
+    if (size == 0) usb_ep0_start_tx(data, NULL, 0, true, NULL);
+    else if (size > 0)
+    {
+        usb_ep0_start_rx(data, 0, NULL);
+        int len = MIN(64, size);
+        data->state->ep0_tx_ptr = addr;
+        data->state->ep0_tx_len = size - len;
+        usb_ep0_start_tx(data, addr, len, !data->state->ep0_tx_len, usb_ep0_tx_callback);
+    }
+    else if (size >= -2)
+    {
+        union usb_endpoint_number ep = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
+        usb_set_stall(data, ep, 1);
+        ep.direction = USB_ENDPOINT_DIRECTION_OUT;
+        usb_set_stall(data, ep, 1);
+    }
+}
+
+void usb_handle_bus_reset(const struct usb_instance* data, int highspeed)
+{
+    data->state->current_address = 0;
+    usb_unconfigure(data);
+    if (data->bus_reset) data->bus_reset(data, highspeed);
+    int c, i;
+    for (c = 0; c < data->configuration_count; c++)
+    {
+        const struct usb_configuration* configuration = data->configurations[c];
+        for (i = 0; i < configuration->interface_count; i++)
+        {
+            const struct usb_interface* interface = configuration->interfaces[i];
+            if (interface->bus_reset) interface->bus_reset(data, c, i, highspeed);
+        }
+    }
+
+    // Prime EP0 for the first setup packet.
+    usb_ep0_start_rx(data, 0, NULL);
+}
+
+void usb_handle_timeout(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
+{
+    // If the host doesn't fetch an EP0 IN packet, we can't do much about it.
+    // This will be recovered by the next SETUP packet.
+    if (epnum.number)
+    {
+        int epidx;
+        int ifidx;
+        const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &epidx, &ifidx);
+        if (!endpoint) data->driver->unconfigure_ep(data, epnum);
+        else if (endpoint->timeout) endpoint->timeout(data, ifidx, epidx, bytesleft);
+    }
+}
+
+void usb_handle_xfer_complete(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
+{
+    if (!epnum.number)
+    {
+        bool (*callback)(const struct usb_instance* data, int size);
+        if (epnum.direction == USB_ENDPOINT_DIRECTION_OUT)
+        {
+            callback = data->state->ep0_rx_callback;
+            data->state->ep0_rx_callback = NULL;
+        }
+        else
+        {
+            callback = data->state->ep0_tx_callback;
+            data->state->ep0_tx_callback = NULL;
+        }
+        if (callback) callback(data, bytesleft);
     }
     else
     {
-        usb_drv_recv(0, NULL, 0);
-        usb_drv_send_nonblocking(0, addr, size > req->wLength ? req->wLength : size);
+        int epidx;
+        int ifidx;
+        const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &epidx, &ifidx);
+        if (!endpoint) usb_unconfigure_ep(data, epnum);
+        else if (endpoint->xfer_complete) endpoint->xfer_complete(data, ifidx, epidx, bytesleft);
     }
 }
 
-bool set_dbgaction(enum dbgaction_t action, int addsize)
+void usb_handle_setup_received(const struct usb_instance* data, union usb_endpoint_number epnum)
 {
-    if (dbgaction != DBGACTION_IDLE)
+    if (!epnum.number)
     {
-        dbgsendbuf[0] = 3;
-        usb_drv_send_nonblocking(dbgendpoints[1], dbgsendbuf, 16 + addsize);
-        return true;
+        if (!data->ep0_setup_hook || !data->ep0_setup_hook(data, data->buffer)) usb_handle_ep0_setup(data, data->buffer);
     }
-    dbgaction = action;
-    wakeup_signal(&dbgwakeup);
-    return false;
-}
-
-void reset() __attribute__((noreturn));
-
-void usb_handle_transfer_complete(int endpoint, int dir, int status, int length)
-{
-    void* addr = dbgsendbuf;
-    int size = 0;
-    if (endpoint == dbgendpoints[0])
+    else
     {
-#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
-        if (dbgrecvbuf[0] >= 0xffff0000)
-        {
-            if (!set_dbgaction(DBGACTION_TARGETSPECIFIC, 0))
-                memcpy(dbgasyncsendbuf, dbgrecvbuf, sizeof(dbgasyncsendbuf));
-            usb_setup_dbg_listener();
-            return;
-        }
-#endif
-        switch (dbgrecvbuf[0])
-        {
-        case 1:  // GET INFO
-            dbgsendbuf[0] = 1;
-            size = 16;
-            switch (dbgrecvbuf[1])
-            {
-            case 0:  // GET VERSION INFO
-                dbgsendbuf[1] = VERSION_SVN_INT;
-                dbgsendbuf[2] = VERSION_MAJOR | (VERSION_MINOR << 8)
-                              | (VERSION_PATCH << 16) | (2 << 24);
-                dbgsendbuf[3] = PLATFORM_ID;
-                break;
-            case 1:  // GET PACKET SIZE INFO
-                dbgsendbuf[1] = 0x02000200;
-                dbgsendbuf[2] = usb_drv_get_max_out_size();
-                dbgsendbuf[3] = usb_drv_get_max_in_size();
-                break;
-            case 2:  // GET USER MEMORY INFO
-                dbgsendbuf[1] = (uint32_t)&_poolstart;
-                dbgsendbuf[2] = (uint32_t)&_poolend;
-                break;
-            default:
-                dbgsendbuf[0] = 2;
-            }
-            break;
-        case 2:  // RESET
-            if (dbgrecvbuf[1])
-            {
-                if (set_dbgaction(DBGACTION_RESET, 0)) break;
-                dbgsendbuf[0] = 1;
-                size = 16;
-            }
-            else reset();
-            break;
-        case 3:  // POWER OFF
-            if (set_dbgaction(DBGACTION_POWEROFF, 0)) break;
-            dbgactiontype = dbgrecvbuf[1];
-            dbgsendbuf[0] = 1;
-            size = 16;
-            break;
-        case 4:  // READ MEMORY
-            dbgsendbuf[0] = 1;
-            memcpy(&dbgsendbuf[4], (const void*)dbgrecvbuf[1], dbgrecvbuf[2]);
-            size = dbgrecvbuf[2] + 16;
-            break;
-        case 5:  // WRITE MEMORY
-            dbgsendbuf[0] = 1;
-            memcpy((void*)dbgrecvbuf[1], &dbgrecvbuf[4], dbgrecvbuf[2]);
-            size = 16;
-            break;
-        case 6:  // READ DMA
-            dbgsendbuf[0] = 1;
-            usb_drv_send_nonblocking(dbgendpoints[1], dbgsendbuf, 16);
-            usb_drv_send_nonblocking(dbgendpoints[3], (const void*)dbgrecvbuf[1], dbgrecvbuf[2]);
-            break;
-        case 7:  // WRITE DMA
-            dbgsendbuf[0] = 1;
-            size = 16;
-            usb_drv_recv(dbgendpoints[2], (void*)dbgrecvbuf[1], dbgrecvbuf[2]);
-            break;
-#ifdef HAVE_I2C
-        case 8:  // READ I2C
-            if (set_dbgaction(DBGACTION_I2CRECV, dbgrecvbuf[1] >> 24)) break;
-            dbgi2cbus = dbgrecvbuf[1] & 0xff;
-            dbgi2cslave = (dbgrecvbuf[1] >> 8) & 0xff;
-            dbgactionaddr = (dbgrecvbuf[1] >> 16) & 0xff;
-            dbgactionlength = dbgrecvbuf[1] >> 24;
-            if (!dbgactionlength) dbgactionlength = 256;
-            break;
-        case 9:  // WRITE I2C
-            if (set_dbgaction(DBGACTION_I2CSEND, 0)) break;
-            dbgi2cbus = dbgrecvbuf[1] & 0xff;
-            dbgi2cslave = (dbgrecvbuf[1] >> 8) & 0xff;
-            dbgactionaddr = (dbgrecvbuf[1] >> 16) & 0xff;
-            dbgactionlength = dbgrecvbuf[1] >> 24;
-            if (!dbgactionlength) dbgactionlength = 256;
-            memcpy(dbgasyncsendbuf, &dbgrecvbuf[4], dbgactionlength);
-            break;
-#endif
-        case 10:  // READ CONSOLE
-            dbgconsoleattached = true;
-            int bytes = dbgconsendwriteidx - dbgconsendreadidx;
-            int used = 0;
-            if (bytes)
-            {
-                if (bytes < 0) bytes += sizeof(dbgconsendbuf);
-                used = bytes;
-                if (bytes > dbgrecvbuf[1]) bytes = dbgrecvbuf[1];
-                int readbytes = bytes;
-                char* outptr = (char*)&dbgsendbuf[4];
-                if (dbgconsendreadidx + bytes >= sizeof(dbgconsendbuf))
-                {
-                    readbytes = sizeof(dbgconsendbuf) - dbgconsendreadidx;
-                    memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
-                    dbgconsendreadidx = 0;
-                    outptr = &outptr[readbytes];
-                    readbytes = bytes - readbytes;
-                }
-                if (readbytes) memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
-                dbgconsendreadidx += readbytes;
-                wakeup_signal(&dbgconsendwakeup);
-            }
-            dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = bytes;
-            dbgsendbuf[2] = sizeof(dbgconsendbuf);
-            dbgsendbuf[3] = used - bytes;
-            size = 16 + dbgrecvbuf[1];
-            break;
-        case 11:  // WRITE CONSOLE
-            bytes = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
-            if (bytes < 0) bytes += sizeof(dbgconrecvbuf);
-            if (bytes)
-            {
-                if (bytes > dbgrecvbuf[1]) bytes = dbgrecvbuf[1];
-                int writebytes = bytes;
-                char* readptr = (char*)&dbgrecvbuf[4];
-                if (dbgconrecvwriteidx + bytes >= sizeof(dbgconrecvbuf))
-                {
-                    writebytes = sizeof(dbgconrecvbuf) - dbgconrecvwriteidx;
-                    memcpy(&dbgconrecvbuf[dbgconrecvwriteidx], readptr, writebytes);
-                    dbgconrecvwriteidx = 0;
-                    readptr = &readptr[writebytes];
-                    writebytes = bytes - writebytes;
-                }
-                if (writebytes) memcpy(&dbgconrecvbuf[dbgconrecvwriteidx], readptr, writebytes);
-                dbgconrecvwriteidx += writebytes;
-                wakeup_signal(&dbgconrecvwakeup);
-            }
-            dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = bytes;
-            dbgsendbuf[2] = sizeof(dbgconrecvbuf);
-            dbgsendbuf[3] = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
-            size = 16;
-            break;
-        case 12:  // CWRITE
-            if (set_dbgaction(DBGACTION_CWRITE, 0)) break;
-            dbgactionconsoles = dbgrecvbuf[1];
-            dbgactionlength = dbgrecvbuf[2];
-            memcpy(dbgasyncsendbuf, &dbgrecvbuf[4], dbgactionlength);
-            break;
-        case 13:  // CREAD
-            if (set_dbgaction(DBGACTION_CREAD, dbgrecvbuf[2])) break;
-            dbgactionconsoles = dbgrecvbuf[1];
-            dbgactionlength = dbgrecvbuf[2];
-            break;
-        case 14:  // CFLUSH
-            if (set_dbgaction(DBGACTION_CFLUSH, 0)) break;
-            dbgactionconsoles = dbgrecvbuf[1];
-            break;
-        case 15:  // GET PROCESS INFO
-            dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = SCHEDULER_THREAD_INFO_VERSION;
-            dbgsendbuf[2] = (uint32_t)head_thread;
-            size = 16;
-            break;
-        case 16:  // FREEZE SCHEDULER
-            dbgsendbuf[1] = scheduler_freeze(dbgrecvbuf[1]);
-            scheduler_switch(NULL, NULL);
-            dbgsendbuf[0] = 1;
-            size = 16;
-            break;
-        case 17:  // SUSPEND THREAD
-            if (dbgrecvbuf[1])
-            {
-                if (thread_suspend((struct scheduler_thread*)(dbgrecvbuf[2])) == ALREADY_SUSPENDED)
-                    dbgsendbuf[1] = 1;
-                else dbgsendbuf[1] = 0;
-            }
-            else
-            {
-                if (thread_resume((struct scheduler_thread*)(dbgrecvbuf[2])) == ALREADY_RESUMED)
-                    dbgsendbuf[1] = 0;
-                else dbgsendbuf[1] = 1;
-            }
-            dbgsendbuf[0] = 1;
-            size = 16;
-            break;
-        case 18:  // KILL THREAD
-            thread_terminate((struct scheduler_thread*)(dbgrecvbuf[1]));
-            dbgsendbuf[0] = 1;
-            size = 16;
-            break;
-        case 19:  // CREATE THREAD
-            dbgsendbuf[0] = 1;
-            dbgsendbuf[1] = (uint32_t)thread_create(NULL, (const char*)(dbgsendbuf[1]),
-                                                    (const void*)(dbgsendbuf[2]),
-                                                    (char*)(dbgsendbuf[3]),
-                                                    dbgsendbuf[4], (enum thread_type)dbgsendbuf[5],
-                                                    dbgsendbuf[6], dbgsendbuf[7],
-                                                    (void*)dbgsendbuf[8], (void*)dbgsendbuf[9],
-                                                    (void*)dbgsendbuf[10], (void*)dbgsendbuf[11]);
-            size = 16;
-            break;
-        case 20:  // FLUSH CACHE
-            clean_dcache();
-            invalidate_icache();
-            dbgsendbuf[0] = 1;
-            size = 16;
-            break;
-        case 21:  // EXECIMAGE
-            if (set_dbgaction(DBGACTION_EXECIMAGE, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactiontype = dbgrecvbuf[2];
-            dbgactionlength = dbgrecvbuf[3];
-            memcpy(dbgasyncsendbuf, &dbgrecvbuf[4], 0x1f0);
-            break;
-#ifdef HAVE_BOOTFLASH
-        case 22:  // READ BOOT FLASH
-            if (set_dbgaction(DBGACTION_READBOOTFLASH, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactionoffset = dbgrecvbuf[2];
-            dbgactionlength = dbgrecvbuf[3];
-            break;
-        case 23:  // WRITE BOOT FLASH
-            if (set_dbgaction(DBGACTION_WRITEBOOTFLASH, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactionoffset = dbgrecvbuf[2];
-            dbgactionlength = dbgrecvbuf[3];
-            break;
-#endif
-        case 24:  // EXECFIRMWARE
-            if (set_dbgaction(DBGACTION_EXECFIRMWARE, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactionoffset = dbgrecvbuf[2];
-            dbgactionlength = dbgrecvbuf[3];
-            break;
-#ifdef HAVE_HWKEYAES
-        case 25:  // HWKEYAES
-            if (set_dbgaction(DBGACTION_HWKEYAES, 0)) break;
-            dbgactiontype = ((uint8_t*)dbgrecvbuf)[4];
-            dbgactionoffset = ((uint16_t*)dbgrecvbuf)[3];
-            dbgactionaddr = dbgrecvbuf[2];
-            dbgactionlength = dbgrecvbuf[3];
-            break;
-#endif
-#ifdef HAVE_HMACSHA1
-        case 26:  // HMACSHA1
-            if (set_dbgaction(DBGACTION_HMACSHA1, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactionlength = dbgrecvbuf[2];
-            dbgactionoffset = dbgrecvbuf[3];
-            break;
-#endif
-#ifdef HAVE_STORAGE
-        case 27:  // STORAGE_GET_INFO
-        case 28:  // STORAGE_READ_SECTORS_MD
-        case 29:  // STORAGE_WRITE_SECTORS_MD
-        case 30:  // FILE_OPEN
-        case 31:  // FILESIZE
-        case 32:  // READ
-        case 33:  // WRITE
-        case 34:  // LSEEK
-        case 35:  // FTRUNCATE
-        case 36:  // FSYNC
-        case 37:  // CLOSE
-        case 38:  // CLOSE_MONITOR_FILES
-        case 39:  // RELEASE_FILES
-        case 40:  // REMOVE
-        case 41:  // RENAME
-        case 42:  // OPENDIR
-        case 43:  // READDIR
-        case 44:  // CLOSEDIR
-        case 45:  // CLOSE_MONITOR_DIRS
-        case 46:  // RELEASE_DIRS
-        case 47:  // MKDIR
-        case 48:  // RMDIR
-        case 49:  // ERRNO
-#ifdef HAVE_HOTSWAP
-        case 50:  // DISK_MOUNT
-        case 51:  // DISK_UNMOUNT
-#endif
-        case 58:  // FAT_ENABLE_FLUSHING
-        case 59:  // FAT_SIZE
-            if (!set_dbgaction(DBGACTION_STORAGE, 0))
-                memcpy(dbgasyncsendbuf, dbgrecvbuf, sizeof(dbgasyncsendbuf));
-            break;
-#endif
-        case 52:  // MALLOC
-            if (set_dbgaction(DBGACTION_MALLOC, 0)) break;
-            dbgactionlength = dbgrecvbuf[1];
-            break;
-        case 53:  // MEMALIGN
-            if (set_dbgaction(DBGACTION_MEMALIGN, 0)) break;
-            dbgactionoffset = dbgrecvbuf[1];
-            dbgactionlength = dbgrecvbuf[2];
-            break;
-        case 54:  // REALLOC
-            if (set_dbgaction(DBGACTION_REALLOC, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactionlength = dbgrecvbuf[2];
-            break;
-        case 55:  // REOWNALLOC
-            if (set_dbgaction(DBGACTION_REOWNALLOC, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            dbgactionoffset = dbgrecvbuf[2];
-            break;
-        case 56:  // FREE
-            if (set_dbgaction(DBGACTION_FREE, 0)) break;
-            dbgactionaddr = dbgrecvbuf[1];
-            break;
-        case 57:  // FREE MONITOR ALLOCATIONS
-            if (set_dbgaction(DBGACTION_FREEMONITOR, 0)) break;
-            break;
-#ifdef HAVE_RTC
-        case 60:  // RTC READ
-            if (set_dbgaction(DBGACTION_RTCREAD, 0)) break;
-            break;
-        case 61:  // RTC WRITE
-            if (set_dbgaction(DBGACTION_RTCWRITE, 0)) break;
-            memcpy(dbgasyncsendbuf, &dbgrecvbuf[1], 7);
-            break;
-#endif
-        default:
-            dbgsendbuf[0] = 2;
-            size = 16;
-        }
-        usb_setup_dbg_listener();
-        if (size) usb_drv_send_nonblocking(dbgendpoints[1], addr, size);
+        int epidx;
+        int ifidx;
+        const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &epidx, &ifidx);
+        if (!endpoint) usb_unconfigure_ep(data, epnum);
+        else if (endpoint->setup_received) endpoint->setup_received(data, ifidx, epidx);
     }
 }
 
-void usb_handle_bus_reset(void)
+void usb_init(const struct usb_instance* data)
 {
-    dbgendpoints[0] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_OUT);
-    dbgendpoints[1] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_IN);
-    dbgendpoints[2] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_OUT);
-    dbgendpoints[3] = usb_drv_request_endpoint(USB_ENDPOINT_XFER_BULK, USB_DIR_IN);
-    config_bundle.endpoint1_descriptor.bEndpointAddress = dbgendpoints[0];
-    config_bundle.endpoint2_descriptor.bEndpointAddress = dbgendpoints[1];
-    config_bundle.endpoint3_descriptor.bEndpointAddress = dbgendpoints[2];
-    config_bundle.endpoint4_descriptor.bEndpointAddress = dbgendpoints[3];
-    usb_setup_dbg_listener();
+    // Initialize data struct
+    data->state->current_address = 0;
+    data->state->current_configuration = 0;
+
+    // Initialize driver
+    data->driver->init(data);
 }
 
-void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
+void usb_exit(const struct usb_instance* data)
 {
-    struct scheduler_thread* t;
-    while (1)
-    {
-        wakeup_wait(&dbgwakeup, TIMEOUT_BLOCK);
-        for (t = head_thread; t; t = t->thread_next)
-            if (t->state == THREAD_DEFUNCT)
-            {
-                if (t->block_type == THREAD_DEFUNCT_STKOV)
-                {
-                    if (t->name) cprintf(1, "\n*PANIC*\nStack overflow! (%s)\n", t->name);
-                    else cprintf(1, "\n*PANIC*\nStack overflow! (%08X)\n", t);
-                }
-                t->state = THREAD_DEFUNCT_ACK;
-            }
-        if (dbgaction != DBGACTION_IDLE)
-        {
-            switch (dbgaction)
-            {
-#ifdef HAVE_I2C
-            case DBGACTION_I2CSEND:
-                i2c_send(dbgi2cbus, dbgi2cslave, dbgactionaddr,
-                         (uint8_t*)dbgasyncsendbuf, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_I2CRECV:
-                i2c_recv(dbgi2cbus, dbgi2cslave, dbgactionaddr,
-                         (uint8_t*)(&dbgasyncsendbuf[4]), dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16 + dbgactionlength);
-                break;
-#endif
-            case DBGACTION_POWEROFF:
-                if (dbgactiontype) shutdown(true);
-                power_off();
-                break;
-            case DBGACTION_RESET:
-                shutdown(false);
-                reset();
-                break;
-            case DBGACTION_CWRITE:
-                cwrite(dbgactionconsoles, (const char*)dbgasyncsendbuf, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_CREAD:
-                dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = cread(dbgactionconsoles, (char*)&dbgasyncsendbuf[4],
-                                           dbgactionlength, 0);
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16 + dbgactionlength);
-                break;
-            case DBGACTION_CFLUSH:
-                cflush(dbgactionconsoles);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_EXECIMAGE:
-                if (dbgactionlength & 0x80000000)
-                {
-                    dbgactionlength &= ~0x80000000;
-                    int i;
-                    for (i = 0; i < dbgactionlength; i++)
-                        dbgasyncsendbuf[i] += (uint32_t)dbgasyncsendbuf;
-                }
-                dbgasyncsendbuf[1] = (uint32_t)execimage((void*)dbgactionaddr, dbgactiontype,
-                                                         (int)dbgactionlength,
-                                                         (const char**)dbgasyncsendbuf);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_EXECFIRMWARE:
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                shutdown(false);
-                execfirmware((void*)dbgactionaddr, (void*)dbgactionoffset,
-                             (size_t)dbgactionlength);
-#ifdef HAVE_BOOTFLASH
-            case DBGACTION_READBOOTFLASH:
-                bootflash_readraw((void*)dbgactionaddr, dbgactionoffset, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_WRITEBOOTFLASH:
-                bootflash_writeraw((void*)dbgactionaddr, dbgactionoffset, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-#endif
-#ifdef HAVE_HWKEYAES
-            case DBGACTION_HWKEYAES:
-                hwkeyaes((enum hwkeyaes_direction) dbgactiontype, dbgactionoffset,
-                         (void*)dbgactionaddr, dbgactionlength);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-#endif
-#ifdef HAVE_HMACSHA1
-            case DBGACTION_HMACSHA1:
-                hmacsha1((void*)dbgactionaddr, dbgactionlength, (void*)dbgactionoffset);
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-#endif
-#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
-            case DBGACTION_TARGETSPECIFIC:
-            {
-                int size = usb_target_handle_request(dbgasyncsendbuf, sizeof(dbgasyncsendbuf));
-                if (size) usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, size);
-                break;
-            }
-#endif
-#ifdef HAVE_STORAGE
-            case DBGACTION_STORAGE:
-                switch(dbgasyncsendbuf[0])
-                {
-                case 27:  // STORAGE_GET_INFO
-                    dbgasyncsendbuf[0] = 1;
-                    storage_get_info(dbgasyncsendbuf[1],
-                                     (struct storage_info*)&dbgasyncsendbuf[4]);
-                    dbgasyncsendbuf[1] = 1;
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf,
-                                             16 + sizeof(struct storage_info));
-                    break;
-                case 28:  // STORAGE_READ_SECTORS_MD
-                {
-                    dbgasyncsendbuf[0] = 1;
-                    int rc = storage_read_sectors_md(dbgasyncsendbuf[1],
-                                                     dbgasyncsendbuf[2]
-                                                   | (((uint64_t)(dbgasyncsendbuf[3]) << 32)),
-                                                     dbgasyncsendbuf[4],
-                                                     (void*)(dbgasyncsendbuf[5]));
-                    dbgasyncsendbuf[1] = (uint32_t)rc;
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                }
-                case 29:  // STORAGE_WRITE_SECTORS_MD
-                {
-                    dbgasyncsendbuf[0] = 1;
-                    int rc = storage_write_sectors_md(dbgasyncsendbuf[1],
-                                                      dbgasyncsendbuf[2]
-                                                    | (((uint64_t)(dbgasyncsendbuf[3]) << 32)),
-                                                      dbgasyncsendbuf[4],
-                                                      (void*)(dbgasyncsendbuf[5]));
-                    dbgasyncsendbuf[1] = (uint32_t)rc;
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                }
-                case 30:  // FILE_OPEN
-                {
-                    dbgasyncsendbuf[0] = 1;
-                    int fd = file_open((char*)(&dbgasyncsendbuf[4]), (int)(dbgasyncsendbuf[1]));
-                    if (fd > 0) reown_file(fd, KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
-                    dbgasyncsendbuf[1] = (uint32_t)fd;
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                }
-                case 31:  // FILESIZE
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)filesize((int)(dbgasyncsendbuf[1]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 32:  // READ
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)read((int)(dbgasyncsendbuf[1]),
-                                                        (void*)(dbgasyncsendbuf[2]),
-                                                        (size_t)(dbgasyncsendbuf[3]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 33:  // WRITE
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)write((int)(dbgasyncsendbuf[1]),
-                                                         (void*)(dbgasyncsendbuf[2]),
-                                                         (size_t)(dbgasyncsendbuf[3]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 34:  // LSEEK
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)lseek((int)(dbgasyncsendbuf[1]),
-                                                         (off_t)(dbgasyncsendbuf[2]),
-                                                         (int)(dbgasyncsendbuf[3]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 35:  // FTRUNCATE
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)ftruncate((int)(dbgasyncsendbuf[1]),
-                                                             (off_t)(dbgasyncsendbuf[2]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 36:  // FSYNC
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)fsync((int)(dbgasyncsendbuf[1]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 37:  // CLOSE
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)close((int)(dbgasyncsendbuf[1]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 38:  // CLOSE_MONITOR_FILES
-                    dbgasyncsendbuf[0] = 1;
-                    int rc = close_all_of_process(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
-                    dbgasyncsendbuf[1] = (uint32_t)rc;
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 39:  // RELEASE_FILES
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)release_files((int)(dbgasyncsendbuf[1]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 40:  // REMOVE
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)remove((char*)(&dbgasyncsendbuf[4]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 41:  // RENAME
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)rename((char*)(&dbgasyncsendbuf[4]),
-                                                          (char*)(&dbgasyncsendbuf[66]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 42:  // OPENDIR
-                    dbgasyncsendbuf[0] = 1;
-                    DIR* dir = opendir((char*)(&dbgasyncsendbuf[4]));
-                    if (dir > 0) reown_dir(dir, KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
-                    dbgasyncsendbuf[1] = (uint32_t)dir;
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 43:  // READDIR
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[3] = (uint32_t)readdir((DIR*)(dbgasyncsendbuf[1]));
-                    dbgasyncsendbuf[1] = 1;
-                    dbgasyncsendbuf[2] = MAX_PATH;
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 44:  // CLOSEDIR
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)closedir((DIR*)(dbgasyncsendbuf[1]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 45:  // CLOSE_MONITOR_DIRS
-                    dbgasyncsendbuf[0] = 1;
-                    rc = closedir_all_of_process(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
-                    dbgasyncsendbuf[1] = (uint32_t)rc;
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 46:  // RELEASE_DIRS
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)release_dirs((int)(dbgasyncsendbuf[1]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 47:  // MKDIR
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)mkdir((char*)(&dbgasyncsendbuf[4]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 48:  // RMDIR
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)rmdir((char*)(&dbgasyncsendbuf[4]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 49:  // ERRNO
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)errno;
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-#ifdef HAVE_HOTSWAP
-                case 50:  // DISK_MOUNT
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)disk_mount((int)(dbgasyncsendbuf[1]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 51:  // DISK_UNMOUNT
-                    dbgasyncsendbuf[0] = 1;
-                    dbgasyncsendbuf[1] = (uint32_t)disk_unmount((int)(dbgasyncsendbuf[1]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-#endif
-                case 58:  // FAT_ENABLE_FLUSHING
-                    dbgasyncsendbuf[0] = 1;
-                    fat_enable_flushing((bool)(dbgasyncsendbuf[1]));
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                case 59:  // FAT_SIZE
-                    dbgasyncsendbuf[0] = 1;
-                    fat_size_mv(dbgasyncsendbuf[1], &dbgasyncsendbuf[1], &dbgasyncsendbuf[2]);
-                    usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                    break;
-                }
-                break;
-#endif
-            case DBGACTION_MALLOC:
-                dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = (uint32_t)malloc((size_t)dbgactionlength);
-                if (dbgasyncsendbuf[1])
-                    reownalloc(dbgasyncsendbuf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_MEMALIGN:
-                dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = (uint32_t)memalign((size_t)dbgactionoffset,
-                                                        (size_t)dbgactionlength);
-                if (dbgasyncsendbuf[1])
-                    reownalloc(dbgasyncsendbuf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_REALLOC:
-                dbgasyncsendbuf[0] = 1;
-                dbgasyncsendbuf[1] = (uint32_t)realloc((void*)dbgactionaddr,
-                                                       (size_t)dbgactionlength);
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_REOWNALLOC:
-                dbgasyncsendbuf[0] = 1;
-                reownalloc((void*)dbgactionaddr, (void*)dbgactionoffset);
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_FREE:
-                dbgasyncsendbuf[0] = 1;
-                free((void*)dbgactionaddr);
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_FREEMONITOR:
-                dbgasyncsendbuf[0] = 1;
-                int rc = free_all_of_thread(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
-                dbgasyncsendbuf[1] = (uint32_t)rc;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-#ifdef HAVE_RTC
-            case DBGACTION_RTCREAD:
-                dbgasyncsendbuf[0] = 1;
-                rtc_read_datetime((struct rtc_datetime*)(&dbgasyncsendbuf[1]));
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-            case DBGACTION_RTCWRITE:
-                rtc_write_datetime((const struct rtc_datetime*)(dbgasyncsendbuf));
-                dbgasyncsendbuf[0] = 1;
-                usb_drv_send_nonblocking(dbgendpoints[1], dbgasyncsendbuf, 16);
-                break;
-#endif
-            }
-            dbgaction = DBGACTION_IDLE;
-        }
-    }
+    // Shut down driver
+    data->driver->exit(data);
+
+    // Unconfigure everything
+    usb_unconfigure(data);
 }
 
-void usb_init(void)
-{
-    dbgaction = DBGACTION_IDLE;
-    wakeup_init(&dbgwakeup);
-    dbgconsendreadidx = 0;
-    dbgconsendwriteidx = 0;
-    dbgconrecvreadidx = 0;
-    dbgconrecvwriteidx = 0;
-    wakeup_init(&dbgconsendwakeup);
-    wakeup_init(&dbgconrecvwakeup);
-    dbgconsoleattached = false;
-    thread_create(&dbgthread_handle, "monitor worker", dbgthread, dbgstack,
-                  sizeof(dbgstack), CORE_THREAD, 255, true, NULL, NULL, NULL, NULL);
-    usb_drv_init();
-}
-
-int dbgconsole_getfree() ICODE_ATTR;
-int dbgconsole_getfree()
-{
-    int free = dbgconsendreadidx - dbgconsendwriteidx - 1;
-    if (free < 0) free += sizeof(dbgconsendbuf);
-    return free;
-}
-
-int dbgconsole_makespace(int length, bool safe) ICODE_ATTR;
-int dbgconsole_makespace(int length, bool safe)
-{
-    int free = dbgconsole_getfree();
-    while (!free && dbgconsoleattached && !safe)
-    {
-        dbgconsoleattached = false;
-        wakeup_wait(&dbgconsendwakeup, 2000000);
-        free = dbgconsole_getfree();
-    }
-    if (free) return free > length ? length : free;
-    if (length > sizeof(dbgconsendbuf) - 17) length = sizeof(dbgconsendbuf) - 17;
-    uint32_t mode = enter_critical_section();
-    dbgconsendreadidx += length;
-    if (dbgconsendreadidx >= sizeof(dbgconsendbuf))
-        dbgconsendreadidx -= sizeof(dbgconsendbuf);
-    int offset = 0;
-    int idx = dbgconsendreadidx;
-    if (idx + 16 >= sizeof(dbgconsendbuf))
-    {
-        offset = sizeof(dbgconsendbuf) - dbgconsendreadidx;
-        memcpy(&dbgconsendbuf[dbgconsendreadidx], dbgconoverflowstr, offset);
-        idx = 0;
-    }
-    if (offset != 16) memcpy(&dbgconsendbuf[idx], &dbgconoverflowstr[offset], 16 - offset);
-    leave_critical_section(mode);
-    return length;
-}
-
-void dbgconsole_putc_internal(char string, bool safe)
-{
-    dbgconsole_makespace(1, safe);
-    dbgconsendbuf[dbgconsendwriteidx++] = string;
-    if (dbgconsendwriteidx >= sizeof(dbgconsendbuf))
-        dbgconsendwriteidx -= sizeof(dbgconsendbuf);
-}
-
-void dbgconsole_putc(char string)
-{
-    dbgconsole_putc_internal(string, false);
-}
-
-void dbgconsole_sputc(char string)
-{
-    dbgconsole_putc_internal(string, true);
-}
-
-void dbgconsole_write_internal(const char* string, size_t length, bool safe)
-{
-    while (length)
-    {
-        int space = dbgconsole_makespace(length, safe);
-        if (dbgconsendwriteidx + space >= sizeof(dbgconsendbuf))
-        {
-            int bytes = sizeof(dbgconsendbuf) - dbgconsendwriteidx;
-            memcpy(&dbgconsendbuf[dbgconsendwriteidx], string, bytes);
-            dbgconsendwriteidx = 0;
-            string = &string[bytes];
-            space -= bytes;
-            length -= bytes;
-        }
-        if (space) memcpy(&dbgconsendbuf[dbgconsendwriteidx], string, space);
-        dbgconsendwriteidx += space;
-        string = &string[space];
-        length -= space;
-    }
-}
-
-void dbgconsole_write(const char* string, size_t length)
-{
-    dbgconsole_write_internal(string, length, false);
-}
-
-void dbgconsole_swrite(const char* string, size_t length)
-{
-    dbgconsole_write_internal(string, length, true);
-}
-
-void dbgconsole_puts(const char* string)
-{
-    dbgconsole_write(string, strlen(string));
-}
-
-void dbgconsole_sputs(const char* string)
-{
-    dbgconsole_swrite(string, strlen(string));
-}
-
-int dbgconsole_getavailable() ICODE_ATTR;
-int dbgconsole_getavailable()
-{
-    int available = dbgconrecvwriteidx - dbgconrecvreadidx;
-    if (available < 0) available += sizeof(dbgconrecvbuf);
-    return available;
-}
-
-int dbgconsole_getc(int timeout)
-{
-    if (!dbgconsole_getavailable())
-    {
-        wakeup_wait(&dbgconrecvwakeup, TIMEOUT_NONE);
-        if (!dbgconsole_getavailable())
-        {
-            wakeup_wait(&dbgconrecvwakeup, timeout);
-            if (!dbgconsole_getavailable()) return -1;
-        }
-    }
-    int byte = dbgconrecvbuf[dbgconrecvreadidx++];
-    if (dbgconrecvreadidx >= sizeof(dbgconrecvbuf))
-        dbgconrecvreadidx -= sizeof(dbgconrecvbuf);
-    return byte;
-}
-
-int dbgconsole_read(char* buffer, size_t length, int timeout)
-{
-    if (!length) return 0;
-    int available = dbgconsole_getavailable();
-    if (!available)
-    {
-        wakeup_wait(&dbgconrecvwakeup, TIMEOUT_NONE);
-        int available = dbgconsole_getavailable();
-        if (!available)
-        {
-            wakeup_wait(&dbgconrecvwakeup, timeout);
-            int available = dbgconsole_getavailable();
-            if (!available) return 0;
-        }
-    }
-    if (available > length) available = length;
-    int left = available;
-    if (dbgconrecvreadidx + available >= sizeof(dbgconrecvbuf))
-    {
-        int bytes = sizeof(dbgconrecvbuf) - dbgconrecvreadidx;
-        memcpy(buffer, &dbgconrecvbuf[dbgconrecvreadidx], bytes);
-        dbgconrecvreadidx = 0;
-        buffer = &buffer[bytes];
-        left -= bytes;
-    }
-    if (left) memcpy(buffer, &dbgconrecvbuf[dbgconrecvreadidx], left);
-    dbgconrecvreadidx += left;
-    return available;
-}
-
-void usb_exit(void)
-{
-    usb_drv_exit();
-}

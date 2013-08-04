@@ -1,432 +1,529 @@
-//
-//
-//    Copyright 2010 TheSeven
-//
-//
-//    This file is part of emCORE.
-//
-//    emCORE is free software: you can redistribute it and/or
-//    modify it under the terms of the GNU General Public License as
-//    published by the Free Software Foundation, either version 2 of the
-//    License, or (at your option) any later version.
-//
-//    emCORE is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-//    See the GNU General Public License for more details.
-//
-//    You should have received a copy of the GNU General Public License along
-//    with emCORE.  If not, see <http://www.gnu.org/licenses/>.
-//
-//
-
-
 #include "global.h"
-#include "mmu.h"
-#include "panic.h"
-#include "usbdrv.h"
-#include "thread.h"
-#include "timer.h"
-#include "usb.h"
-#include "usb_ch9.h"
 #include "synopsysotg.h"
+#include "usb.h"
+#include "timer.h"
 #include "util.h"
-#include "interrupt.h"
-#include "clockgates.h"
-#include "power.h"
 
+#ifndef SYNOPSYSOTG_AHB_BURST_LEN
+#define SYNOPSYSOTG_AHB_BURST_LEN 5
+#endif
+#ifndef SYNOPSYSOTG_AHB_THRESHOLD
+#define SYNOPSYSOTG_AHB_THRESHOLD 8
+#endif
+#ifndef SYNOPSYSOTG_TURNAROUND
+#define SYNOPSYSOTG_TURNAROUND 3
+#endif
 
-struct ep_type
+static void synopsysotg_flush_out_endpoint(const struct usb_instance* instance, int ep)
 {
-    bool active;
-    bool busy;
-    bool done;
-    int rc;
-    int size;
-    struct wakeup complete;
-} ;
-
-static struct ep_type endpoints[5];
-static struct usb_ctrlrequest ctrlreq CACHEALIGN_ATTR;
-static struct scheduler_thread synopsysotg_thread_handle;
-static uint32_t synopsysotg_stack[0x40] STACK_ATTR;
-
-int usb_drv_port_speed(void)
-{
-    return (DSTS & 2) == 0 ? 1 : 0;
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    if (data->core->outep_regs[ep].doepctl.b.epena)
+    {
+        // We are waiting for an OUT packet on this endpoint, which might arrive any moment.
+        // Assert a global output NAK to avoid race conditions while shutting down the endpoint.
+        synopsysotg_target_disable_irq(instance);
+        data->core->dregs.dctl.b.sgoutnak = 1;
+        while (!(data->core->gregs.gintsts.b.goutnakeff));
+        union synopsysotg_depctl doepctl = { .b = { .snak = 1, .epdis = 1 } };
+        data->core->outep_regs[ep].doepctl = doepctl;
+        while (!(data->core->outep_regs[ep].doepint.b.epdisabled));
+        data->core->dregs.dctl.b.cgoutnak = 1;
+        synopsysotg_target_enable_irq(instance);
+    }
+    data->core->outep_regs[ep].doepctl.b.usbactep = 0;
+    // Reset the transfer size register. Not strictly necessary, but can't hurt.
+    data->core->outep_regs[ep].doeptsiz.d32 = 0;
 }
 
-static void reset_endpoints(int reinit)
+static void synopsysotg_flush_in_endpoint(const struct usb_instance* instance, int ep)
 {
-    unsigned int i;
-    for (i = 0; i < sizeof(endpoints)/sizeof(struct ep_type); i++)
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    if (data->core->inep_regs[ep].diepctl.b.epena)
     {
-        if (reinit) endpoints[i].active = false;
-        endpoints[i].busy = false;
-        endpoints[i].rc = -1;
-        endpoints[i].done = true;
-        wakeup_signal(&endpoints[i].complete);
+        // We are shutting down an endpoint that might still have IN packets in the FIFO.
+        // Disable the endpoint, wait for things to settle, and flush the relevant FIFO.
+        synopsysotg_target_disable_irq(instance);
+        data->core->inep_regs[ep].diepctl.b.snak = 1;
+        while (!(data->core->inep_regs[ep].diepint.b.inepnakeff));
+        data->core->inep_regs[ep].diepctl.b.epdis = 1;
+        while (!(data->core->inep_regs[ep].diepint.b.epdisabled));
+        if (ep) data->core->inep_regs[ep].diepctl.b.usbactep = 0;
+        synopsysotg_target_enable_irq(instance);
+        // Wait for any DMA activity to stop, to make sure nobody will touch the FIFO.
+        while (!data->core->gregs.grstctl.b.ahbidle);
+        // Flush it all the way down!
+        union synopsysotg_grstctl grstctl = { .b = { .txfnum = data->core->inep_regs[ep].diepctl.b.txfnum, .txfflsh = 1 } };
+        data->core->gregs.grstctl = grstctl;
+        while (data->core->gregs.grstctl.b.txfflsh);
     }
-    DIEPCTL0 = 0x8800;  /* EP0 IN ACTIVE NEXT=1 */
-    DOEPCTL0 = 0x8000;  /* EP0 OUT ACTIVE */
-    DOEPTSIZ0 = 0x20080040;  /* EP0 OUT Transfer Size:
-                                64 Bytes, 1 Packet, 1 Setup Packet */
-    DOEPDMA0 = &ctrlreq;
-    DOEPCTL0 |= 0x84000000;  /* EP0 OUT ENABLE CLEARNAK */
-    if (reinit)
+    else if (ep) data->core->inep_regs[ep].diepctl.b.usbactep = 0;
+    // Reset the transfer size register. Not strictly necessary, but can't hurt.
+    data->core->inep_regs[ep].dieptsiz.d32 = 0;
+}
+
+static void synopsysotg_flush_ints(const struct usb_instance* instance)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    int i;
+    for (i = 0; i < 16; i++)
     {
-        /* The size is getting set to zero, because we don't know
-           whether we are Full Speed or High Speed at this stage */
-        /* EP1 IN INACTIVE DATA0 SIZE=0 NEXT=3 */
-        DIEPCTL1 = 0x10001800;
-        /* EP2 OUT INACTIVE DATA0 SIZE=0 */
-        DOEPCTL2 = 0x10000000;
-        /* EP3 IN INACTIVE DATA0 SIZE=0 NEXT=0 */
-        DIEPCTL3 = 0x10000000;
-        /* EP4 OUT INACTIVE DATA0 SIZE=0 */
-        DOEPCTL4 = 0x10000000;
+        data->core->outep_regs[i].doepint = data->core->outep_regs[i].doepint;
+        data->core->inep_regs[i].diepint = data->core->inep_regs[i].diepint;
+    }
+    data->core->gregs.gintsts = data->core->gregs.gintsts;
+}
+
+static void synopsysotg_try_push(const struct usb_instance* instance, int ep)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    struct synopsysotg_state* state = (struct synopsysotg_state*)instance->driver_state;
+    union synopsysotg_depctl depctl = data->core->inep_regs[ep].diepctl;
+    if (!depctl.b.epena || !depctl.b.usbactep || depctl.b.stall || depctl.b.naksts) return;
+    int bytesleft = data->core->inep_regs[ep].dieptsiz.b.xfersize;
+    if (!bytesleft) return;
+    int maxpacket = ep ? data->core->inep_regs[ep].diepctl.b.mps : 64;
+    union synopsysotg_hnptxsts fifospace = data->core->gregs.hnptxsts;
+    int words = (MIN(maxpacket, bytesleft) + 3) >> 2;
+    if (fifospace.b.nptxqspcavail && fifospace.b.nptxfspcavail << 2 >= words)
+        while (words--) data->core->dfifo[ep][0] = *state->endpoints[ep].txaddr++;
+    if (!words && bytesleft <= maxpacket) return;
+    data->core->gregs.gintmsk.b.nptxfempty = true;
+}
+
+void synopsysotg_start_rx(const struct usb_instance* instance, union usb_endpoint_number ep, void* buf, int size)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    struct synopsysotg_state* state = (struct synopsysotg_state*)instance->driver_state;
+
+    // Find the appropriate set of endpoint registers
+    volatile struct synopsysotg_outepregs* regs = &data->core->outep_regs[ep.number];
+    // Calculate number of packets (if size == 0 an empty packet will be sent)
+    int maxpacket = regs->doepctl.b.mps;
+    int packets = (size + maxpacket - 1) / maxpacket;
+    if (!packets) packets = 1;
+
+    // Set up data destination
+    if (data->use_dma) regs->doepdma = buf;
+    else state->endpoints[ep.number].rxaddr = (uint32_t*)buf;
+    union synopsysotg_depxfrsiz deptsiz = { .b = { .pktcnt = packets, .xfersize = size } };
+    regs->doeptsiz = deptsiz;
+
+    // Flush CPU cache if necessary
+    if (data->use_dma) invalidate_dcache(buf, size);
+
+    // Enable the endpoint
+    union synopsysotg_depctl depctl = regs->doepctl;
+    depctl.b.epena = 1;
+    depctl.b.cnak = 1;
+    regs->doepctl = depctl;
+}
+
+void synopsysotg_start_tx(const struct usb_instance* instance, union usb_endpoint_number ep, const void* buf, int size)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    struct synopsysotg_state* state = (struct synopsysotg_state*)instance->driver_state;
+
+    // Find the appropriate set of endpoint registers
+    volatile struct synopsysotg_inepregs* regs = &data->core->inep_regs[ep.number];
+    // Calculate number of packets (if size == 0 an empty packet will be sent)
+    int maxpacket = regs->diepctl.b.mps;
+    int packets = (size + maxpacket - 1) / maxpacket;
+    if (!packets) packets = 1;
+
+    // Set up data source
+    if (data->use_dma) regs->diepdma = buf;
+    else state->endpoints[ep.number].txaddr = (uint32_t*)buf;
+    union synopsysotg_depxfrsiz deptsiz = { .b = { .pktcnt = packets, .xfersize = size } };
+    regs->dieptsiz = deptsiz;
+
+    // Flush CPU cache if necessary
+    if (data->use_dma) clean_dcache(buf, size);
+
+    // Enable the endpoint
+    union synopsysotg_depctl depctl = regs->diepctl;
+    depctl.b.epena = 1;
+    depctl.b.cnak = 1;
+    regs->diepctl = depctl;
+
+    // Start pushing data into the FIFO (must be done after enabling the endpoint)
+    if (size && !data->use_dma)
+    {
+        if (data->shared_txfifo) synopsysotg_try_push(instance, ep.number);
+        else data->core->dregs.diepempmsk.ep.in |= (1 << ep.number);
+    }
+}
+
+int synopsysotg_get_stall(const struct usb_instance* instance, union usb_endpoint_number ep)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    if (ep.direction == USB_ENDPOINT_DIRECTION_IN)
+        return !!data->core->inep_regs[ep.number].diepctl.b.stall;
+    return !!data->core->outep_regs[ep.number].doepctl.b.stall;
+}
+
+void synopsysotg_set_stall(const struct usb_instance* instance, union usb_endpoint_number ep, int stall)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    if (ep.direction == USB_ENDPOINT_DIRECTION_IN)
+    {
+        data->core->inep_regs[ep.number].diepctl.b.stall = !!stall;
+        if (!stall) data->core->inep_regs[ep.number].diepctl.b.setd0pid = true;
     }
     else
     {
-        /* INACTIVE DATA0 */
-        DIEPCTL1 = (DIEPCTL1 & ~0x00008000) | 0x10000000;
-        DOEPCTL2 = (DOEPCTL2 & ~0x00008000) | 0x10000000;
-        DIEPCTL3 = (DIEPCTL3 & ~0x00008000) | 0x10000000;
-        DOEPCTL4 = (DOEPCTL4 & ~0x00008000) | 0x10000000;
+        data->core->outep_regs[ep.number].doepctl.b.stall = !!stall;
+        if (!stall) data->core->outep_regs[ep.number].doepctl.b.setd0pid = true;
     }
-    DAINTMSK = 0xFFFFFFFF;  /* Enable interrupts on all EPs */
+
 }
 
-int usb_drv_request_endpoint(int type, int dir)
+void synopsysotg_set_address(const struct usb_instance* instance, uint8_t address)
 {
-    size_t ep;
-    int ret = -1;
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    data->core->dregs.dcfg.b.devaddr = address;
+}
 
-    if (dir == USB_DIR_IN) ep = 1;
-    else ep = 2;
-
-    while (ep < 5)
+void synopsysotg_unconfigure_ep(const struct usb_instance* instance, union usb_endpoint_number ep)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    if (ep.direction == USB_ENDPOINT_DIRECTION_IN)
     {
-        if (!endpoints[ep].active)
-        {
-            endpoints[ep].active = true;
-            ret = ep | dir;
-            uint32_t newbits = (type << 18) | 0x10000000;
-            if (dir) DIEPCTL(ep) = (DIEPCTL(ep) & ~0x000C0000) | newbits;
-            else DOEPCTL(ep) = (DOEPCTL(ep) & ~0x000C0000) | newbits;
-            break;
-        }
-        ep += 2;
+        // Kill any outstanding IN transfers
+        synopsysotg_flush_in_endpoint(instance, ep.number);
+        // Mask interrupts for this endpoint
+        data->core->dregs.daintmsk.ep.in &= ~(1 << ep.number);
+    }
+    else
+    {
+        // Kill any outstanding OUT transfers
+        synopsysotg_flush_out_endpoint(instance, ep.number);
+        // Mask interrupts for this endpoint
+        data->core->dregs.daintmsk.ep.out &= ~(1 << ep.number);
+    }
+}
+
+void synopsysotg_configure_ep(const struct usb_instance* instance, union usb_endpoint_number ep,
+                              enum usb_endpoint_type type, int maxpacket)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+
+    // Write the new configuration and unmask interrupts for the endpoint.
+    // Reset data toggle to DATA0, as required by the USB specification.
+    int txfifo = data->shared_txfifo ? 0 : ep.number;
+    union synopsysotg_depctl depctl = { .b = { .usbactep = 1, .eptype = type, .mps = maxpacket,
+                                               .txfnum = txfifo, .setd0pid = 1, .nextep = (ep.number + 1) & 0xf } };
+    if (ep.direction == USB_ENDPOINT_DIRECTION_IN)
+    {
+        data->core->inep_regs[ep.number].diepctl = depctl;
+        data->core->dregs.daintmsk.ep.in |= (1 << ep.number);
+    }
+    else
+    {
+        data->core->outep_regs[ep.number].doepctl = depctl;
+        data->core->dregs.daintmsk.ep.out |= (1 << ep.number);
+    }
+}
+
+void synopsysotg_ep0_start_rx(const struct usb_instance* instance, int non_setup)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    struct synopsysotg_state* state = (struct synopsysotg_state*)instance->driver_state;
+
+    // Set up data destination
+    if (data->use_dma) data->core->outep_regs[0].doepdma = instance->buffer;
+    else state->endpoints[0].rxaddr = (uint32_t*)instance->buffer;
+    union synopsysotg_dep0xfrsiz deptsiz = { .b = { .supcnt = 3, .pktcnt = !!non_setup, .xfersize = 64 } };
+    data->core->outep_regs[0].doeptsiz.d32 = deptsiz.d32;
+
+    // Flush CPU cache if necessary
+    if (data->use_dma) invalidate_dcache(instance->buffer, sizeof(instance->buffer));
+
+    // Enable the endpoint
+    union synopsysotg_depctl depctl = data->core->outep_regs[0].doepctl;
+    depctl.b.epena = 1;
+    depctl.b.cnak = non_setup;
+    data->core->outep_regs[0].doepctl = depctl;
+}
+
+void synopsysotg_ep0_start_tx(const struct usb_instance* instance, const void* buf, int len)
+{
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    struct synopsysotg_state* state = (struct synopsysotg_state*)instance->driver_state;
+
+    if (len)
+    {
+        // Set up data source
+        if (data->use_dma) data->core->inep_regs[0].diepdma = buf;
+        else state->endpoints[0].txaddr = buf;
+        union synopsysotg_dep0xfrsiz deptsiz = { .b = { .pktcnt = (len + 63) >> 6, .xfersize = len } };
+        data->core->inep_regs[0].dieptsiz.d32 = deptsiz.d32;
+    }
+    else
+    {
+        // Set up the IN pipe for a zero-length packet
+        union synopsysotg_dep0xfrsiz deptsiz = { .b = { .pktcnt = 1 } };
+        data->core->inep_regs[0].dieptsiz.d32 = deptsiz.d32;
     }
 
-    return ret;
+    // Flush CPU cache if necessary
+    if (data->use_dma) clean_dcache(buf, len);
+
+    // Enable the endpoint
+    union synopsysotg_depctl depctl = data->core->inep_regs[0].diepctl;
+    depctl.b.epena = 1;
+    depctl.b.cnak = 1;
+    data->core->inep_regs[0].diepctl = depctl;
+
+    // Start pushing data into the FIFO (must be done after enabling the endpoint)
+    if (len && !data->use_dma)
+    {
+        if (data->shared_txfifo) synopsysotg_try_push(instance, 0);
+        else data->core->dregs.diepempmsk.ep.in |= 1;
+    }
 }
 
-void usb_drv_release_endpoint(int ep)
+static void synopsysotg_ep0_init(const struct usb_instance* instance)
 {
-    ep = ep & 0x7f;
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
 
-    if (ep < 1 || ep > USB_NUM_ENDPOINTS) return;
-
-    endpoints[ep].active = false;
+    // Make sure both EP0 pipes are active.
+    // (The hardware should take care of that, but who knows...)
+    union synopsysotg_depctl depctl = { .b = { .usbactep = 1, .nextep = data->core->inep_regs[0].diepctl.b.nextep } };
+    data->core->outep_regs[0].doepctl = depctl;
+    data->core->inep_regs[0].diepctl = depctl;
 }
 
-static void usb_reset(void)
+void synopsysotg_irq(const struct usb_instance* instance)
 {
-    DCTL = 0x802;  /* Soft Disconnect */
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+    struct synopsysotg_state* state = (struct synopsysotg_state*)instance->driver_state;
 
-    OPHYPWR = 0;  /* PHY: Power up */
-    udelay(10);
-    OPHYUNK1 = 1;
-    OPHYUNK2 = 0xE3F;
-    ORSTCON = 1;  /* PHY: Assert Software Reset */
-    udelay(10);
-    ORSTCON = 0;  /* PHY: Deassert Software Reset */
-    udelay(10);
-    OPHYUNK3 = 0x600;
-    OPHYCLK = SYNOPSYSOTG_CLOCK;
-    sleep(400);
+    union synopsysotg_gintsts gintsts = data->core->gregs.gintsts;
 
-    GRSTCTL = 1;  /* OTG: Assert Software Reset */
-    while (GRSTCTL & 1);  /* Wait for OTG to ack reset */
-    while (!(GRSTCTL & 0x80000000));  /* Wait for OTG AHB master idle */
+    if (gintsts.b.usbreset)
+    {
+        data->core->dregs.dcfg.b.devaddr = 0;
+        usb_handle_bus_reset(instance, 0);
+    }
 
-    GRXFSIZ = 0x00000200;  /* RX FIFO: 512 bytes */
-    GNPTXFSIZ = 0x02000200;  /* Non-periodic TX FIFO: 512 bytes */
-    GAHBCFG = SYNOPSYSOTG_AHBCFG;
-    GUSBCFG = 0x1408;  /* OTG: 16bit PHY and some reserved bits */
+    if (gintsts.b.enumdone)
+    {
+        usb_handle_bus_reset(instance, data->core->dregs.dsts.b.enumspd == 0);
+        synopsysotg_ep0_init(instance);
+    }
 
-    DCFG = 4;  /* Address 0 */
-    DCTL = 0x800;  /* Soft Reconnect */
-    DIEPMSK = 0x0D;  /* IN EP interrupt mask */
-    DOEPMSK = 0x0D;  /* IN EP interrupt mask */
-    DAINTMSK = 0xFFFFFFFF;  /* Enable interrupts on all endpoints */
-    GINTMSK = 0xC3000;  /* Interrupt mask: IN event, OUT event, bus reset */
+    if (gintsts.b.rxstsqlvl && !data->use_dma)
+    {
+        // Device to memory part of the "software DMA" implementation, used to receive data if use_dma == 0.
+        // Handle one packet at a time, the IRQ will re-trigger if there's something left.
+        union synopsysotg_grxfsts rxsts = data->core->gregs.grxstsp;
+        int ep = rxsts.b.chnum;
+        int words = (rxsts.b.bcnt + 3) >> 2;
+        while (words--) *state->endpoints[ep].rxaddr++ = data->core->dfifo[0][0];
+    }
 
-    reset_endpoints(1);
+    if (gintsts.b.nptxfempty && data->core->gregs.gintmsk.b.nptxfempty)
+    {
+        // Old style, "shared TX FIFO" memory to device part of the "software DMA" implementation,
+        // used to send data if use_dma == 0 and the device doesn't support one non-periodic TX FIFO per endpoint.
+
+        // First disable the IRQ, it will be re-enabled later if there is anything left to be done.
+        data->core->gregs.gintmsk.b.nptxfempty = false;
+
+        // Check all endpoints for anything to be transmitted
+        int ep;
+        for (ep = 0; ep < 16; ep++) synopsysotg_try_push(instance, ep);
+    }
+
+    if (gintsts.b.inepintr)
+    {
+        union synopsysotg_daint daint = data->core->dregs.daint;
+        int ep;
+        for (ep = 0; ep < 16; ep++)
+            if (daint.ep.in & (1 << ep))
+            {
+                union synopsysotg_diepintn epints = data->core->inep_regs[ep].diepint;
+                if (epints.b.emptyintr)
+                {
+                    // Memory to device part of the "software DMA" implementation, used to transmit data if use_dma == 0.
+                    union synopsysotg_depxfrsiz deptsiz = data->core->inep_regs[ep].dieptsiz;
+                    if (!deptsiz.b.xfersize) data->core->dregs.diepempmsk.ep.in &= ~(1 << ep);
+                    else
+                    {
+                        // Push data into the TX FIFO until we don't have anything left or the FIFO would overflow.
+                        int left = (deptsiz.b.xfersize + 3) >> 2;
+                        while (left)
+                        {
+                            int words = data->core->inep_regs[ep].dtxfsts.b.txfspcavail;
+                            if (words > left) words = left;
+                            if (!words) break;
+                            left -= words;
+                            while (words--) data->core->dfifo[ep][0] = *state->endpoints[ep].txaddr++;
+                        }
+                    }
+                }
+                union usb_endpoint_number epnum = { .direction = USB_ENDPOINT_DIRECTION_IN, .number = ep };
+                int bytesleft = data->core->inep_regs[ep].dieptsiz.b.xfersize;
+                if (epints.b.timeout) usb_handle_timeout(instance, epnum, bytesleft);
+                if (epints.b.xfercompl) usb_handle_xfer_complete(instance, epnum, bytesleft);
+                data->core->inep_regs[ep].diepint = epints;
+            }
+    }
+
+    if (gintsts.b.outepintr)
+    {
+        union synopsysotg_daint daint = data->core->dregs.daint;
+        int ep;
+        for (ep = 0; ep < 16; ep++)
+            if (daint.ep.out & (1 << ep))
+            {
+                union synopsysotg_doepintn epints = data->core->outep_regs[ep].doepint;
+                union usb_endpoint_number epnum = { .direction = USB_ENDPOINT_DIRECTION_OUT, .number = ep };
+                if (epints.b.setup)
+                {
+                    if (data->use_dma) invalidate_dcache(instance->buffer, sizeof(instance->buffer));
+                    synopsysotg_flush_in_endpoint(instance, ep);
+                    usb_handle_setup_received(instance, epnum);
+                }
+                else if (epints.b.xfercompl)
+                {
+                    int bytesleft = data->core->inep_regs[ep].dieptsiz.b.xfersize;
+                    usb_handle_xfer_complete(instance, epnum, bytesleft);
+                }
+                data->core->outep_regs[ep].doepint = epints;
+            }
+    }
+
+    data->core->gregs.gintsts = gintsts;
 }
 
-/* IRQ handler */
-void INT_USB_FUNC(void)
+void synopsysotg_init(const struct usb_instance* instance)
 {
     int i;
-    uint32_t ints = GINTSTS;
-    uint32_t epints;
-    if (ints & 0x1000)  /* bus reset */
+
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
+
+    // Disable IRQ during setup
+    synopsysotg_target_disable_irq(instance);
+
+    // Enable OTG clocks
+    synopsysotg_target_enable_clocks(instance);
+
+    // Enable PHY clocks
+    union synopsysotg_pcgcctl pcgcctl = { .b = {} };
+    data->core->pcgcctl = pcgcctl;
+
+    // Configure PHY type (must be done before reset)
+    union synopsysotg_gccfg gccfg = { .b = { .disablevbussensing = 1, .pwdn = 0 } };
+    data->core->gregs.gccfg = gccfg;
+    union synopsysotg_gusbcfg gusbcfg = { .b = { .force_dev = 1, .usbtrdtim = SYNOPSYSOTG_TURNAROUND } };
+    if (data->phy_16bit) gusbcfg.b.phyif = 1;
+    else if (data->phy_ulpi) gusbcfg.b.ulpi_utmi_sel = 1;
+    else gusbcfg.b.physel  = 1;
+    data->core->gregs.gusbcfg = gusbcfg;
+
+    // Reset the whole USB core
+    union synopsysotg_grstctl grstctl = { .b = { .csftrst = 1 } };
+    udelay(100);
+    while (!data->core->gregs.grstctl.b.ahbidle);
+    data->core->gregs.grstctl = grstctl;
+    while (data->core->gregs.grstctl.b.csftrst);
+    while (!data->core->gregs.grstctl.b.ahbidle);
+
+    // Soft disconnect
+    union synopsysotg_dctl dctl = { .b = { .sftdiscon = 1 } };
+    data->core->dregs.dctl = dctl;
+
+    // Configure the core
+    union synopsysotg_gahbcfg gahbcfg = { .b = { .dmaenable = data->use_dma, .hburstlen = SYNOPSYSOTG_AHB_BURST_LEN, .glblintrmsk = 1 } };
+    if (data->disable_double_buffering)
     {
-        DCFG = 4;  /* Address 0 */
-        reset_endpoints(1);
-        usb_handle_bus_reset();
+        gahbcfg.b.nptxfemplvl_txfemplvl = 1;
+        gahbcfg.b.ptxfemplvl = 1;
     }
+    data->core->gregs.gahbcfg = gahbcfg;
+    data->core->gregs.gusbcfg = gusbcfg;
+    gccfg.b.pwdn = 1;
+    data->core->gregs.gccfg = gccfg;
+    union synopsysotg_dcfg dcfg = { .b = { .nzstsouthshk = 1 } };
+    data->core->dregs.dcfg = dcfg;
 
-    if (ints & 0x2000)  /* enumeration done, we now know the speed */
+    // Configure the FIFOs
+    if (data->use_dma)
     {
-        /* Set up the maximum packet sizes accordingly */
-        uint32_t maxpacket = usb_drv_port_speed() ? 512 : 64;
-        DIEPCTL1 = (DIEPCTL1 & ~0x000003FF) | maxpacket;
-        DOEPCTL2 = (DOEPCTL2 & ~0x000003FF) | maxpacket;
-        DIEPCTL3 = (DIEPCTL3 & ~0x000003FF) | maxpacket;
-        DOEPCTL4 = (DOEPCTL4 & ~0x000003FF) | maxpacket;
+        union synopsysotg_dthrctl dthrctl = { .b = { .arb_park_en = 1, .rx_thr_en = 1, .iso_thr_en = 0, .non_iso_thr_en = 0,
+                                                     .rx_thr_len = SYNOPSYSOTG_AHB_THRESHOLD } };
+        data->core->dregs.dthrctl = dthrctl;
     }
-
-    if (ints & 0x40000)  /* IN EP event */
-        for (i = 0; i < 4; i += i + 1)  // 0, 1, 3
-            if (epints = DIEPINT(i))
-            {
-                if (epints & 1)  /* Transfer completed */
-                {
-                    int bytes = endpoints[i].size - (DIEPTSIZ(i) & 0x3FFFF);
-                    if (endpoints[i].busy)
-                    {
-                        endpoints[i].busy = false;
-                        endpoints[i].rc = 0;
-                        endpoints[i].done = true;
-                        usb_handle_transfer_complete(i, USB_DIR_IN, 0, bytes);
-                        wakeup_signal(&endpoints[i].complete);
-                    }
-                }
-                if (epints & 4)  /* AHB error */
-                    panicf(PANIC_FATAL, "USB: AHB error on IN EP%d", i);
-                if (epints & 8)  /* Timeout */
-                {
-                    if (endpoints[i].busy)
-                    {
-                        endpoints[i].busy = false;
-                        endpoints[i].rc = 1;
-                        endpoints[i].done = true;
-                        wakeup_signal(&endpoints[i].complete);
-                    }
-                }
-                DIEPINT(i) = epints;
-            }
-
-    if (ints & 0x80000)  /* OUT EP event */
-        for (i = 0; i < 5; i += 2)  // 0, 2, 4
-            if (epints = DOEPINT(i))
-            {
-                if (epints & 1)  /* Transfer completed */
-                {
-                    int bytes = endpoints[i].size - (DOEPTSIZ(i) & 0x3FFFF);
-                    if (endpoints[i].busy)
-                    {
-                        endpoints[i].busy = false;
-                        endpoints[i].rc = 0;
-                        endpoints[i].done = true;
-                        usb_handle_transfer_complete(i, USB_DIR_OUT, 0, bytes);
-                        wakeup_signal(&endpoints[i].complete);
-                    }
-                }
-                if (epints & 4)  /* AHB error */
-                    panicf(PANIC_FATAL, "USB: AHB error on OUT EP%d", i);
-                if (epints & 8)  /* SETUP phase done */
-                {
-                    invalidate_dcache();
-                    if (i == 0) usb_handle_control_request(&ctrlreq);
-                    else panicf(PANIC_FATAL, "USB: SETUP done on OUT EP%d!?", i);
-                }
-                /* Make sure EP0 OUT is set up to accept the next request */
-                if (!i)
-                {
-                    DOEPTSIZ0 = 0x20080040;
-                    DOEPDMA0 = &ctrlreq;
-                    DOEPCTL0 |= 0x84000000;
-                }
-                DOEPINT(i) = epints;
-            }
-
-    GINTSTS = ints;
-}
-
-void usb_drv_set_address(int address)
-{
-    DCFG = (DCFG & ~0x7F0) | (address << 4);
-}
-
-static void ep_send(int ep, const void *ptr, int length)
-{
-    endpoints[ep].busy = true;
-    endpoints[ep].size = length;
-    DIEPCTL(ep) |= 0x8000;  /* EPx OUT ACTIVE */
-    int blocksize = usb_drv_port_speed() ? 512 : 64;
-    int packets = (length + blocksize - 1) / blocksize;
-    if (!length)
+    int addr = data->fifosize;
+    for (i = 0; i < 16; i++)
     {
-        DIEPTSIZ(ep) = 1 << 19;  /* one empty packet */
-        DIEPDMA(ep) = NULL;  /* dummy address */
-    }
-    else
-    {
-        DIEPTSIZ(ep) = length | (packets << 19);
-        DIEPDMA(ep) = ptr;
-    }
-    clean_dcache();
-    DIEPCTL(ep) |= 0x84000000;  /* EPx OUT ENABLE CLEARNAK */
-}
-
-static void ep_recv(int ep, void *ptr, int length)
-{
-    endpoints[ep].busy = true;
-    endpoints[ep].size = length;
-    DOEPCTL(ep) &= ~0x20000;  /* EPx UNSTALL */
-    DOEPCTL(ep) |= 0x8000;  /* EPx OUT ACTIVE */
-    int blocksize = usb_drv_port_speed() ? 512 : 64;
-    int packets = (length + blocksize - 1) / blocksize;
-    if (!length)
-    {
-        DOEPTSIZ(ep) = 1 << 19;  /* one empty packet */
-        DOEPDMA(ep) = NULL;  /* dummy address */
-    }
-    else
-    {
-        DOEPTSIZ(ep) = length | (packets << 19);
-        DOEPDMA(ep) = ptr;
-    }
-    invalidate_dcache();
-    DOEPCTL(ep) |= 0x84000000;  /* EPx OUT ENABLE CLEARNAK */
-}
-
-int usb_drv_send(int endpoint, const void *ptr, int length)
-{
-    endpoint &= 0x7f;
-    endpoints[endpoint].done = false;
-    ep_send(endpoint, ptr, length);
-    while (!endpoints[endpoint].done && endpoints[endpoint].busy)
-        wakeup_wait(&endpoints[endpoint].complete, TIMEOUT_BLOCK);
-    return endpoints[endpoint].rc;
-}
-
-int usb_drv_send_nonblocking(int endpoint, const void *ptr, int length)
-{
-    ep_send(endpoint & 0x7f, ptr, length);
-    return 0;
-}
-
-int usb_drv_recv(int endpoint, void* ptr, int length)
-{
-    ep_recv(endpoint & 0x7f, ptr, length);
-    return 0;
-}
-
-void usb_drv_cancel_all_transfers(void)
-{
-    uint32_t mode = enter_critical_section();
-    reset_endpoints(0);
-    leave_critical_section(mode);
-}
-
-bool usb_drv_stalled(int endpoint, bool in)
-{
-    if (in) return DIEPCTL(endpoint) & 0x00200000 ? true : false;
-    else return DOEPCTL(endpoint) & 0x00200000 ? true : false;
-}
-
-void usb_drv_stall(int endpoint, bool stall, bool in)
-{
-    if (in)
-    {
-        if (stall) DIEPCTL(endpoint) |= 0x00200000;
-        else DIEPCTL(endpoint) &= ~0x00200000;
-    }
-    else
-    {
-        if (stall) DOEPCTL(endpoint) |= 0x00200000;
-        else DOEPCTL(endpoint) &= ~0x00200000;
-    }
-}
-
-void usb_drv_power_up(void)
-{
-    /* Enable USB clock */
-    clockgate_enable(CLOCKGATE_USB_1, true);
-    clockgate_enable(CLOCKGATE_USB_2, true);
-    PCGCCTL = 0;
-
-    /* reset the beast */
-    usb_reset();
-}
-
-void usb_drv_power_down(void)
-{
-    DCTL = 0x802;  /* Soft Disconnect */
-
-    OPHYPWR = 0xF;  /* PHY: Power down */
-    udelay(10);
-    ORSTCON = 7;  /* Put the PHY into reset (needed to get current down) */
-    udelay(10);
-    PCGCCTL = 1;  /* Shut down PHY clock */
-    
-    clockgate_enable(CLOCKGATE_USB_1, false);
-    clockgate_enable(CLOCKGATE_USB_2, false);
-}
-
-void usb_check_vbus(void* arg0, void* arg1, void* arg2, void* arg3)
-{
-    bool oldstate = false;
-    while (true)
-    {
-        sleep(200000);
-        bool newstate = vbus_state();
-        if (oldstate != newstate)
+        int size = data->txfifosize[i];
+        addr -= size;
+        if (size)
         {
-            if (newstate) usb_drv_power_up();
-            else usb_drv_power_down();
-            oldstate = newstate;
+            data->core->inep_regs[i].diepctl.b.nextep = (i + 1) & 0xf;
+            union synopsysotg_txfsiz fsiz = { .b = { .startaddr = addr, .depth = size } };
+            if (!i) data->core->gregs.dieptxf0_hnptxfsiz = fsiz;
+            else data->core->gregs.dieptxf[i - 1] = fsiz;
         }
     }
+    union synopsysotg_rxfsiz fsiz = { .b = { .depth = addr } };
+    data->core->gregs.grxfsiz = fsiz;
+
+    // Set up interrupts
+    union synopsysotg_doepintn doepmsk =  { .b = { .xfercompl = 1, .setup = 1 } };
+    data->core->dregs.doepmsk = doepmsk;
+    union synopsysotg_diepintn diepmsk =  { .b = { .xfercompl = 1, .timeout = 1 } };
+    data->core->dregs.diepmsk = diepmsk;
+    data->core->dregs.diepempmsk.d32 = 0;
+    union synopsysotg_daint daintmsk = { .ep = { .in = 0b0000000000000001, .out = 0b0000000000000001 } };
+    data->core->dregs.daintmsk = daintmsk;
+    union synopsysotg_gintmsk gintmsk =  { .b = { .usbreset = 1, .enumdone = 1, .outepintr = 1, .inepintr = 1 } };
+    if (!data->use_dma) gintmsk.b.rxstsqlvl = 1;
+    data->core->gregs.gintmsk = gintmsk;
+    synopsysotg_flush_ints(instance);
+    synopsysotg_target_clear_irq(instance);
+    synopsysotg_target_enable_irq(instance);
+
+    // Soft reconnect
+    dctl.b.sftdiscon = 0;
+    data->core->dregs.dctl = dctl;
 }
 
-void usb_drv_init(void)
+void synopsysotg_exit(const struct usb_instance* instance)
 {
-    unsigned int i;
-    for (i = 0; i < sizeof(endpoints)/sizeof(struct ep_type); i++)
-        wakeup_init(&endpoints[i].complete);
+    const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
 
-    /* Enable USB clock */
-    clockgate_enable(CLOCKGATE_USB_1, true);
-    clockgate_enable(CLOCKGATE_USB_2, true);
-    PCGCCTL = 0;
+    // Soft disconnect
+    union synopsysotg_dctl dctl = { .b = { .sftdiscon = 1 } };
+    data->core->dregs.dctl = dctl;
 
-    /* unmask irq */
-    interrupt_enable(IRQ_USB_FUNC, true);
+    // Disable IRQs
+    synopsysotg_target_disable_irq(instance);
 
-    thread_create(&synopsysotg_thread_handle, "synopsysotg", usb_check_vbus,
-                  synopsysotg_stack, sizeof(synopsysotg_stack), OS_THREAD, 63, true,
-                  NULL, NULL, NULL, NULL);
-
-    usb_drv_power_down();
+    // Disable clocks
+    synopsysotg_target_disable_clocks(instance);
 }
 
-void usb_drv_exit(void)
+int synopsysotg_get_max_transfer_size(const struct usb_instance* data, union usb_endpoint_number ep)
 {
-    usb_drv_power_down();
+    return 512;
 }
 
-int usb_drv_get_max_out_size()
+const struct usb_driver synopsysotg_driver =
 {
-    return usb_drv_port_speed() ? 262144 : 32768;
-}
+    .init = synopsysotg_init,
+    .exit = synopsysotg_exit,
+    .ep0_start_rx = synopsysotg_ep0_start_rx,
+    .ep0_start_tx = synopsysotg_ep0_start_tx,
+    .start_rx = synopsysotg_start_rx,
+    .start_tx = synopsysotg_start_tx,
+    .get_stall = synopsysotg_get_stall,
+    .set_stall = synopsysotg_set_stall,
+    .set_address = synopsysotg_set_address,
+    .configure_ep = synopsysotg_configure_ep,
+    .unconfigure_ep = synopsysotg_unconfigure_ep,
+    .get_max_transfer_size = synopsysotg_get_max_transfer_size,
+};
 
-int usb_drv_get_max_in_size()
-{
-    return usb_drv_port_speed() ? 262144 : 32768;
-}

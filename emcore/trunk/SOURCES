@@ -19,8 +19,9 @@ target/ipodnano2g/clickwheel.c
 target/ipodnano2g/hwkeyaes.c
 target/ipodnano2g/hmacsha1.c
 target/ipodnano2g/usbtarget.c
-usb/synopsysotg.c
 target/ipodnano2g/rtc.c
+usb/synopsysotg.c
+usb/synopsysotg_s5l87xx.c
 #endif
 
 #ifdef TARGET_ipodnano4g
@@ -35,6 +36,7 @@ target/ipodnano4g/backlight.c
 target/ipodnano4g/clockgates.c
 target/ipodnano4g/hwkeyaes.c
 usb/synopsysotg.c
+usb/synopsysotg_s5l87xx.c
 #endif
 
 #if defined(TARGET_ipodnano3g) || defined(TARGET_ipodclassic)
@@ -53,8 +55,9 @@ target/ipodnano3g/clickwheel.c
 target/ipodnano3g/spi.c
 target/ipodnano3g/targetinit.c
 target/ipodnano3g/uart.c
-usb/synopsysotg.c
 target/ipodnano2g/rtc.c
+usb/synopsysotg.c
+usb/synopsysotg_s5l87xx.c
 #endif
 
 #ifdef TARGET_ipodclassic
@@ -73,6 +76,7 @@ target/ipodnano4g/backlight.c
 target/ipodnano4g/clockgates.c
 target/ipodtouch2g/lcd.c
 usb/synopsysotg.c
+usb/synopsysotg_s5l87xx.c
 #endif
 
 #ifdef ARM_ARCH
@@ -99,6 +103,8 @@ ucl.S
 thread.c
 #ifdef HAVE_USB
 usb/usb.c
+usb/usbglue.c
+usb/usbdebug.c
 #endif
 shutdown.c
 syscall.c
@@ -139,3 +145,4 @@ libc/strlen.c
 libc/strncmp.c
 libc/strrchr.c
 libc/tlsf/tlsf.c
+

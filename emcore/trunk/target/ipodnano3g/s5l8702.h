@@ -366,6 +366,7 @@
 
 
 /////DMA/////
+#ifndef ASM_FILE
 struct dma_lli
 {
     void* srcaddr;
@@ -373,6 +374,7 @@ struct dma_lli
     const struct dma_lli* nextlli;
     uint32_t control;
 };
+#endif
 #define DMACINTSTS(d)       (*((uint32_t volatile*)(0x38200000 + 0x1700000 * (d))))
 #define DMACINTTCSTS(d)     (*((uint32_t volatile*)(0x38200004 + 0x1700000 * (d))))
 #define DMACINTTCCLR(d)     (*((uint32_t volatile*)(0x38200008 + 0x1700000 * (d))))
