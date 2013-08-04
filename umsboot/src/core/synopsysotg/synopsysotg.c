@@ -312,7 +312,7 @@ void synopsysotg_irq(const struct usb_instance* instance)
         synopsysotg_ep0_init(instance);
     }
 
-    if (gintsts.b.rxstsqlvl)
+    if (gintsts.b.rxstsqlvl && !data->use_dma)
     {
         // Device to memory part of the "software DMA" implementation, used to receive data if use_dma == 0.
         // Handle one packet at a time, the IRQ will re-trigger if there's something left.

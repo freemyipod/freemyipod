@@ -34,6 +34,12 @@ void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len,
     // Expect zero-length ACK if we are about to actually send data, otherwise expect SETUP.
     if (last) usb_ep0_start_rx(data, !!len, usb_ep0_rx_callback);
 
+    if (((uint32_t)buf) & (CACHEALIGN_SIZE - 1))
+    {
+        memcpy(data->buffer->raw, buf, len);
+        buf = data->buffer->raw;
+    }
+
     data->state->ep0_tx_callback = callback;
     data->driver->ep0_start_tx(data, buf, len);
 }
@@ -44,7 +50,7 @@ bool usb_ep0_tx_callback(const struct usb_instance* data, int bytesleft)
     int len = MIN(64, data->state->ep0_tx_len);
     data->state->ep0_tx_ptr += 64;
     data->state->ep0_tx_len -= len;
-    usb_ep0_start_tx(data, data->state->ep0_tx_ptr, len, !!data->state->ep0_tx_len, usb_ep0_tx_callback);
+    usb_ep0_start_tx(data, data->state->ep0_tx_ptr, len, !data->state->ep0_tx_len, usb_ep0_tx_callback);
     return true;
 }
 
