@@ -179,7 +179,8 @@ class Emcore(object):
         """ Writes the data in 'data' to the location 'addr'
             in the memory of the device. This takes care of splitting long requests.
         """
-        self.logger.debug("Uploading %d bytes to 0x%X\n" % (len(data), addr))
+        size = len(data)
+        self.logger.debug("Uploading %d bytes to 0x%X\n" % (size, addr))
         offset = 0
         while size > 0:
             writesize = min(size, 0xf00)

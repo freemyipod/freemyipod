@@ -62,6 +62,7 @@
 #include "../crc32.h"
 #include "../rtc.h"
 #include "../accel.h"
+#include "../usb/usbglue.h"
 #include "../libc/include/assert.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
@@ -73,7 +74,7 @@
 #endif
 
 /* increase this every time the api struct changes */
-#define EMCORE_API_VERSION 7
+#define EMCORE_API_VERSION 8
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
@@ -290,6 +291,19 @@ struct emcore_syscall_table
     typeof(accel_read_force_vector) *accel_read_force_vector;
     typeof(reown_file) *reown_file;
     typeof(reown_dir) *reown_dir;
+    typeof(usbmanager_install_custom) *usbmanager_install_custom;
+    typeof(usbmanager_uninstall_custom) *usbmanager_uninstall_custom;
+    typeof(usbmanager_get_available_endpoints) *usbmanager_get_available_endpoints;
+    typeof(usbmanager_get_connected) *usbmanager_get_connected;
+    typeof(usb_ep0_start_rx) *usb_ep0_start_rx;
+    typeof(usb_ep0_start_tx) *usb_ep0_start_tx;
+    typeof(usb_start_rx) *usb_start_rx;
+    typeof(usb_start_tx) *usb_start_tx;
+    typeof(usb_set_stall) *usb_set_stall;
+    typeof(usb_configure_ep) *usb_configure_ep;
+    typeof(usb_unconfigure_ep) *usb_unconfigure_ep;
+    typeof(usb_get_max_transfer_size) *usb_get_max_transfer_size;
+    typeof(usb_ep0_tx_callback) *usb_ep0_tx_callback;
 };
 
 

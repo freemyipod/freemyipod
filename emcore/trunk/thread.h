@@ -43,7 +43,8 @@ enum kernel_owner_type
     KERNEL_OWNER_USB_MONITOR = 1,
     KERNEL_OWNER_FILE_HANDLE = 2,
     KERNEL_OWNER_DIR_HANDLE = 3,
-    KERNEL_OWNER_ATA_BBT = 4
+    KERNEL_OWNER_ATA_BBT = 4,
+    KERNEL_OWNER_CUSTOM_USB = 5,
 };
 
 #define OWNER_TYPE(x, y) ((struct scheduler_thread*)((((int)(y)) & ~3) | x))

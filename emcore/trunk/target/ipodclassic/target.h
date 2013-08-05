@@ -60,7 +60,7 @@
 { \
     .endpoints = { {}, {}, {}, {}, {} }, \
 }
-#define USB_ENDPOINTS { 0x80, 0x01, 0x82, 0x03 }
+#define USB_ENDPOINTS 0b0000000000010110000000000010101
 #define USB_MAXCURRENT 500
 #define USB_HAVE_TARGET_SPECIFIC_REQUESTS
 

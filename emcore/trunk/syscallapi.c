@@ -261,4 +261,19 @@ struct emcore_syscall_table syscall_table ICONST_ATTR =
     .reown_file = reown_file,
     .reown_dir = reown_dir,
 #endif
+#ifdef HAVE_USB
+    .usbmanager_install_custom = usbmanager_install_custom,
+    .usbmanager_uninstall_custom = usbmanager_uninstall_custom,
+    .usbmanager_get_available_endpoints = usbmanager_get_available_endpoints,
+    .usbmanager_get_connected = usbmanager_get_connected,
+    .usb_ep0_start_rx = usb_ep0_start_rx,
+    .usb_ep0_start_tx = usb_ep0_start_tx,
+    .usb_start_rx = usb_start_rx,
+    .usb_start_tx = usb_start_tx,
+    .usb_set_stall = usb_set_stall,
+    .usb_configure_ep = usb_configure_ep,
+    .usb_unconfigure_ep = usb_unconfigure_ep,
+    .usb_get_max_transfer_size = usb_get_max_transfer_size,
+    .usb_ep0_tx_callback = usb_ep0_tx_callback,
+#endif
 };

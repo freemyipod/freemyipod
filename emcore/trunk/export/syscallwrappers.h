@@ -230,6 +230,19 @@ extern struct emcore_syscall_table* __emcore_syscall;
 #define accel_read_force_vector __emcore_syscall->accel_read_force_vector
 #define reown_file __emcore_syscall->reown_file
 #define reown_dir __emcore_syscall->reown_dir
+#define usbmanager_install_custom __emcore_syscall->usbmanager_install_custom
+#define usbmanager_uninstall_custom __emcore_syscall->usbmanager_uninstall_custom
+#define usbmanager_get_available_endpoints __emcore_syscall->usbmanager_get_available_endpoints
+#define usbmanager_get_connected __emcore_syscall->usbmanager_get_connected
+#define usb_ep0_start_rx __emcore_syscall->usb_ep0_start_rx
+#define usb_ep0_start_tx __emcore_syscall->usb_ep0_start_tx
+#define usb_start_rx __emcore_syscall->usb_start_rx
+#define usb_start_tx __emcore_syscall->usb_start_tx
+#define usb_set_stall __emcore_syscall->usb_set_stall
+#define usb_configure_ep __emcore_syscall->usb_configure_ep
+#define usb_unconfigure_ep __emcore_syscall->usb_unconfigure_ep
+#define usb_get_max_transfer_size __emcore_syscall->usb_get_max_transfer_size
+#define usb_ep0_tx_callback __emcore_syscall->usb_ep0_tx_callback
 
 
 #endif

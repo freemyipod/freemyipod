@@ -39,8 +39,31 @@
 #define CONSOLE_PANICDUMP 0
 
 
+#include "../ipodnano4g/s5l8720.h"
 #define HAVE_USB
-#define USB_NUM_ENDPOINTS 5
+#define USB_DRIVER_HEADER "usb/synopsysotg.h"
+#define USB_DRIVER synopsysotg_driver
+#define USB_DRIVER_CONFIG_TYPE const struct synopsysotg_config
+#define USB_DRIVER_CONFIG \
+{ \
+    .core = (struct synopsysotg_core_regs*)OTGBASE, \
+    .phy_16bit = true, \
+    .phy_ulpi = false, \
+    .use_dma = true, \
+    .shared_txfifo = true, \
+    .disable_double_buffering = false, \
+    .fifosize = 1024, \
+    .txfifosize = { 0x200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, \
+}
+#define USB_DRIVER_STATE_TYPE struct synopsysotg_state
+#define USB_DRIVER_STATE \
+{ \
+    .endpoints = { {}, {}, {}, {}, {} }, \
+}
+#define USB_ENDPOINTS 0b0000000000010110000000000010101
+#define USB_MAXCURRENT 500
+#define USB_HAVE_TARGET_SPECIFIC_REQUESTS
+
 
 #define HAVE_LCD
 #define LCD_WIDTH 320

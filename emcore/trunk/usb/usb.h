@@ -1,7 +1,7 @@
 #ifndef __PROTOCOL_USB_USB_H__
 #define __PROTOCOL_USB_USB_H__
 
-#include "global.h"
+#include "../global.h"
 
 struct usb_instance;
 
@@ -287,7 +287,6 @@ extern void usb_handle_xfer_complete(const struct usb_instance* data, union usb_
 extern void usb_handle_setup_received(const struct usb_instance* data, union usb_endpoint_number epnum);
 extern void usb_ep0_start_rx(const struct usb_instance* data, int non_setup, bool (*callback)(const struct usb_instance* data, int bytesleft));
 extern void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len, bool last, bool (*callback)(const struct usb_instance* data, int bytesleft));
-extern void usb_ep0_expect_setup(const struct usb_instance* data);
 extern void usb_start_rx(const struct usb_instance* data, union usb_endpoint_number ep, void* buf, int size);
 extern void usb_start_tx(const struct usb_instance* data, union usb_endpoint_number ep, const void* buf, int size);
 extern void usb_set_stall(const struct usb_instance* data, union usb_endpoint_number ep, int stall);
