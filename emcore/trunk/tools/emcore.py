@@ -407,10 +407,13 @@ class Commandline(object):
         """
             Reads data from the USB console continuously
         """
+        size = 48
         while True:
-            resp = self.emcore.usbcread()
+            resp = self.emcore.usbcread(size)
             self.logger.write(resp.data, target = "stdout")
-#            time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
+            size = max(48, min(len(resp.data), size) + resp.queuesize)
+            if size < 0x800:
+                time.sleep(0.1 / 0x800 * (0x800 - size))
     
     @command
     def writeusbconsole(self, *args):

@@ -64,8 +64,10 @@ enum dbgstate_t
     DBGSTATE_IDLE = 0,
     DBGSTATE_SETUP,
     DBGSTATE_WRITE_MEM,
+    DBGSTATE_WRITE_CONSOLE,
     DBGSTATE_ASYNC,
     DBGSTATE_RESPOND,
+    DBGSTATE_READ_CONSOLE,
 };
 
 static struct scheduler_thread dbgthread_handle IBSS_ATTR;
@@ -157,39 +159,21 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
             break;
         }
         case 10:  // READ CONSOLE
-            dbgconsoleattached = true;
-            int bytes = dbgconsendwriteidx - dbgconsendreadidx;
-            int used = 0;
-            if (bytes)
-            {
-                if (bytes < 0) bytes += sizeof(dbgconsendbuf);
-                used = bytes;
-                if (bytes > buf[1]) bytes = buf[1];
-                int readbytes = bytes;
-                char* outptr = (char*)&dbgbuf[4];
-                if (dbgconsendreadidx + bytes >= sizeof(dbgconsendbuf))
-                {
-                    readbytes = sizeof(dbgconsendbuf) - dbgconsendreadidx;
-                    memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
-                    dbgconsendreadidx = 0;
-                    outptr = &outptr[readbytes];
-                    readbytes = bytes - readbytes;
-                }
-                if (readbytes) memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
-                dbgconsendreadidx += readbytes;
-                wakeup_signal(&dbgconsendwakeup);
-            }
-            dbgbuf[0] = 1;
-            dbgbuf[1] = bytes;
-            dbgbuf[2] = sizeof(dbgconsendbuf);
-            dbgbuf[3] = used - bytes;
+            dbgmemaddr = (void*)buf[1];
+            dbgstate = DBGSTATE_READ_CONSOLE;
+            usb_ep0_start_tx(dbgusb, NULL, 0, true, NULL);
+            return true;
             break;
         case 11:  // WRITE CONSOLE
-            bytes = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
+        {
+            int total = 0;
+            int bytes = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
             if (bytes < 0) bytes += sizeof(dbgconrecvbuf);
             if (bytes)
             {
                 if (bytes > buf[1]) bytes = buf[1];
+                total = bytes;
+                if (bytes > 48) bytes = 48;
                 int writebytes = bytes;
                 char* readptr = (char*)&buf[4];
                 if (dbgconrecvwriteidx + bytes >= sizeof(dbgconrecvbuf))
@@ -205,10 +189,18 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
                 wakeup_signal(&dbgconrecvwakeup);
             }
             dbgbuf[0] = 1;
-            dbgbuf[1] = bytes;
+            dbgbuf[1] = total;
             dbgbuf[2] = sizeof(dbgconrecvbuf);
+            if (total > 48)
+            {
+                dbgmemlen = total - 48;
+                dbgstate = DBGSTATE_WRITE_CONSOLE;
+                usb_ep0_start_rx(dbgusb, 1, usbdebug_handle_data);
+                return true;
+            }
             dbgbuf[3] = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
             break;
+        }
         case 15:  // GET PROCESS INFO
             dbgbuf[0] = 1;
             dbgbuf[1] = SCHEDULER_THREAD_INFO_VERSION;
@@ -267,10 +259,10 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
         break;
     case DBGSTATE_WRITE_MEM:
     {
-        int len = MIN(64, dbgmemlen);
+        int len = MIN(64 - bytesleft, dbgmemlen);
         dbgmemlen -= len;
         memcpy(dbgmemaddr, buf, len);
-        if (dbgmemlen)
+        if (dbgmemlen && !bytesleft)
         {
             dbgmemaddr += len;
             usb_ep0_start_rx(dbgusb, 1, usbdebug_handle_data);
@@ -279,10 +271,71 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
         dbgbuf[0] = 1;
         break;
     }
+    case DBGSTATE_WRITE_CONSOLE:
+    {
+        int bytes = MIN(64 - bytesleft, dbgmemlen);
+        dbgmemlen -= bytes;
+        if (bytes)
+        {
+            int writebytes = bytes;
+            char* readptr = (char*)buf;
+            if (dbgconrecvwriteidx + bytes >= sizeof(dbgconrecvbuf))
+            {
+                writebytes = sizeof(dbgconrecvbuf) - dbgconrecvwriteidx;
+                memcpy(&dbgconrecvbuf[dbgconrecvwriteidx], readptr, writebytes);
+                dbgconrecvwriteidx = 0;
+                readptr = &readptr[writebytes];
+                writebytes = bytes - writebytes;
+            }
+            if (writebytes) memcpy(&dbgconrecvbuf[dbgconrecvwriteidx], readptr, writebytes);
+            dbgconrecvwriteidx += writebytes;
+            wakeup_signal(&dbgconrecvwakeup);
+            if (dbgmemlen && !bytesleft)
+            {
+                usb_ep0_start_rx(dbgusb, 1, usbdebug_handle_data);
+                return true;
+            }
+        }
+        dbgbuf[3] = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
+        if (dbgbuf[3] < 0) dbgbuf[3] += sizeof(dbgconrecvbuf);
+    }
     default: break;
     }
     dbgstate = DBGSTATE_RESPOND;
     usb_ep0_start_tx(dbgusb, NULL, 0, true, NULL);
+    return true;
+}
+
+bool read_console_callback(const struct usb_instance* data, int bytesleft)
+{
+    if (bytesleft || !dbgmemaddr) return false;
+    dbgconsoleattached = true;
+    int bytes = MIN(64, dbgmemlen);
+    if (bytes)
+    {
+        int readbytes = bytes;
+        char* outptr = (char*)dbgbuf;
+        if (dbgconsendreadidx + bytes >= sizeof(dbgconsendbuf))
+        {
+            readbytes = sizeof(dbgconsendbuf) - dbgconsendreadidx;
+            memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
+            dbgconsendreadidx = 0;
+            outptr = &outptr[readbytes];
+            readbytes = bytes - readbytes;
+        }
+        if (readbytes) memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
+        dbgconsendreadidx += readbytes;
+        wakeup_signal(&dbgconsendwakeup);
+        dbgmemlen -= bytes;
+    }
+    bytes = MIN(64, (int)dbgmemaddr);
+    dbgmemaddr -= bytes;
+    if (dbgmemaddr)
+    {
+        usb_ep0_start_rx(dbgusb, 0, NULL);
+        usb_ep0_start_tx(dbgusb, dbgbuf, bytes, false, read_console_callback);
+    }
+    else usb_ep0_start_tx(dbgusb, dbgbuf, bytes, true, NULL);
     return true;
 }
 
@@ -315,12 +368,53 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
                         usb_ep0_start_rx(dbgusb, 0, NULL);
                         data->state->ep0_tx_ptr = dbgmemaddr - 16;
                         data->state->ep0_tx_len = dbgmemlen;
-                        usb_ep0_start_tx(dbgusb, dbgbuf, len + 16, !data->state->ep0_tx_len, usb_ep0_tx_callback);
+                        usb_ep0_start_tx(dbgusb, dbgbuf, len + 16, false, usb_ep0_tx_callback);
                         return -3;
                     }
                     dbgstate = DBGSTATE_IDLE;
                     *response = dbgbuf;
                     return len + 16;
+                }
+                case DBGSTATE_READ_CONSOLE:
+                {
+                    dbgconsoleattached = true;
+                    dbgmemlen = dbgconsendwriteidx - dbgconsendreadidx;
+                    if (dbgmemlen < 0) dbgmemlen += sizeof(dbgconsendbuf);
+                    int used = dbgmemlen;
+                    if (dbgmemlen > (int)dbgmemaddr) dbgmemlen = (int)dbgmemaddr;
+                    int bytes = MIN(48, dbgmemlen);
+                    dbgbuf[0] = 1;
+                    dbgbuf[1] = dbgmemlen;
+                    dbgbuf[2] = sizeof(dbgconsendbuf);
+                    dbgbuf[3] = used - dbgmemlen;
+                    if (bytes)
+                    {
+                        int readbytes = bytes;
+                        char* outptr = (char*)&dbgbuf[4];
+                        if (dbgconsendreadidx + bytes >= sizeof(dbgconsendbuf))
+                        {
+                            readbytes = sizeof(dbgconsendbuf) - dbgconsendreadidx;
+                            memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
+                            dbgconsendreadidx = 0;
+                            outptr = &outptr[readbytes];
+                            readbytes = bytes - readbytes;
+                        }
+                        if (readbytes) memcpy(outptr, &dbgconsendbuf[dbgconsendreadidx], readbytes);
+                        dbgconsendreadidx += readbytes;
+                        wakeup_signal(&dbgconsendwakeup);
+                    }
+                    dbgmemlen -= bytes;
+                    bytes = MIN(48, (int)dbgmemaddr);
+                    dbgmemaddr -= bytes;
+                    if (dbgmemaddr)
+                    {
+                        usb_ep0_start_rx(dbgusb, 0, NULL);
+                        usb_ep0_start_tx(dbgusb, dbgbuf, bytes + 16, false, read_console_callback);
+                        return -3;
+                    }
+                    dbgstate = DBGSTATE_IDLE;
+                    *response = dbgbuf;
+                    return bytes + 16;
                 }
                 default: return -2;
                 }

@@ -239,12 +239,12 @@ class Emcore(object):
         return self.lib.monitorcommand(struct.pack("<IBBBBII%ds" % size, 9, index, slaveaddr, startaddr, size, 0, 0, data), "III", (None, None, None))
     
     @command()
-    def usbcread(self):
+    def usbcread(self, maxsize = 48):
         """ Reads one packet with the maximal cin size from the console """
-        cin_maxsize = 48
-        resp = self.lib.monitorcommand(struct.pack("<IIII", 10, cin_maxsize, 0, 0), "III%ds" % cin_maxsize, ("validsize", "buffersize", "queuesize", "data"))
+        maxsize = min(0xff0, maxsize)
+        resp = self.lib.monitorcommand(struct.pack("<IIII", 10, maxsize, 0, 0), "III%ds" % maxsize, ("validsize", "buffersize", "queuesize", "data"))
         resp.data = resp.data[:resp.validsize].decode("latin_1")
-        resp.maxsize = cin_maxsize
+        resp.maxsize = maxsize
         return resp
     
     @command()
