@@ -112,6 +112,7 @@ static const struct usb_endpoint usb_c1_i0_a0_ep1out =
 static const struct usb_endpoint usb_c1_i0_a0_ep1in =
 {
     .number = { .number = UMSBOOT_ENDPOINT_IN, .direction = USB_ENDPOINT_DIRECTION_IN },
+    .ctrl_request = ums_ep_ctrl_request,
     .xfer_complete = ums_xfer_complete,
     .timeout = ums_timeout,
 };
