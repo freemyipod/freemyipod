@@ -52,7 +52,9 @@ typedef int bool;
 
 
 #ifndef IN_APPLICATION_CODE
+#ifndef _NO_VERSION_H_
 #include "build/version.h"
+#endif
 #include "configmagic.h"
 #endif
 #ifndef ASM_FILE

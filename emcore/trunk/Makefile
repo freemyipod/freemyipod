@@ -28,7 +28,7 @@ TARGETS := $(call preprocess,TARGETS,-I.)
 define TARGET_template
 -include target/$(1)/target.mk
 
-SRC_$(1) := $$(call preprocesspaths,SOURCES,-DTARGET_$(1) -DTARGET=\"$(1)\" -DCONFIG_H=\"target/$(1)/config.h\" -DTARGET_H=\"target/$(1)/target.h\" -Itarget/$(1) -I.)
+SRC_$(1) := $$(call preprocesspaths,SOURCES,-DTARGET_$(1) -DTARGET=\"$(1)\" -DCONFIG_H=\"target/$(1)/config.h\" -DTARGET_H=\"target/$(1)/target.h\" -D_NO_VERSION_H_ -Itarget/$(1) -I.)
 OBJ_$(1) := $$(SRC_$(1):%.c=build/$(1)/%.o)
 OBJ_$(1) := $$(OBJ_$(1):%.S=build/$(1)/%.o)
 
