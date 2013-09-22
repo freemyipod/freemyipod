@@ -1,6 +1,6 @@
 //
 //
-//    Copyright 2011 user890104
+//    Copyright 2013 user890104
 //
 //
 //    This file is part of emCORE.
@@ -19,7 +19,6 @@
 //    with emCORE.  If not, see <http://www.gnu.org/licenses/>.
 //
 //
-
 
 #ifndef __GLOBAL_H__
 #define __GLOBAL_H__

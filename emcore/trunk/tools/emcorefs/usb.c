@@ -1,6 +1,6 @@
 //
 //
-//    Copyright 2011 user890104
+//    Copyright 2013 user890104
 //
 //
 //    This file is part of emCORE.
@@ -20,23 +20,18 @@
 //
 //
 
-
 #include "global.h"
 
 #include "emcore.h"
 #include "util.h"
 #include "usb.h"
 
+libusb_context *usb_ctx = NULL;
+libusb_device_handle *usb_handle = NULL;
+uint8_t usb_iface_num = 0;
 
-libusb_context* usb_ctx = NULL;
-libusb_device_handle* usb_handle = NULL;
-
-extern struct emcore_usb_endpoints_addr emcore_usb_eps_addr;
-extern struct emcore_usb_endpoints_max_packet_size emcore_usb_eps_mps;
-
-int usb_init(void)
-{
-    int res;
+int32_t usb_init(void) {
+    int32_t res;
 
 #ifdef DEBUG
     fprintf(stderr, "Initialising USB library...\n");
@@ -44,31 +39,27 @@ int usb_init(void)
 
     res = libusb_init(&usb_ctx);
 
-    if (LIBUSB_SUCCESS != res)
-    {
+    if (res != LIBUSB_SUCCESS) {
         return res;
     }
 
 #ifdef DEBUG
     fprintf(stderr, "USB library initialized!\n");
     libusb_set_debug(usb_ctx, 3);
-
 #endif
 
     return LIBUSB_SUCCESS;
 }
 
-int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
-{
-    libusb_device **devs, *dev;
-    ssize_t devs_cnt;
-    int res, i, j;
+int32_t usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t *reattach) {
+    libusb_device **devs, *dev = NULL;
+    ssize_t devs_cnt, i, j, k, l;
+    int32_t res;
+    uint8_t found;
     struct libusb_device_descriptor dev_desc;
-    uint8_t found = 0;
-    struct libusb_config_descriptor* cfg_desc;
-    const struct libusb_interface* iface;
-    const struct libusb_interface_descriptor* iface_desc;
-    const struct libusb_endpoint_descriptor* ep_desc;
+    struct libusb_config_descriptor *cfg_desc;
+    const struct libusb_interface *iface;
+    const struct libusb_interface_descriptor *iface_desc;
 
 #ifdef DEBUG
     fprintf(stderr, "Getting USB device list...\n");
@@ -76,24 +67,21 @@ int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
 
     devs_cnt = libusb_get_device_list(usb_ctx, &devs);
 
-    if (devs_cnt < 0)
-    {
+    if (devs_cnt < 0) {
         return devs_cnt;
     }
 
 #ifdef DEBUG
     fprintf(stderr, "Found %Zd USB devices!\n", devs_cnt);
 #endif
-    for (i = 0; i < devs_cnt; ++i)
-    {
+    for (i = 0; i < devs_cnt; ++i) {
         dev = devs[i];
 #ifdef DEBUG
         fprintf(stderr, "Getting device descriptor of USB device %d...\n", i);
 #endif
         res = libusb_get_device_descriptor(dev, &dev_desc);
 
-        if (LIBUSB_SUCCESS != res)
-        {
+        if (res != LIBUSB_SUCCESS) {
 #ifdef DEBUG
             fprintf(stderr, "Unable to get device descriptor of device %d!\n", i);
 #endif
@@ -105,106 +93,86 @@ int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
             dev_desc.idProduct, libusb_get_bus_number(dev),
             libusb_get_device_address(dev), dev_desc.bcdUSB);
 #endif
-        if (vendor_id == dev_desc.idVendor && product_id == dev_desc.idProduct)
-        {
+        if (dev_desc.idVendor != vendor_id || dev_desc.idProduct != product_id) {
+            continue;
+        }
+        
 #ifdef DEBUG
-            fprintf(stderr, "Found emCORE USB device!\n");
+        fprintf(stderr, "Found emCORE USB device!\n");
 #endif
-            if (1 != dev_desc.bNumConfigurations)
-            {
+        if (!dev_desc.bNumConfigurations) {
 #ifdef DEBUG
-                fprintf(stderr, "Number of configs is different than 1, not the right device...\n");
+            fprintf(stderr, "No configs found...\n");
 #endif
-                continue;
-            }
+            continue;
+        }
 
 #ifdef DEBUG
-            fprintf(stderr, "Getting config descriptor 0 of device...\n");
+        fprintf(stderr, "Found %Zd configs...\n", dev_desc.bNumConfigurations);
 #endif
 
-            res = libusb_get_config_descriptor(dev, 0, &cfg_desc);
+        for (j = 0; j < dev_desc.bNumConfigurations; ++j) {
+#ifdef DEBUG
+            fprintf(stderr, "Getting config descriptor %Zd of device...\n", j);
+#endif
 
-            if (LIBUSB_SUCCESS != res)
-            {
+            res = libusb_get_config_descriptor(dev, j, &cfg_desc);
+
+            if (res != LIBUSB_SUCCESS) {
                 return res;
             }
 
-            if (1 != cfg_desc->bNumInterfaces)
-            {
+            if (!cfg_desc->bNumInterfaces) {
 #ifdef DEBUG
-                fprintf(stderr, "Wrong USB device, it should have exactly 1 interface\n");
+                fprintf(stderr, "No interfaces found...\n");
 #endif
-
                 continue;
             }
 
-            iface = &cfg_desc->interface[0];
+            for (k = 0; k < cfg_desc->bNumInterfaces; ++k) {
+                iface = &cfg_desc->interface[k];
 
-            if (1 != iface->num_altsetting)
-            {
+                if (!iface->num_altsetting) {
 #ifdef DEBUG
-                fprintf(stderr, "Wrong USB device, it should have exactly 1 altsetting\n");
+                    fprintf(stderr, "No altsettings found...\n");
+#endif
+                    continue;
+                }
+
+                for (l = 0; l < iface->num_altsetting; ++l) {
+                    iface_desc = &iface->altsetting[l];
+
+                    if (
+                        iface_desc->bInterfaceClass    != EMCORE_USB_INTERFACE_CLASS ||
+                        iface_desc->bInterfaceSubClass != EMCORE_USB_INTERFACE_SUB_CLASS ||
+                        iface_desc->bInterfaceProtocol != EMCORE_USB_INTERFACE_PROTOCOL
+                    ) {
+#ifdef DEBUG
+                        fprintf(stderr, "Wrong interface class (%02X %02X %02X), trying next device...\n", iface_desc->bInterfaceClass, iface_desc->bInterfaceSubClass, iface_desc->bInterfaceProtocol);
 #endif
 
-                continue;
-            }
-
-            iface_desc = &iface->altsetting[0];
-
-            if (4 != iface_desc->bNumEndpoints)
-            {
+                        continue;
+                    }
+                    
 #ifdef DEBUG
-                fprintf(stderr, "Wrong USB device, it should have exactly 4 endpoints\n");
+                    fprintf(stderr, "emCORE Debugger interface at %Zd\n", iface_desc->bInterfaceNumber);
 #endif
 
-                continue;
-            }
-
-#ifdef DEBUG
-           fprintf(stderr, "Endpoints:");
-#endif
-
-            for (j = 0; j < 4; ++j)
-            {
-                ep_desc = &iface_desc->endpoint[j];
-
-#ifdef DEBUG
-                fprintf(stderr, " %d at 0x%02x", j, ep_desc->bEndpointAddress);
-#endif
-
-                switch (j) {
-                    case 0:
-                        emcore_usb_eps_addr.cout = ep_desc->bEndpointAddress;
-                    break;
-                    case 1:
-                        emcore_usb_eps_addr.cin = ep_desc->bEndpointAddress;
-                    break;
-                    case 2:
-                        emcore_usb_eps_addr.dout = ep_desc->bEndpointAddress;
-                    break;
-                    case 3:
-                        emcore_usb_eps_addr.din = ep_desc->bEndpointAddress;
-                    break;
+                    usb_iface_num = iface_desc->bInterfaceNumber;
+                    found = 1;
+                    goto outside_search_loop;
                 }
             }
-
-#ifdef DEBUG
-            fprintf(stderr, "\n");
-#endif
-
-            found = 1;
-            break;
         }
     }
+    
+    outside_search_loop:
 
-    if (found)
-    {
+    if (found) {
         res = usb_open(dev, reattach);
     }
-    else
-    {
-        fprintf(stderr, "USB device with VID=%4x and PID=%4x not found!\n",
-            vendor_id, product_id);
+    else {
+        fprintf(stderr, "emCORE Debugger interface not found!\n");
 
         res = EMCORE_ERROR_NO_DEVICE;
     }
@@ -217,17 +185,15 @@ int usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t* reattach)
     return res;
 }
 
-int usb_open(libusb_device* dev, uint8_t* reattach)
-{
-    int res;
+int32_t usb_open(libusb_device *dev, uint8_t *reattach) {
+    int32_t res;
 
 #ifdef DEBUG
     fprintf(stderr, "Opening USB device...\n");
 #endif
     res = libusb_open(dev, &usb_handle);
 
-    if (LIBUSB_SUCCESS != res)
-    {
+    if (res != LIBUSB_SUCCESS) {
         return res;
     }
 #ifdef DEBUG
@@ -237,24 +203,26 @@ int usb_open(libusb_device* dev, uint8_t* reattach)
 
     res = libusb_set_configuration(usb_handle, 1);
 
-    if (LIBUSB_SUCCESS != res)
-    {
+    if (res != LIBUSB_SUCCESS) {
         return res;
     }
+    
 #ifdef DEBUG
     fprintf(stderr, "USB configuration set!\n");
 #endif
     res = libusb_kernel_driver_active(usb_handle, 0);
 
-    if (1 == res)
-    {
+    if (res < 0) {
+        return res;
+    }
+    
+    if (res == 1) {
         *reattach = 1;
 
         res = libusb_detach_kernel_driver(usb_handle, 0);
     }
 
-    if (LIBUSB_SUCCESS != res)
-    {
+    if (res != LIBUSB_SUCCESS) {
         return res;
     }
 
@@ -263,63 +231,42 @@ int usb_open(libusb_device* dev, uint8_t* reattach)
 #endif
     res = libusb_claim_interface(usb_handle, 0);
 
-    if (LIBUSB_SUCCESS != res)
-    {
+    if (res != LIBUSB_SUCCESS) {
         return res;
     }
 
 #ifdef DEBUG
     fprintf(stderr, "Interface claimed successfully!\n");
-    fprintf(stderr, "Getting endpoints max size...\n");
-#endif
-
-    res = emcore_get_packet_info(&emcore_usb_eps_mps);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-#ifdef DEBUG
-    fprintf(stderr, "Got endpoint max size!\n");
-    fprintf(stderr, "COUT max pckt: %d, CIN max pckt: %d, DOUT max pckt: %d, DIN max pckt: %d\n",
-        emcore_usb_eps_mps.cout, emcore_usb_eps_mps.cin, emcore_usb_eps_mps.dout, emcore_usb_eps_mps.din
-    );
 #endif
 
     return LIBUSB_SUCCESS;
 }
 
-int usb_bulk_transfer(unsigned char endpoint, void* data, int length)
-{
-    int transferred;
-    int res;
+int32_t usb_control_transfer(uint8_t rq_type, void *data, size_t length) {
+    int32_t res;
 
-    res = libusb_bulk_transfer(usb_handle, endpoint, (unsigned char*)data, length, &transferred, 30000);
+    res = libusb_control_transfer(usb_handle, rq_type, 0, 0, usb_iface_num, (unsigned char *)data, length, 10000);
 
-    if (LIBUSB_SUCCESS != res)
-    {
+    if (res < 0) {
         return res;
     }
 
-    if (transferred != length)
-    {
+    if ((size_t)res != length) {
         return EMCORE_ERROR_INCOMPLETE;
     }
 
     return LIBUSB_SUCCESS;
 }
 
-int usb_close(uint8_t reattach) {
-    int res;
+int32_t usb_close(uint8_t reattach) {
+    int32_t res;
 
 #ifdef DEBUG
     fprintf(stderr, "Releasing USB interface...\n");
 #endif
     res = libusb_release_interface(usb_handle, 0);
 
-    if (LIBUSB_SUCCESS != res)
-    {
+    if (res != LIBUSB_SUCCESS) {
         return res;
     }
 
@@ -327,22 +274,19 @@ int usb_close(uint8_t reattach) {
     fprintf(stderr, "Released interface successfully!\n");
 #endif
 
-    if (reattach)
-    {
+    if (reattach) {
 #ifdef DEBUG
         fprintf(stderr, "Reattaching kernel driver...\n");
 #endif
 
         res = libusb_attach_kernel_driver(usb_handle, 0);
 
-        if (LIBUSB_SUCCESS == res)
-        {
+        if (res == LIBUSB_SUCCESS) {
 #ifdef DEBUG
             fprintf(stderr, "Reattached successfully!\n");
 #endif
         }
-        else
-        {
+        else {
             print_error(res);
 
             res = LIBUSB_SUCCESS;
@@ -356,8 +300,7 @@ int usb_close(uint8_t reattach) {
     return res;
 }
 
-void usb_exit(void)
-{
+void usb_exit(void) {
 #ifdef DEBUG
     fprintf(stderr, "Deinitializing USB library...\n");
 #endif
@@ -365,17 +308,14 @@ void usb_exit(void)
     libusb_exit(usb_ctx);
 }
 
-int usb_destroy(uint8_t reattach)
-{
-    int res = LIBUSB_SUCCESS;
+int32_t usb_destroy(uint8_t reattach) {
+    int32_t res = LIBUSB_SUCCESS;
 
-    if (usb_handle)
-    {
+    if (usb_handle) {
         res = usb_close(reattach);
     }
 
-    if (usb_ctx)
-    {
+    if (usb_ctx) {
         usb_exit();
     }
 

@@ -1,6 +1,6 @@
 //
 //
-//    Copyright 2011 user890104
+//    Copyright 2013 user890104
 //
 //
 //    This file is part of emCORE.
@@ -20,41 +20,23 @@
 //
 //
 
-
 #include "global.h"
 
 #include "emcore.h"
 #include "util.h"
 #include "usb.h"
 
-
-struct emcore_usb_endpoints_addr emcore_usb_eps_addr;
-struct emcore_usb_endpoints_max_packet_size emcore_usb_eps_mps;
-
-int emcore_cout(const void* data, uint32_t length)
-{
-    return usb_bulk_transfer(emcore_usb_eps_addr.cout, (void*)data, length);
+int32_t emcore_send(const void *data, uint32_t length) {
+    return usb_control_transfer(0x41, (void *)data, length);
 }
 
-int emcore_cin(void* data, uint32_t length)
-{
-    return usb_bulk_transfer(emcore_usb_eps_addr.cin, data, length);
+int32_t emcore_receive(void *data, uint32_t length) {
+    return usb_control_transfer(0xc1, data, length);
 }
 
-int emcore_dout(const void* data, uint32_t length)
-{
-    return usb_bulk_transfer(emcore_usb_eps_addr.dout, (void*)data, length);
-}
-
-int emcore_din(void* data, uint32_t length)
-{
-    return usb_bulk_transfer(emcore_usb_eps_addr.din, data, length);
-}
-
-int emcore_monitor_command(const void* out, void* in,
-    uint32_t send_length, uint32_t receive_length)
-{
-    int res;
+int32_t emcore_monitor_command(const void *out, void *in,
+    uint32_t send_length, uint32_t receive_length) {
+    int32_t res;
     uint32_t status;
 
 #ifdef DEBUG_USB_PACKETS
@@ -64,23 +46,20 @@ int emcore_monitor_command(const void* out, void* in,
     dump_packet(out, send_length);
 
 #endif
-    res = emcore_cout(out, send_length);
+    res = emcore_send(out, send_length);
 
-    if (LIBUSB_SUCCESS != res)
-    {
+    if (res != LIBUSB_SUCCESS) {
         return res;
     }
 
-    if (in && receive_length)
-    {
+    if (in && receive_length) {
 #ifdef DEBUG_USB_PACKETS
         fprintf(stderr, "Receiving %d bytes...\n", receive_length);
 
 #endif
-        res = emcore_cin(in, receive_length);
+        res = emcore_receive(in, receive_length);
 
-        if (LIBUSB_SUCCESS != res)
-        {
+        if (res != LIBUSB_SUCCESS) {
             return res;
         }
 
@@ -88,10 +67,9 @@ int emcore_monitor_command(const void* out, void* in,
         dump_packet(in, receive_length);
 
 #endif
-        status = *((int *)(in));
+        status = *((int32_t *)(in));
     }
-    else
-    {
+    else {
         status = EMCORE_SUCCESS;
     }
 
@@ -99,8 +77,7 @@ int emcore_monitor_command(const void* out, void* in,
     fprintf(stderr, "--------------------------------------------\n");
 
 #endif
-    switch (status)
-    {
+    switch (status) {
         case 0:
             return EMCORE_ERROR_INVALID;
         break;
@@ -119,15 +96,13 @@ int emcore_monitor_command(const void* out, void* in,
     }
 }
 
-int emcore_get_version(struct emcore_dev_info* dev_info)
-{
-    int res;
+int32_t emcore_get_version(struct emcore_dev_info *dev_info) {
+    int32_t res;
     uint32_t out[4] = { 1, 0, 0, 0 }, in[4];
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
@@ -136,95 +111,133 @@ int emcore_get_version(struct emcore_dev_info* dev_info)
     return EMCORE_SUCCESS;
 }
 
-int emcore_get_packet_info(struct emcore_usb_endpoints_max_packet_size* max_packet_size)
-{
-    int res;
+int32_t emcore_get_malloc_pool_bounds(struct emcore_malloc_pool_bounds *bounds) {
+    int32_t res;
     uint32_t out[4] = { 1, 1, 0, 0 }, in[4];
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
-    memcpy(max_packet_size, &in[1], sizeof(*max_packet_size));
+    memcpy(bounds, &in[1], sizeof(*bounds));
 
     return EMCORE_SUCCESS;
 }
 
-int emcore_get_user_mem_range(struct emcore_user_mem_range* mem_range)
-{
-    int res;
-    uint32_t out[4] = { 1, 2, 0, 0 }, in[4];
-
-    res = emcore_monitor_command(out, in, 16, 16);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    memcpy(mem_range, &in[1], sizeof(*mem_range));
-
-    return EMCORE_SUCCESS;
-}
-
-int emcore_reset(uint8_t graceful)
-{
-    int res;
-    uint32_t out[4] = { 2, 0xdeadbeef, 0, 0 }, in[4];
+int32_t emcore_reset(uint8_t graceful) {
+    int32_t res;
+    uint32_t out[4] = { 2, 0xdeadbeef, 0, 0 };
 
     out[1] = graceful;
 
-    res = emcore_monitor_command(out, in, 16, graceful ? 16 : 0);
+    res = emcore_monitor_command(out, NULL, 16, 0);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
     return EMCORE_SUCCESS;
 }
 
-int emcore_poweroff(uint8_t graceful)
-{
-    int res;
-    uint32_t out[4] = { 3, 0xdeadbeef, 0, 0 }, in[4];
+int32_t emcore_poweroff(uint8_t graceful) {
+    int32_t res;
+    uint32_t out[4] = { 3, 0xdeadbeef, 0, 0 };
 
     out[1] = graceful;
 
-    res = emcore_monitor_command(out, in, 16, graceful ? 16 : 0);
+    res = emcore_monitor_command(out, NULL, 16, 0);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
     return EMCORE_SUCCESS;
 }
 
-int emcore_readmem(void* data, uint32_t addr, uint32_t size)
-{
-    int res;
-    uint32_t data_length, out[4] = { 4, 0xdeadbeef, 0xdeadbeef, 0 };
-    void* in;
-
-    out[1] = addr;
-    out[2] = size;
-
-    if (size + EMCORE_HEADER_SIZE > emcore_usb_eps_mps.cin)
-    {
-        return EMCORE_ERROR_OVERFLOW;
+int32_t emcore_read(void *data, uint32_t addr, uint32_t size) {
+    int32_t res;
+    uint32_t readsize, out[4] = { 4, 0xdeadbeef, 0xdeadbeef, 0 };
+    void *in;
+    
+    in = malloc(EMCORE_HEADER_SIZE + 0x0F00);
+    
+    while (size) {
+        readsize = MIN(size, 0x0F00);
+        
+        out[1] = addr;
+        out[2] = readsize;
+        
+        res = emcore_monitor_command(out, in, 16, readsize + EMCORE_HEADER_SIZE);
+        
+        if (res != EMCORE_SUCCESS) {
+            free(in);
+            return res;
+        }
+        
+        memcpy(data, in + EMCORE_HEADER_SIZE, readsize);
+        
+        data += readsize;
+        addr += readsize;
+        size -= readsize;
     }
 
-    data_length = size + EMCORE_HEADER_SIZE;
+    free(in);
+    
+    return EMCORE_SUCCESS;
+}
+
+int32_t emcore_write(const void *data, uint32_t addr, uint32_t size) {
+    int32_t res;
+    uint32_t writesize, in[4], *out;
+    
+    out = calloc(sizeof(char), EMCORE_HEADER_SIZE + 0x0F00);
+
+    *(out) = 5;
+    
+    while (size) {
+        writesize = MIN(size, 0x0F00);
+        
+        memcpy(out + 4, data, writesize);
+
+        *(out + 1) = addr;
+        *(out + 2) = writesize;
+        
+        res = emcore_monitor_command(out, in, writesize + EMCORE_HEADER_SIZE, 16);
+
+        if (res != EMCORE_SUCCESS) {
+            free(out);
+            return res;
+        }
+        
+        data += writesize;
+        addr += writesize;
+        size -= writesize;
+    }
+    
+    free(out);
+
+    return EMCORE_SUCCESS;
+}
+
+int32_t emcore_readi2c(void *data, uint8_t bus, uint8_t slave, uint8_t addr, uint8_t size) {
+    int32_t res;
+    uint32_t data_length, out[4] = { 8, 0xdeadbeef, 0, 0 };
+    void *in;
+
+    if (!size) {
+        return EMCORE_SUCCESS;
+    }
+
+    out[1] = bus | (slave << 8) | (addr << 16) | (size << 24);
+
+    data_length = EMCORE_HEADER_SIZE + size;
     in = malloc(data_length);
 
     res = emcore_monitor_command(out, in, 16, data_length);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         free(in);
 
         return res;
@@ -237,167 +250,41 @@ int emcore_readmem(void* data, uint32_t addr, uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_writemem(const void* data, uint32_t addr, uint32_t size)
-{
-    int res;
+int32_t emcore_writei2c(const void *data, uint8_t bus, uint8_t slave, uint8_t addr, uint8_t size) {
+    int32_t res;
     uint32_t data_length, in[4], *out;
 
-    if (size + EMCORE_HEADER_SIZE > emcore_usb_eps_mps.cout)
-    {
-        return EMCORE_ERROR_OVERFLOW;
+    if (!size) {
+        return EMCORE_SUCCESS;
     }
 
+    if (size > 48) {
+        return EMCORE_ERROR_OVERFLOW;
+    }
+    
     data_length = size + EMCORE_HEADER_SIZE;
-    out = malloc(data_length);
+    out = calloc(data_length, 1);
 
-    *(out) = 5;
-    *(out + 1) = addr;
-    *(out + 2) = size;
-    *(out + 3) = 0;
+    *(out) = 9;
+    out[1] = bus | (slave << 8) | (addr << 16) | (size << 24);
+
     memcpy(out + 4, data, size);
 
     res = emcore_monitor_command(out, in, data_length, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
     return EMCORE_SUCCESS;
 }
 
-int emcore_readdma(void* data, uint32_t addr, uint32_t size)
-{
-    int res;
-    uint32_t out[4] = { 6, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
-
-    out[1] = addr;
-    out[2] = size;
-
-    if (size > emcore_usb_eps_mps.din)
-    {
-        return EMCORE_ERROR_OVERFLOW;
-    }
-
-    res = emcore_monitor_command(out, in, 16, 16);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    res = emcore_din(data, size);
-
-    return EMCORE_SUCCESS;
-}
-
-int emcore_writedma(const void* data, uint32_t addr, uint32_t size)
-{
-    int res;
-    uint32_t out[4] = { 7, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
-
-    out[1] = addr;
-    out[2] = size;
-
-    if (size > emcore_usb_eps_mps.dout)
-    {
-        return EMCORE_ERROR_OVERFLOW;
-    }
-
-    res = emcore_monitor_command(out, in, 16, 16);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    res = emcore_dout(data, size);
-
-    return EMCORE_SUCCESS;
-}
-
-int emcore_readi2c(void* data, uint8_t bus, uint8_t slave, uint8_t addr, uint8_t size)
-{
-    int res;
-    uint32_t data_length, out[4] = { 8, 0xdeadbeef, 0, 0 };
-    void* in;
-
-    out[1] = bus | (slave << 8) | (addr << 16) | (size << 24);
-
-    if (size + EMCORE_HEADER_SIZE > emcore_usb_eps_mps.cin)
-    {
-        return EMCORE_ERROR_OVERFLOW;
-    }
-
-    data_length = 16 + size;
-    in = malloc(data_length);
-
-    res = emcore_monitor_command(out, in, 16, data_length);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        free(in);
-
-        return res;
-    }
-
-    memcpy(data, in + 16, size);
-
-    free(in);
-
-    return EMCORE_SUCCESS;
-}
-
-int emcore_writei2c(const void* data, uint8_t bus, uint8_t slave, uint8_t addr, uint8_t size)
-{
-    int res;
-    uint32_t data_length, in[4], *out;
-
-    if (size + EMCORE_HEADER_SIZE > emcore_usb_eps_mps.cout)
-    {
-        return EMCORE_ERROR_OVERFLOW;
-    }
-
-    data_length = 16 + size;
-    out = calloc(data_length, 1);
-
-    *(out) = 9; // bytes 0-3
-    *(out + 4) = bus;
-    *(out + 5) = slave;
-    *(out + 6) = addr;
-    *(out + 7) = size;
-
-    memcpy(out + 16, data, size); // bytes 16+
-
-    res = emcore_monitor_command(out, in, data_length, 16);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    return EMCORE_SUCCESS;
-}
-
-int emcore_file_open(uint32_t* handle, const char* path, int flags)
-{
-    int res;
+int32_t emcore_file_open(uint32_t *handle, const char *path, uint32_t flags) {
+    int32_t res;
     uint32_t str_length, data_length, in[4], *out;
-    int flags_emcore = 0;
+    int32_t flags_emcore = 0;
     
     *handle = 0;
-    
-    str_length = strlen(path);
-    data_length = str_length + 1 + EMCORE_HEADER_SIZE;
-    
-    if (data_length > emcore_usb_eps_mps.cout)
-    {
-        return EMCORE_ERROR_OVERFLOW;
-    }
-
-    out = calloc(sizeof(char), data_length);
-
-    *(out) = 30;
     
     /*
     #define O_RDONLY 0
@@ -428,19 +315,49 @@ int emcore_file_open(uint32_t* handle, const char* path, int flags)
         flags_emcore |= 0x10;
     }
     
-    *(out + 1) = flags_emcore;
+    str_length = strlen(path) + 1;
     
-    strncpy(((char*)(out + 4)), path, str_length);
+    if (str_length > 48) {
+        uint32_t buf = 0;
+        
+        res = emcore_malloc(&buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        res = emcore_write(path, buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        out = calloc(sizeof(char), EMCORE_HEADER_SIZE);
 
-    res = emcore_monitor_command(out, in, data_length, 16);
+        *(out) = 30;
+        *(out + 1) = flags_emcore;
+        *(out + 3) = buf;
+        
+        res = emcore_monitor_command(out, in, EMCORE_HEADER_SIZE, 16);
+    }
+    else {
+        data_length = EMCORE_HEADER_SIZE + str_length;
+        
+        out = calloc(sizeof(char), data_length);
 
-    if (EMCORE_SUCCESS != res)
-    {
+        *(out) = 30;
+        *(out + 1) = flags_emcore;
+        
+        strncpy(((char *)(out + 4)), path, str_length - 1);
+        
+        res = emcore_monitor_command(out, in, data_length, 16);
+    }
+
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
@@ -449,22 +366,19 @@ int emcore_file_open(uint32_t* handle, const char* path, int flags)
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_size(uint32_t* size, uint32_t handle)
-{
-    int res;
+int32_t emcore_file_size(uint32_t *size, uint32_t handle) {
+    int32_t res;
     uint32_t out[4] = { 31, 0xdeadbeef, 0, 0 }, in[4];
     
     out[1] = handle;
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
@@ -473,9 +387,8 @@ int emcore_file_size(uint32_t* size, uint32_t handle)
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_read(uint32_t* nread, uint32_t handle, uint32_t addr, uint32_t size)
-{
-    int res;
+int32_t emcore_file_read(uint32_t *nread, uint32_t handle, uint32_t addr, uint32_t size) {
+    int32_t res;
     uint32_t out[4] = { 32, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef }, in[4];
     
     out[1] = handle;
@@ -484,13 +397,11 @@ int emcore_file_read(uint32_t* nread, uint32_t handle, uint32_t addr, uint32_t s
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
@@ -499,9 +410,8 @@ int emcore_file_read(uint32_t* nread, uint32_t handle, uint32_t addr, uint32_t s
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_write(uint32_t* nwrite, uint32_t handle, uint32_t addr, uint32_t size)
-{
-    int res;
+int32_t emcore_file_write(uint32_t *nwrite, uint32_t handle, uint32_t addr, uint32_t size) {
+    int32_t res;
     uint32_t out[4] = { 33, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef }, in[4];
     
     out[1] = handle;
@@ -510,13 +420,11 @@ int emcore_file_write(uint32_t* nwrite, uint32_t handle, uint32_t addr, uint32_t
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
@@ -525,9 +433,8 @@ int emcore_file_write(uint32_t* nwrite, uint32_t handle, uint32_t addr, uint32_t
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_seek(uint32_t handle, uint32_t offset, uint32_t whence)
-{
-    int res;
+int32_t emcore_file_seek(uint32_t handle, uint32_t offset, uint32_t whence) {
+    int32_t res;
     uint32_t out[4] = { 34, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef }, in[4];
     
     out[1] = handle;
@@ -536,22 +443,19 @@ int emcore_file_seek(uint32_t handle, uint32_t offset, uint32_t whence)
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_truncate(uint32_t handle, uint32_t length)
-{
-    int res;
+int32_t emcore_file_truncate(uint32_t handle, uint32_t length) {
+    int32_t res;
     uint32_t out[4] = { 35, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
     
     out[1] = handle;
@@ -559,77 +463,66 @@ int emcore_file_truncate(uint32_t handle, uint32_t length)
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_sync(uint32_t handle)
-{
-    int res;
+int32_t emcore_file_sync(uint32_t handle) {
+    int32_t res;
     uint32_t out[4] = { 36, 0xdeadbeef, 0, 0 }, in[4];
 
     out[1] = handle;
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_close(uint32_t handle)
-{
-    int res;
+int32_t emcore_file_close(uint32_t handle) {
+    int32_t res;
     uint32_t out[4] = { 37, 0xdeadbeef, 0, 0 }, in[4];
 
     out[1] = handle;
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_close_all(uint32_t* count)
-{
-    int res;
+int32_t emcore_file_close_all(uint32_t *count) {
+    int32_t res;
     uint32_t out[4] = { 38, 0, 0, 0 }, in[4];
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
@@ -638,130 +531,184 @@ int emcore_file_close_all(uint32_t* count)
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_kill_all(uint32_t volume)
-{
-    int res;
+int32_t emcore_file_kill_all(uint32_t volume) {
+    int32_t res;
     uint32_t out[4] = { 39, 0xdeadbeef, 0, 0 }, in[4];
 
     out[1] = volume;
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_unlink(const char* name)
-{
-    int res;
+int32_t emcore_file_unlink(const char *path) {
+    int32_t res;
     uint32_t str_length, data_length, in[4], *out;
     
-    str_length = strlen(name);
-    data_length = str_length + 1 + EMCORE_HEADER_SIZE;
+    str_length = strlen(path) + 1;
     
-    if (data_length > emcore_usb_eps_mps.cout)
-    {
-        return EMCORE_ERROR_OVERFLOW;
+    if (str_length > 48) {
+        uint32_t buf;
+        
+        res = emcore_malloc(&buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        res = emcore_write(path, buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        out = calloc(sizeof(char), EMCORE_HEADER_SIZE);
+
+        *(out) = 40;
+        *(out + 3) = buf;
+        
+        res = emcore_monitor_command(out, in, EMCORE_HEADER_SIZE, 16);
+    }
+    else {
+        data_length = EMCORE_HEADER_SIZE + str_length;
+        
+        out = calloc(sizeof(char), data_length);
+
+        *(out) = 40;
+        
+        strncpy(((char *)(out + 4)), path, str_length - 1);
+        
+        res = emcore_monitor_command(out, in, data_length, 16);
     }
 
-    out = calloc(sizeof(char), data_length);
-
-    *(out) = 40;
-    
-    strncpy(((char*)(out + 4)), name, str_length);
-
-    res = emcore_monitor_command(out, in, data_length, 16);
-
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
     return EMCORE_SUCCESS;
 }
 
-int emcore_file_rename(const char* path, const char* newpath)
-{
-    int res;
+int32_t emcore_file_rename(const char *path, const char *newpath) {
+    // TODO: currently, calling file_rename crashes the emCORE kernel
+    return EMCORE_ERROR_NOT_IMPLEMENTED;
+    
+    int32_t res;
+    uint32_t in[4], out[4] = { 41, 0, 0xdeadbeef, 0xdeadbeef }, buf;
+    void *data;
+    size_t obytes, nbytes;
+    
+    obytes = strlen(path) + 1;
+    nbytes = strlen(newpath) + 1;
+    
+    res = emcore_malloc(&buf, obytes + nbytes);
+    
+    if (res != EMCORE_SUCCESS) {
+        return res;
+    }
+    
+    data = calloc(sizeof(char), obytes + nbytes);
+    
+    strcpy(data, path);
+    strcpy(data + obytes, newpath);
+    
+    res = emcore_write(data, buf, obytes + nbytes);
+    
+    free(data);
+    
+    if (res != EMCORE_SUCCESS) {
+        return res;
+    }
+
+    out[2] = buf;
+    out[3] = buf + obytes;
+    
+    res = emcore_monitor_command(out, in, EMCORE_HEADER_SIZE, 16);
+
+    if (res != EMCORE_SUCCESS) {
+        return res;
+    }
+    
+    res = emcore_free(buf);
+
+    if (res != EMCORE_SUCCESS) {
+        return res;
+    }
+    
+    if (in[1] > 0x80000000) {
+        return EMCORE_ERROR_IO;
+    }
+    
+    return EMCORE_SUCCESS;
+}
+
+int32_t emcore_dir_open(uint32_t *handle, const char *name) {
+    int32_t res;
     uint32_t str_length, data_length, in[4], *out;
     
-    if (strlen(path) > 247)
-    {
-        return EMCORE_ERROR_OVERFLOW;
+    str_length = strlen(name) + 1;
+    
+    if (str_length > 48) {
+        uint32_t buf = 0;
+        
+        res = emcore_malloc(&buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        res = emcore_write(name, buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        out = calloc(sizeof(char), EMCORE_HEADER_SIZE);
+
+        *(out) = 42;
+        *(out + 3) = buf;
+        
+        res = emcore_monitor_command(out, in, EMCORE_HEADER_SIZE, 16);
     }
-    
-    str_length = MIN(247, strlen(newpath));
-    data_length = str_length + 1 + 248 + EMCORE_HEADER_SIZE;
-    
-    if (data_length > emcore_usb_eps_mps.cout)
-    {
-        return EMCORE_ERROR_OVERFLOW;
+    else {
+        data_length = EMCORE_HEADER_SIZE + str_length;
+        
+        out = calloc(sizeof(char), data_length);
+
+        *(out) = 42;
+        
+        strncpy(((char *)(out + 4)), name, str_length - 1);
+        
+        res = emcore_monitor_command(out, in, data_length, 16);
     }
 
-    out = calloc(sizeof(char), data_length);
-
-    *(out) = 41;
-    
-    strncpy(((char*)(out + 4)), path, strlen(path));
-    strncpy(((char*)(out) + 248), newpath, str_length);
-
-    res = emcore_monitor_command(out, in, data_length, 16);
-
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
-    return EMCORE_SUCCESS;
-}
-
-int emcore_dir_open(uint32_t* handle, const char* name)
-{
-    int res;
-    size_t name_length;
-    uint32_t data_length, in[4], *out;
-
-    name_length = strlen(name);
-    data_length = name_length + 1 + EMCORE_HEADER_SIZE;
-    out = calloc(data_length, 1);
-
-    *out = 42;
-    strncpy(((char*)(out + 4)), name, name_length + 1);
-
-    res = emcore_monitor_command(out, in, data_length, 16);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
     *handle = in[1];
 
     return EMCORE_SUCCESS;
 }
 
-int emcore_dir_read(struct emcore_dir_entry* entry, uint32_t handle)
-{
-    int res;
+int32_t emcore_dir_read(struct emcore_dir_entry *entry, uint32_t handle) {
+    int32_t res;
     uint32_t maxpath, ptr, dirent_size, emcore_errno_value, filename_buf_len,
         out[4] = { 43, 0xdeadbeef, 0, 0 }, in[4];
     void *buf;
@@ -772,32 +719,27 @@ int emcore_dir_read(struct emcore_dir_entry* entry, uint32_t handle)
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
     ptr = in[3];
 
-    if (0 == ptr)
-    {
+    if (!ptr) {
         res = emcore_errno(&emcore_errno_value);
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return res;
         }
         
-        if (EMCORE_SUCCESS != emcore_errno_value && 2 != emcore_errno_value)
-        {
+        if (emcore_errno_value != EMCORE_SUCCESS && emcore_errno_value != 2) {
             return EMCORE_ERROR_IO;
         }
 
         return EMCORE_ERROR_NO_MORE_ENTRIES;
     }
 
-    if (1 != in[1]) // version
-    {
+    if (in[1] != 1) { // version
         return EMCORE_ERROR_NOT_IMPLEMENTED;
     }
 
@@ -809,16 +751,18 @@ int emcore_dir_read(struct emcore_dir_entry* entry, uint32_t handle)
 
     res = emcore_read(buf, ptr, dirent_size);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
+        free(buf);
         return res;
     }
 
-    filename_buf_len = strlen((char*)buf) + 1;
+    filename_buf_len = strlen((char *)buf) + 1;
 
     entry->name = malloc(filename_buf_len);
     strncpy(entry->name, buf, filename_buf_len);
     memcpy(&entry->attributes, buf + maxpath, 16);
+    
+    free(buf);
 
 #ifdef DEBUG_DIR_ENTRIES
     fprintf(stderr, "Read directory entry: %s\n", entry->name);
@@ -827,48 +771,42 @@ int emcore_dir_read(struct emcore_dir_entry* entry, uint32_t handle)
     fprintf(stderr, "Start cluster: %d\n", entry->startcluster);
     fprintf(stderr, "Last written date: 0x%04x\n", entry->wrtdate);
     fprintf(stderr, "Last written time: 0x%04x\n", entry->wrttime);
-    fprintf(stderr, "Last written TS: %lu\n",
-        (unsigned long) fat_time_to_unix_ts(entry->wrttime, entry->wrtdate));
+    fprintf(stderr, "Last written TS: %d\n",
+        fat_time_to_unix_ts(entry->wrttime, entry->wrtdate));
 #endif
     return EMCORE_SUCCESS;
 }
 
-int emcore_dir_close(uint32_t handle)
-{
-    int res;
+int32_t emcore_dir_close(uint32_t handle) {
+    int32_t res;
     uint32_t out[4] = { 44, 0xdeadbeef, 0, 0 }, in[4];
 
     out[1] = handle;
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
     return EMCORE_SUCCESS;
 }
 
-int emcore_dir_close_all(uint32_t* count)
-{
-    int res;
+int32_t emcore_dir_close_all(uint32_t *count) {
+    int32_t res;
     uint32_t out[4] = { 45, 0, 0, 0 }, in[4];
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
@@ -877,83 +815,115 @@ int emcore_dir_close_all(uint32_t* count)
     return EMCORE_SUCCESS;
 }
 
-int emcore_dir_create(const char* name)
-{
-    int res;
+int32_t emcore_dir_create(const char *name) {
+    int32_t res;
     uint32_t str_length, data_length, in[4], *out;
     
-    str_length = strlen(name);
-    data_length = str_length + 1 + EMCORE_HEADER_SIZE;
+    str_length = strlen(name) + 1;
     
-    if (data_length > emcore_usb_eps_mps.cout)
-    {
-        return EMCORE_ERROR_OVERFLOW;
+    if (str_length > 48) {
+        uint32_t buf = 0;
+        
+        res = emcore_malloc(&buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        res = emcore_write(name, buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        out = calloc(sizeof(char), EMCORE_HEADER_SIZE);
+
+        *(out) = 47;
+        *(out + 3) = buf;
+        
+        res = emcore_monitor_command(out, in, EMCORE_HEADER_SIZE, 16);
+    }
+    else {
+        data_length = EMCORE_HEADER_SIZE + str_length;
+        
+        out = calloc(sizeof(char), data_length);
+
+        *(out) = 47;
+        
+        strncpy(((char *)(out + 4)), name, str_length - 1);
+        
+        res = emcore_monitor_command(out, in, data_length, 16);
     }
 
-    out = calloc(sizeof(char), data_length);
-
-    *(out) = 47;
-    
-    strncpy(((char*)(out + 4)), name, str_length);
-
-    res = emcore_monitor_command(out, in, data_length, 16);
-
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
     return EMCORE_SUCCESS;
 }
 
-int emcore_dir_remove(const char* name)
-{
-    int res;
+int32_t emcore_dir_remove(const char *name) {
+    int32_t res;
     uint32_t str_length, data_length, in[4], *out;
     
-    str_length = strlen(name);
-    data_length = str_length + 1 + EMCORE_HEADER_SIZE;
+    str_length = strlen(name) + 1;
     
-    if (data_length > emcore_usb_eps_mps.cout)
-    {
-        return EMCORE_ERROR_OVERFLOW;
+    if (str_length > 48) {
+        uint32_t buf = 0;
+        
+        res = emcore_malloc(&buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        res = emcore_write(name, buf, str_length);
+        
+        if (res != EMCORE_SUCCESS) {
+            return res;
+        }
+        
+        out = calloc(sizeof(char), EMCORE_HEADER_SIZE);
+
+        *(out) = 48;
+        *(out + 3) = buf;
+        
+        res = emcore_monitor_command(out, in, EMCORE_HEADER_SIZE, 16);
+    }
+    else {
+        data_length = EMCORE_HEADER_SIZE + str_length;
+        
+        out = calloc(sizeof(char), data_length);
+
+        *(out) = 48;
+        
+        strncpy(((char *)(out + 4)), name, str_length - 1);
+        
+        res = emcore_monitor_command(out, in, data_length, 16);
     }
 
-    out = calloc(sizeof(char), data_length);
-
-    *(out) = 48;
-    
-    strncpy(((char*)(out + 4)), name, str_length);
-
-    res = emcore_monitor_command(out, in, data_length, 16);
-
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
     
-    if (in[1] > 0x80000000)
-    {
+    if (in[1] > 0x80000000) {
         return EMCORE_ERROR_IO;
     }
     
     return EMCORE_SUCCESS;
 }
 
-int emcore_errno(uint32_t* emcore_errno_value)
-{
-    int res;
+int32_t emcore_errno(uint32_t *emcore_errno_value) {
+    int32_t res;
     uint32_t out[4] = { 49, 0, 0, 0 }, in[4];
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
@@ -962,17 +932,15 @@ int emcore_errno(uint32_t* emcore_errno_value)
     return EMCORE_SUCCESS;
 }
 
-int emcore_malloc(uint32_t* ptr, uint32_t size)
-{
-    int res;
+int32_t emcore_malloc(uint32_t *ptr, uint32_t size) {
+    int32_t res;
     uint32_t out[4] = { 52, 0xdeadbeef, 0, 0 }, in[4];
 
     out[1] = size;
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
@@ -981,9 +949,8 @@ int emcore_malloc(uint32_t* ptr, uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_memalign(uint32_t* ptr, uint32_t align, uint32_t size)
-{
-    int res;
+int32_t emcore_memalign(uint32_t *ptr, uint32_t align, uint32_t size) {
+    int32_t res;
     uint32_t out[4] = { 53, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
 
     out[1] = align;
@@ -991,8 +958,7 @@ int emcore_memalign(uint32_t* ptr, uint32_t align, uint32_t size)
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
@@ -1001,9 +967,8 @@ int emcore_memalign(uint32_t* ptr, uint32_t align, uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_realloc(uint32_t* new_ptr, uint32_t ptr, uint32_t size)
-{
-    int res;
+int32_t emcore_realloc(uint32_t *new_ptr, uint32_t ptr, uint32_t size) {
+    int32_t res;
     uint32_t out[4] = { 54, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
 
     out[1] = ptr;
@@ -1011,8 +976,7 @@ int emcore_realloc(uint32_t* new_ptr, uint32_t ptr, uint32_t size)
 
     res = emcore_monitor_command(out, in, 16, 16);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
@@ -1021,8 +985,7 @@ int emcore_realloc(uint32_t* new_ptr, uint32_t ptr, uint32_t size)
     return EMCORE_SUCCESS;
 }
 
-int emcore_reownalloc(uint32_t ptr, uint32_t owner)
-{
+int32_t emcore_reownalloc(uint32_t ptr, uint32_t owner) {
     uint32_t out[4] = { 55, 0xdeadbeef, 0xdeadbeef, 0 }, in[4];
 
     out[1] = ptr;
@@ -1031,8 +994,7 @@ int emcore_reownalloc(uint32_t ptr, uint32_t owner)
     return emcore_monitor_command(out, in, 16, 16);
 }
 
-int emcore_free(uint32_t ptr)
-{
+int32_t emcore_free(uint32_t ptr) {
     uint32_t out[4] = { 56, 0xdeadbeef, 0, 0 }, in[4];
 
     out[1] = ptr;
@@ -1040,166 +1002,25 @@ int emcore_free(uint32_t ptr)
     return emcore_monitor_command(out, in, 16, 16);
 }
 
-int emcore_free_all(void)
-{
+int32_t emcore_free_all(void) {
     uint32_t out[4] = { 57, 0, 0, 0 }, in[4];
 
     return emcore_monitor_command(out, in, 16, 16);
 }
 
-int emcore_read(void* data, uint32_t addr, uint32_t size)
-{
-    int res;
-    struct alignsizes* sizes;
-    uint32_t cin_maxsize, readsize, curraddr;
-
-    cin_maxsize = emcore_usb_eps_mps.cin - EMCORE_HEADER_SIZE;
-    sizes = malloc(sizeof(*sizes));
-
-    alignsplit(sizes, addr, size, cin_maxsize, 16);
-#ifdef DEBUG_ALIGN_SPLIT
-    fprintf(stderr, "Downloading %d bytes from 0x%08x, split as (%d/%d/%d)\n",
-        size, addr, sizes->head, sizes->body, sizes->tail);
-
-#endif
-    curraddr = addr;
-
-    if (sizes->head > 0)
-    {
-        res = emcore_readmem(data, curraddr, sizes->head);
-
-        if (EMCORE_SUCCESS != res)
-        {
-            return res;
-        }
-
-        data += sizes->head;
-        curraddr += sizes->head;
-    }
-
-    while (sizes->body > 0)
-    {
-        if (sizes->body >= cin_maxsize * 2)
-        {
-            readsize = MIN(sizes->body, emcore_usb_eps_mps.din);
-            res = emcore_readdma(data, curraddr, readsize);
-        }
-        else
-        {
-            readsize = MIN(sizes->body, cin_maxsize);
-            res = emcore_readmem(data, curraddr, readsize);
-        }
-
-        if (EMCORE_SUCCESS != res)
-        {
-            return res;
-        }
-
-        data += readsize;
-        curraddr += readsize;
-        sizes->body -= readsize;
-    }
-
-    if (sizes->tail > 0)
-    {
-        res = emcore_readmem(data, curraddr, sizes->tail);
-
-        if (EMCORE_SUCCESS != res)
-        {
-            return res;
-        }
-
-        data += sizes->tail;
-    }
-
-    return EMCORE_SUCCESS;
-}
-
-int emcore_write(const void* data, uint32_t addr, uint32_t size)
-{
-    int res;
-    struct alignsizes* sizes;
-    uint32_t cout_maxsize, writesize, curraddr;
-
-    cout_maxsize = emcore_usb_eps_mps.cout - 16;
-    sizes = malloc(sizeof(*sizes));
-
-    alignsplit(sizes, addr, size, cout_maxsize, 16);
-#ifdef DEBUG_ALIGN_SPLIT
-    fprintf(stderr, "Uploading %d bytes from 0x%08x, split as (%d/%d/%d)\n",
-        size, addr, sizes->head, sizes->body, sizes->tail);
-
-#endif
-    curraddr = addr;
-
-    if (sizes->head > 0)
-    {
-        res = emcore_writemem(data, curraddr, sizes->head);
-
-        if (EMCORE_SUCCESS != res)
-        {
-            return res;
-        }
-
-        data += sizes->head;
-        curraddr += sizes->head;
-    }
-
-    while (sizes->body > 0)
-    {
-        if (sizes->body >= 2 * cout_maxsize)
-        {
-            writesize = MIN(sizes->body, emcore_usb_eps_mps.dout);
-            res = emcore_writedma(data, curraddr, writesize);
-        }
-        else
-        {
-            writesize = MIN(sizes->body, cout_maxsize);
-            res = emcore_writemem(data, curraddr, writesize);
-        }
-
-        if (EMCORE_SUCCESS != res)
-        {
-            return res;
-        }
-
-        data += writesize;
-        curraddr += writesize;
-        sizes->body -= writesize;
-    }
-
-    if (sizes->tail > 0)
-    {
-        res = emcore_writemem(data, curraddr, sizes->tail);
-
-        if (EMCORE_SUCCESS != res)
-        {
-            return res;
-        }
-
-        data += sizes->tail;
-    }
-
-    return EMCORE_SUCCESS;
-}
-
-int emcore_ls(uint32_t handle)
-{
-    int res = 0;
+int32_t emcore_ls(uint32_t handle) {
+    uint32_t res = 0;
     struct emcore_dir_entry entry;
 
-    while (1)
-    {
+    while (1) {
         res = emcore_dir_read(&entry, handle);
 
-        if (EMCORE_ERROR_NO_MORE_ENTRIES == res)
-        {
+        if (res == EMCORE_ERROR_NO_MORE_ENTRIES) {
             res = EMCORE_SUCCESS;
             break;
         }
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return res;
         }
 
@@ -1211,15 +1032,13 @@ int emcore_ls(uint32_t handle)
         fprintf(stderr, "Start cluster: %d\n", entry.startcluster);
         fprintf(stderr, "Last written date: 0x%04x\n", entry.wrtdate);
         fprintf(stderr, "Last written time: 0x%04x\n", entry.wrttime);
-        fprintf(stderr, "Last written TS: %lu\n",
-            (unsigned long) fat_time_to_unix_ts(entry.wrttime, entry.wrtdate));
+        fprintf(stderr, "Last written TS: %d\n",
+            fat_time_to_unix_ts(entry.wrttime, entry.wrtdate));
 #endif
-        if (entry.attributes & 0x10)
-        {
+        if (entry.attributes & 0x10) {
             printf("     [DIR]");
         }
-        else
-        {
+        else {
             printf("%10d", entry.size);
         }
 
@@ -1227,187 +1046,4 @@ int emcore_ls(uint32_t handle)
     }
 
     return res;
-}
-
-int emcore_test(void)
-{
-    int res;
-
-    /* emcore_get_version */
-    struct emcore_dev_info dev_info;
-    char *hw_type;
-
-    /* emcore_get_packet_info */
-    struct emcore_usb_endpoints_max_packet_size max_packet_size;
-
-    /* emcore_get_user_mem_range */
-    struct emcore_user_mem_range mem_range;
-
-    /* emcore_readmem */
-    void* buf;
-    uint16_t buf_size;
-    uint32_t read_addr;
-
-    /* emcore_readi2c */
-    /* uint8_t i2cdata; */
-
-    /* emcore_dir_open */
-    uint32_t dir_handle;
-
-    /* emcore_dir_close_all */
-    uint32_t count;
-
-    res = emcore_get_version(&dev_info);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    hw_type = malloc(5);
-
-    strncpy(hw_type, ((char*)&dev_info.hw_type), 4);
-
-    printf("Connected to %4s running %s v%d.%d.%d r%d\n",
-        hw_type, (1 == dev_info.sw_type ? "emBIOS" : (2 == dev_info.sw_type ? "emCORE" : "UNKNOWN")),
-        dev_info.major, dev_info.minor, dev_info.patch, dev_info.svn_revision
-    );
-
-    free(hw_type);
-
-    res = emcore_get_packet_info(&max_packet_size);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    printf("COUT max pckt: %d, CIN max pckt: %d, DOUT max pckt: %d, DIN max pckt: %d\n",
-        max_packet_size.cout, max_packet_size.cin, max_packet_size.dout, max_packet_size.din
-    );
-
-    res = emcore_get_user_mem_range(&mem_range);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    printf("User mem range: 0x%08x - 0x%08x\n", mem_range.lower, mem_range.upper);
-
-    read_addr = 0x09000000;
-    buf_size = 0x1000;
-    buf = malloc(buf_size);
-
-    printf("Reading 0x%08x bytes from 0x%08x\n", buf_size, read_addr);
-
-    res = emcore_read(buf, read_addr, buf_size);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-#ifdef DEBUG
-    dump_packet(buf, buf_size);
-
-#endif
-    printf("Writing 0x%08x bytes to 0x%08x\n", buf_size, read_addr);
-
-    res = emcore_write(buf, read_addr, buf_size);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    free(buf);
-
-    /*
-    printf("Reading 1 byte from I2C\n");
-
-    res = emcore_readi2c(&i2cdata, 0, 0xe6, 0x29, 1);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-#ifdef DEBUG
-    dump_packet(&i2cdata, 1);
-
-#endif
-    */
-    /* nano2g - turns on/off the backlight */
-    /*
-    i2cdata = 1;
-
-    printf("Writing 1 byte to I2C\n");
-
-    res = emcore_writei2c(&i2cdata, 0, 0xe6, 0x29, 1);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    sleep(1);
-
-    i2cdata = 0;
-
-    printf("Writing 1 byte to I2C\n");
-
-    res = emcore_writei2c(&i2cdata, 0, 0xe6, 0x29, 1);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-    */
-    res = emcore_dir_open(&dir_handle, "/");
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    printf("Opened dir handle: 0x%08x\n", dir_handle);
-
-    res = emcore_ls(dir_handle);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    printf("Listed dir handle: 0x%08x\n", dir_handle);
-
-    res = emcore_dir_close(dir_handle);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    printf("Closed dir handle 0x%08x\n", dir_handle);
-
-    res = emcore_dir_close_all(&count);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    printf("Closed %d dir handles\n", count);
-    /* powers off the device - graceful
-    res = emcore_poweroff(1);
-
-    if (EMCORE_SUCCESS != res)
-    {
-        return res;
-    }
-
-    printf("Device powered off successfully!\n");
-    */
-    return EMCORE_SUCCESS;
 }

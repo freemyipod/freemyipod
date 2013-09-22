@@ -1,6 +1,6 @@
 //
 //
-//    Copyright 2011 user890104
+//    Copyright 2013 user890104
 //
 //
 //    This file is part of emCORE.
@@ -20,14 +20,11 @@
 //
 //
 
-
 #include "global.h"
 
 #include "util.h"
 
-
-const char* libusb_error_messages[13] =
-{
+const char *libusb_error_messages[13] = {
     "No error",                /* LIBUSB_SUCCESS = 0               */
     "Input/output error",      /* LIBUSB_ERROR_IO = -1             */
     "Invalid parameter",       /* LIBUSB_ERROR_INVALID_PARAM = -2  */
@@ -43,8 +40,7 @@ const char* libusb_error_messages[13] =
     "Operation not supported", /* LIBUSB_ERROR_NOT_SUPPORTED = -12 */
 };
 
-const char* emcore_error_messages[10] =
-{
+const char *emcore_error_messages[10] = {
     "No error",               /* EMCORE_SUCCESS = 0               */
     "Invalid command",        /* EMCORE_ERROR_INVALID = 1         */
     "Command not supported",  /* EMCORE_ERROR_NOT_SUPPORTED = 2   */
@@ -57,21 +53,17 @@ const char* emcore_error_messages[10] =
     "I/O error",              /* EMCORE_ERROR_IO = 9              */
 };
 
-void dump_packet(const void* data, size_t length)
-{
+void dump_packet(const void *data, size_t length) {
     static size_t i;
 
-    for (i = 0; i < length; ++i)
-    {
-        fprintf(stderr, "%02x ", *((uint8_t*)(data + i)));
+    for (i = 0; i < length; ++i) {
+        fprintf(stderr, "%02x ", *((uint8_t *)(data + i)));
 
-        if (i % 4 == 3)
-        {
+        if (i % 4 == 3) {
             fprintf(stderr, " ");
         }
 
-        if (i % 16 == 15 && i + 1 < length)
-        {
+        if (i % 16 == 15 && i + 1 < length) {
             fprintf(stderr, "\n");
         }
     }
@@ -79,50 +71,7 @@ void dump_packet(const void* data, size_t length)
     fprintf(stderr, "\n");
 }
 
-void alignsplit(struct alignsizes* sizeptr, uint32_t addr,
-    uint32_t size, uint32_t blksize, uint32_t align)
-{
-    uint32_t end, bodyaddr, tailaddr;
-
-    if (size <= blksize)
-    {
-        sizeptr->head = size;
-        sizeptr->body = 0;
-        sizeptr->tail = 0;
-
-        return;
-    }
-
-    end = addr + size;
-
-    if (addr & (align -1))
-    {
-        bodyaddr = (addr + MIN(size, blksize)) & ~(align - 1);
-    }
-    else
-    {
-        bodyaddr = addr;
-    }
-
-    sizeptr->head = bodyaddr - addr;
-
-    if ((size - sizeptr->head) & (align - 1))
-    {
-        tailaddr = ((end - MIN(end - bodyaddr, blksize) + align - 1) & ~(align - 1));
-    }
-    else
-    {
-        tailaddr = end;
-    }
-
-    sizeptr->tail = end - tailaddr;
-    sizeptr->body = tailaddr - bodyaddr;
-
-    return;
-}
-
-time_t fat_time_to_unix_ts(short wrttime, short wrtdate)
-{
+time_t fat_time_to_unix_ts(uint16_t time, uint16_t date) {
     struct tm result;
     /*
         Example time: 0x9365
@@ -138,19 +87,18 @@ time_t fat_time_to_unix_ts(short wrttime, short wrtdate)
         Y Y Y Y Y Y Y M   M M M D D D D D
     */
 
-    result.tm_sec = ((wrttime & 0x1f) << 1);
-    result.tm_min = (wrttime >> 5) & 0x3f;
-    result.tm_hour = (wrttime >> 11) & 0x1f;
-    result.tm_mday = wrtdate & 0x1f;
-    result.tm_mon = ((wrtdate >> 5) & 0xf) - 1;
-    result.tm_year = ((wrtdate >> 9) & 0x7f) + 80;
+    result.tm_sec = ((time & 0x1f) << 1);
+    result.tm_min = (time >> 5) & 0x3f;
+    result.tm_hour = (time >> 11) & 0x1f;
+    result.tm_mday = date & 0x1f;
+    result.tm_mon = ((date >> 5) & 0xf) - 1;
+    result.tm_year = ((date >> 9) & 0x7f) + 80;
 
     return mktime(&result);
 }
 
-int32_t unix_ts_to_fat_time(time_t datetime)
-{
-    struct tm* tm_ptr;
+int32_t unix_ts_to_fat_time(time_t datetime) {
+    struct tm *tm_ptr;
     
     tm_ptr = localtime(&datetime);
     
@@ -162,16 +110,13 @@ int32_t unix_ts_to_fat_time(time_t datetime)
            ((tm_ptr->tm_year - 80) << 0x19);
 }
 
-void print_error(int code)
-{
-    if (code > 0)
-    {
+void print_error(int32_t code) {
+    if (code > 0) {
         fprintf(stderr, "emcore error: %s\n", emcore_error_messages[code]);
     }
-    else
-    {
+    else {
         fprintf(stderr, "libusb error: %s\n", (
-            LIBUSB_ERROR_OTHER == code ?
+            code == LIBUSB_ERROR_OTHER ?
                 "Other error" :
                 libusb_error_messages[-code]
         ));

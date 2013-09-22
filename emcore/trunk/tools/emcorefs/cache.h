@@ -1,6 +1,6 @@
 //
 //
-//    Copyright 2011 user890104
+//    Copyright 2013 user890104
 //
 //
 //    This file is part of emCORE.
@@ -20,17 +20,15 @@
 //
 //
 
-
 #ifndef __CACHE_H__
 #define __CACHE_H__
 
 #include "global.h"
 
-
 void cache_init(void);
-struct emcore_dir_entry* cache_get(const char* name);
-void cache_insert(const char* dir_name, const struct emcore_dir_entry* entry);
-void cache_remove(const char* dir_name);
+struct emcore_dir_entry *cache_get(const char *name);
+void cache_insert(const char *dir_name, const struct emcore_dir_entry *entry);
+void cache_remove(const char *dir_name);
 void cache_destroy(void);
 
 #ifdef DEBUG2

@@ -1,6 +1,6 @@
 //
 //
-//    Copyright 2011 user890104
+//    Copyright 2013 user890104
 //
 //
 //    This file is part of emCORE.
@@ -20,7 +20,6 @@
 //
 //
 
-
 #include "global.h"
 
 #include "fuse.h"
@@ -28,16 +27,13 @@
 #include "cache.h"
 #include "emcore.h"
 
-
-int emcorefs_init(void)
-{
-    int res;
+int32_t emcorefs_init(void) {
+    int32_t res;
     uint32_t count;
 
     res = emcore_file_close_all(&count);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return res;
     }
 
@@ -46,9 +42,8 @@ int emcorefs_init(void)
     return res;
 }
 
-int emcorefs_getattr(const char* path, struct stat* stbuf)
-{
-    int res = 0;
+int32_t emcorefs_getattr(const char *path, struct stat *stbuf) {
+    int32_t res = 0;
     struct emcore_dir_entry *entry = NULL, curr_entry;
     uint32_t dir_handle;
     char *parent, *filename;
@@ -56,41 +51,34 @@ int emcorefs_getattr(const char* path, struct stat* stbuf)
     memset(stbuf, 0, sizeof(*stbuf));
 
 #ifdef DEBUG2
-    if (0 == strcmp(path, "/__cache_dump"))
-    {
+    if (strcmp(path, "/__cache_dump") == 0) {
         cache_dump();
     }
 #endif
     entry = cache_get(path);
 
-    if (NULL == entry)
-    {
+    if (!entry) {
         parent = strdup(path);
         dirname(parent);
-        filename = basename((char*)path);
+        filename = basename((char *) path);
 
         res = emcore_dir_open(&dir_handle, parent);
 
-        if (EMCORE_SUCCESS == res)
-        {
-            while (1)
-            {
+        if (res == EMCORE_SUCCESS) {
+            while (1) {
                 res = emcore_dir_read(&curr_entry, dir_handle);
 
-                if (EMCORE_ERROR_NO_MORE_ENTRIES == res)
-                {
+                if (res == EMCORE_ERROR_NO_MORE_ENTRIES) {
                     break;
                 }
 
-                if (EMCORE_SUCCESS != res)
-                {
+                if (res != EMCORE_SUCCESS) {
                     break;
                 }
                 
                 cache_insert(parent, &curr_entry);
 
-                if (0 == strcmp(filename, curr_entry.name))
-                {
+                if (strcmp(filename, curr_entry.name) == 0) {
                     entry = malloc(sizeof(*entry));
 
                     memcpy(entry, &curr_entry, sizeof(curr_entry));
@@ -105,28 +93,24 @@ int emcorefs_getattr(const char* path, struct stat* stbuf)
         free(parent);
     }
 
-    if (NULL == entry) {
-        if (EMCORE_ERROR_NO_MORE_ENTRIES == res)
-        {
+    if (!entry) {
+        if (res == EMCORE_ERROR_NO_MORE_ENTRIES) {
             return -ENOENT;
         }
 
         return -EIO;
     }
-    else
-    {
+    else {
         stbuf->st_uid = getuid();
         stbuf->st_gid = getgid();
         stbuf->st_mtime = fat_time_to_unix_ts(entry->wrttime, entry->wrtdate);
 
-        if (entry->attributes & 0x10)
-        {
+        if (entry->attributes & 0x10) {
             stbuf->st_mode = S_IFDIR | 0755;
             stbuf->st_nlink = 2;
             stbuf->st_size = 0x1000;
         }
-        else
-        {
+        else {
             stbuf->st_mode = S_IFREG | 0644;
             stbuf->st_nlink = 1;
             stbuf->st_size = entry->size;
@@ -136,15 +120,13 @@ int emcorefs_getattr(const char* path, struct stat* stbuf)
     return 0;
 }
 
-int emcorefs_opendir(const char* path, struct fuse_file_info* fi)
-{
-    int res;
+int32_t emcorefs_opendir(const char *path, struct fuse_file_info *fi) {
+    int32_t res;
     uint32_t handle;
 
     res = emcore_dir_open(&handle, path);
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
@@ -153,30 +135,25 @@ int emcorefs_opendir(const char* path, struct fuse_file_info* fi)
     return 0;
 }
 
-int emcorefs_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi)
-{
-    int res;
+int32_t emcorefs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
+    int32_t res;
     struct emcore_dir_entry entry;
     (void) offset;
     (void) fi;
 
-    if (strcmp(path, "/") == 0)
-    {
+    if (strcmp(path, "/") == 0) {
         filler(buf, ".", NULL, 0);
         filler(buf, "..", NULL, 0);
     }
 
-    while (1)
-    {
+    while (1) {
         res = emcore_dir_read(&entry, fi->fh);
 
-        if (EMCORE_ERROR_NO_MORE_ENTRIES == res)
-        {
+        if (res == EMCORE_ERROR_NO_MORE_ENTRIES) {
             break;
         }
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return -EIO;
         }
 
@@ -188,40 +165,34 @@ int emcorefs_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t 
     return 0;
 }
 
-int emcorefs_releasedir(const char* path, struct fuse_file_info* fi)
-{
-    int res;
+int32_t emcorefs_releasedir(const char *path, struct fuse_file_info *fi) {
+    int32_t res;
     uint32_t emcore_errno_value;
     (void)path;
 
     res = emcore_dir_close(fi->fh);
 
-    if (EMCORE_ERROR_IO == res)
-    {
+    if (res == EMCORE_ERROR_IO) {
         res = emcore_errno(&emcore_errno_value);
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return -EIO;
         }
 
-        if (EMCORE_SUCCESS != emcore_errno_value)
-        {
+        if (emcore_errno_value == EMCORE_SUCCESS) {
             return -emcore_errno_value;
         }
     }
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
     return 0;
 }
 
-int emcorefs_open(const char* path, struct fuse_file_info* fi)
-{
-    int res;
+int32_t emcorefs_open(const char *path, struct fuse_file_info *fi) {
+    int32_t res;
     uint32_t handle, emcore_errno_value;
     
 #ifdef DEBUG
@@ -230,23 +201,19 @@ int emcorefs_open(const char* path, struct fuse_file_info* fi)
     
     res = emcore_file_open(&handle, path, fi->flags);
     
-    if (EMCORE_ERROR_IO == res)
-    {
+    if (res == EMCORE_ERROR_IO) {
         res = emcore_errno(&emcore_errno_value);
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return -EIO;
         }
 
-        if (EMCORE_SUCCESS != emcore_errno_value)
-        {
+        if (emcore_errno_value != EMCORE_SUCCESS) {
             return -emcore_errno_value;
         }
     }
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
@@ -255,24 +222,22 @@ int emcorefs_open(const char* path, struct fuse_file_info* fi)
     return 0;
 }
 
-int emcorefs_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
+int32_t emcorefs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
 #ifdef DEBUG2
     fprintf(stderr, "FUSE_READ: path=[%s] size=[%d] offset=[%jd] fi->flags=[%d]\n", path, size, offset, fi->flags);
 #else
     (void)path;
 #endif
-    int res;
+    int32_t res;
     uint32_t emcore_errno_value, addr, nread = size;
 
-    if (!fi->fh)
-    {
+    if (!fi->fh) {
         return -EIO;
     }
     
     res = emcore_malloc(&addr, size);
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
@@ -280,25 +245,21 @@ int emcorefs_read(const char* path, char* buf, size_t size, off_t offset, struct
         if (offset) {
             res = emcore_file_seek(fi->fh, offset, SEEK_SET);
             
-            if (EMCORE_ERROR_IO == res)
-            {
+            if (res == EMCORE_ERROR_IO) {
                 res = emcore_errno(&emcore_errno_value);
 
-                if (EMCORE_SUCCESS != res)
-                {
+                if (res != EMCORE_SUCCESS) {
                     nread = -EIO;
                     break;
                 }
 
-                if (EMCORE_SUCCESS != emcore_errno_value)
-                {
+                if (emcore_errno_value != EMCORE_SUCCESS) {
                     nread = -emcore_errno_value;
                     break;
                 }
             }
         
-            if (EMCORE_SUCCESS != res)
-            {
+            if (res != EMCORE_SUCCESS) {
                 nread = -EIO;
                 break;
             }
@@ -306,67 +267,58 @@ int emcorefs_read(const char* path, char* buf, size_t size, off_t offset, struct
         
         res = emcore_file_read(&nread, fi->fh, addr, size);
         
-        if (EMCORE_ERROR_IO == res)
-        {
+        if (res == EMCORE_ERROR_IO) {
             res = emcore_errno(&emcore_errno_value);
 
-            if (EMCORE_SUCCESS != res)
-            {
+            if (res != EMCORE_SUCCESS) {
                 nread = -EIO;
                 break;
             }
 
-            if (EMCORE_SUCCESS != emcore_errno_value)
-            {
+            if (emcore_errno_value != EMCORE_SUCCESS) {
                 nread = -emcore_errno_value;
                 break;
             }
         }
     
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             nread = -EIO;
             break;
         }
         
         res = emcore_read(buf, addr, nread);
         
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             nread = -EIO;
         }
-        
     }
     while(0);
     
     res = emcore_free(addr);
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
     return nread;
 }
 
-int emcorefs_write(const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
+int32_t emcorefs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
 #ifdef DEBUG2
     fprintf(stderr, "FUSE_WRITE: path=[%s] size=[%d] offset=[%jd] fi->flags=[%d]\n", path, size, offset, fi->flags);
 #else
     (void)path;
 #endif
-    int res;
+    int32_t res;
     uint32_t emcore_errno_value, addr, nwrite = size;
 
-    if (!fi->fh)
-    {
+    if (!fi->fh) {
         return -EIO;
     }
     
     res = emcore_malloc(&addr, size);
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
@@ -374,25 +326,21 @@ int emcorefs_write(const char* path, const char* buf, size_t size, off_t offset,
         if (offset) {
             res = emcore_file_seek(fi->fh, offset, SEEK_SET);
             
-            if (EMCORE_ERROR_IO == res)
-            {
+            if (res == EMCORE_ERROR_IO) {
                 res = emcore_errno(&emcore_errno_value);
 
-                if (EMCORE_SUCCESS != res)
-                {
+                if (res != EMCORE_SUCCESS) {
                     nwrite = -EIO;
                     break;
                 }
 
-                if (EMCORE_SUCCESS != emcore_errno_value)
-                {
+                if (emcore_errno_value != EMCORE_SUCCESS) {
                     nwrite = -emcore_errno_value;
                     break;
                 }
             }
         
-            if (EMCORE_SUCCESS != res)
-            {
+            if (res != EMCORE_SUCCESS) {
                 nwrite = -EIO;
                 break;
             }
@@ -400,33 +348,28 @@ int emcorefs_write(const char* path, const char* buf, size_t size, off_t offset,
         
         res = emcore_write(buf, addr, nwrite);
         
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             nwrite = -EIO;
             break;
         }
         
         res = emcore_file_write(&nwrite, fi->fh, addr, size);
         
-        if (EMCORE_ERROR_IO == res)
-        {
+        if (res == EMCORE_ERROR_IO) {
             res = emcore_errno(&emcore_errno_value);
 
-            if (EMCORE_SUCCESS != res)
-            {
+            if (res != EMCORE_SUCCESS) {
                 nwrite = -EIO;
                 break;
             }
 
-            if (EMCORE_SUCCESS != emcore_errno_value)
-            {
+            if (emcore_errno_value != EMCORE_SUCCESS) {
                 nwrite = -emcore_errno_value;
                 break;
             }
         }
     
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             nwrite = -EIO;
         }
     }
@@ -434,8 +377,7 @@ int emcorefs_write(const char* path, const char* buf, size_t size, off_t offset,
     
     res = emcore_free(addr);
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
@@ -444,97 +386,81 @@ int emcorefs_write(const char* path, const char* buf, size_t size, off_t offset,
     return nwrite;
 }
 
-int emcorefs_release(const char* path, struct fuse_file_info* fi)
-{
-    int res;
+int32_t emcorefs_release(const char *path, struct fuse_file_info *fi) {
+    int32_t res;
     uint32_t emcore_errno_value;
     (void)path;
 
-    if (!fi->fh)
-    {
+    if (!fi->fh) {
         return -EIO;
     }
     
     res = emcore_file_close(fi->fh);
     
-    if (EMCORE_ERROR_IO == res)
-    {
+    if (EMCORE_ERROR_IO == res) {
         res = emcore_errno(&emcore_errno_value);
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return -EIO;
         }
 
-        if (EMCORE_SUCCESS != emcore_errno_value)
-        {
+        if (emcore_errno_value != EMCORE_SUCCESS) {
             return -emcore_errno_value;
         }
     }
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
     return 0;
 }
 
-int emcorefs_mkdir(const char* path, mode_t mode)
-{
+int32_t emcorefs_mkdir(const char *path, mode_t mode) {
     (void)mode;
-    int res;
+    int32_t res;
     uint32_t emcore_errno_value;
 
     res = emcore_dir_create(path);
     
-    if (EMCORE_ERROR_IO == res)
-    {
+    if (res == EMCORE_ERROR_IO) {
         res = emcore_errno(&emcore_errno_value);
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return -EIO;
         }
 
-        if (EMCORE_SUCCESS != emcore_errno_value)
-        {
+        if (emcore_errno_value != EMCORE_SUCCESS) {
             return -emcore_errno_value;
         }
     }
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
     return 0;
 }
 
-int emcorefs_rmdir(const char* path)
-{
-    int res;
+int32_t emcorefs_rmdir(const char *path) {
+    int32_t res;
     uint32_t emcore_errno_value;
 
     res = emcore_dir_remove(path);
     
-    if (EMCORE_ERROR_IO == res)
-    {
+    if (res == EMCORE_ERROR_IO) {
         res = emcore_errno(&emcore_errno_value);
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return -EIO;
         }
 
-        if (EMCORE_SUCCESS != emcore_errno_value)
-        {
+        if (emcore_errno_value != EMCORE_SUCCESS) {
             return -emcore_errno_value;
         }
     }
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
@@ -543,53 +469,47 @@ int emcorefs_rmdir(const char* path)
     return 0;
 }
 
-int emcorefs_create(const char* path, mode_t mode, struct fuse_file_info* fi)
-{
+int32_t emcorefs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
     (void)mode;
     return emcorefs_open(path, fi);
 }
 
-int emcorefs_mknod(const char* path, mode_t mode, dev_t dev)
-{
+int32_t emcorefs_mknod(const char *path, mode_t mode, dev_t dev) {
     (void)dev;
-    int res;
+    int32_t res;
     struct fuse_file_info fi;
     
     fi.flags = O_WRONLY | O_CREAT | O_TRUNC;
     
     res = emcorefs_create(path, mode, &fi);
     
-    if (0 != res) {
+    if (res) {
         return res;
     }
     
     return emcorefs_release(path, &fi);
 }
 
-int emcorefs_unlink(const char* path)
+int32_t emcorefs_unlink(const char *path)
 {
-    int res;
+    int32_t res;
     uint32_t emcore_errno_value;
 
     res = emcore_file_unlink(path);
     
-    if (EMCORE_ERROR_IO == res)
-    {
+    if (res == EMCORE_ERROR_IO) {
         res = emcore_errno(&emcore_errno_value);
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return -EIO;
         }
 
-        if (EMCORE_SUCCESS != emcore_errno_value)
-        {
+        if (emcore_errno_value != EMCORE_SUCCESS) {
             return -emcore_errno_value;
         }
     }
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
@@ -598,30 +518,25 @@ int emcorefs_unlink(const char* path)
     return 0;
 }
 
-int emcorefs_rename(const char* path, const char* new_path)
-{
-    int res;
+int32_t emcorefs_rename(const char *path, const char *new_path) {
+    int32_t res;
     uint32_t emcore_errno_value;
 
     res = emcore_file_rename(path, new_path);
-    
-    if (EMCORE_ERROR_IO == res)
-    {
+
+    if (res == EMCORE_ERROR_IO) {
         res = emcore_errno(&emcore_errno_value);
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return -EIO;
         }
 
-        if (EMCORE_SUCCESS != emcore_errno_value)
-        {
+        if (emcore_errno_value != EMCORE_SUCCESS) {
             return -emcore_errno_value;
         }
     }
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
@@ -630,56 +545,49 @@ int emcorefs_rename(const char* path, const char* new_path)
     return 0;
 }
 
-int emcorefs_truncate(const char* path, off_t size)
-{
-    int res;
+int32_t emcorefs_truncate(const char *path, off_t size) {
+    int32_t res;
     struct fuse_file_info fi;
     
     res = emcorefs_open(path, &fi);
     
-    if (0 != res) {
+    if (res) {
         return res;
     }
     
     res = emcorefs_ftruncate(path, size, &fi);
     
-    if (0 != res) {
+    if (res) {
         return res;
     }
     
     return emcorefs_release(path, &fi);
 }
 
-int emcorefs_ftruncate(const char* path, off_t size, struct fuse_file_info* fi)
-{
-    int res;
+int32_t emcorefs_ftruncate(const char *path, off_t size, struct fuse_file_info *fi) {
+    int32_t res;
     uint32_t emcore_errno_value;
     (void)path;
 
-    if (!fi->fh)
-    {
+    if (!fi->fh) {
         return -EIO;
     }
     
     res = emcore_file_truncate(fi->fh, size);
     
-    if (EMCORE_ERROR_IO == res)
-    {
+    if (res == EMCORE_ERROR_IO) {
         res = emcore_errno(&emcore_errno_value);
 
-        if (EMCORE_SUCCESS != res)
-        {
+        if (res != EMCORE_SUCCESS) {
             return -EIO;
         }
 
-        if (EMCORE_SUCCESS != emcore_errno_value)
-        {
+        if (emcore_errno_value != EMCORE_SUCCESS) {
             return -emcore_errno_value;
         }
     }
     
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         return -EIO;
     }
     
@@ -687,4 +595,3 @@ int emcorefs_ftruncate(const char* path, off_t size, struct fuse_file_info* fi)
     
     return 0;
 }
-

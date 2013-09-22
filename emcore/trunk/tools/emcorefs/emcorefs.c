@@ -1,6 +1,6 @@
 //
 //
-//    Copyright 2011 user890104
+//    Copyright 2013 user890104
 //
 //
 //    This file is part of emCORE.
@@ -20,7 +20,6 @@
 //
 //
 
-
 #include "global.h"
 
 #include "usb.h"
@@ -28,11 +27,8 @@
 #include "emcore.h"
 #include "fuse.h"
 #include "util.h"
-#include "emcorefs.h"
 
-
-struct fuse_operations emcorefs_oper =
-{
+struct fuse_operations emcorefs_oper = {
     .getattr    = emcorefs_getattr,
     
     .opendir    = emcorefs_opendir,
@@ -56,25 +52,21 @@ struct fuse_operations emcorefs_oper =
     .ftruncate  = emcorefs_ftruncate,
 };
 
-int main(int argc, char* argv[])
-{
-    int res, res2;
+int main(int argc, char **argv) {
+    int32_t res, res2;
     uint8_t reattach = 0;
 
     res = usb_init();
 
-    if (LIBUSB_SUCCESS == res)
-    {
+    if (res == LIBUSB_SUCCESS) {
         res = usb_find(EMCORE_USB_VID, EMCORE_USB_PID, &reattach);
     }
 
-    if (LIBUSB_SUCCESS == res)
-    {
+    if (res == LIBUSB_SUCCESS) {
         res = emcorefs_init();
     }
 
-    if (EMCORE_SUCCESS == res)
-    {
+    if (res == EMCORE_SUCCESS) {
 #ifdef TEST_ONLY
         /* gcc complains about unused vars */
         (void)(argc);
@@ -90,20 +82,17 @@ int main(int argc, char* argv[])
 #endif
     }
 
-    if (EMCORE_SUCCESS != res)
-    {
+    if (res != EMCORE_SUCCESS) {
         print_error(res);
     }
 
     res2 = usb_destroy(reattach);
 
-    if (LIBUSB_SUCCESS != res2)
-    {
+    if (res2 != LIBUSB_SUCCESS) {
         print_error(res2);
     }
 
-    if (res < 0)
-    {
+    if (res < 0) {
         res = -res;
     }
 
