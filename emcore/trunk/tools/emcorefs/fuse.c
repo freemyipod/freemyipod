@@ -120,6 +120,13 @@ int32_t emcorefs_getattr(const char *path, struct stat *stbuf) {
     return 0;
 }
 
+int32_t emcorefs_utimens(const char *path, const struct timespec tv[2]) {
+    (void)path;
+    (void)tv;
+    
+    return 0;
+}
+
 int32_t emcorefs_opendir(const char *path, struct fuse_file_info *fi) {
     int32_t res;
     uint32_t handle;

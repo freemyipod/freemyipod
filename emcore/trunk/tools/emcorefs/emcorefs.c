@@ -30,6 +30,7 @@
 
 struct fuse_operations emcorefs_oper = {
     .getattr    = emcorefs_getattr,
+    .utimens    = emcorefs_utimens,
     
     .opendir    = emcorefs_opendir,
     .readdir    = emcorefs_readdir,

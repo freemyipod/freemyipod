@@ -27,6 +27,7 @@
 
 int32_t emcorefs_init(void);
 int32_t emcorefs_getattr(const char *path, struct stat *stbuf);
+int32_t emcorefs_utimens(const char *path, const struct timespec tv[2]);
 int32_t emcorefs_opendir(const char *path, struct fuse_file_info *fi);
 int32_t emcorefs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
 int32_t emcorefs_releasedir(const char *path, struct fuse_file_info *fi);
