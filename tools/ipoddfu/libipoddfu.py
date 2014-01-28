@@ -187,7 +187,7 @@ class ipoddfu:
 
     crc = 0xffffffff
     for i in range(len(data)):
-      crc = (crc >> 8) ^ crc_table[(crc ^ data[i]) & 0xff];
+      crc = (crc >> 8) ^ crc_table[(crc ^ struct.unpack("B", data[i:i+1])[0]) & 0xff];
 
     return crc
 
