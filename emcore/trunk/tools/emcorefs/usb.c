@@ -55,7 +55,7 @@ int32_t usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t *reattach) {
     libusb_device **devs, *dev = NULL;
     ssize_t devs_cnt, i, j, k, l;
     int32_t res;
-    uint8_t found;
+    uint8_t found = 0;
     struct libusb_device_descriptor dev_desc;
     struct libusb_config_descriptor *cfg_desc;
     const struct libusb_interface *iface;
