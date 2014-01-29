@@ -5,65 +5,67 @@
   \___|_| |_| |_|\____\___/|_| \_\_____|_|   |____/ 
 
 emCOREFS is a FUSE-based filesystem that uses emCORE's Monitor API
-to provide communication with device's FS. It is not yet complete,
-but most features are done. It runs on both Linux and Mac OS X.
+to provide communication with device's FS. It is mostly complete,
+and works well. It runs on both Linux and Mac OS X.
 
 For communication with the device, this application uses libusb 1.0.
 
 Building
 --------
 You need:
-1. GCC(<4.5) and GNU Make on Linux // Xcode on OS X
+1. GCC 4.4 and GNU Make (Xcode on OS X)
 2. pkg-config
 3. libusb >= 1.0
-4. libfuse >= 2.8 on Linux // fuse4x on x64 OS X
+4. libfuse >= 2.8 (or fuse4x on x64 OS X)
 5. all dependencies of the above
 
-Compiling:
-make - standard build, no debug messages, only fatal errors on
-    startup are shown.
+Installing needed packages on Ubuntu
+sudo apt-get install gcc-4.4 make pkg-config libusb-1.0-0-dev libfuse-dev
 
-make debug - debug build, some debug/error messages are shown.
-    libusb debug messages are enabled, too.
+Compiling:
+standard build, no debug messages, only fatal errors on startup are shown.
+$ make build/emcorefs
+
+debug build, some debug/error messages are shown. libusb debug messages are enabled, too.
+$ make debug
 
 You can prefix any of these with
 CFLAGS="-DDEBUG_USB_PACKETS"
 in order to have a dump of the usb traffic that's being sent and received.
 
 Testing:
-make test - run the build without FUSE debugging messages, going
-    into the background if it connects to the device successfully.
-
-make testdebug - run the build in the foreground, showing FUSE debug
-    messages in the terminal.
+test the connection and some basic emCORE functions. useful only to developers.
+$ make build/emcore-test
+$ ./build/emcore-test
 
 Running
 -------
 You need FUSE >= 2.8 installed. (or fuse4x on x64 OS X)
-Currently tested on:
-- Linux (Ubuntu 11.04 x86)
-- Mac OS X (10.6.8 x64)
+Currently tested on Linux (Ubuntu 11.04 x86) and Mac OS X (10.6.8 x64).
 
 Starting: ./emcorefs <mountpoint>
+
 Stopping: fusermount -u <mountpoint as seen in /etc/mtab> (Linux)
           diskutil unmount <mountpoint as seen in /etc/mtab> (OS X)
+
 Known bugs/issues
 -----------------
-* Write support not tested very well.
 * Running FUSE with multithreading breaks file reading because of
     the way these are implemented on emCORE's side.
     Workaround: use the "-s" option.
-* Most errors are not handled properly, EIO (Input/output error) is
+* Some errors are not handled properly, EIO (Input/output error) is
     given in many cases where there's a more descriptive error
     message available. Will be fixed in the future.
-* Linking using gcc-4.5+ doesn't seem to work properly. You can set
-    the desired GCC version with the GCC Makefile viariable.
-    For example: GCC=gcc-4.4 make debug
+* Rename/move in the filesystem itself is currently disabled, since
+    the underlying filesystem call crashes the emCORE kernel.
+    Workaround: move the file/dir on another filesystem, then rename
+    it if needed, then move it back.
 
 Future plans
 ------------
 * Merge some functions that are doing similar tasks to reduce code
-    duplication. Return proper error codes in FS operations.
+    duplication.
+* Return proper error codes in FS operations.
 
 Bug reporting
 -------------
