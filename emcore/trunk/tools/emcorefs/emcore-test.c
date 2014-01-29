@@ -65,6 +65,10 @@ int main() {
     }
 
     do {
+        if (res != EMCORE_SUCCESS) {
+            break;
+        }
+
         res = emcore_get_version(&dev_info);
 
         if (res != EMCORE_SUCCESS) {
