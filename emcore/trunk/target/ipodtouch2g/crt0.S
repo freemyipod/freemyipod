@@ -294,8 +294,8 @@ read_usec_timer:
 	ldr	r0, val_3c700000
 	ldr	r1, [r0,#0x80]
 	ldr	r0, [r0,#0x84]
-	mov	r0, r0,lsr#5
-	orr	r0, r0, r1,lsl#27
+	mov	r0, r0,lsr#4
+	orr	r0, r0, r1,lsl#28
 	add	r0, r0, r0,asr#2
 	add	r0, r0, r0,asr#6
 	bx	lr
