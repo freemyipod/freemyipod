@@ -421,6 +421,8 @@ pmu_warmboot:
 pmu_batch_5_begin:
 	.byte	0x0a, 0x70
 	.byte	0x13, 0x02
+	.byte	0x30, 250
+	.byte	0x31, 3
 pmu_batch_5_end:
 .endm
 	mov	r9, #(pmu_batch_5_end - pmu_batch_5_begin) / 2
