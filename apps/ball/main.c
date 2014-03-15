@@ -35,6 +35,9 @@ static void main(int argc, const char** argv)
     dw = lcd_get_width(),
     dh = lcd_get_height();
     
+    cprintf(3, "Display width: %d\n", dw);
+    cprintf(3, "Display height: %d\n", dh);
+    
     unsigned int fb_size = DBPP * dw * dh;
     void* fb = malloc(fb_size);
     
