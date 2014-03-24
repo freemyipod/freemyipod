@@ -264,6 +264,7 @@ void displaylcd_dither(unsigned int x, unsigned int y, unsigned int width,
     __asm__ volatile("    nop                          \n"); // 2 cycles
     __asm__ volatile("    nop                          \n"); // 2 cycles
     __asm__ volatile("    nop                          \n"); // 2 cycles
+    __asm__ volatile("    nop                          \n"); // 2 cycles
     __asm__ volatile("    bne displaylcd_dither_x      \n");
     __asm__ volatile("    add r3, r3, r11              \n");
     __asm__ volatile("    subs r12, r12, #1            \n");
