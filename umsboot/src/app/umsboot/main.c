@@ -106,22 +106,26 @@ int main()
         console_flush(&umsboot_console);
 #endif
         int found = 0;
+        uint16_t ubicluster = 0;
+        uint32_t ubisize = 0;
         uint16_t cluster = 0;
-        uint32_t size = 0;
         uint16_t totalclusters = 0;
         for (i = 0; i < RAMDISK_SECTORSIZE; i += 32)
             if (!RAMDISK[1 + fatsectors][i]) break;
             else if (RAMDISK[1 + fatsectors][i] == 0xe5) continue;
             else if (((((uint32_t*)RAMDISK[1 + fatsectors])[(i + 8) >> 2]) & 0xffffff) == 0x494255)
             {
-                cluster = ((uint16_t*)RAMDISK[1 + fatsectors])[(i + 26) >> 1];
-                size = ((uint32_t*)RAMDISK[1 + fatsectors])[(i + 28) >> 2];
+                ubicluster = ((uint16_t*)RAMDISK[1 + fatsectors])[(i + 26) >> 1];
+                ubisize = ((uint32_t*)RAMDISK[1 + fatsectors])[(i + 28) >> 2];
                 RAMDISK[1 + fatsectors][i] = 0xe5;
                 found++;
             }
-            else if (((uint16_t*)RAMDISK[1 + fatsectors])[(i + 26) >> 1])
-                totalclusters += (((uint32_t*)RAMDISK[1 + fatsectors])[(i + 28) >> 2]
-                                + RAMDISK_SECTORSIZE - 1) / RAMDISK_SECTORSIZE;
+            else if ((cluster = ((uint16_t*)RAMDISK[1 + fatsectors])[(i + 26) >> 1]))
+                while (cluster != 0xffff)
+                {
+                    cluster = ((uint16_t*)RAMDISK[1])[cluster];
+                    totalclusters++;
+                }
         if (!found)
         {
 #ifdef UMSBOOT_HAVE_CONSOLE
@@ -138,7 +142,7 @@ int main()
 #endif
             continue;
         }
-        if (!size || !cluster)
+        if (!ubisize || !ubicluster)
         {
 #ifdef UMSBOOT_HAVE_CONSOLE
             console_puts(&umsboot_console, "UBI file is empty!\nPlease retry.\n");
@@ -147,11 +151,11 @@ int main()
             continue;
         }
         uint16_t dest = 0;
-        while (cluster != 0xffff)
+        while (ubicluster != 0xffff)
         {
-            swap(fatsectors + cluster, dest++);
-            cluster = ((uint16_t*)RAMDISK[swapmap[1 + (cluster / (RAMDISK_SECTORSIZE / 2))]])
-                                         [cluster % (RAMDISK_SECTORSIZE / 2)];
+            swap(fatsectors + ubicluster, dest++);
+            ubicluster = ((uint16_t*)RAMDISK[swapmap[1 + (ubicluster / (RAMDISK_SECTORSIZE / 2))]])
+                                            [ubicluster % (RAMDISK_SECTORSIZE / 2)];
         }
 #ifdef UMSBOOT_HAVE_CONSOLE
         console_puts(&umsboot_console, "Rearranging files...\n");
@@ -171,7 +175,6 @@ int main()
             {
                 memcpy(&newdir[newptr], &RAMDISK[swapmap[1 + fatsectors]][i], 0x20);
                 cluster = ((uint16_t*)newdir)[(newptr + 26) >> 1];
-                size = ((uint32_t*)newdir)[(newptr + 28) >> 2];
                 if (cluster)
                 {
                     ((uint16_t*)newdir)[(newptr + 26) >> 1] = dest;
@@ -195,6 +198,10 @@ int main()
         console_puts(&umsboot_console, "Booting UBI file...");
         console_flush(&umsboot_console);
 #endif
+#ifdef DEBUG
+        continue;
+#else
         execfirmware(RAMDISK[0]);
+#endif
     }
 }
