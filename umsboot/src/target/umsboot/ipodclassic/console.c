@@ -99,7 +99,7 @@ void umsboot_console_init()
     lcd_backlight(&umsboot_lcd, 100);
     console_init(&umsboot_console);
     console_puts(&umsboot_console,
-        "UMSboot v0.2\n\n"
+        "UMSboot v0.2.1\n\n"
         "Please copy a UBI file to the mass storage\n"
         "device and safely eject it when you're done.\n"
         "If you booted this accidentally, just press\n"
