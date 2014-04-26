@@ -1004,13 +1004,14 @@ class Lib(object):
         self.logger.debug("Initializing Lib object\n")
         self.idVendor = 0xFFFF
         self.idProduct = 0xE000
+        self.idProductMask = 0xFFFE
         
         self.headersize = 0x10
         
         self.connect()
     
     def connect(self):
-        self.dev = Dev(self.idVendor, self.idProduct, self.logger)
+        self.dev = Dev(self.idVendor, self.idProduct, self.idProductMask, self.logger)
         self.connected = True
     
     def monitorcommand(self, cmd, rcvdatatypes=None, rcvstruct=None):
@@ -1051,13 +1052,15 @@ class Lib(object):
 
 
 class Dev(object):
-    def __init__(self, idVendor, idProduct, logger):
+    def __init__(self, idVendor, idProduct, idProductMask, logger):
         self.idVendor = idVendor
         self.idProduct = idProduct
+        self.idProductMask = idProductMask
         
         self.logger = logger
         self.logger.debug("Initializing Dev object\n")
         
+        self.dev = None
         self.interface = None
         self.claimed = False
         self.timeout = 1000
@@ -1083,7 +1086,11 @@ class Dev(object):
     
     def connect(self):
         self.logger.debug("Looking for emCORE device\n")
-        self.dev = usb.core.find(idVendor=self.idVendor, idProduct=self.idProduct)
+        devs = usb.core.find(find_all=True, idVendor=self.idVendor)
+        for dev in devs:
+            if dev.idProduct & self.idProductMask == self.idProduct:
+                self.dev = dev
+                break
         if self.dev is None:
             raise DeviceNotFoundError()
         self.logger.debug("Device found!\n")
