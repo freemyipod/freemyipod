@@ -26,6 +26,7 @@
 
 
 #include "emcoreapp.h"
+#include "libboot.h"
 
 
 #define SCSI_TEST_UNIT_READY        0x00
@@ -327,6 +328,16 @@ static bool locked;
 static const struct usb_instance* usb;
 static volatile bool ejected = false;
 static uint8_t __attribute__((aligned(32))) storage_buffer[0x10000];
+
+struct bootinfo_t
+{
+    bool valid;
+    void* firmware;
+    int size;
+    void* app;
+    int argc;
+    const char** argv;
+};
 
 static void listen()
 {
@@ -842,8 +853,18 @@ static const struct usb_configuration* usb_configurations[] =
     &usb_c1,
 };
 
+struct emcorelib_header* loadlib(uint32_t identifier, uint32_t version, char* filename)
+{
+    struct emcorelib_header* lib = get_library(identifier, version, LIBSOURCE_BOOTFLASH, filename);
+    if (!lib) panicf(PANIC_KILLTHREAD, "Could not load %s", filename);
+    return lib;
+}
+
 static void main(int argc, const char** argv)
 {
+    cprintf(3, "Welcome to Disk mode! Please wait until your device is detected by your operating system. It should not take more than 1-2 minutes. In case of issues, please ask for support.\n\n");
+    cprintf(3, "When you're done transferring files, please use your operating system's Eject/Unmount option before unplugging the device.\n\n");
+    
     storage_get_info(0, &storage_info);
     
     if (!storage_info.sector_size) panicf(PANIC_KILLTHREAD, "Sector size is zero!\n");
@@ -911,7 +932,30 @@ static void main(int argc, const char** argv)
     
     usbmanager_uninstall_custom();
     
+    cprintf(3, "Disk mode completed successfully. Returning to the bootmenu...\n\n");
+    
+    struct bootinfo_t bootinfo =
+    {
+        .valid = false,
+        .firmware = NULL,
+        .size = 0,
+        .app = NULL,
+        .argc = 0,
+        .argv = NULL
+    };
+
+    struct emcorelib_header* libboot = loadlib(LIBBOOT_IDENTIFIER,
+                                               LIBBOOT_API_VERSION, "libboot ");
+    struct libboot_api* boot = (struct libboot_api*)libboot->api;
+    
+    boot->load_from_flash(&bootinfo.app, &bootinfo.size, false, "bootmenu", 0);
+    
+    if (!bootinfo.app) {
+        panicf(PANIC_KILLTHREAD, "Unable to start the bootmenu! Press MENU+SELECT to reboot your device.\n");
+    }
+    
     disk_mount(0);
+    execimage(bootinfo.app, false, bootinfo.argc, bootinfo.argv);
 }
 
 

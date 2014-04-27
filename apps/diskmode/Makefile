@@ -3,6 +3,7 @@ STACKSIZE := 4096
 COMPRESS := true
 
 EMCOREDIR ?= ../../emcore/trunk/
+LIBBOOTDIR ?= ../../libs/boot/
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -17,7 +18,7 @@ LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 ELF2ECA := $(CROSS)elf2emcoreapp
 
-LIBINCLUDES :=
+LIBINCLUDES := -I$(LIBBOOTDIR)/export
 
 CFLAGS  += -Os -fno-pie -fno-stack-protector -fomit-frame-pointer -I. -I$(EMCOREDIR)/export $(LIBINCLUDES) -ffunction-sections -fdata-sections -mcpu=arm940t -DARM_ARCH=4 -marm
 LDFLAGS += "$(shell $(CC) -print-libgcc-file-name)" --emit-relocs --gc-sections
