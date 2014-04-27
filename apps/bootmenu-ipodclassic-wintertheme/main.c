@@ -65,10 +65,14 @@ static void main(int argc, const char** argv)
                 break;
             
             case 2:
-                fastboot_umsboot();
+                fastboot_diskmode();
                 break;
             
             case 3:
+                fastboot_umsboot();
+                break;
+            
+            case 4:
                 bootinfo.valid = true;
                 break;
         }

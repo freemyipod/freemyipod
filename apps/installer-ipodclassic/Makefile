@@ -7,6 +7,7 @@ AUTOBUILD_FSFILES ?= true
 EMCOREDIR ?= ../../emcore/trunk/
 BOOTMENUDIR ?= ../bootmenu-ipodclassic/
 BOOTMENUTHEMEDIR ?= ../bootmenu-ipodclassic-wintertheme/
+DISKMODEDIR ?= ../diskmode/
 LIBBOOTDIR ?= ../../libs/boot/
 LIBPNGDIR ?= ../../libs/png/
 LIBUIDIR ?= ../../libs/ui/
@@ -15,7 +16,7 @@ UMSBOOTDIR ?= ../../umsboot/
 TOOLSDIR ?= ../../tools/
 
 FLASHFILES = flashfiles/boot.emcorelib flashfiles/png.emcorelib flashfiles/ui.emcorelib flashfiles/mkfat32.emcorelib \
-             flashfiles/bootmenu-ipodclassic.emcoreapp flashfiles/emcoreldr-ipodclassic.bin \
+             flashfiles/bootmenu-ipodclassic.emcoreapp flashfiles/diskmode.emcoreapp flashfiles/emcoreldr-ipodclassic.bin \
              flashfiles/emcore-ipodclassic.ucl flashfiles/umsboot-ipodclassic.ucl flashfiles/rockbox.ipod.ucl
 
 FSFILES = fsfiles/.apps/bootmenu/theme.emcoreapp
@@ -224,6 +225,13 @@ else
 endif
 	@cp $< $@
 
+$(DISKMODEDIR)/build/diskmode.emcoreapp: diskmode
+	@$(MAKE) -C $(DISKMODEDIR)
+
+flashfiles/diskmode.emcoreapp: $(DISKMODEDIR)/build/diskmode.emcoreapp
+	@echo [CP]     $@
+	@cp $< $@
+
 $(EMCOREDIR)/loader/ipodclassic/build/emcoreldr-ipodclassic.bin: emcoreldr-ipodclassic
 	@$(MAKE) -C $(EMCOREDIR)/loader/ipodclassic
 
@@ -245,4 +253,4 @@ flashfiles/emcore-ipodclassic.bin: $(EMCOREDIR)/build/ipodclassic/emcore.bin
 clean:
 	@rm -rf build
 
-.PHONY: all clean emcore emcoreldr-ipodclassic bootmenu-ipodclassic bootmenu-ipodclassic-theme libboot libpng libui libmkfat32 umsboot libucl flashfiles $(NAME)
+.PHONY: all clean emcore emcoreldr-ipodclassic bootmenu-ipodclassic bootmenu-ipodclassic-theme diskmode libboot libpng libui libmkfat32 umsboot libucl flashfiles $(NAME)

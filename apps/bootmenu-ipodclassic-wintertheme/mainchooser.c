@@ -69,11 +69,23 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_rockbox =
     .render = NULL
 };
 
-static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
+struct chooser_renderer_iconflow_itemdata mainchooser_rparams_diskmode =
 {
     .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 160)),
                           LIBUI_POINT(80, 80)),
     .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 160)),
+                                   LIBUI_POINT(80, 80)),
+    .text = "Disk mode",
+    .text_color = 0xffffcccc,
+    .text_bgcolor = 0x7f000000,
+    .render = NULL
+};
+
+static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
+{
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 240)),
+                          LIBUI_POINT(80, 80)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 240)),
                                    LIBUI_POINT(80, 80)),
     .text = "emCORE console",
     .text_color = 0xffffcccc,
@@ -83,9 +95,9 @@ static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_console =
 
 static struct chooser_renderer_iconflow_itemdata mainchooser_rparams_toolchooser =
 {
-    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 240)),
+    .icon = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 320)),
                           LIBUI_POINT(80, 80)),
-    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 240)),
+    .icon_selected = LIBUI_SURFACE(LIBUI_LOCATION(LIBUI_BUFFER(NULL, 80), LIBUI_POINT(0, 320)),
                                    LIBUI_POINT(80, 80)),
     .text = "Tools",
     .text_color = 0xffffcccc,
@@ -144,7 +156,7 @@ static struct chooser_info mainchooser =
     .rendererparams = &mainchooser_rparams,
     .userparams = NULL,
     .tickinterval = 990000,
-    .itemcount = 4,
+    .itemcount = 5,
     .defaultitem = 0,
     .items =
     {
@@ -157,6 +169,11 @@ static struct chooser_info mainchooser =
             .user = run_rockbox,
             .actionparams = NULL,
             .renderparams = &mainchooser_rparams_rockbox
+        },
+        {
+            .user = run_diskmode,
+            .actionparams = NULL,
+            .renderparams = &mainchooser_rparams_diskmode
         },
         {
             .user = NULL,
@@ -188,10 +205,14 @@ void run_mainchooser()
                     break;
                 
                 case 2:
-                    run_umsboot();
+                    run_diskmode();
                     break;
                 
                 case 3:
+                    run_umsboot();
+                    break;
+                
+                case 4:
                     return;
             }
         if (!result->user) return;
@@ -213,6 +234,8 @@ void mainchooser_init()
     mainchooser_rparams_rockbox.icon_selected.loc.buf.addr = icons;
     mainchooser_rparams_console.icon.loc.buf.addr = icons;
     mainchooser_rparams_console.icon_selected.loc.buf.addr = icons;
+    mainchooser_rparams_diskmode.icon.loc.buf.addr = icons;
+    mainchooser_rparams_diskmode.icon_selected.loc.buf.addr = icons;
     mainchooser_rparams_toolchooser.icon.loc.buf.addr = icons;
     mainchooser_rparams_toolchooser.icon_selected.loc.buf.addr = icons;
 }

@@ -37,11 +37,12 @@ int settingchooser_time_to_str(char* buf, int buflen, void* setting, int value)
 
 static struct settingchooser_select_options settings_timeout_item_options =
 {
-    .optioncount = 4,
+    .optioncount = 5,
     .options =
     {
         SETTINGCHOOSER_SELECT_OPTION("Power off", "Power off", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Rockbox", "Rockbox", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Disk mode", "Disk mode", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("UMSboot", "UMSboot", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Console", "emCORE console", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL)
     }
@@ -49,11 +50,12 @@ static struct settingchooser_select_options settings_timeout_item_options =
 
 static struct settingchooser_select_options settings_default_item_options =
 {
-    .optioncount = 4,
+    .optioncount = 5,
     .options =
     {
         SETTINGCHOOSER_SELECT_OPTION("Power off", "Power off", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Rockbox", "Rockbox", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Disk mode", "Disk mode", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Console", "emCORE console", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Tools", "Tools", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL)
     }
@@ -61,11 +63,12 @@ static struct settingchooser_select_options settings_default_item_options =
 
 static struct settingchooser_select_options settings_fastboot_item_options =
 {
-    .optioncount = 4,
+    .optioncount = 5,
     .options =
     {
         SETTINGCHOOSER_SELECT_OPTION("Disabled", "Disabled", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Rockbox", "Rockbox", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
+        SETTINGCHOOSER_SELECT_OPTION("Disk mode", "Disk mode", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("UMSboot", "UMSboot", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL),
         SETTINGCHOOSER_SELECT_OPTION("Console", "emCORE console", LIBUI_SURFACE_NULL, LIBUI_SURFACE_NULL)
     }

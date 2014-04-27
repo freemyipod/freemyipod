@@ -33,6 +33,7 @@ extern void fastboot_rockbox();
 extern void run_rockbox_fallback();
 extern void run_rockbox();
 extern void fastboot_umsboot();
+extern void run_diskmode();
 extern void run_umsboot();
 
 

@@ -70,6 +70,22 @@ void run_rockbox()
     }
 }
 
+void fastboot_diskmode()
+{
+    boot->load_from_flash(&bootinfo.app, &bootinfo.size, false, "diskmode", 0);
+    if (bootinfo.app) bootinfo.valid = true;
+}
+
+void run_diskmode()
+{
+    fastboot_diskmode();
+    if (!bootinfo.valid)
+    {
+        memcpy(framebuf, bg, 320 * 240 * 3);
+        message(91, "Loading disk mode failed!", " Returning to main menu. ");
+    }
+}
+
 void fastboot_umsboot()
 {
     boot->load_from_flash(&bootinfo.firmware, &bootinfo.size, false, "umsboot ", 0x10000);

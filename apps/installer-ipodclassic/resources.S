@@ -118,6 +118,14 @@ flashscript:
 .ascii "bootmenu"
 
 .byte 0
+.byte 0
+.byte 0
+.byte 1
+.word f_diskmode_emcoreapp
+.word f_diskmode_emcoreapp_end - f_diskmode_emcoreapp
+.ascii "diskmode"
+
+.byte 0
 .byte 2
 .byte 0
 .byte 1
@@ -201,6 +209,11 @@ f_mkfat32_emcorelib_end:
 f_bootmenu_ipodclassic_emcoreapp:
 .incbin "flashfiles/bootmenu-ipodclassic.emcoreapp"
 f_bootmenu_ipodclassic_emcoreapp_end:
+
+.align 4
+f_diskmode_emcoreapp:
+.incbin "flashfiles/diskmode.emcoreapp"
+f_diskmode_emcoreapp_end:
 
 .align 4
 f_umsboot_ipodclassic_ucl:
