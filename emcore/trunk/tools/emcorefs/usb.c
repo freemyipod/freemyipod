@@ -26,9 +26,9 @@
 #include "util.h"
 #include "usb.h"
 
-libusb_context *usb_ctx = NULL;
-libusb_device_handle *usb_handle = NULL;
-uint8_t usb_iface_num = 0;
+libusb_context *usb_ctx;
+libusb_device_handle *usb_handle;
+uint8_t usb_iface_num;
 
 int32_t usb_init(void) {
     int32_t res;
@@ -53,9 +53,10 @@ int32_t usb_init(void) {
 
 int32_t usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t *reattach) {
     libusb_device **devs, *dev = NULL;
-    ssize_t devs_cnt, i, j, k, l;
+    ssize_t devs_cnt, i;
+    uint8_t found = 0, j, k;
+    int l;
     int32_t res;
-    uint8_t found = 0;
     struct libusb_device_descriptor dev_desc;
     struct libusb_config_descriptor *cfg_desc;
     const struct libusb_interface *iface;
@@ -72,18 +73,18 @@ int32_t usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t *reattach) {
     }
 
 #ifdef DEBUG
-    fprintf(stderr, "Found %Zd USB devices!\n", devs_cnt);
+    fprintf(stderr, "Found %zd USB devices!\n", devs_cnt);
 #endif
     for (i = 0; i < devs_cnt; ++i) {
         dev = devs[i];
 #ifdef DEBUG
-        fprintf(stderr, "Getting device descriptor of USB device %d...\n", i);
+        fprintf(stderr, "Getting device descriptor of USB device %zd...\n", i);
 #endif
         res = libusb_get_device_descriptor(dev, &dev_desc);
 
         if (res != LIBUSB_SUCCESS) {
 #ifdef DEBUG
-            fprintf(stderr, "Unable to get device descriptor of device %d!\n", i);
+            fprintf(stderr, "Unable to get device descriptor of device %zd!\n", i);
 #endif
             continue;
         }
@@ -108,12 +109,12 @@ int32_t usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t *reattach) {
         }
 
 #ifdef DEBUG
-        fprintf(stderr, "Found %Zd configs...\n", dev_desc.bNumConfigurations);
+        fprintf(stderr, "Found %u configs...\n", dev_desc.bNumConfigurations);
 #endif
 
         for (j = 0; j < dev_desc.bNumConfigurations; ++j) {
 #ifdef DEBUG
-            fprintf(stderr, "Getting config descriptor %Zd of device...\n", j);
+            fprintf(stderr, "Getting config descriptor %u of device...\n", j);
 #endif
 
             res = libusb_get_config_descriptor(dev, j, &cfg_desc);
@@ -155,7 +156,7 @@ int32_t usb_find(uint16_t vendor_id, uint16_t product_id, uint8_t *reattach) {
                     }
                     
 #ifdef DEBUG
-                    fprintf(stderr, "emCORE Debugger interface at %Zd\n", iface_desc->bInterfaceNumber);
+                    fprintf(stderr, "emCORE Debugger interface at %u\n", iface_desc->bInterfaceNumber);
 #endif
 
                     usb_iface_num = iface_desc->bInterfaceNumber;
