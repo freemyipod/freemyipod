@@ -13,14 +13,14 @@ For communication with the device, this application uses libusb 1.0.
 Building
 --------
 You need:
-1. GCC 4.4 and GNU Make (Xcode on OS X)
+1. GCC and GNU Make (Xcode on OS X)
 2. pkg-config
 3. libusb >= 1.0
 4. libfuse >= 2.8 (or fuse4x on x64 OS X)
 5. all dependencies of the above
 
 Installing needed packages on Ubuntu
-sudo apt-get install gcc-4.4 make pkg-config libusb-1.0-0-dev libfuse-dev
+sudo apt-get install gcc make pkg-config libusb-1.0-0-dev libfuse-dev
 
 Compiling:
 standard build, no debug messages, only fatal errors on startup are shown.
