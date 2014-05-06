@@ -13,6 +13,7 @@ static void ipcl_lcd_send_cmd(const struct lcdif_instance* interface, int cmd)
 
 static void ipcl_lcd_send_data(const struct lcdif_instance* interface, int data)
 {
+    data = (data & 0xff) | ((data & 0x7f00) << 1);
     interface->driver->send_data(interface, data);
 }
 
