@@ -1088,6 +1088,7 @@ class Dev(object):
         self.logger.debug("Looking for emCORE device\n")
         devs = usb.core.find(find_all=True, idVendor=self.idVendor)
         for dev in devs:
+            self.logger.debug("%04x:%04x\n" % (dev.idVendor, dev.idProduct))
             if dev.idProduct & self.idProductMask == self.idProduct:
                 self.dev = dev
                 break
@@ -1097,6 +1098,7 @@ class Dev(object):
         self.logger.debug("Searching for device interface:\n")
         for cfg in self.dev:
             for intf in cfg:
+                self.logger.debug("%02x:%02x:%02x\n" % (intf.bInterfaceClass, intf.bInterfaceSubClass, intf.bInterfaceProtocol))
                 if intf.bInterfaceClass == 0xff and intf.bInterfaceSubClass == 0 and intf.bInterfaceProtocol == 0:
                     self.interface = intf.bInterfaceNumber
                     break

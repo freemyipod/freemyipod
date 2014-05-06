@@ -136,12 +136,12 @@ while True:
     try:
       nfa = block.get_next_free().get_address()
       if nfa >= prev_addr and nfa < prev_addr + block.get_size() + 4:
-        print("%08X: Next free block (%08X) lies within the block itself" % (prev_addr, nfa))
+        print("%08X: Next free block (%08X) is within the block itself" % (prev_addr, nfa))
     except: print("%08X: Invalid next free block pointer: %08X" % (prev_addr, block.next_free))
     try:
       pfa = block.get_prev_free().get_address()
       if pfa >= prev_addr and pfa < prev_addr + block.get_size() + 4:
-        print("%08X: Previous free block (%08X) lies within the block itself" % (prev_addr, pfa))
+        print("%08X: Previous free block (%08X) is within the block itself" % (prev_addr, pfa))
     except:
       print("%08X: Invalid previous free block pointer: %08X" % (prev_addr, block.prev_free))
     print("%08X: %08X bytes free" % (prev_addr + 4, block.get_size() + 4))
@@ -255,7 +255,7 @@ for i in range(FL_INDEX_COUNT):
       try:
         nfa = block.get_next_free().get_address()
         if nfa >= addr and nfa < addr + size + 4:
-          print("[%d:%d:%08X] Next free block (%08X) lies within the block itself" % (i, j, addr, nfa))
+          print("[%d:%d:%08X] Next free block (%08X) is within the block itself" % (i, j, addr, nfa))
           fatal = True
       except:
         print("[%d:%d:%08X] Invalid next free block pointer: %08X" % (i, j, addr, block.next_free))
@@ -263,7 +263,7 @@ for i in range(FL_INDEX_COUNT):
       try:
         pfa = block.get_prev_free().get_address()
         if pfa >= addr and pfa < addr + size + 4:
-          print("[%d:%d:%08X] Previous free block (%08X) lies within the block itself" % (i, j, addr, pfa))
+          print("[%d:%d:%08X] Previous free block (%08X) is within the block itself" % (i, j, addr, pfa))
         if prev == None and not block.get_prev_free().is_null():
           print("[%d:%d:%08X] Previous free block pointer is broken: %08X (should be NULL)" % (i, j, addr, pfa))
         if prev != None and prev != pfa:

@@ -119,7 +119,7 @@ class emcoreldr:
 
     maxblk = self.maxin - 0x10
 
-    data = ""
+    data = b""
 
     while True:
       blocklen = size
