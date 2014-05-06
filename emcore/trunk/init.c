@@ -120,7 +120,12 @@ void storageinitthread(void* arg0, void* arg1, void* arg2, void* arg3)
 {
     struct initbss* ib = (struct initbss*)arg0;
     DEBUGF("Initializing storage drivers...");
-    storage_init();
+    int rc = storage_init();
+    if (IS_ERR(rc))
+    {
+        DEBUGF("Storage init error: %08X\n", rc);
+        cprintf(CONSOLE_BOOT, "Storage init error: %08X\n", rc);
+    }
     DEBUGF("Initializing storage subsystem...");
     disk_init_subsystem();
     DEBUGF("Reading partition tables...");
