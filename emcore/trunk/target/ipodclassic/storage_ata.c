@@ -879,7 +879,7 @@ int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool 
 {
 #endif
     if (sector + count > ata_total_sectors) RET_ERR(0);
-    if (!ata_powered) ata_power_up();
+    if (!ata_powered) PASS_RC(ata_power_up(), 2, 1);
     ata_set_active();
     if (ata_dma && write) clean_dcache();
     else if (ata_dma) invalidate_dcache();
@@ -907,7 +907,7 @@ int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool 
                 buf += SECTOR_SIZE;
             }
         }
-        PASS_RC(rc, 1, 1);
+        PASS_RC(rc, 2, 2);
         buffer += SECTOR_SIZE * cnt;
         sector += cnt;
         count -= cnt;
@@ -933,7 +933,7 @@ int ata_soft_reset()
 {
     int rc;
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
-    if (!ata_powered) ata_power_up();
+    if (!ata_powered) PASS_RC(ata_power_up(), 1, 0);
     ata_set_active();
     if (ceata) rc = ceata_soft_reset();
     else
@@ -951,7 +951,7 @@ int ata_soft_reset()
     }
     ata_set_active();
     mutex_unlock(&ata_mutex);
-    return rc;
+    PASS_RC(rc, 1, 1);
 }
 
 int ata_read_sectors(IF_MD2(int drive,) unsigned long start, int incount,
@@ -1028,11 +1028,11 @@ void ata_bbt_disable()
     mutex_unlock(&ata_mutex);
 }
 
-void ata_bbt_reload()
+int ata_bbt_reload()
 {
     mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
     ata_bbt_disable();
-    ata_power_up();
+    PASS_RC(ata_power_up(), 0, 0);
     uint32_t* buf = (uint32_t*)memalign(0x10, 0x1000);
     if (buf)
     {
@@ -1104,7 +1104,7 @@ int ata_init(void)
     ata_powered = false;
     ata_total_sectors = 0;
 #ifdef ATA_HAVE_BBT
-    ata_bbt_reload();
+    PASS_RC(ata_bbt_reload(), 0, 0);
 #endif
     thread_create(&ata_thread_handle, "ATA idle monitor", ata_thread, ata_stack,
                   sizeof(ata_stack), OS_THREAD, 1, true, NULL, NULL, NULL, NULL);

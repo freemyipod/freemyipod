@@ -32,7 +32,7 @@ struct ata_target_driverinfo
     void (*srst_after_error)(bool enable);
     void (*set_retries)(int retries);
     int (*bbt_translate)(uint64_t sector, uint32_t count, uint64_t* phys, uint32_t* physcount);
-    void (*bbt_reload)();
+    int (*bbt_reload)();
     void (*bbt_disable)();
 };
 
@@ -49,7 +49,7 @@ extern uint16_t (*ata_bbt)[0x20];
 extern uint64_t ata_virtual_sectors;
 
 int ata_bbt_translate(uint64_t sector, uint32_t count, uint64_t* phys, uint32_t* physcount);
-void ata_bbt_reload();
+int ata_bbt_reload();
 void ata_bbt_disable();
 int ata_rw_sectors_internal(uint64_t sector, uint32_t count, void* buffer, bool write);
 #endif
