@@ -364,9 +364,9 @@ void synopsysotg_irq(const struct usb_instance* instance)
                 }
                 union usb_endpoint_number epnum = { .direction = USB_ENDPOINT_DIRECTION_IN, .number = ep };
                 int bytesleft = data->core->inep_regs[ep].dieptsiz.b.xfersize;
+                data->core->inep_regs[ep].diepint = epints;
                 if (epints.b.timeout) usb_handle_timeout(instance, epnum, bytesleft);
                 if (epints.b.xfercompl) usb_handle_xfer_complete(instance, epnum, bytesleft);
-                data->core->inep_regs[ep].diepint = epints;
             }
     }
 
@@ -378,6 +378,7 @@ void synopsysotg_irq(const struct usb_instance* instance)
             if (daint.ep.out & (1 << ep))
             {
                 union synopsysotg_doepintn epints = data->core->outep_regs[ep].doepint;
+                data->core->outep_regs[ep].doepint = epints;
                 union usb_endpoint_number epnum = { .direction = USB_ENDPOINT_DIRECTION_OUT, .number = ep };
                 if (epints.b.setup)
                 {
@@ -390,7 +391,6 @@ void synopsysotg_irq(const struct usb_instance* instance)
                     int bytesleft = data->core->inep_regs[ep].dieptsiz.b.xfersize;
                     usb_handle_xfer_complete(instance, epnum, bytesleft);
                 }
-                data->core->outep_regs[ep].doepint = epints;
             }
     }
 
