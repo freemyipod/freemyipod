@@ -2,6 +2,6 @@
 #define __CPU_ARM_TARGET_H__
 
 #define CPU_ARM
-#define LITTLE_ENDIAN
+#define ENDIANNESS_LITTLE
 
 #endif

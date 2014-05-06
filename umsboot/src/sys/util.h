@@ -58,7 +58,7 @@
                                                      (((unsigned long)(x) & 0x4ul) << 27) | \
                                                      (((unsigned long)(x) & 0x2ul) << 29) | \
                                                      (((unsigned long)(x) & 0x1ul) << 31)))
-#ifdef LITTLE_ENDIAN
+#ifdef ENDIANNESS_LITTLE
 #define LE_TO_H16(x) (x)
 #define LE_TO_H32(x) (x)
 #define H_TO_LE16(x) (x)
@@ -124,7 +124,8 @@ extern __attribute__((pure)) uint32_t reverse32(uint32_t data);
 extern void* memcpy(void* dst, const void* src, size_t len);
 extern void* memmove(void* dst, const void* src, size_t len);
 extern void* memset(void* dst, int val, size_t len);
-extern int strlen(const char* string);
+extern int memcmp(const void* a, const void* b, size_t len);
+extern size_t strlen(const char* string);
 extern void to_hex(char* dest, int len, uint32_t value);
 
 static inline void discard(uint32_t data)

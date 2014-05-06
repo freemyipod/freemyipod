@@ -143,11 +143,23 @@ __attribute__((weak)) void* memmove(void* dst_void, const void* src_void, size_t
 
 __attribute__((weak,alias("memmove"))) void* memcpy(void* dst, const void* src, size_t len);
 */
-__attribute__((weak)) int strlen(const char* string)
+
+__attribute__((weak)) int memcmp(const void* ptr1, const void* ptr2, size_t len)
+{
+    uint8_t* a = (uint8_t*)ptr1;
+    uint8_t* b = (uint8_t*)ptr2;
+    int d;
+    while (len--)
+        if ((d = *a++ - *b++))
+            return d;
+    return 0;
+}
+
+__attribute__((weak)) size_t strlen(const char* string)
 {
     const char* pos = string;
     while (*pos++);
-    return pos - string;
+    return pos - string - 1;
 }
 
 static const char hextab[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
