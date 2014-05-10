@@ -104,8 +104,9 @@ swtypes = {
 
 hwtypes = {
     0:          ("invalid",     "invalid"),
-    0x47324e49: ("ipodnano2g",  "iPod nano 2g"),
-    0x47334e49: ("ipodnano3g",  "iPod nano 3g"),
-    0x47344e49: ("ipodnano4g",  "iPod nano 4g"),
-    0x4c435049: ("ipodclassic", "iPod classic"),
+    0x47324e49: ("ipodnano2g",  "iPod Nano 2G"),
+    0x47334e49: ("ipodnano3g",  "iPod Nano 3G"),
+    0x47344e49: ("ipodnano4g",  "iPod Nano 4G"),
+    0x4c435049: ("ipodclassic", "iPod Classic"),
+    0x47325449: ("ipodtouch2g", "iPod Touch 2G"),
 }
