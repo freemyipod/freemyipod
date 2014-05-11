@@ -41,8 +41,52 @@ __start:
 .section .initcode,"ax",%progbits
 .global _start
 _start:
-	ldr	r0, =0x00450878
-	mcr	p15, 0, r0,c1,c0,0
+	mrc	p15, 0, r0,c1,c0
+	bic	r0, r0, #0x200
+	orr	r0, r0, #0x100
+	mcr	p15, 0, r0,c1,c0
+	mov	r0, #0x7fffffff
+	mcr	p15, 0, r0,c3,c0
+	mov	r0, #0x22000000
+	orr	r1, r0, #0x00000100
+	orr	r0, r0, #0x0003c000
+	orr	r1, r1, #0x000000fe
+	add	r2, r0, #0x200
+	mov	r3, #0
+	str	r1, [r0], #4
+.mmuloop1:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop1
+	add	r0, r0, #0x080
+	add	r2, r0, #0x580
+.mmuloop2:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop2
+	add	r0, r0, #0x4
+	add	r2, r0, #0x7c
+.mmuloop3:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop3
+	add	r0, r0, #0x4
+	add	r2, r0, #0x500
+	add	r2, r2, #0x7c
+.mmuloop4:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop4
+	add	r0, r0, #0x200
+	add	r2, r0, #0x3000
+.mmuloop5:
+	str	r3, [r0], #4
+	cmp	r0, r2
+	bne	.mmuloop5
+	mrc	p15, 0, r0,c1,c0
+	orr	r0, r0, #5
+	orr	r0, r0, #0x400000
+	mcr	p15, 0, r0,c1,c0
 	ldr	r0, =_sramsource
 	ldr	r1, =_sramstart
 	ldr	r2, =_sramend
