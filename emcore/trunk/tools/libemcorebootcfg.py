@@ -24,7 +24,7 @@
 import struct
 
 def encode(addr, option):
-    if option == None: return ""
+    if option == None: return b""
     addr = addr + 16
     data1 = encode(addr, option[2])
     if len(data1) == 0: addr1 = 0
@@ -34,9 +34,9 @@ def encode(addr, option):
     if len(data2) == 0: addr2 = 0
     else: addr2 = addr
     addr = addr + len(data2)
-    if type(option[1]).__name__ == "str":
-        data = option[1] + '\0'
-        data = data.ljust((len(data) + 3) & ~3, '\0')
+    if type(option[1]) == type(b""):
+        data = option[1] + b"\0"
+        data = data.ljust((len(data) + 3) & ~3, b"\0")
     else:
         data = ""
         addr = option[1]
@@ -44,7 +44,7 @@ def encode(addr, option):
     
 
 def configure(binary, options):
-    fileaddr =  binary.index("emCOboot")
+    fileaddr =  binary.index(b"emCOboot")
     version = struct.unpack("<I", binary[fileaddr + 8 : fileaddr + 12])[0]
     if version != 1: raise ValueError("Unknown boot configuration data version")
     memaddr = struct.unpack("<I", binary[fileaddr + 12 : fileaddr + 16])[0]
