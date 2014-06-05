@@ -694,13 +694,12 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                     rtc_write_datetime((const struct rtc_datetime*)&buf[1]);
                     break;
 #endif
-#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
-                if (buf[0] >= 0xffff0000)
-                    len = usb_target_handle_request(buf, sizeof(buf), &addr);
-                    break;
-#endif
                 default:
                     buf[0] = 2;
+#ifdef USB_HAVE_TARGET_SPECIFIC_REQUESTS
+                    if (buf[0] >= 0xffff0000)
+                        len = usb_target_handle_request(buf, sizeof(buf), &addr);
+#endif
                     break;
             }
             mode = enter_critical_section();
