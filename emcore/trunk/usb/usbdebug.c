@@ -533,6 +533,7 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                     buf[0] = 1;
                     storage_get_info(buf[1], (struct storage_info*)&buf[4]);
                     buf[1] = 1;
+                    len = (sizeof(struct storage_info) + 3) / 4 * 4;
                     break;
                 case 28:  // STORAGE_READ_SECTORS_MD
                     buf[0] = 1;
@@ -711,7 +712,7 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                 dbgstate = DBGSTATE_RESPOND;
                 dbgmemaddr = addr;
                 dbgmemlen = len;
-                memcpy(dbgbuf, buf, 64);
+                memcpy(dbgbuf, buf, 16);
             }
         }
         dbgbusy = false;
