@@ -107,6 +107,9 @@ int usb_target_handle_request(uint32_t* buf, int bufsize, void** addr)
             buf[0] = 1;
             break;
         }
+        default:
+            buf[0] = 2;
+            break;
     }
     return len;
 }
