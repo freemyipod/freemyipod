@@ -60,7 +60,7 @@ int file_creat(const char *pathname)
     return open(pathname, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 }
 
-static int open_internal(const char* pathname, int flags, bool use_cache)
+static int open_internal(const char* pathname, int flags, bool ignoredir)
 {
     DIR* dir;
     struct dirent* entry;
@@ -75,14 +75,14 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
         DEBUGF("'%s' is not an absolute path.", pathname);
         DEBUGF("Only absolute pathnames supported at the moment");
         errno = EINVAL;
-        return -1;
+        return 0;
     }
 
     file = (struct filedesc*)memalign(0x10, sizeof(struct filedesc));
     if (!file)
     {
         errno = EMFILE;
-        return -2;
+        return 0;
     }
     reownalloc(file, KERNEL_OWNER(KERNEL_OWNER_FILE_HANDLE));
     memset(file, 0, sizeof(struct filedesc));
@@ -112,7 +112,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
         DEBUGF("Failed opening dir");
         errno = EIO;
         free(file);
-        return -4;
+        return 0;
     }
 
     if(name[0] == 0) {
@@ -120,7 +120,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
         errno = EINVAL;
         free(file);
         closedir(dir);
-        return -5;
+        return 0;
     }
 
     /* scan dir for name */
@@ -137,34 +137,34 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
     }
 
     if ( !entry ) {
-        DEBUGF("Didn't find file %s",name);
         if ( file->write && (flags & O_CREAT) ) {
             rc = fat_create_file(name,
                                  &(file->fatfile),
                                  &(dir->fatdir));
             if (rc < 0) {
-                DEBUGF("Couldn't create %s in %s",name,pathnamecopy);
+                DEBUGF("Couldn't create %s", pathnamecopy);
                 errno = EIO;
                 free(file);
                 closedir(dir);
-                return rc * 10 - 6;
+                return 0;
             }
+            DEBUGF("File %s doesn't exist, creating it", pathnamecopy);
             file->size = 0;
             file->attr = 0;
         }
         else {
-            DEBUGF("Couldn't find %s in %s",name,pathnamecopy);
+            DEBUGF("Couldn't find %s", pathnamecopy);
             errno = ENOENT;
             free(file);
             closedir(dir);
-            return -7;
+            return 0;
         }
     } else {
-        if(file->attr & FAT_ATTR_DIRECTORY) {
+        if (file->attr & FAT_ATTR_DIRECTORY && !ignoredir) {
             errno = EISDIR;
             free(file);
             closedir(dir);
-            return -8;
+            return 0;
         }
     }
     closedir(dir);
@@ -177,7 +177,8 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
         if (rc < 0 )
         {
             free(file);
-            return rc * 10 - 9;
+            errno = EIO;
+            return 0;
         }
     }
 
@@ -191,8 +192,7 @@ static int open_internal(const char* pathname, int flags, bool use_cache)
 
 int file_open(const char* pathname, int flags)
 {
-    /* By default, use the dircache if available. */
-    return open_internal(pathname, flags, true);
+    return open_internal(pathname, flags, false);
 }
 
 void reown_file(int fd, struct scheduler_thread* owner)
@@ -299,10 +299,8 @@ int fsync(int fd)
 int remove(const char* name)
 {
     int rc;
-    /* Can't use dircache now, because we need to access the fat structures. */
     int fd = open_internal(name, O_WRONLY, false);
-    if ( fd < 0 )
-        return fd * 10 - 1;
+    if (!fd) return - 1;
 
     struct filedesc* file = (struct filedesc*)fd;
     rc = fat_remove(&(file->fatfile));
@@ -332,18 +330,17 @@ int rename(const char* path, const char* newpath)
 
     /* verify new path does not already exist */
     /* If it is a directory, errno == EISDIR if the name exists */
-    fd = open(newpath, O_RDONLY);
-    if ( fd >= 0 || errno == EISDIR) {
+    fd = open_internal(newpath, O_RDONLY, true);
+    if (fd) {
         close(fd);
         errno = EBUSY;
         return -1;
     }
-    close(fd);
 
-    fd = open_internal(path, O_RDONLY, false);
-    if ( fd < 0 ) {
+    fd = open_internal(path, O_RDONLY, true);
+    if (!fd) {
         errno = EIO;
-        return fd * 10 - 2;
+        return -2;
     }
 
     /* extract new file name */
