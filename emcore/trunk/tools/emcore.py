@@ -395,7 +395,7 @@ class Commandline(object):
         bus = to_int(bus)
         slave = to_int(slave)
         addr = to_int(addr)
-        data = ""
+        data = b""
         for arg in args:
             data += chr(to_int(arg))
         self.logger.info("Writing data to I2C...\n")
