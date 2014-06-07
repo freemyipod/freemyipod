@@ -397,7 +397,7 @@ class Commandline(object):
         addr = to_int(addr)
         data = b""
         for arg in args:
-            data += chr(to_int(arg))
+            data += struct.pack("B", to_int(arg))
         self.logger.info("Writing data to I2C...\n")
         self.emcore.i2cwrite(bus, slave, addr, data)
         self.logger.info("done\n")
