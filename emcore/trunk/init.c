@@ -119,6 +119,26 @@ void storageinitthread(void* arg0, void* arg1, void* arg2, void* arg3) INITCODE_
 void storageinitthread(void* arg0, void* arg1, void* arg2, void* arg3)
 {
     struct initbss* ib = (struct initbss*)arg0;
+    int threshold = 0;
+    DEBUGF("Battery state: %d mV, %d mAh", read_battery_voltage(0), read_battery_mwh_current(0));
+    if (read_battery_mwh_current(0) <= threshold)
+    {
+        backlight_set_brightness(50);
+        cputs(CONSOLE_BOOT, "The battery is discharged.\n"
+                            "Please connect to a power supply\n"
+                            "and wait a few minutes.\n");
+        while (read_battery_mwh_current(0) <= threshold)
+        {
+            DEBUGF("Battery state: %d mV, %d mAh", read_battery_voltage(0), read_battery_mwh_current(0));
+            sleep(10000000);
+            if (read_input_state(0) != INPUT_STATE_ACTIVE)
+            {
+                shutdown(true);
+                power_off();
+            }
+        }
+        backlight_set_brightness(100);
+    }
     DEBUGF("Initializing storage drivers...");
     int rc = storage_init();
     if (IS_ERR(rc))
