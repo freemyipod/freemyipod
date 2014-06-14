@@ -235,8 +235,8 @@ struct __attribute__((packed,aligned(4))) usb_configuration
 
 struct __attribute__((packed,aligned(4))) usb_state
 {
-    bool (*ep0_rx_callback)(const struct usb_instance* data, int bytesleft);
-    bool (*ep0_tx_callback)(const struct usb_instance* data, int bytesleft);
+    bool (*ep0_rx_callback)(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft);
+    bool (*ep0_tx_callback)(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft);
     const void* ep0_tx_ptr;
     uint16_t ep0_tx_len;
     uint8_t current_address;
@@ -248,12 +248,12 @@ struct __attribute__((packed,aligned(4))) usb_driver
 {
     void (*init)(const struct usb_instance* data);
     void (*exit)(const struct usb_instance* data);
-    void (*ep0_start_rx)(const struct usb_instance* data, int non_setup);
+    void (*ep0_start_rx)(const struct usb_instance* data, bool non_setup, int len);
     void (*ep0_start_tx)(const struct usb_instance* data, const void* buf, int len);
     void (*start_rx)(const struct usb_instance* data, union usb_endpoint_number ep, void* buf, int size);
     void (*start_tx)(const struct usb_instance* data, union usb_endpoint_number ep, const void* buf, int size);
     int (*get_stall)(const struct usb_instance* data, union usb_endpoint_number ep);
-    void (*set_stall)(const struct usb_instance* data, union usb_endpoint_number ep, int stall);
+    void (*set_stall)(const struct usb_instance* data, union usb_endpoint_number ep, bool stall);
     void (*set_address)(const struct usb_instance* data, uint8_t address);
     void (*configure_ep)(const struct usb_instance* data, union usb_endpoint_number ep, enum usb_endpoint_type type, int maxpacket);
     void (*unconfigure_ep)(const struct usb_instance* data, union usb_endpoint_number ep);
@@ -285,15 +285,17 @@ extern void usb_handle_bus_reset(const struct usb_instance* data, int highspeed)
 extern void usb_handle_timeout(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft);
 extern void usb_handle_xfer_complete(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft);
 extern void usb_handle_setup_received(const struct usb_instance* data, union usb_endpoint_number epnum);
-extern void usb_ep0_start_rx(const struct usb_instance* data, int non_setup, bool (*callback)(const struct usb_instance* data, int bytesleft));
-extern void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len, bool last, bool (*callback)(const struct usb_instance* data, int bytesleft));
-extern void usb_ep0_expect_setup(const struct usb_instance* data);
+extern void usb_ep0_start_rx(const struct usb_instance* data, bool non_setup, int len, bool (*callback)(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft));
+extern void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len, bool (*callback)(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft));
 extern void usb_start_rx(const struct usb_instance* data, union usb_endpoint_number ep, void* buf, int size);
 extern void usb_start_tx(const struct usb_instance* data, union usb_endpoint_number ep, const void* buf, int size);
-extern void usb_set_stall(const struct usb_instance* data, union usb_endpoint_number ep, int stall);
+extern void usb_set_stall(const struct usb_instance* data, union usb_endpoint_number ep, bool stall);
 extern void usb_configure_ep(const struct usb_instance* data, union usb_endpoint_number ep, enum usb_endpoint_type type, int maxpacket);
 extern void usb_unconfigure_ep(const struct usb_instance* data, union usb_endpoint_number ep);
 extern int usb_get_max_transfer_size(const struct usb_instance* data, union usb_endpoint_number ep);
+extern bool usb_ep0_tx_callback(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft);
+extern bool usb_ep0_short_tx_callback(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft);
+extern bool usb_ep0_ack_callback(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft);
 
 
 #endif

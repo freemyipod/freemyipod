@@ -12,28 +12,34 @@ void usb_start_tx(const struct usb_instance* data, union usb_endpoint_number ep,
     data->driver->start_tx(data, ep, buf, size);
 }
 
-void usb_set_stall(const struct usb_instance* data, union usb_endpoint_number ep, int stall)
+void usb_set_stall(const struct usb_instance* data, union usb_endpoint_number ep, bool stall)
 {
     data->driver->set_stall(data, ep, stall);
 }
 
-void usb_ep0_start_rx(const struct usb_instance* data, int non_setup, bool (*callback)(const struct usb_instance* data, int bytesleft))
+void usb_ep0_start_rx(const struct usb_instance* data, bool non_setup, int len, bool (*callback)(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft))
 {
     data->state->ep0_rx_callback = callback;
-    data->driver->ep0_start_rx(data, non_setup);
+    data->driver->ep0_start_rx(data, non_setup, len);
 }
 
-bool usb_ep0_rx_callback(const struct usb_instance* data, int bytesleft)
+bool usb_ep0_ack_callback(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
 {
-    usb_ep0_start_rx(data, 0, NULL);
+    // This function is intended to eat zero-byte ACK packets,
+    // which are always the last packet of a transaction.
+    // At this point we can STALL all further packets.
+    union usb_endpoint_number ep = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_OUT };
+    usb_set_stall(data, ep, true);
+    ep.direction = USB_ENDPOINT_DIRECTION_IN;
+    usb_set_stall(data, ep, true);
+    // If this is an IN endpoint, something else must already be
+    // waiting for a SETUP packet anyway, or there could be deadlocks.
+    if (epnum.direction == USB_ENDPOINT_DIRECTION_OUT) usb_ep0_start_rx(data, false, 0, NULL);
     return true;
 }
 
-void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len, bool last, bool (*callback)(const struct usb_instance* data, int bytesleft))
+void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len, bool (*callback)(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft))
 {
-    // Expect zero-length ACK if we are about to actually send data, otherwise expect SETUP.
-    if (last) usb_ep0_start_rx(data, !!len, usb_ep0_rx_callback);
-
     if (((uint32_t)buf) & (CACHEALIGN_SIZE - 1))
     {
         memcpy(data->buffer->raw, buf, len);
@@ -44,13 +50,35 @@ void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len,
     data->driver->ep0_start_tx(data, buf, len);
 }
 
-bool usb_ep0_tx_callback(const struct usb_instance* data, int bytesleft)
+bool usb_ep0_short_tx_callback(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
 {
-    if (bytesleft || !data->state->ep0_tx_len) return false;
+    // No more data to be sent after a short packet. STALL IN.
+    union usb_endpoint_number ep = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
+    usb_set_stall(data, ep, true);
+    // If this was the last regular packet, but a short one, expect zero-length ACK.
+    // Otherwise usb_ep0_tx_callback will have taken care of that already.
+    if (data->state->ep0_tx_ptr) usb_ep0_start_rx(data, true, 0, usb_ep0_ack_callback);
+    return false;
+}
+
+bool usb_ep0_tx_callback(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
+{
+    if (bytesleft || !data->state->ep0_tx_len)
+    {
+        // This was the last packet. Expect zero-length ACK.
+        usb_ep0_start_rx(data, true, 0, usb_ep0_ack_callback);
+        // If someone might expect to receive more data, send a zero-byte packet.
+        if (!data->state->ep0_tx_len) usb_ep0_start_tx(data, NULL, 0, usb_ep0_short_tx_callback);
+        // Abuse this as a marker for usb_ep0_short_tx_callback...
+        data->state->ep0_tx_ptr = NULL;
+        return false;
+    }
+    
     int len = MIN(64, data->state->ep0_tx_len);
-    data->state->ep0_tx_ptr += 64;
     data->state->ep0_tx_len -= len;
-    usb_ep0_start_tx(data, data->state->ep0_tx_ptr, len, !data->state->ep0_tx_len, usb_ep0_tx_callback);
+    usb_ep0_start_tx(data, data->state->ep0_tx_ptr, len,
+                     len < 64 ? usb_ep0_short_tx_callback : usb_ep0_tx_callback);
+    data->state->ep0_tx_ptr += 64;
     return true;
 }
 
@@ -119,6 +147,7 @@ static const struct usb_endpoint* usb_find_endpoint(const struct usb_instance* d
 static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_buffer* buffer)
 {
     // size < -2: do nothing at all (dangerous, you need to take care of priming EP0 yourself!)
+    //            (this case is required for requests that have an OUT data stage)
     // size == -2: send STALL
     // size == -1: try to run default handler, or send STALL if none exists
     // size == 0: send ACK
@@ -275,12 +304,12 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
                     break;
                 case USB_SETUP_BREQUEST_CLEAR_FEATURE:
                     if (buffer->setup.wLength || buffer->setup.wValue) break;
-                    data->driver->set_stall(data, ep, false);
+                    usb_set_stall(data, ep, false);
                     size = 0;
                     break;
                 case USB_SETUP_BREQUEST_SET_FEATURE:
                     if (buffer->setup.wLength || buffer->setup.wValue) break;
-                    data->driver->set_stall(data, ep, true);
+                    usb_set_stall(data, ep, true);
                     size = 0;
                     break;
                 default: break;
@@ -293,22 +322,30 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
         default: break;
     }
     }
-    // See comment at the top of this function
-    if (size == 0) usb_ep0_start_tx(data, NULL, 0, true, NULL);
+    union usb_endpoint_number ep0in = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
+    union usb_endpoint_number ep0out = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_OUT };
+    // See comment at the top of this function for meanings of size.
+    if (size == 0)
+    {
+        // Send ACK. Stall OUT pipe. Accept SETUP packets though.
+        usb_set_stall(data, ep0out, true);
+        usb_ep0_start_rx(data, false, 0, NULL);
+        usb_ep0_start_tx(data, NULL, 0, usb_ep0_ack_callback);
+    }
     else if (size > 0)
     {
-        usb_ep0_start_rx(data, 0, NULL);
-        int len = MIN(64, size);
+        // Send a data stage. Expect to receive only SETUP until we're done. NAK everything else.
+        usb_ep0_start_rx(data, false, 0, NULL);
         data->state->ep0_tx_ptr = addr;
-        data->state->ep0_tx_len = size - len;
-        usb_ep0_start_tx(data, addr, len, !data->state->ep0_tx_len, usb_ep0_tx_callback);
+        data->state->ep0_tx_len = size;
+        usb_ep0_tx_callback(data, ep0in, 0);  // A convenient way to start a transfer.
     }
     else if (size >= -2)
     {
-        union usb_endpoint_number ep = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
-        usb_set_stall(data, ep, 1);
-        ep.direction = USB_ENDPOINT_DIRECTION_OUT;
-        usb_set_stall(data, ep, 1);
+        // We have no handler, or the handler failed. STALL everything, accept only SETUP packets.
+        usb_set_stall(data, ep0in, true);
+        usb_set_stall(data, ep0out, true);
+        usb_ep0_start_rx(data, false, 0, NULL);
     }
 }
 
@@ -329,7 +366,7 @@ void usb_handle_bus_reset(const struct usb_instance* data, int highspeed)
     }
 
     // Prime EP0 for the first setup packet.
-    usb_ep0_start_rx(data, 0, NULL);
+    usb_ep0_start_rx(data, false, 0, NULL);
 }
 
 void usb_handle_timeout(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
@@ -350,7 +387,7 @@ void usb_handle_xfer_complete(const struct usb_instance* data, union usb_endpoin
 {
     if (!epnum.number)
     {
-        bool (*callback)(const struct usb_instance* data, int size);
+        bool (*callback)(const struct usb_instance* data, union usb_endpoint_number epnum, int size);
         if (epnum.direction == USB_ENDPOINT_DIRECTION_OUT)
         {
             callback = data->state->ep0_rx_callback;
@@ -361,7 +398,7 @@ void usb_handle_xfer_complete(const struct usb_instance* data, union usb_endpoin
             callback = data->state->ep0_tx_callback;
             data->state->ep0_tx_callback = NULL;
         }
-        if (callback) callback(data, bytesleft);
+        if (callback) callback(data, epnum, bytesleft);
     }
     else
     {

@@ -16,6 +16,7 @@
 
 static void synopsysotg_flush_out_endpoint(const struct usb_instance* instance, int ep)
 {
+    if (!ep) return;
     const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
     if (data->core->outep_regs[ep].doepctl.b.epena)
     {
@@ -24,8 +25,8 @@ static void synopsysotg_flush_out_endpoint(const struct usb_instance* instance, 
         synopsysotg_target_disable_irq(instance);
         data->core->dregs.dctl.b.sgoutnak = 1;
         while (!(data->core->gregs.gintsts.b.goutnakeff));
-        union synopsysotg_depctl doepctl = { .b = { .snak = 1, .epdis = 1 } };
-        data->core->outep_regs[ep].doepctl = doepctl;
+        data->core->outep_regs[ep].doepctl.b.snak = 1;
+        data->core->outep_regs[ep].doepctl.b.epdis = 1;
         while (!(data->core->outep_regs[ep].doepint.b.epdisabled));
         data->core->dregs.dctl.b.cgoutnak = 1;
         synopsysotg_target_enable_irq(instance);
@@ -37,6 +38,7 @@ static void synopsysotg_flush_out_endpoint(const struct usb_instance* instance, 
 
 static void synopsysotg_flush_in_endpoint(const struct usb_instance* instance, int ep)
 {
+    if (!ep) return;
     const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
     if (data->core->inep_regs[ep].diepctl.b.epena)
     {
@@ -47,7 +49,7 @@ static void synopsysotg_flush_in_endpoint(const struct usb_instance* instance, i
         while (!(data->core->inep_regs[ep].diepint.b.inepnakeff));
         data->core->inep_regs[ep].diepctl.b.epdis = 1;
         while (!(data->core->inep_regs[ep].diepint.b.epdisabled));
-        if (ep) data->core->inep_regs[ep].diepctl.b.usbactep = 0;
+        data->core->inep_regs[ep].diepctl.b.usbactep = 0;
         synopsysotg_target_enable_irq(instance);
         // Wait for any DMA activity to stop, to make sure nobody will touch the FIFO.
         while (!data->core->gregs.grstctl.b.ahbidle);
@@ -161,7 +163,7 @@ int synopsysotg_get_stall(const struct usb_instance* instance, union usb_endpoin
     return !!data->core->outep_regs[ep.number].doepctl.b.stall;
 }
 
-void synopsysotg_set_stall(const struct usb_instance* instance, union usb_endpoint_number ep, int stall)
+void synopsysotg_set_stall(const struct usb_instance* instance, union usb_endpoint_number ep, bool stall)
 {
     const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
     if (ep.direction == USB_ENDPOINT_DIRECTION_IN)
@@ -224,7 +226,7 @@ void synopsysotg_configure_ep(const struct usb_instance* instance, union usb_end
     }
 }
 
-void synopsysotg_ep0_start_rx(const struct usb_instance* instance, int non_setup)
+void synopsysotg_ep0_start_rx(const struct usb_instance* instance, bool non_setup, int len)
 {
     const struct synopsysotg_config* data = (const struct synopsysotg_config*)instance->driver_config;
     struct synopsysotg_state* state = (struct synopsysotg_state*)instance->driver_state;
@@ -232,16 +234,16 @@ void synopsysotg_ep0_start_rx(const struct usb_instance* instance, int non_setup
     // Set up data destination
     if (data->use_dma) data->core->outep_regs[0].doepdma = instance->buffer;
     else state->endpoints[0].rxaddr = (uint32_t*)instance->buffer;
-    union synopsysotg_dep0xfrsiz deptsiz = { .b = { .supcnt = 3, .pktcnt = !!non_setup, .xfersize = 64 } };
+    union synopsysotg_dep0xfrsiz deptsiz = { .b = { .supcnt = 3, .pktcnt = !!non_setup, .xfersize = len } };
     data->core->outep_regs[0].doeptsiz.d32 = deptsiz.d32;
 
     // Flush CPU cache if necessary
-    if (data->use_dma) invalidate_dcache(instance->buffer, sizeof(instance->buffer));
+    if (data->use_dma) invalidate_dcache(instance->buffer, len);
 
     // Enable the endpoint
     union synopsysotg_depctl depctl = data->core->outep_regs[0].doepctl;
     depctl.b.epena = 1;
-    depctl.b.cnak = non_setup;
+    depctl.b.cnak = !!non_setup;
     data->core->outep_regs[0].doepctl = depctl;
 }
 
@@ -364,9 +366,9 @@ void synopsysotg_irq(const struct usb_instance* instance)
                 }
                 union usb_endpoint_number epnum = { .direction = USB_ENDPOINT_DIRECTION_IN, .number = ep };
                 int bytesleft = data->core->inep_regs[ep].dieptsiz.b.xfersize;
+                data->core->inep_regs[ep].diepint = epints;
                 if (epints.b.timeout) usb_handle_timeout(instance, epnum, bytesleft);
                 if (epints.b.xfercompl) usb_handle_xfer_complete(instance, epnum, bytesleft);
-                data->core->inep_regs[ep].diepint = epints;
             }
     }
 
@@ -378,10 +380,11 @@ void synopsysotg_irq(const struct usb_instance* instance)
             if (daint.ep.out & (1 << ep))
             {
                 union synopsysotg_doepintn epints = data->core->outep_regs[ep].doepint;
+                data->core->outep_regs[ep].doepint = epints;
                 union usb_endpoint_number epnum = { .direction = USB_ENDPOINT_DIRECTION_OUT, .number = ep };
                 if (epints.b.setup)
                 {
-                    if (data->use_dma) invalidate_dcache(instance->buffer, sizeof(instance->buffer));
+                    if (data->use_dma) invalidate_dcache((const void*)data->core->inep_regs[ep].diepdma, 8);
                     synopsysotg_flush_in_endpoint(instance, ep);
                     usb_handle_setup_received(instance, epnum);
                 }
@@ -390,7 +393,6 @@ void synopsysotg_irq(const struct usb_instance* instance)
                     int bytesleft = data->core->inep_regs[ep].dieptsiz.b.xfersize;
                     usb_handle_xfer_complete(instance, epnum, bytesleft);
                 }
-                data->core->outep_regs[ep].doepint = epints;
             }
     }
 
@@ -458,11 +460,11 @@ void synopsysotg_init(const struct usb_instance* instance)
     int addr = data->fifosize;
     for (i = 0; i < 16; i++)
     {
+        data->core->inep_regs[i].diepctl.b.nextep = (i + 1) & 0xf;
         int size = data->txfifosize[i];
         addr -= size;
         if (size)
         {
-            data->core->inep_regs[i].diepctl.b.nextep = (i + 1) & 0xf;
             union synopsysotg_txfsiz fsiz = { .b = { .startaddr = addr, .depth = size } };
             if (!i) data->core->gregs.dieptxf0_hnptxfsiz = fsiz;
             else data->core->gregs.dieptxf[i - 1] = fsiz;
@@ -526,3 +528,4 @@ const struct usb_driver synopsysotg_driver =
     .unconfigure_ep = synopsysotg_unconfigure_ep,
     .get_max_transfer_size = synopsysotg_get_max_transfer_size,
 };
+

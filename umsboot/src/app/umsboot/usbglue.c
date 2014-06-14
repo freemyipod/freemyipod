@@ -188,3 +188,4 @@ const struct usb_instance usb_data =
         &usb_c1,
     },
 };
+
