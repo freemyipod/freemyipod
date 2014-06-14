@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         if (sscanf(line, "%i", &sector) == 1 && sector) mark_bad(bitmap, sector);
     }
     fclose(in);
-    int l0count = (sectors + 0x7ffff) >> 19;
+    int l0count = (sectors + 0xfffff) >> 19;
     int bbtpages = 64 + ((l0count + 0x3f) & ~0x3f);
     int bbtsize;
     uint16_t (*bbt)[0x20];
@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     while (bbtpages <= 32832)
     {
         bbtsize = bbtpages << 6;
-        l0count = (sectors - bbtsize + 0xfffff) >> 19;
+        l0count = (sectors - ((bbtsize + 0xfff) >> 12) + 0xfffff) >> 19;
         bbt = malloc(bbtsize);
         memset(bbt, 0, bbtsize);
         int logical = 0;
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
             else if (!(logical & 0x3ff)) level = 1;
             else if (!(logical & 0x1f)) level = 2;
             else level = 3;
-            if (!level) remapbase = ((physical - logical) >> 12) << 12;
+            if (!level) remapbase = (physical - logical) & ~0xfff;
             if (physical - logical - remapbase > 0x7fff || remapbase > 0xffff)
             {
                 printf("Need to remap across too high distance!\n");
@@ -167,7 +167,7 @@ int main(int argc, char** argv)
             printf("User data sectors: %d (%d KiB)\n", logical, logical << 2);
             memcpy(bbt, "emBIbbth", 8);
             ((uint32_t*)bbt)[0x1fc] = logical;
-            ((uint32_t*)bbt)[0x1ff] = (bbtpages >> 6) - 1;
+            ((uint32_t*)bbt)[0x1ff] = bbtgood;
             break;
         }
         free(bbt);
