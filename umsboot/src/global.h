@@ -2,19 +2,21 @@
 #define __GLOBAL_H__
 
 #ifndef ASM_FILE
-#include <stdint.h>
-#include <stddef.h>
-#ifndef NULL
+typedef unsigned char uint8_t;
+typedef signed char int8_t;
+typedef unsigned short uint16_t;
+typedef signed short int16_t;
+typedef unsigned long uint32_t;
+typedef signed long int32_t;
+typedef unsigned long long uint64_t;
+typedef signed long long int64_t;
+typedef __SIZE_TYPE__ size_t;
+typedef uint32_t uintptr_t;
+typedef int32_t intptr_t;
+typedef uint8_t bool;
 #define NULL ((void*)0)
-#endif
-#ifndef bool
-#define bool uint8_t
 #define true 1
 #define false 0
-#endif
-#ifndef size_t
-#define size_t uint32_t
-#endif
 #endif
 
 #include "config.h"
