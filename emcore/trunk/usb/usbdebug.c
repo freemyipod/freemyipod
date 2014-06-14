@@ -110,10 +110,12 @@ void usbdebug_disable(const struct usb_instance* data, int interface, int altset
     dbgstate = DBGSTATE_IDLE;
 }
 
-bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
+bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
 {
+    union usb_endpoint_number ep0in = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
+    union usb_endpoint_number ep0out = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_OUT };
     uint32_t* buf = (uint32_t*)data->buffer->raw;
-    usb_ep0_start_rx(dbgusb, 0, NULL);
+    usb_ep0_start_rx(dbgusb, false, 0, NULL);
     switch (dbgstate)
     {
     case DBGSTATE_SETUP:
@@ -152,7 +154,7 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
             {
                 dbgmemaddr += len;
                 dbgstate = DBGSTATE_WRITE_MEM;
-                usb_ep0_start_rx(dbgusb, 1, usbdebug_handle_data);
+                usb_ep0_start_rx(dbgusb, true, MIN(64, dbgmemlen), usbdebug_handle_data);
                 return true;
             }
             dbgbuf[0] = 1;
@@ -161,7 +163,8 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
         case 10:  // READ CONSOLE
             dbgmemaddr = (void*)buf[1];
             dbgstate = DBGSTATE_READ_CONSOLE;
-            usb_ep0_start_tx(dbgusb, NULL, 0, true, NULL);
+            usb_set_stall(dbgusb, ep0out, true);
+            usb_ep0_start_tx(dbgusb, NULL, 0, NULL);
             return true;
             break;
         case 11:  // WRITE CONSOLE
@@ -195,7 +198,7 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
             {
                 dbgmemlen = total - 48;
                 dbgstate = DBGSTATE_WRITE_CONSOLE;
-                usb_ep0_start_rx(dbgusb, 1, usbdebug_handle_data);
+                usb_ep0_start_rx(dbgusb, true, MIN(64, dbgmemlen), usbdebug_handle_data);
                 return true;
             }
             dbgbuf[3] = dbgconrecvreadidx - dbgconrecvwriteidx - 1;
@@ -265,7 +268,7 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
         if (dbgmemlen && !bytesleft)
         {
             dbgmemaddr += len;
-            usb_ep0_start_rx(dbgusb, 1, usbdebug_handle_data);
+            usb_ep0_start_rx(dbgusb, true, MIN(64, dbgmemlen), usbdebug_handle_data);
             return true;
         }
         dbgbuf[0] = 1;
@@ -292,7 +295,7 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
             wakeup_signal(&dbgconrecvwakeup);
             if (dbgmemlen && !bytesleft)
             {
-                usb_ep0_start_rx(dbgusb, 1, usbdebug_handle_data);
+                usb_ep0_start_rx(dbgusb, true, MIN(64, dbgmemlen), usbdebug_handle_data);
                 return true;
             }
         }
@@ -302,13 +305,20 @@ bool usbdebug_handle_data(const struct usb_instance* data, int bytesleft)
     default: break;
     }
     dbgstate = DBGSTATE_RESPOND;
-    usb_ep0_start_tx(dbgusb, NULL, 0, true, NULL);
+    usb_set_stall(dbgusb, ep0out, true);
+    usb_ep0_start_tx(dbgusb, NULL, 0, NULL);
     return true;
 }
 
-bool read_console_callback(const struct usb_instance* data, int bytesleft)
+bool read_console_callback(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
 {
-    if (bytesleft || !dbgmemaddr) return false;
+    if (bytesleft || !dbgmemaddr)
+    {
+        usb_ep0_start_rx(dbgusb, true, 0, usb_ep0_ack_callback);
+        if (!dbgmemaddr) usb_ep0_start_tx(dbgusb, NULL, 0, usb_ep0_short_tx_callback);
+        dbgusb->state->ep0_tx_ptr = NULL;
+        return false;
+    }
     dbgconsoleattached = true;
     int bytes = MIN(64, dbgmemlen);
     if (bytes)
@@ -332,16 +342,17 @@ bool read_console_callback(const struct usb_instance* data, int bytesleft)
     dbgmemaddr -= bytes;
     if (dbgmemaddr)
     {
-        usb_ep0_start_rx(dbgusb, 0, NULL);
-        usb_ep0_start_tx(dbgusb, dbgbuf, bytes, false, read_console_callback);
+        usb_ep0_start_tx(dbgusb, dbgbuf, bytes,
+                         bytes < 64 ? usb_ep0_short_tx_callback : read_console_callback);
     }
-    else usb_ep0_start_tx(dbgusb, dbgbuf, bytes, true, NULL);
+    else usb_ep0_start_tx(dbgusb, dbgbuf, bytes, NULL);
     return true;
 }
 
 int usbdebug_handle_setup(const struct usb_instance* data, int interface, union usb_ep0_buffer* request, const void** response)
 {
     int size = -1;
+    union usb_endpoint_number ep0out = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_OUT };
     switch (request->setup.bmRequestType.type)
     {
     case USB_SETUP_BMREQUESTTYPE_TYPE_VENDOR:
@@ -353,22 +364,24 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
             case USB_SETUP_BMREQUESTTYPE_DIRECTION_OUT:
                 dbgstate = DBGSTATE_SETUP;
                 dbgmemlen = 0;
-                usb_ep0_start_rx(dbgusb, 1, usbdebug_handle_data);
+                usb_ep0_start_rx(dbgusb, true, 64, usbdebug_handle_data);
                 return -3;
             case USB_SETUP_BMREQUESTTYPE_DIRECTION_IN:
                 switch (dbgstate)
                 {
                 case DBGSTATE_RESPOND:
                 {
+                    dbgmemlen = MIN(dbgmemlen, data->buffer->setup.wLength - 16);
                     int len = MIN(48, dbgmemlen);
                     if (len) memcpy(&dbgbuf[4], dbgmemaddr, len);
                     dbgmemlen -= len;
                     if (dbgmemlen)
                     {
-                        usb_ep0_start_rx(dbgusb, 0, NULL);
-                        data->state->ep0_tx_ptr = dbgmemaddr - 16;
-                        data->state->ep0_tx_len = dbgmemlen;
-                        usb_ep0_start_tx(dbgusb, dbgbuf, len + 16, false, usb_ep0_tx_callback);
+                        usb_ep0_start_rx(dbgusb, false, 0, NULL);
+                        dbgusb->state->ep0_tx_ptr = dbgmemaddr + 48;
+                        dbgusb->state->ep0_tx_len = dbgmemlen;
+                        usb_ep0_start_tx(dbgusb, dbgbuf, len + 16,
+                                         len < 48 ? usb_ep0_short_tx_callback : usb_ep0_tx_callback);
                         return -3;
                     }
                     dbgstate = DBGSTATE_IDLE;
@@ -377,6 +390,7 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
                 }
                 case DBGSTATE_READ_CONSOLE:
                 {
+                    dbgmemaddr = (void*)MIN((int)dbgmemaddr, data->buffer->setup.wLength - 16);
                     dbgconsoleattached = true;
                     dbgmemlen = dbgconsendwriteidx - dbgconsendreadidx;
                     if (dbgmemlen < 0) dbgmemlen += sizeof(dbgconsendbuf);
@@ -408,8 +422,10 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
                     dbgmemaddr -= bytes;
                     if (dbgmemaddr)
                     {
-                        usb_ep0_start_rx(dbgusb, 0, NULL);
-                        usb_ep0_start_tx(dbgusb, dbgbuf, bytes + 16, false, read_console_callback);
+                        dbgusb->state->ep0_tx_ptr = (void*)true;
+                        usb_ep0_start_rx(dbgusb, false, 0, NULL);
+                        usb_ep0_start_tx(dbgusb, dbgbuf, bytes + 16,
+                                         bytes < 48 ? usb_ep0_short_tx_callback : read_console_callback);
                         return -3;
                     }
                     dbgstate = DBGSTATE_IDLE;
@@ -708,7 +724,7 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
             mode = enter_critical_section();
             if (dbgstate == DBGSTATE_ASYNC)
             {
-                usb_ep0_start_tx(dbgusb, NULL, 0, true, NULL);
+                usb_ep0_start_tx(dbgusb, NULL, 0, NULL);
                 dbgstate = DBGSTATE_RESPOND;
                 dbgmemaddr = addr;
                 dbgmemlen = len;
