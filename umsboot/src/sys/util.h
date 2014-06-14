@@ -107,6 +107,8 @@
 #define DMAALIGN_ATTR __attribute__((aligned(DMAALIGN_SIZE)))
 #define DMAALIGN_AT_LEAST_ATTR(x) __attribute__((aligned(MAX(DMAALIGN_SIZE, (x)))))
 
+
+#ifndef ASM_FILE
 extern __attribute__((noreturn)) void powerdown();
 extern __attribute__((noreturn)) void hang();
 extern __attribute__((pure)) void idle();
@@ -131,5 +133,6 @@ extern void to_hex(char* dest, int len, uint32_t value);
 static inline void discard(uint32_t data)
 {
 }
+#endif
 
 #endif
