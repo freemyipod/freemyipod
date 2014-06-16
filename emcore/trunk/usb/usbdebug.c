@@ -117,7 +117,7 @@ void usbdebug_disable(const struct usb_instance* data, int interface, int altset
     dbgstate = DBGSTATE_IDLE;
 }
 
-void usbdebug_bus_reset(const struct usb_instance* data, int highspeed)
+void usbdebug_bus_reset(const struct usb_instance* data, int configuration, int interface, int highspeed)
 {
     maxpacket = highspeed ? 512 : 64;
 }
@@ -150,13 +150,13 @@ void usbdebug_bulk_xfer_complete(const struct usb_instance* data, int interface,
         {
             union usb_endpoint_number ep = { .number = USBDEBUG_ENDPOINT_IN, .direction = USB_ENDPOINT_DIRECTION_IN };
             size = MIN(state->size, maxpacket * usb_get_max_transfer_size(data, ep));
-            usb_start_rx(data, ep, state->addr, size);
+            usb_start_tx(data, ep, state->addr, size);
         }
         else
         {
             union usb_endpoint_number ep = { .number = USBDEBUG_ENDPOINT_OUT, .direction = USB_ENDPOINT_DIRECTION_OUT };
             size = MIN(state->size, maxpacket * usb_get_max_transfer_size(data, ep));
-            usb_start_tx(data, ep, state->addr, size);
+            usb_start_rx(data, ep, state->addr, size);
         }
         state->addr += size;
         state->size -= size;
@@ -166,22 +166,18 @@ void usbdebug_bulk_xfer_complete(const struct usb_instance* data, int interface,
 bool usbdebug_bulk_handle_data(const struct usb_instance* data, union usb_endpoint_number epnum, int bytesleft)
 {
     uint32_t* buf = (uint32_t*)data->buffer->raw;
-    int len = 64 - bytesleft;
     union usb_endpoint_number ep0out = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_OUT };
     union usb_endpoint_number ep0in = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
     usb_ep0_start_rx(data, false, 0, NULL);
     switch (buf[0])
     {
     case 1:  // START MEMORY TRANSFER
-        if (len == 12)
-        {
             bulk_state[bulk_ctrlreq_ep].addr = (void*)buf[1];
             bulk_state[bulk_ctrlreq_ep].size = buf[2];
             usbdebug_bulk_xfer_complete(data, 0, bulk_ctrlreq_ep, 0);  // Convenient way to start a transfer.
             usb_set_stall(data, ep0out, true);
             usb_ep0_start_tx(data, NULL, 0, NULL);
             break;
-        }
     default:
         usb_set_stall(data, ep0out, true);
         usb_set_stall(data, ep0in, true);
@@ -206,8 +202,7 @@ int usbdebug_bulk_ctrl_request(const struct usb_instance* data, int interface, i
                 bulk_ctrlreq_ep = endpoint;
                 usb_ep0_start_rx(data, true, 64, usbdebug_bulk_handle_data);
                 return -3;
-            case USB_SETUP_BMREQUESTTYPE_DIRECTION_IN:
-                return -2;
+            default: break;
             }
             break;
         default: break;

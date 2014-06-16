@@ -36,7 +36,7 @@ extern void usbdebug_bulk_disable(const struct usb_instance* data, int interface
 extern int usbdebug_handle_setup(const struct usb_instance* data, int interface, union usb_ep0_buffer* request, const void** response);
 extern void usbdebug_bulk_xfer_complete(const struct usb_instance* data, int interface, int endpoint, int bytesleft);
 extern int usbdebug_bulk_ctrl_request(const struct usb_instance* data, int interface, int endpoint, union usb_ep0_buffer* request, const void** response);
-extern void usbdebug_bus_reset(const struct usb_instance* data, int highspeed);
+extern void usbdebug_bus_reset(const struct usb_instance* data, int configuration, int interface, int highspeed);
 extern void dbgconsole_putc(char string) ICODE_ATTR;
 extern void dbgconsole_puts(const char* string) ICODE_ATTR;
 extern void dbgconsole_write(const char* string, size_t length) ICODE_ATTR;
