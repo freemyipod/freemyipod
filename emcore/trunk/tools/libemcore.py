@@ -107,7 +107,7 @@ class Emcore(object):
         self.lib = Lib(self.logger)
         
         self.getversioninfo()
-        if self.lib.dev.swtypeid != 2:
+        if self.lib.dev.swtypeid not in swtypes:
             raise DeviceError("Connected to unknown software type. Exiting")
         
         self.getmallocpoolbounds()
@@ -144,11 +144,17 @@ class Emcore(object):
     @command()
     def getmallocpoolbounds(self):
         """ This returns the memory range of the malloc pool """
-        resp = self.lib.monitorcommand(struct.pack("<IIII", 1, 1, 0, 0), "III", ("lower", "upper", None))
-        self.logger.debug("Malloc pool bounds = 0x%X - 0x%X\n" % (resp.lower, resp.upper))
-        self.lib.dev.mallocpool.lower = resp.lower
-        self.lib.dev.mallocpool.upper = resp.upper
-        return resp
+        try:
+            resp = self.lib.monitorcommand(struct.pack("<IIII", 1, 1, 0, 0), "III", ("lower", "upper", None))
+            self.logger.debug("Malloc pool bounds = 0x%X - 0x%X\n" % (resp.lower, resp.upper))
+            self.lib.dev.mallocpool.lower = resp.lower
+            self.lib.dev.mallocpool.upper = resp.upper
+            self.lib.dev.havemalloc = True
+            return resp
+        except:
+            self.logger.debug("Device doesn't have a memory allocator\n")
+            self.lib.dev.havemalloc = True
+            return None
     
     @command()
     def reset(self, force=False):
@@ -1077,6 +1083,7 @@ class Dev(object):
         self.swtypeid = None
         self.hwtypeid = None
         
+        self.havemalloc = False
         self.mallocpool = Bunch()
         self.mallocpool.lower = None
         self.mallocpool.upper = None

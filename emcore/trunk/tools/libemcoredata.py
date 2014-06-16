@@ -99,7 +99,8 @@ class wakeup(ExtendedCStruct):
 swtypes = {
     0: "invalid",
     1: "emBIOS Debugger",
-    2: "emCORE Debugger"
+    2: "emCORE Debugger",
+    3: "emCORE Downloader Stub",
 }
 
 hwtypes = {

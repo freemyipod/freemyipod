@@ -25,10 +25,12 @@ static const struct usb_devicedescriptor usb_devicedescriptor =
     .bNumConfigurations = 1,
 };
 
-static const struct __attribute__((packed)) _usb_config1_descriptors
+static struct __attribute__((packed)) _usb_config1_descriptors
 {
     struct usb_configurationdescriptor c1;
     struct usb_interfacedescriptor c1_i0_a0;
+    struct usb_endpointdescriptor c1_i0_a0_e1out;
+    struct usb_endpointdescriptor c1_i0_a0_e1in;
 } usb_config1_descriptors =
 {
     .c1 =
@@ -48,12 +50,43 @@ static const struct __attribute__((packed)) _usb_config1_descriptors
         .bDescriptorType = USB_DESCRIPTOR_TYPE_INTERFACE,
         .bInterfaceNumber = 0,
         .bAlternateSetting = 0,
-        .bNumEndpoints = 0,
+        .bNumEndpoints = 2,
         .bInterfaceClass = 0xff,
         .bInterfaceSubClass = 0x00,
         .bInterfaceProtocol = 0x00,
         .iInterface = 0,
     },
+    .c1_i0_a0_e1out =
+    {
+        .bLength = sizeof(struct usb_endpointdescriptor),
+        .bDescriptorType = USB_DESCRIPTOR_TYPE_ENDPOINT,
+        .bEndpointAddress = { .number = USBDEBUG_ENDPOINT_OUT, .direction = USB_ENDPOINT_DIRECTION_OUT },
+        .bmAttributes = { .type = USB_ENDPOINT_ATTRIBUTE_TYPE_BULK },
+        .wMaxPacketSize = 512,
+        .bInterval = 1,
+    },
+    .c1_i0_a0_e1in =
+    {
+        .bLength = sizeof(struct usb_endpointdescriptor),
+        .bDescriptorType = USB_DESCRIPTOR_TYPE_ENDPOINT,
+        .bEndpointAddress = { .number = USBDEBUG_ENDPOINT_IN, .direction = USB_ENDPOINT_DIRECTION_IN },
+        .bmAttributes = { .type = USB_ENDPOINT_ATTRIBUTE_TYPE_BULK },
+        .wMaxPacketSize = 512,
+        .bInterval = 1,
+    },
+};
+
+static const struct usb_interfacedescriptor usb_simpledebug_intf_desc =
+{
+    .bLength = sizeof(struct usb_interfacedescriptor),
+    .bDescriptorType = USB_DESCRIPTOR_TYPE_INTERFACE,
+    .bInterfaceNumber = 0,
+    .bAlternateSetting = 0,
+    .bNumEndpoints = 0,
+    .bInterfaceClass = 0xff,
+    .bInterfaceSubClass = 0x00,
+    .bInterfaceProtocol = 0x00,
+    .iInterface = 0,
 };
 
 static const struct usb_stringdescriptor usb_string_language =
@@ -84,7 +117,52 @@ static const struct usb_stringdescriptor* usb_stringdescriptors[] =
     &usb_string_product,
 };
 
+static const struct usb_endpoint usb_c1_i0_a0_ep1out =
+{
+    .number = { .number = USBDEBUG_ENDPOINT_OUT, .direction = USB_ENDPOINT_DIRECTION_OUT },
+    .ctrl_request = usbdebug_bulk_ctrl_request,
+    .xfer_complete = usbdebug_bulk_xfer_complete,
+    .setup_received = NULL,
+};
+
+static const struct usb_endpoint usb_c1_i0_a0_ep1in =
+{
+    .number = { .number = USBDEBUG_ENDPOINT_IN, .direction = USB_ENDPOINT_DIRECTION_IN },
+    .ctrl_request = usbdebug_bulk_ctrl_request,
+    .xfer_complete = usbdebug_bulk_xfer_complete,
+    .timeout = NULL,
+};
+
 static const struct usb_altsetting usb_c1_i0_a0 =
+{
+    .set_altsetting = usbdebug_bulk_enable,
+    .unset_altsetting = usbdebug_bulk_disable,
+    .endpoint_count = 2,
+    .endpoints =
+    {
+        &usb_c1_i0_a0_ep1out,
+        &usb_c1_i0_a0_ep1in,
+    },
+};
+
+static void usbglue_bus_reset(const struct usb_instance* data, int highspeed)
+{
+    usb_config1_descriptors.c1_i0_a0_e1out.wMaxPacketSize = highspeed ? 512 : 64;
+    usb_config1_descriptors.c1_i0_a0_e1in.wMaxPacketSize = highspeed ? 512 : 64;
+}
+
+static struct usb_interface usb_c1_i0 =
+{
+    .bus_reset = usbdebug_bus_reset,
+    .ctrl_request = usbdebug_handle_setup,
+    .altsetting_count = 1,
+    .altsettings =
+    {
+        &usb_c1_i0_a0,
+    },
+};
+
+static const struct usb_altsetting usb_simpledebug_intf_a0 =
 {
     .set_altsetting = usbdebug_enable,
     .unset_altsetting = usbdebug_disable,
@@ -94,14 +172,14 @@ static const struct usb_altsetting usb_c1_i0_a0 =
     },
 };
 
-static struct usb_interface usb_c1_i0 =
+static struct usb_interface usb_simpledebug_intf =
 {
     .bus_reset = NULL,
     .ctrl_request = usbdebug_handle_setup,
     .altsetting_count = 1,
     .altsettings =
     {
-        &usb_c1_i0_a0,
+        &usb_simpledebug_intf_a0,
     },
 };
 
@@ -136,7 +214,7 @@ struct usb_instance usb_default_data =
     .driver_state = &usb_driver_state,
     .state = &usb_state,
     .buffer = &usb_buffer,
-    .bus_reset = NULL,
+    .bus_reset = usbglue_bus_reset,
     .ep0_setup_hook = NULL,
     .configuration_count = 1,
     .stringdescriptor_count = 3,
@@ -275,9 +353,9 @@ int usbmanager_install_custom(const struct usb_devicedescriptor* devicedescripto
         {
             struct usb_interfacedescriptor* intfdescriptor = (struct usb_interfacedescriptor*)descbuf;
             descbuf += sizeof(struct usb_interfacedescriptor);
-            memcpy(intfdescriptor, &usb_config1_descriptors.c1_i0_a0, sizeof(struct usb_interfacedescriptor));
+            memcpy(intfdescriptor, &usb_simpledebug_intf_desc, sizeof(struct usb_interfacedescriptor));
             intfdescriptor->bInterfaceNumber = j;
-            config->interfaces[j] = &usb_c1_i0;
+            config->interfaces[j] = &usb_simpledebug_intf;
             config->interface_count++;
             cfgdescriptor->wTotalLength += sizeof(struct usb_interfacedescriptor);
             cfgdescriptor->bNumInterfaces++;
