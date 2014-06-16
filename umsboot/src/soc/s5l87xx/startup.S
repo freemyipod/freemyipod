@@ -26,22 +26,21 @@
 .extern _fiq_handler
 
 
-.global _vectors
 .section .vectors,"ax",%progbits
-_vectors:
-    b _reset_handler
-    b _undef_instr_handler
-    b _syscall_handler
-    b _prefetch_abort_handler
-    b _data_abort_handler
-    b _reserved_handler
-    b _irq_handler
-    b _fiq_handler
+    ldr pc, =_reserved_handler
+    ldr pc, =_undef_instr_handler
+    ldr pc, =_syscall_handler
+    ldr pc, =_prefetch_abort_handler
+    ldr pc, =_data_abort_handler
+    ldr pc, =_reserved_handler
+    ldr pc, =_irq_handler
+    ldr pc, =_fiq_handler
 
-_reset_handler:
+
+.section .init,"ax",%progbits
     @ Check if we need to relocate ourselves
-    adr r0, _vectors
-    ldr r1, =_vectors
+    adr r0, _init_end
+    ldr r1, =_text
     cmp r0, r1
     beq _relocated
     @ Move around as necessary
@@ -53,6 +52,19 @@ _copy:
     subs r2, r2, #1
     bne _copy
 _relocated:
+    @ Check if the vectors need to be copied
+    ldr r2, =_vectors_src
+    sub r0, r0, r1
+    add r0, r0, r2
+    ldr r2, =(_vectors_size + 31)
+    ldr r1, =_vectors
+    mov r2, r2,lsr#5
+    @ Copy vectors
+_vectors_copy:
+    ldmia r0!, {r4-r11}
+    stmia r1!, {r4-r11}
+    subs r2, r2, #1
+    bne _vectors_copy
 #ifdef SOC_S5L8701
     @ Detect execution base address and remap memory at 0x0 accordingly (for IRQ vectors)
     tst r1, #0x20000000
@@ -136,7 +148,10 @@ _mmuloop:
 
     @ Jump to final execution address (after relocation)
     ldr pc, =_enable_irqs
+.ltorg
+_init_end:
 
+.section .text,"ax",%progbits
 _enable_irqs:
     @ Mask and clear all IRQs
 #ifdef SOC_S5L8701 
@@ -228,3 +243,4 @@ hang:
     b hang
 .size reset, .-reset
 .size hang, .-hang
+

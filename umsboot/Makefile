@@ -99,7 +99,7 @@ $(eval $(call MODULE_template,src,src))
 SRC := $(foreach file,$(SRC),$(call relpath,$(file)))
 OBJ := $(SRC:src/%.c=build/$(TARGET)/$(TYPE)/%.o)
 OBJ := $(OBJ:src/%.S=build/$(TARGET)/$(TYPE)/%.o)
-_LDSCRIPT = $(LDSCRIPT:src/%.lds=build/$(TARGET)/$(TYPE)/%.lds)
+_LDSCRIPT := $(LDSCRIPT:src/%.lds=build/$(TARGET)/$(TYPE)/%.lds)
 
 _ASMFLAGS := $(CFLAGS_GENERAL) $(CFLAGS_ASM) $(CFLAGS_$(TYPE)) $(_CFLAGS) $(_PPFLAGS) $(CFLAGS) $(ASMFLAGS)
 _CFLAGS := $(CFLAGS_GENERAL) $(CFLAGS_$(TYPE)) $(_CFLAGS) $(_PPFLAGS) $(CFLAGS)

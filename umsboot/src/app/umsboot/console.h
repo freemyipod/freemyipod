@@ -1,5 +1,5 @@
-#ifndef __TARGET_UMSBOOT_IPODNANO2G_H__
-#define __TARGET_UMSBOOT_IPODNANO2G_H__
+#ifndef __APP_UMSBOOT_CONSOLE_H__
+#define __APP_UMSBOOT_CONSOLE_H__
 
 #include "global.h"
 #include "interface/console/console.h"

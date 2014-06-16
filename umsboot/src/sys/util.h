@@ -111,7 +111,7 @@
 #ifndef ASM_FILE
 extern __attribute__((noreturn)) void powerdown();
 extern __attribute__((noreturn)) void hang();
-extern __attribute__((pure)) void idle();
+extern void idle();
 extern __attribute__((noreturn)) void execfirmware(void* address);
 extern void enter_critical_section();
 extern void leave_critical_section();

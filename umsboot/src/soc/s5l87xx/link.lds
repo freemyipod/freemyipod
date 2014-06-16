@@ -13,17 +13,35 @@
 #define SDRAM_SIZE DEFAULT_SDRAM_SIZE
 #endif
 
+#ifndef VECTORS_REGION
+#define VECTORS_REGION SRAM
+#endif
+#ifndef VECTORS_BASE
+#define VECTORS_BASE SRAM_BASE
+#endif
 #ifndef CODE_REGION
 #define CODE_REGION SDRAM
+#endif
+#ifndef CODE_BASE
+#define CODE_BASE
 #endif
 #ifndef BSS_REGION
 #define BSS_REGION SDRAM
 #endif
+#ifndef BSS_BASE
+#define BSS_BASE
+#endif
 #ifndef DMABSS_REGION
 #define DMABSS_REGION SRAM
 #endif
+#ifndef DMABSS_BASE
+#define DMABSS_BASE
+#endif
 #ifndef STACK_REGION
 #define STACK_REGION SRAM
+#endif
+#ifndef STACK_BASE
+#define STACK_BASE
 #endif
 
 #ifndef STACK_SIZE
@@ -44,16 +62,18 @@ MEMORY
     SDRAM : ORIGIN = SDRAM_BASE, LENGTH = SDRAM_SIZE
 }
 
-_entry = _vectors;
+_entry = _init;
 ENTRY(_entry)
 
 SECTIONS
 {
 
-    .text :
+    .text CODE_BASE :
     {
+        _init = .;
+        KEEP(*(.init))
+        _init_end = .;
         _text = .;
-        KEEP(*(.vectors))
         *(.text)
         *(.text.*)
         *(.rodata)
@@ -70,7 +90,23 @@ SECTIONS
 
     _text_size = _text_end - _text;
 
-    .bss (NOLOAD) :
+    .vectors VECTORS_BASE :
+    {
+        _vectors = .;
+        KEEP(*(.vectors))
+        _vectors_end = .;
+    } >VECTORS_REGION AT>CODE_REGION
+
+    _vectors_src = LOADADDR(.vectors);
+    _vectors_size = _vectors_end - _vectors;
+
+    .dummy _text_end - 4 :
+    {
+        . += 4;
+        . = ALIGN(1 << CACHEALIGN_BITS);
+    } >CODE_REGION
+
+    .bss BSS_BASE (NOLOAD) :
     {
         . = ALIGN(1 << CACHEALIGN_BITS);
         _bss = .;
@@ -83,7 +119,7 @@ SECTIONS
 
     _bss_size = _bss_end - _bss;
 
-    .dmabss (NOLOAD) :
+    .dmabss DMABSS_BASE (NOLOAD) :
     {
         . = ALIGN(1 << CACHEALIGN_BITS);
         _dmabss = .;
@@ -95,7 +131,7 @@ SECTIONS
 
     _dmabss_size = _dmabss_end - _dmabss;
 
-    .stack (NOLOAD) :
+    .stack STACK_BASE (NOLOAD) :
     {
         . = ALIGN(1 << CACHEALIGN_BITS);
         _stack = .;
