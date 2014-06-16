@@ -377,7 +377,7 @@ void usb_handle_timeout(const struct usb_instance* data, union usb_endpoint_numb
     {
         int epidx;
         int ifidx;
-        const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &epidx, &ifidx);
+        const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &ifidx, &epidx);
         if (!endpoint) data->driver->unconfigure_ep(data, epnum);
         else if (endpoint->timeout) endpoint->timeout(data, ifidx, epidx, bytesleft);
     }
@@ -404,7 +404,7 @@ void usb_handle_xfer_complete(const struct usb_instance* data, union usb_endpoin
     {
         int epidx;
         int ifidx;
-        const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &epidx, &ifidx);
+        const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &ifidx, &epidx);
         if (!endpoint) usb_unconfigure_ep(data, epnum);
         else if (endpoint->xfer_complete) endpoint->xfer_complete(data, ifidx, epidx, bytesleft);
     }
@@ -420,7 +420,7 @@ void usb_handle_setup_received(const struct usb_instance* data, union usb_endpoi
     {
         int epidx;
         int ifidx;
-        const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &epidx, &ifidx);
+        const struct usb_endpoint* endpoint = usb_find_endpoint(data, epnum, &ifidx, &epidx);
         if (!endpoint) usb_unconfigure_ep(data, epnum);
         else if (endpoint->setup_received) endpoint->setup_received(data, ifidx, epidx);
     }

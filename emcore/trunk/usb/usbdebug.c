@@ -174,9 +174,9 @@ bool usbdebug_bulk_handle_data(const struct usb_instance* data, union usb_endpoi
     case 1:  // START MEMORY TRANSFER
             bulk_state[bulk_ctrlreq_ep].addr = (void*)buf[1];
             bulk_state[bulk_ctrlreq_ep].size = buf[2];
-            usbdebug_bulk_xfer_complete(data, 0, bulk_ctrlreq_ep, 0);  // Convenient way to start a transfer.
             usb_set_stall(data, ep0out, true);
             usb_ep0_start_tx(data, NULL, 0, NULL);
+            usbdebug_bulk_xfer_complete(data, 0, bulk_ctrlreq_ep, 0);  // Convenient way to start a transfer.
             break;
     default:
         usb_set_stall(data, ep0out, true);
