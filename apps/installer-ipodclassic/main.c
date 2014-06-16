@@ -95,9 +95,7 @@ static void sha1(void* data, uint32_t size, void* hash)
             for (i = 0; i < 16; i++) SHA1DATAIN[i] = tmp32[i];
         }
         else for (i = 0; i < 16; i++) SHA1DATAIN[i] = *databuf++;
-        clean_dcache();  // Not sure why we need this, but apparently we do...
         SHA1CONFIG |= 2;
-        invalidate_dcache();  // Not sure why we need this, but apparently we do...
         while (SHA1CONFIG & 1) sleep(0);
         SHA1CONFIG |= 8;
     }
@@ -231,19 +229,20 @@ static void main(int argc, const char** argv)
             if (flags & 8)
             {
                 offs = 0x800;
-                size = ((size + 0xf) & ~0xf);
+                size = ((size + 0xf) & ~0xf) + offs;
             }
             if (flags & 1)
             {
-                endptr -= ((offs + size + 0xfff) & ~0xfff);
+                endptr -= ((size + 0xfff) & ~0xfff);
+                memcpy(&norbuf[endptr + offs], data, size);
                 file = endptr;
             }
             else
             {
+                memcpy(&norbuf[beginptr + offs], data, size);
                 file = beginptr;
-                beginptr += ((offs + size + 0xfff) & ~0xfff);
+                beginptr += ((size + 0xfff) & ~0xfff);
             }
-            memcpy(&norbuf[file + offs], data, size);
             if (!(flags & 4))
             {
                 if (dirptr >= 0x2000)
@@ -256,6 +255,7 @@ static void main(int argc, const char** argv)
             }
             if (flags & 8)
             {
+                size -= offs;
                 memset(&norbuf[file], 0, 0x800);
                 memcpy(&norbuf[file], "87021.0\x01", 8);
                 *((uint32_t*)&norbuf[file + 0xc]) = size;
