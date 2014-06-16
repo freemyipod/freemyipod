@@ -136,7 +136,7 @@ _mmuloop:
     cmp r1, #0x38000000
     biccs r1, r1, #0xc
     tst r1, #0x40000000
-    str r1, [r0], #4
+    streq r1, [r0], #4
     beq _mmuloop
     mov r0, #-1
     mcr p15, 0, r0,c3,c0
