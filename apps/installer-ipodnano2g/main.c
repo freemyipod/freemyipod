@@ -695,15 +695,14 @@ static void main(int argc, const char** argv)
             if (flags & 1)
             {
                 endptr -= ((size + 0xfff) & ~0xfff);
-                memcpy(&norbuf[endptr], data, size);
                 file = endptr;
             }
             else
             {
-                memcpy(&norbuf[beginptr], data, size);
                 file = beginptr;
                 beginptr += ((size + 0xfff) & ~0xfff);
             }
+            memcpy(&norbuf[file], data, size);
             if (!(flags & 4))
             {
                 if (dirptr >= 0x1000)
