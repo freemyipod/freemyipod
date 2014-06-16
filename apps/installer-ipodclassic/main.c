@@ -229,20 +229,19 @@ static void main(int argc, const char** argv)
             if (flags & 8)
             {
                 offs = 0x800;
-                size = ((size + 0xf) & ~0xf) + offs;
+                size = ((size + 0xf) & ~0xf);
             }
             if (flags & 1)
             {
-                endptr -= ((size + 0xfff) & ~0xfff);
-                memcpy(&norbuf[endptr + offs], data, size);
+                endptr -= ((offs + size + 0xfff) & ~0xfff);
                 file = endptr;
             }
             else
             {
-                memcpy(&norbuf[beginptr + offs], data, size);
                 file = beginptr;
-                beginptr += ((size + 0xfff) & ~0xfff);
+                beginptr += ((offs + size + 0xfff) & ~0xfff);
             }
+            memcpy(&norbuf[file + offs], data, size);
             if (!(flags & 4))
             {
                 if (dirptr >= 0x2000)
@@ -255,7 +254,6 @@ static void main(int argc, const char** argv)
             }
             if (flags & 8)
             {
-                size -= offs;
                 memset(&norbuf[file], 0, 0x800);
                 memcpy(&norbuf[file], "87021.0\x01", 8);
                 *((uint32_t*)&norbuf[file + 0xc]) = size;
