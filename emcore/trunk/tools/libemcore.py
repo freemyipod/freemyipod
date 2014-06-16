@@ -128,6 +128,23 @@ class Emcore(object):
         return self.lib.monitorcommand(struct.pack("<IIII%ds" % len(data), 5, addr, len(data), 0, data), "III", (None, None, None))
     
     @command()
+    def _readmem_bulk(self, addr, size):
+        """ Reads the memory from location 'addr' with size 'size'
+            from the device. Can handle unlimited amounts of bytes,
+            however the address and size should be cacheline aligned.
+        """
+        return self.lib.recvbulk(struct.pack("<III", 1, addr, size), size)
+    
+    @command()
+    def _writemem_bulk(self, addr, data):
+        """ Writes the data in 'data' to the location 'addr'
+            in the memory of the device. Can handle unlimited amounts of bytes,
+            however the address and size should be cacheline aligned.
+
+        """
+        return self.lib.sendbulk(struct.pack("<III", 1, addr, len(data)), data)
+    
+    @command()
     def getversioninfo(self):
         """ This returns the emCORE version and device information. """
         resp = self.lib.monitorcommand(struct.pack("<IIII", 1, 0, 0, 0), "IBBBBI", ("revision", "majorv", "minorv", "patchv", "swtypeid", "hwtypeid"))
@@ -173,6 +190,19 @@ class Emcore(object):
         """
         data = b""
         self.logger.debug("Downloading %d bytes from 0x%X\n" % (size, addr))
+        try:
+            if self.lib.bulkin and size > 0x800:
+                if addr & 63:
+                    align = 64 - (addr & 63)
+                    data += self._readmem(addr, align)
+                    addr += align
+                    size -= align
+                align = size & 63
+                size -= align
+                data += self._readmem_bulk(addr, size)
+                addr += size
+                size = align
+        except: self.logger.warn("Bulk read interface failed, falling back to slow reads\n")
         while size > 0:
             readsize = min(size, 0xf00)
             data += self._readmem(addr, readsize)
@@ -188,6 +218,21 @@ class Emcore(object):
         size = len(data)
         self.logger.debug("Uploading %d bytes to 0x%X\n" % (size, addr))
         offset = 0
+        try:
+            if self.lib.bulkin and size > 0x800:
+                if addr & 63:
+                    align = 64 - (addr & 63)
+                    self._writemem(addr, data[offset:offset+align])
+                    offset += align
+                    addr += align
+                    size -= align
+                align = size & 63
+                size -= align
+                self._writemem_bulk(addr, data[offset:offset+size])
+                offset += size
+                addr += size
+                size = align
+        except: self.logger.warn("Bulk write interface failed, falling back to slow writes\n")
         while size > 0:
             writesize = min(size, 0xf00)
             self._writemem(addr, data[offset:offset+writesize])
@@ -1019,6 +1064,8 @@ class Lib(object):
     def connect(self):
         self.dev = Dev(self.idVendor, self.idProduct, self.idProductMask, self.logger)
         self.connected = True
+        self.bulkout = True if self.dev.bulkout else False
+        self.bulkin = True if self.dev.bulkin else False
     
     def monitorcommand(self, cmd, rcvdatatypes=None, rcvstruct=None):
         self.logger.debug("Sending monitorcommand [0x%s]\n" % base64.b16encode(cmd[3::-1]).decode("ascii"))
@@ -1055,6 +1102,14 @@ class Lib(object):
                 raise DeviceError("Device busy")
         else:
             return writelen
+            
+    def sendbulk(self, cmd, data):
+        self.logger.debug("Sending bulk command [0x%s]\n" % base64.b16encode(cmd[3::-1]).decode("ascii"))
+        return self.dev.sendbulk(cmd, data)
+            
+    def recvbulk(self, cmd, size):
+        self.logger.debug("Receiving bulk command [0x%s]\n" % base64.b16encode(cmd[3::-1]).decode("ascii"))
+        return self.dev.recvbulk(cmd, size)
 
 
 class Dev(object):
@@ -1068,6 +1123,8 @@ class Dev(object):
         
         self.dev = None
         self.interface = None
+        self.bulkout = None
+        self.bulkin = None
         self.claimed = False
         self.timeout = 1000
         
@@ -1108,6 +1165,14 @@ class Dev(object):
                 self.logger.debug("%02x:%02x:%02x\n" % (intf.bInterfaceClass, intf.bInterfaceSubClass, intf.bInterfaceProtocol))
                 if intf.bInterfaceClass == 0xff and intf.bInterfaceSubClass == 0 and intf.bInterfaceProtocol == 0:
                     self.interface = intf.bInterfaceNumber
+                    for ep in intf:
+                        if not ep.bEndpointAddress & 0x80:
+                            self.bulkout = ep
+                            break
+                    for ep in intf:
+                        if ep.bEndpointAddress & 0x80:
+                            self.bulkin = ep
+                            break
                     break
         if self.interface is None:
             raise DeviceNotFoundError()
@@ -1123,16 +1188,32 @@ class Dev(object):
     def send(self, data):
         if len(data) > 0x1000: raise DeviceError("Attempting to send a message that is too big!")
         size = self.dev.ctrl_transfer(0x41, 0x00, 0, self.interface, data, self.timeout)
-        if size != len(data):
-            raise SendError("Not all data was written!")
-        return len
+        if size != len(data): raise SendError("Not all data was written!")
+        return size
     
     def receive(self, size):
         if size > 0x1000: raise DeviceError("Attempting to receive a message that is too big!")
-        read = self.dev.ctrl_transfer(0xc1, 0x00, 0, self.interface, size, self.timeout)
-        if len(read) != size:
-            raise ReceiveError("Requested size and read size don't match!")
-        return read
+        data = self.dev.ctrl_transfer(0xc1, 0x00, 0, self.interface, size, self.timeout)
+        if len(data) != size: raise ReceiveError("Requested size and read size don't match!")
+        return data
+    
+    def sendbulk(self, cmd, data):
+        size = self.dev.ctrl_transfer(0x42, 0x00, 0, self.bulkout.bEndpointAddress, cmd, self.timeout)
+        if size != len(cmd):
+            raise SendError("Bulk send command could not be fully sent (%d of %d)!" % (size, len(cmd)))
+        size = self.bulkout.write(data, self.timeout)
+        if size != len(data):
+            raise SendError("Bulk data could not be fully sent (%d of %d)!" % (size, len(data)))
+        return size
+    
+    def recvbulk(self, cmd, size):
+        size = self.dev.ctrl_transfer(0x42, 0x00, 0, self.bulkin.bEndpointAddress, cmd, self.timeout)
+        if size != len(cmd):
+            raise ReceiveError("Bulk receive command could not be fully sent (%d of %d)!" % (size, len(cmd)))
+        data = self.bulkin.read(size, self.timeout)
+        if len(data) != size:
+            raise SendError("Bulk data could not be fully received (%d of %d)!" % (len(cmd), size))
+        return data
     
 
 if __name__ == "__main__":

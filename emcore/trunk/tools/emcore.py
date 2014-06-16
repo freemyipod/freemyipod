@@ -141,8 +141,8 @@ class Commandline(object):
                     self.logger.error(usage("Argument Error in '%s': Wrong argument count" % func, specific=func))
                 else:
                     raise
-            except libemcore.usb.core.USBError:
-                self.logger.error("There is a problem with the USB connection.\n")
+#            except libemcore.usb.core.USBError:
+#                self.logger.error("There is a problem with the USB connection.\n")
         else:
             usage("No such command!", docstring = False)
 
