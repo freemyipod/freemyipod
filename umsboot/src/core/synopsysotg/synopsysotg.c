@@ -510,7 +510,7 @@ void synopsysotg_exit(const struct usb_instance* instance)
 
 int synopsysotg_get_max_transfer_size(const struct usb_instance* data, union usb_endpoint_number ep)
 {
-    return 512;
+    return 1023;
 }
 
 const struct usb_driver synopsysotg_driver =
