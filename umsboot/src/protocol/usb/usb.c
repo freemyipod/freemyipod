@@ -277,50 +277,50 @@ static void usb_handle_ep0_setup(const struct usb_instance* data, union usb_ep0_
             default: break;
             }
             break;
+        default: break;
+        }
+        break;
+    }
+    case USB_SETUP_BMREQUESTTYPE_RECIPIENT_ENDPOINT:
+    {
+        if (!data->state->current_configuration) break;
+        union usb_endpoint_number ep = { .byte = buffer->setup.wIndex };
+        int intfid;
+        int epid;
+        const struct usb_endpoint* endpoint = usb_find_endpoint(data, ep, &intfid, &epid);
+        if (!endpoint) break;
+        if (endpoint->ctrl_request) size = endpoint->ctrl_request(data, intfid, epid, buffer, &addr);
+        if (size != -1) break;
+        switch (buffer->setup.bmRequestType.type)
+        {
+        case USB_SETUP_BMREQUESTTYPE_TYPE_STANDARD:
+            switch (buffer->setup.bRequest.req)
+            {
+            case USB_SETUP_BREQUEST_GET_STATUS:
+                if (buffer->setup.wLength != 2 || buffer->setup.wValue) break;
+                data->buffer->raw[0] = 0;
+                data->buffer->raw[1] = data->driver->get_stall(data, ep);
+                addr = data->buffer;
+                size = 2;
+                break;
+            case USB_SETUP_BREQUEST_CLEAR_FEATURE:
+                if (buffer->setup.wLength || buffer->setup.wValue) break;
+                usb_set_stall(data, ep, false);
+                size = 0;
+                break;
+            case USB_SETUP_BREQUEST_SET_FEATURE:
+                if (buffer->setup.wLength || buffer->setup.wValue) break;
+                usb_set_stall(data, ep, true);
+                size = 0;
+                break;
+            default: break;
+            }
+            break;
             default: break;
         }
         break;
-        case USB_SETUP_BMREQUESTTYPE_RECIPIENT_ENDPOINT:
-        {
-            if (!data->state->current_configuration) break;
-            union usb_endpoint_number ep = { .byte = buffer->setup.wIndex };
-            int intfid;
-            int epid;
-            const struct usb_endpoint* endpoint = usb_find_endpoint(data, ep, &intfid, &epid);
-            if (!endpoint) break;
-            if (endpoint->ctrl_request) size = endpoint->ctrl_request(data, intfid, epid, buffer, &addr);
-            if (size != -1) break;
-            switch (buffer->setup.bmRequestType.type)
-            {
-            case USB_SETUP_BMREQUESTTYPE_TYPE_STANDARD:
-                switch (buffer->setup.bRequest.req)
-                {
-                case USB_SETUP_BREQUEST_GET_STATUS:
-                    if (buffer->setup.wLength != 2 || buffer->setup.wValue) break;
-                    data->buffer->raw[0] = 0;
-                    data->buffer->raw[1] = data->driver->get_stall(data, ep);
-                    addr = data->buffer;
-                    size = 2;
-                    break;
-                case USB_SETUP_BREQUEST_CLEAR_FEATURE:
-                    if (buffer->setup.wLength || buffer->setup.wValue) break;
-                    usb_set_stall(data, ep, false);
-                    size = 0;
-                    break;
-                case USB_SETUP_BREQUEST_SET_FEATURE:
-                    if (buffer->setup.wLength || buffer->setup.wValue) break;
-                    usb_set_stall(data, ep, true);
-                    size = 0;
-                    break;
-                default: break;
-                }
-                break;
-                default: break;
-            }
-            break;
-        }
-        default: break;
     }
+    default: break;
     }
     union usb_endpoint_number ep0in = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
     union usb_endpoint_number ep0out = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_OUT };
