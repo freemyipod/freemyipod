@@ -95,7 +95,9 @@ static void sha1(void* data, uint32_t size, void* hash)
             for (i = 0; i < 16; i++) SHA1DATAIN[i] = tmp32[i];
         }
         else for (i = 0; i < 16; i++) SHA1DATAIN[i] = *databuf++;
+        clean_dcache();  // Not sure why we need this, but apparently we do...
         SHA1CONFIG |= 2;
+        invalidate_dcache();  // Not sure why we need this, but apparently we do...
         while (SHA1CONFIG & 1) sleep(0);
         SHA1CONFIG |= 8;
     }
