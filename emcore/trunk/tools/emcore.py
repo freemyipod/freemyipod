@@ -436,7 +436,7 @@ class Commandline(object):
         bitmask = to_int(bitmask)
         while True:
             resp = self.emcore.cread()
-            self.logger.write(resp.data)
+            self.logger.write(resp.data.decode("ascii"))
             time.sleep(0.1 / resp.maxsize * (resp.maxsize - len(resp.data)))
     
     @command
@@ -451,7 +451,7 @@ class Commandline(object):
             text += word + " "
         text = text[:-1]
         self.logger.info("Writing '%s' to the device consoles identified with 0x%X\n" % (text, bitmask))
-        self.emcore.cwrite(text, bitmask)
+        self.emcore.cwrite(text.encode("ascii"), bitmask)
     
     @command
     def flushconsolebuffers(self, bitmask):
