@@ -63,7 +63,7 @@ static struct partinfo part[NUM_DRIVES*4]; /* space for 4 partitions on 2 drives
 static int vol_drive[NUM_VOLUMES]; /* mounted to which drive (-1 if none) */
 static struct mutex disk_mutex;
 
-struct partinfo* disk_init(IF_MD_NONVOID(int drive))
+int disk_init(IF_MD2(int drive,) struct partinfo** partinfo)
 {
     int i;
 #ifdef HAVE_MULTIDRIVE
@@ -78,15 +78,21 @@ struct partinfo* disk_init(IF_MD_NONVOID(int drive))
     const int drive = 0;
     (void)drive;
 #endif
+    *partinfo = pinfo;
 
     unsigned char* sector = fat_get_sector_buffer();
-    storage_read_sectors(IF_MD2(drive,) 0,1, sector);
+    int rc = storage_read_sectors(IF_MD2(drive,) 0, 1, sector);
+    if (IS_ERR(rc))
+    {
+        fat_release_sector_buffer();
+        PASS_RC(rc, 1, 0);
+    }
     /* check that the boot sector is initialized */
     if ( (sector[510] != 0x55) ||
          (sector[511] != 0xaa)) {
         fat_release_sector_buffer();
         DEBUGF("Bad boot sector signature");
-        return NULL;
+        RET_ERR(1);
     }
 
     /* parse partitions */
@@ -105,7 +111,7 @@ struct partinfo* disk_init(IF_MD_NONVOID(int drive))
         }
     }
     fat_release_sector_buffer();
-    return pinfo;
+    return 0;
 }
 
 struct partinfo* disk_partinfo(int partition)
@@ -122,6 +128,7 @@ int disk_mount_all(void)
 {
     int mounted=0;
     int i;
+    int rc;
     
 #ifdef HAVE_HOTSWAP
     mutex_lock(&disk_mutex, TIMEOUT_BLOCK);
@@ -132,20 +139,24 @@ int disk_mount_all(void)
         vol_drive[i] = -1; /* mark all as unassigned */
 
 #ifndef HAVE_MULTIDRIVE
-    mounted = disk_mount(0);
+    PASS_RC(disk_mount(0), 0, 0);
 #else
     for(i=0;i<NUM_DRIVES;i++)
     {
 #ifdef HAVE_HOTSWAP
         if (storage_present(i))
 #endif
-            mounted += disk_mount(i); 
+        {
+            rc = disk_mount(i);
+            if (!IS_ERR(rc)) mounted += rc;
+        }
     }
 #endif
 
 #ifdef HAVE_HOTSWAP
     mutex_unlock(&disk_mutex);
 #endif
+    if (!mounted) PASS_RC(rc, 0, 0);
     return mounted;
 }
 
@@ -164,6 +175,7 @@ static int get_free_volume(void)
 int disk_mount(int drive)
 {
     int i;
+    int rc;
     int mounted = 0; /* reset partition-on-drive flag */
     int volume;
     struct partinfo* pinfo;
@@ -173,22 +185,23 @@ int disk_mount(int drive)
 #endif
 
     volume = get_free_volume();
-    pinfo = disk_init(IF_MD(drive));
+    PASS_RC_MTX(disk_init(IF_MD2(drive,) &pinfo), 2, 0, &disk_mutex);
 
     if (pinfo == NULL)
     {
 #ifdef HAVE_HOTSWAP
         mutex_unlock(&disk_mutex);
 #endif
-        return 0;
+        RET_ERR(1);
     }
     for (i = 0; volume != -1 && i<4 && mounted<NUM_VOLUMES_PER_DRIVE; i++)
     {
         if (memchr(fat_partition_types, pinfo[i].type,
                    sizeof(fat_partition_types)) == NULL)
             continue;  /* not an accepted partition type */
-
-        if (!fat_mount(IF_MV2(volume,) IF_MD2(drive,) pinfo[i].start))
+            
+        rc = fat_mount(IF_MV2(volume,) IF_MD2(drive,) pinfo[i].start);
+        if (!IS_ERR(rc))
         {
             mounted++;
             vol_drive[volume] = drive; /* remember the drive for this volume */
@@ -199,7 +212,8 @@ int disk_mount(int drive)
     if (mounted == 0 && volume != -1) /* none of the 4 entries worked? */
     {   /* try "superfloppy" mode */
         DEBUGF("No partition found, trying to mount sector 0.");
-        if (!fat_mount(IF_MV2(volume,) IF_MD2(drive,) 0))
+        rc = fat_mount(IF_MV2(volume,) IF_MD2(drive,) 0);
+        if (!IS_ERR(rc))
         {
             mounted = 1;
             vol_drive[volume] = drive; /* remember the drive for this volume */
@@ -208,6 +222,7 @@ int disk_mount(int drive)
 #ifdef HAVE_HOTSWAP
     mutex_unlock(&disk_mutex);
 #endif
+    if (!mounted) PASS_RC(rc, 2, 2);
     return mounted;
 }
 

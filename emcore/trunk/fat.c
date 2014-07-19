@@ -315,11 +315,11 @@ int fat_mount(IF_MV2(int volume,) IF_MD2(int drive,) long startsector)
     /* Read the sector */
     unsigned char* buf = fat_get_sector_buffer();
     rc = storage_read_sectors(IF_MD2(drive,) startsector,1,buf);
-    if(rc)
+    if (IS_ERR(rc))
     {
         fat_release_sector_buffer();
-        DEBUGF( "fat_mount() - Couldn't read BPB (error code %d)", rc);
-        return rc * 10 - 1;
+        DEBUGF("fat_mount() - Couldn't read BPB (error code %d)", rc);
+        PASS_RC(rc, 3, 0);
     }
 
     memset(fat_bpb, 0, sizeof(struct bpb));
@@ -358,7 +358,7 @@ int fat_mount(IF_MV2(int volume,) IF_MD2(int drive,) long startsector)
     if (!fat_bpb->bpb_bytspersec)
     {
         fat_release_sector_buffer();
-        return -2;
+        RET_ERR(1);
     }
     rootdirsectors = secmult * ((fat_bpb->bpb_rootentcnt * DIR_ENTRY_SIZE
                      + fat_bpb->bpb_bytspersec - 1) / fat_bpb->bpb_bytspersec);
@@ -377,7 +377,7 @@ int fat_mount(IF_MV2(int volume,) IF_MD2(int drive,) long startsector)
     else
     {
         fat_release_sector_buffer();
-        return -2;
+        RET_ERR(2);
     }
 
 #ifdef TEST_FAT
@@ -396,12 +396,12 @@ int fat_mount(IF_MV2(int volume,) IF_MD2(int drive,) long startsector)
         { /* FAT12 */
             fat_release_sector_buffer();
             DEBUGF("This is FAT12. Go away!");
-            return -2;
+            RET_ERR(3);
         }
 #else /* #ifdef HAVE_FAT16SUPPORT */
         fat_release_sector_buffer();
         DEBUGF("This is not FAT32. Go away!");
-        return -2;
+        RET_ERR(3);
 #endif /* #ifndef HAVE_FAT16SUPPORT */
     }
 
@@ -433,7 +433,7 @@ int fat_mount(IF_MV2(int volume,) IF_MD2(int drive,) long startsector)
     {
         fat_release_sector_buffer();
         DEBUGF( "fat_mount() - BPB is not sane");
-        return rc * 10 - 3;
+        RET_ERR(4);
     }
 
 #ifdef HAVE_FAT16SUPPORT
@@ -448,11 +448,11 @@ int fat_mount(IF_MV2(int volume,) IF_MD2(int drive,) long startsector)
         /* Read the fsinfo sector */
         rc = storage_read_sectors(IF_MD2(drive,)
             startsector + fat_bpb->bpb_fsinfo, 1, buf);
-        if (rc < 0)
+        if (IS_ERR(rc))
         {
             fat_release_sector_buffer();
             DEBUGF( "fat_mount() - Couldn't read FSInfo (error code %d)", rc);
-            return rc * 10 - 4;
+            PASS_RC(rc, 3, 5);
         }
         fat_bpb->fsinfo.freecount = BYTES2INT32(buf, FSINFO_FREECOUNT);
         fat_bpb->fsinfo.nextfree = BYTES2INT32(buf, FSINFO_NEXTFREE);
