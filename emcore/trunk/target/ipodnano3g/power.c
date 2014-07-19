@@ -45,17 +45,17 @@ void power_init(void)
 
 bool charging_state(void)
 {
-    return false;
-}
-
-bool external_power_state(void)
-{
-    return (PDAT(12) & 8) ? false : true;
+    return (PDAT(11) & 0x10) ? false : true;
 }
 
 bool vbus_state(void)
 {
-    return (PDAT(12) & 8) ? false : true;
+    return (PDAT(11) & 0x20) ? false : true;
+}
+
+bool external_power_state(void)
+{
+    return vbus_state();
 }
 
 int read_battery_voltage(int battery)
@@ -85,7 +85,7 @@ int read_battery_mwh_full(int battery)
 int read_battery_mwh_current(int battery)
 {
     // TODO: Approximate that better
-    if (battery == 0) return (read_battery_voltage(0) - 3600) * 3;
+    if (battery == 0) return MAX(0, (read_battery_voltage(0) - 3600) * 3);
     return -1;
 }
 
@@ -97,6 +97,7 @@ int read_battery_mw(int battery)
 enum battery_state read_battery_state(int battery)
 {
     if (battery != 0) return BATTERY_STATE_INVALID;
+    if (read_battery_voltage(0) < 100) return BATTERY_STATE_NONPRESENT;
     if (charging_state()) return BATTERY_STATE_CHARGING;
     if (external_power_state()) return BATTERY_STATE_IDLE;
     return BATTERY_STATE_DISCHARGING;
@@ -123,3 +124,4 @@ enum input_state read_input_state(int input)
     if (external_power_state()) return INPUT_STATE_ACTIVE;
     return INPUT_STATE_NONPRESENT;
 }
+
