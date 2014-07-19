@@ -54,6 +54,11 @@
 #endif
 
 
+#ifndef BATTERY_BOOT_LOCKOUT_THRESHOLD
+#define BATTERY_BOOT_LOCKOUT_THRESHOLD 0
+#endif
+
+
 extern int _poolstart;   // Not an int at all, but gcc complains about void types being
                          // used here, and we only need the address, so just make it happy...
 
@@ -119,25 +124,35 @@ void storageinitthread(void* arg0, void* arg1, void* arg2, void* arg3) INITCODE_
 void storageinitthread(void* arg0, void* arg1, void* arg2, void* arg3)
 {
     struct initbss* ib = (struct initbss*)arg0;
-    int threshold = 0;
-    DEBUGF("Battery state: %d mV, %d mAh", read_battery_voltage(0), read_battery_mwh_current(0));
-    if (read_battery_mwh_current(0) <= threshold)
+    DEBUGF("Battery state: %d, %d mV, %d mAh", read_battery_state(0),
+           read_battery_voltage(0), read_battery_mwh_current(0));
+    switch (read_battery_state(0))
     {
-        backlight_set_brightness(50);
-        cputs(CONSOLE_BOOT, "The battery is discharged.\n"
-                            "Please connect to a power supply\n"
-                            "and wait a few minutes.\n");
-        while (read_battery_mwh_current(0) <= threshold)
+    case BATTERY_STATE_NONPRESENT:
+        cputs(CONSOLE_BOOT, "No battery connected.\n");
+        break;
+    case BATTERY_STATE_IDLE:
+    case BATTERY_STATE_CHARGING:
+    case BATTERY_STATE_DISCHARGING:
+        if (read_battery_mwh_current(0) <= BATTERY_BOOT_LOCKOUT_THRESHOLD)
         {
-            DEBUGF("Battery state: %d mV, %d mAh", read_battery_voltage(0), read_battery_mwh_current(0));
-            sleep(10000000);
-            if (read_input_state(0) != INPUT_STATE_ACTIVE)
+            backlight_set_brightness(50);
+            cputs(CONSOLE_BOOT, "The battery is discharged.\n"
+                                "Please connect to a power supply\n"
+                                "and wait a few minutes.\n");
+            while (read_battery_mwh_current(0) <= BATTERY_BOOT_LOCKOUT_THRESHOLD)
             {
-                shutdown(true);
-                power_off();
+                DEBUGF("Battery state: %d, %d mV, %d mAh", read_battery_state(0),
+                       read_battery_voltage(0), read_battery_mwh_current(0));
+                sleep(10000000);
+                if (read_battery_state(0) != BATTERY_STATE_CHARGING)
+                {
+                    shutdown(true);
+                    power_off();
+                }
             }
+            backlight_set_brightness(100);
         }
-        backlight_set_brightness(100);
     }
     DEBUGF("Initializing storage drivers...");
     int rc = storage_init();
@@ -148,10 +163,13 @@ void storageinitthread(void* arg0, void* arg1, void* arg2, void* arg3)
     }
     DEBUGF("Initializing storage subsystem...");
     disk_init_subsystem();
-    DEBUGF("Reading partition tables...");
-    disk_init();
     DEBUGF("Mounting partitions...");
-    disk_mount_all();
+    rc = disk_mount_all();
+    if (IS_ERR(rc))
+    {
+        DEBUGF("FS mount error: %08X\n", rc);
+        cprintf(CONSOLE_BOOT, "FS mount error: %08X\n", rc);
+    }
     DEBUGF("Storage init finished.");
     wakeup_signal(&(ib->storagewakeup));
 }
