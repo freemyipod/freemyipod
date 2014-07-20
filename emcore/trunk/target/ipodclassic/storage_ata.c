@@ -92,6 +92,10 @@ static struct ata_target_driverinfo drvinfo =
     .bbt_reload = ata_bbt_reload,
     .bbt_disable = ata_bbt_disable,
 #endif
+    .soft_reset = ata_soft_reset,
+    .hard_reset = ata_hard_reset,
+    .read_taskfile = ata_read_taskfile,
+    .raw_cmd = ata_raw_cmd,
 };
 
 
@@ -465,7 +469,7 @@ int ceata_cancel_command()
     return 0;
 }
 
-int ceata_rw_multiple_block(bool write, void* buf, uint32_t count, long timeout)
+int ceata_rw_multiple_block(bool write, void* buf, uint32_t count, uint32_t blksize, long timeout)
 {
     mmc_discard_irq();
     uint32_t responsetype;
@@ -485,7 +489,7 @@ int ceata_rw_multiple_block(bool write, void* buf, uint32_t count, long timeout)
         direction = MMC_CMD_CEATA_RW_MULTIPLE_BLOCK_DIRECTION_READ;
         invalidate_dcache();
     }
-    SDCI_DMASIZE = 0x200;
+    SDCI_DMASIZE = blksize;
     SDCI_DMAADDR = buf;
     SDCI_DMACOUNT = count;
     SDCI_DCTRL = SDCI_DCTRL_TXFIFORST | SDCI_DCTRL_RXFIFORST;
@@ -519,15 +523,16 @@ int ata_identify(uint16_t* buf)
         ceata_taskfile[0xf] = 0xec;
         PASS_RC(ceata_wait_idle(), 2, 0);
         PASS_RC(ceata_write_multiple_register(0, ceata_taskfile, 16), 2, 1);
-        PASS_RC(ceata_rw_multiple_block(false, buf, 1, CEATA_COMMAND_TIMEOUT), 2, 2);
+        PASS_RC(ceata_rw_multiple_block(false, buf, 1, 256, CEATA_COMMAND_TIMEOUT), 2, 2);
     }
     else
     {
-        PASS_RC(ata_wait_for_not_bsy(10000000), 1, 0);
+        PASS_RC(ata_wait_for_not_bsy(10000000), 2, 0);
         ata_write_cbr(&ATA_PIO_DVR, 0);
         ata_write_cbr(&ATA_PIO_CSD, 0xec);
-        PASS_RC(ata_wait_for_start_of_transfer(10000000), 1, 1);
+        PASS_RC(ata_wait_for_start_of_transfer(10000000), 2, 1);
         for (i = 0; i < 0x100; i++) buf[i] = ata_read_cbr(&ATA_PIO_DTR);
+        PASS_RC(ata_wait_for_end_of_transfer(100000), 2, 2);
     }
     return 0;
 }
@@ -741,7 +746,7 @@ int ata_rw_chunk(uint64_t sector, uint32_t cnt, void* buffer, bool write)
         ceata_taskfile[0xf] = write ? 0x35 : 0x25;
         PASS_RC(ceata_wait_idle(), 2, 0);
         PASS_RC(ceata_write_multiple_register(0, ceata_taskfile, 16), 2, 1);
-        PASS_RC(ceata_rw_multiple_block(write, buffer, cnt << 3, CEATA_COMMAND_TIMEOUT), 2, 2);
+        PASS_RC(ceata_rw_multiple_block(write, buffer, cnt << 3, 512, CEATA_COMMAND_TIMEOUT), 2, 2);
     }
     else
     {
@@ -1007,6 +1012,184 @@ int ata_reset()
             if (IS_ERR(rc2)) rc = ERR_RC((rc << 2) | 2);
         }
         else rc = 1;
+    }
+    ata_set_active();
+    mutex_unlock(&ata_mutex);
+    return rc;
+}
+
+int ata_read_taskfile(struct ata_raw_cmd_t* cmd)
+{
+    mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
+    if (!ata_powered) PASS_RC(ata_power_up(), 1, 0);
+    ata_set_active();
+    cmd->result_valid = false;
+    if (ceata)
+    {
+        PASS_RC_MTX(ceata_read_multiple_register(0, ceata_taskfile, 16), 1, 1, &ata_mutex);
+        cmd->feature = ceata_taskfile[0x9];
+        cmd->count = ceata_taskfile[0xa];
+        cmd->lba_low = ceata_taskfile[0xb];
+        cmd->lba_mid = ceata_taskfile[0xc];
+        cmd->lba_high = ceata_taskfile[0xd];
+        cmd->device = ceata_taskfile[0xe];
+        cmd->command = ceata_taskfile[0xf];
+        if (cmd->lba48)
+        {
+            cmd->feature |= ceata_taskfile[0x1] << 8;
+            cmd->count |= ceata_taskfile[0x2] << 8;
+            cmd->lba_low |= ceata_taskfile[0x3] << 8;
+            cmd->lba_mid |= ceata_taskfile[0x4] << 8;
+            cmd->lba_high |= ceata_taskfile[0x5] << 8;
+        }
+    }
+    else
+    {
+        cmd->feature = ata_read_cbr(&ATA_PIO_FED);
+        cmd->count = ata_read_cbr(&ATA_PIO_SCR);
+        cmd->lba_low = ata_read_cbr(&ATA_PIO_LLR);
+        cmd->lba_mid = ata_read_cbr(&ATA_PIO_LMR);
+        cmd->lba_high = ata_read_cbr(&ATA_PIO_LHR);
+        cmd->device = ata_read_cbr(&ATA_PIO_DVR);
+        cmd->command = ata_read_cbr(&ATA_PIO_CSD);
+        if (cmd->lba48)
+        {
+            ata_write_cbr(&ATA_PIO_DAD, BIT(7));
+            cmd->feature |= ata_read_cbr(&ATA_PIO_FED) << 8;
+            cmd->count |= ata_read_cbr(&ATA_PIO_SCR) << 8;
+            cmd->lba_low |= ata_read_cbr(&ATA_PIO_LLR) << 8;
+            cmd->lba_mid |= ata_read_cbr(&ATA_PIO_LMR) << 8;
+            cmd->lba_high |= ata_read_cbr(&ATA_PIO_LHR) << 8;
+            ata_write_cbr(&ATA_PIO_DAD, 0);
+        }
+    }
+    cmd->result_valid = true;
+    ata_set_active();
+    mutex_unlock(&ata_mutex);
+    return 0;
+}
+
+int ata_raw_cmd(struct ata_raw_cmd_t* cmd)
+{
+    mutex_lock(&ata_mutex, TIMEOUT_BLOCK);
+    if (!ata_powered) PASS_RC(ata_power_up(), 3, 0);
+    ata_set_active();
+    int rc = 0, rc2 = 0;
+    cmd->result_valid = false;
+    if (ceata)
+    {
+        memset(ceata_taskfile, 0, 16);
+        if (cmd->lba48)
+        {
+            ceata_taskfile[0x1] = cmd->feature >> 8;
+            ceata_taskfile[0x2] = cmd->count >> 8;
+            ceata_taskfile[0x3] = cmd->lba_low >> 8;
+            ceata_taskfile[0x4] = cmd->lba_mid >> 8;
+            ceata_taskfile[0x5] = cmd->lba_high >> 8;
+        }
+        ceata_taskfile[0x9] = cmd->feature & 0xff;
+        ceata_taskfile[0xa] = cmd->count & 0xff;
+        ceata_taskfile[0xb] = cmd->lba_low & 0xff;
+        ceata_taskfile[0xc] = cmd->lba_mid & 0xff;
+        ceata_taskfile[0xd] = cmd->lba_high & 0xff;
+        ceata_taskfile[0xe] = cmd->device;
+        ceata_taskfile[0xf] = cmd->command;
+        PASS_RC_MTX(ceata_wait_idle(), 3, 1, &ata_mutex);
+        PASS_RC_MTX(ceata_write_multiple_register(0, ceata_taskfile, 16), 3, 2, &ata_mutex);
+        if (cmd->transfer)
+            rc = ceata_rw_multiple_block(cmd->send, cmd->buffer, cmd->size, cmd->blksize, CEATA_COMMAND_TIMEOUT);
+        else rc = ceata_wait_idle();
+        if (IS_ERR(rc)) rc = ERR_RC((rc << 3) | 3);
+        rc2 = ata_read_taskfile(cmd);
+        if (IS_ERR(rc2) && !IS_ERR(rc)) rc = ERR_RC((rc2 << 3) | 4);
+    }
+    else
+    {
+        PASS_RC_MTX(ata_wait_for_rdy(100000), 3, 1, &ata_mutex);
+        ata_write_cbr(&ATA_PIO_DVR, 0);
+        if (cmd->lba48)
+        {
+            ata_write_cbr(&ATA_PIO_FED, cmd->feature >> 8);
+            ata_write_cbr(&ATA_PIO_SCR, cmd->count >> 8);
+            ata_write_cbr(&ATA_PIO_LLR, cmd->lba_low >> 8);
+            ata_write_cbr(&ATA_PIO_LMR, cmd->lba_mid >> 8);
+            ata_write_cbr(&ATA_PIO_LHR, cmd->lba_high >> 8);
+        }
+        ata_write_cbr(&ATA_PIO_FED, cmd->feature & 0xff);
+        ata_write_cbr(&ATA_PIO_SCR, cmd->count & 0xff);
+        ata_write_cbr(&ATA_PIO_LLR, cmd->lba_low & 0xff);
+        ata_write_cbr(&ATA_PIO_LMR, cmd->lba_mid & 0xff);
+        ata_write_cbr(&ATA_PIO_LHR, cmd->lba_high & 0xff);
+        ata_write_cbr(&ATA_PIO_DVR, cmd->device);
+        ata_write_cbr(&ATA_PIO_CSD, cmd->command);
+        sleep(cmd->delay);
+        if (cmd->transfer)
+        {
+            if (cmd->dma)
+            {
+                rc = ata_wait_for_start_of_transfer(500000);
+                if (IS_ERR(rc)) rc = ERR_RC((rc << 3) | 2);
+                else
+                {
+                    if (cmd->send)
+                    {
+                        clean_dcache();
+                        ATA_SBUF_START = cmd->buffer;
+                        ATA_SBUF_SIZE = cmd->size * cmd->blksize;
+                        ATA_CFG |= BIT(4);
+                    }
+                    else
+                    {
+                        invalidate_dcache();
+                        ATA_TBUF_START = cmd->buffer;
+                        ATA_TBUF_SIZE = cmd->size * cmd->blksize;
+                        ATA_CFG &= ~BIT(4);
+                    }
+                    ATA_XFR_NUM = cmd->blksize * cmd->size - 1;
+                    ATA_CFG |= ata_dma_flags;
+                    ATA_CFG &= ~(BIT(7) | BIT(8));
+                    wakeup_wait(&ata_wakeup, TIMEOUT_NONE);
+                    ATA_IRQ = BITRANGE(0, 4);
+                    ATA_IRQ_MASK = BIT(0);
+                    ATA_COMMAND = BIT(0);
+                    if (wakeup_wait(&ata_wakeup, 500000) == THREAD_TIMEOUT) rc = ERR_RC(3);
+                    ATA_COMMAND = BIT(1);
+                    ATA_CFG &= ~(BITRANGE(2, 3) | BIT(12));
+                }
+            }
+            else
+            {
+                ATA_CFG &= ~ata_dma_flags;
+                while (cmd->size--)
+                {
+                    rc = ata_wait_for_start_of_transfer(500000);
+                    if (IS_ERR(rc))
+                    {
+                        rc = ERR_RC((rc << 3) | 4);
+                        break;
+                    }
+                    int i;
+                    if (cmd->send)
+                        for (i = 0; i < (cmd->blksize >> 1); i++)
+                            ata_write_cbr(&ATA_PIO_DTR, ((uint16_t*)cmd->buffer)[i]);
+                    else
+                        for (i = 0; i < (cmd->blksize >> 1); i++)
+                            ((uint16_t*)cmd->buffer)[i] = ata_read_cbr(&ATA_PIO_DTR);
+                    cmd->buffer += cmd->blksize;
+                }
+            }
+            if (!IS_ERR(rc))
+            {
+                rc = ata_wait_for_end_of_transfer(100000);
+                if (IS_ERR(rc)) rc = ERR_RC((rc << 3) | 5);
+            }
+        }
+        else
+        {
+            rc = ata_wait_for_rdy(500000);
+            if (IS_ERR(rc)) rc = ERR_RC((rc << 3) | 6);
+        }
+        ata_read_taskfile(cmd);  // Cannot fail for PATA
     }
     ata_set_active();
     mutex_unlock(&ata_mutex);

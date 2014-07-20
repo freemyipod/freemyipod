@@ -38,6 +38,7 @@
 
 
 #define ATA_HAVE_BBT
+#define TEST_FAT
 
 
 #endif

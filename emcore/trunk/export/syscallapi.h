@@ -74,7 +74,7 @@
 #endif
 
 /* increase this every time the api struct changes */
-#define EMCORE_API_VERSION 8
+#define EMCORE_API_VERSION 9
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
