@@ -199,9 +199,11 @@ class Emcore(object):
                     size -= align
                 align = size & 63
                 size -= align
-                if size:
-                    data += self._readmem_bulk(addr, size)
-                    addr += size
+                while size > 0:
+                    chunk = min(size, 0xffc00)
+                    data += self._readmem_bulk(addr, chunk)
+                    addr += chunk
+                    size -= chunk
                 size = align
         except: raise#self.logger.warn("Bulk read interface failed, falling back to slow reads\n")
         while size > 0:
@@ -229,10 +231,12 @@ class Emcore(object):
                     size -= align
                 align = size & 63
                 size -= align
-                if size:
-                    self._writemem_bulk(addr, data[offset:offset+size])
-                    offset += size
-                    addr += size
+                while size > 0:
+                    chunk = min(size, 0xffc00)
+                    self._writemem_bulk(addr, data[offset:offset+chunk])
+                    offset += chunk
+                    addr += chunk
+                    size -= chunk
                 size = align
         except: self.logger.warn("Bulk write interface failed, falling back to slow writes\n")
         while size > 0:

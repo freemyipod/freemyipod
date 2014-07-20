@@ -23,10 +23,10 @@
     .phy_16bit = true, \
     .phy_ulpi = false, \
     .use_dma = true, \
-    .shared_txfifo = true, \
+    .shared_txfifo = false, \
     .disable_double_buffering = false, \
     .fifosize = 1024, \
-    .txfifosize = { 0x200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, \
+    .txfifosize = { 0x80, 0x180, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, \
 }
 #define UMSBOOT_USB_DRIVER_STATE_TYPE struct synopsysotg_state
 #define UMSBOOT_USB_DRIVER_STATE \
