@@ -26,6 +26,7 @@
 #include "ums.h"
 #include "scsi.h"
 #include "usb.h"
+#include "../../emcore/trunk/target/ipodclassic/storage_ata-target.h"
 
 
 #define UMS_BUFSIZE 65536
@@ -40,6 +41,8 @@ static struct
     unsigned int tag;
     unsigned int lun;
     unsigned int last_result;
+    unsigned int bytes_pending;
+    bool data_direction;
 } cur_cmd;
 
 
@@ -52,7 +55,37 @@ static struct
 } cur_sense_data;
 
 
-struct __attribute__((packed,aligned(32))) command_block_wrapper
+static enum
+{
+    SAT_PENDING_NONE = 0,
+    SAT_PENDING_SRST,
+    SAT_PENDING_HRST,
+    SAT_PENDING_CMD,
+    SAT_PENDING_READ_CDB,
+} sat_pending = SAT_PENDING_NONE;
+static struct ata_raw_cmd_t sat_command;
+static struct __attribute__((packed)) sat_response_information
+{
+    uint8_t descriptor_code;
+    uint8_t additional_length;
+    uint8_t extend;
+    uint8_t error;
+    uint8_t sector_count_h;
+    uint8_t sector_count_l;
+    uint8_t lba_low_h;
+    uint8_t lba_low_l;
+    uint8_t lba_mid_h;
+    uint8_t lba_mid_l;
+    uint8_t lba_high_h;
+    uint8_t lba_high_l;
+    uint8_t device;
+    uint8_t status;
+} sat_response_information;
+static bool have_sat_response_information = false;
+static bool sat_check;
+
+
+struct __attribute__((packed)) command_block_wrapper
 {
     unsigned int signature;
     unsigned int tag;
@@ -78,7 +111,15 @@ union __attribute__((aligned(32)))
     struct inquiry_data inquiry;
     struct capacity capacity_data;
     struct format_capacity format_capacity_data;
-    struct sense_data sense_data;
+    struct sense_data_fixed sense_data_fixed;
+    struct
+    {
+        struct sense_data_descr header;
+        union
+        {
+            struct sat_response_information sat_response;
+        } info;
+    } sense_data_descr;
     struct mode_sense_data_6 ms_data_6;
     struct mode_sense_data_10 ms_data_10;
     struct report_lun_data lun_data;
@@ -91,9 +132,10 @@ static enum
     WAITING_FOR_COMMAND,
     SENDING_BLOCKS,
     SENDING_RESULT,
-    SENDING_FAILED_RESULT,
     RECEIVING_BLOCKS,
-    WAITING_FOR_CSW_COMPLETION
+    WAITING_FOR_CSW_COMPLETION,
+    RECEIVING_SAT_WRITE,
+    PROCESSING,
 } state = WAITING_FOR_COMMAND;
 
 static uint32_t length;
@@ -135,9 +177,15 @@ void ums_listen()
 
 static void send_csw(int status)
 {
+    if (cur_cmd.bytes_pending)
+    {
+        if (cur_cmd.data_direction) usb_stall_in();
+        else usb_stall_out();
+    }
+
     tb.csw.signature = 0x53425355;
     tb.csw.tag = cur_cmd.tag;
-    tb.csw.data_residue = 0;
+    tb.csw.data_residue = cur_cmd.bytes_pending;
     tb.csw.status = status;
 
     state = WAITING_FOR_CSW_COMPLETION;
@@ -155,32 +203,66 @@ static void send_csw(int status)
 
 static void receive_block_data(void* data, int size)
 {
-    length = size;
-    usb_receive(data, size);
-    state = RECEIVING_BLOCKS;
+    if (cur_cmd.data_direction) fail("diskmode: Attempting to receive data for IN command!");
+    else if (size > cur_cmd.bytes_pending) fail("diskmode: Receive overrun!");
+    else
+    {
+        cur_cmd.bytes_pending -= size;
+        length = size;
+        usb_receive(data, size);
+        state = RECEIVING_BLOCKS;
+    }
+}
+
+
+static void receive_sat_write(void* data, int size)
+{
+    if (cur_cmd.data_direction) fail("diskmode: Attempting to receive data for SAT IN command!");
+    else if (size > cur_cmd.bytes_pending) fail("diskmode: Receive SAT overrun!");
+    else
+    {
+        cur_cmd.bytes_pending -= size;
+        length = size;
+        usb_receive(data, size);
+        state = RECEIVING_SAT_WRITE;
+    }
 }
 
 
 static void send_block_data(void* data, int size)
 {
-    length = size;
-    usb_transmit(data, size);
-    state = SENDING_BLOCKS;
+    if (!cur_cmd.data_direction) fail("diskmode: Attempting to send data for OUT command!");
+    else if (size > cur_cmd.bytes_pending) fail("diskmode: Send block overrun!");
+    else
+    {
+        cur_cmd.bytes_pending -= size;
+        length = size;
+        usb_transmit(data, size);
+        state = SENDING_BLOCKS;
+    }
 }
 
 
 static void send_command_result(void* data, int size)
 {
-    length = size;
-    usb_transmit(data, size);
-    state = SENDING_RESULT;
+    if (!cur_cmd.data_direction) fail("diskmode: Attempting to send result for OUT command!");
+    else if (size > cur_cmd.bytes_pending) fail("diskmode: Send result overrun!");
+    else
+    {
+        cur_cmd.bytes_pending -= size;
+        length = size;
+        usb_transmit(data, size);
+        state = SENDING_RESULT;
+    }
 }
 
 
-static void send_command_failed_result()
+static void send_command_failed_result(unsigned char key, unsigned char asc, unsigned char ascq)
 {
-    usb_transmit(NULL, 0);
-    state = SENDING_FAILED_RESULT;
+    send_csw(1);
+    cur_sense_data.sense_key = key;
+    cur_sense_data.asc = asc;
+    cur_sense_data.ascq = ascq;
 }
 
 
@@ -255,24 +337,22 @@ static void handle_scsi(struct command_block_wrapper* cbw)
 
     if (cbw->signature != 0x43425355)
     {
-        usb_stall();
+        usb_stall_in();
+        usb_stall_out();
         return;
     }
     cur_cmd.tag = cbw->tag;
     cur_cmd.lun = cbw->lun;
     cur_cmd.cur_cmd = cbw->command_block[0];
+    cur_cmd.bytes_pending = cbw->data_transfer_length;
+    if (cbw->flags & 0x80) cur_cmd.data_direction = 1;
+    else cur_cmd.data_direction = 0;
 
     switch (cbw->command_block[0])
     {
         case SCSI_TEST_UNIT_READY:
             if (!ums_ejected) send_csw(0);
-            else
-            {
-                send_csw(1);
-                cur_sense_data.sense_key = SENSE_NOT_READY;
-                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
-                cur_sense_data.ascq = 0;
-            }
+            else send_command_failed_result(SENSE_NOT_READY, ASC_MEDIUM_NOT_PRESENT, 0);
             break;
 
         case SCSI_REPORT_LUNS:
@@ -291,29 +371,40 @@ static void handle_scsi(struct command_block_wrapper* cbw)
 
         case SCSI_REQUEST_SENSE:
         {
-            tb.sense_data.ResponseCode = 0x70;
-            tb.sense_data.Obsolete = 0;
-            tb.sense_data.fei_sensekey = cur_sense_data.sense_key & 0x0f;
-            tb.sense_data.Information = cur_sense_data.information;
-            tb.sense_data.AdditionalSenseLength = 10;
-            tb.sense_data.CommandSpecificInformation = 0;
-            tb.sense_data.AdditionalSenseCode = cur_sense_data.asc;
-            tb.sense_data.AdditionalSenseCodeQualifier = cur_sense_data.ascq;
-            tb.sense_data.FieldReplaceableUnitCode = 0;
-            tb.sense_data.SKSV = 0;
-            tb.sense_data.SenseKeySpecific = 0;
-            send_command_result(&tb.sense_data, MIN(sizeof(tb.sense_data), length));
+            if (have_sat_response_information)
+            {
+                memset(&tb.sense_data_descr.header, 0, sizeof(tb.sense_data_descr.header));
+                tb.sense_data_descr.header.ResponseCode = 0x72;
+                tb.sense_data_descr.header.fei_sensekey = cur_sense_data.sense_key & 0x0f;
+                tb.sense_data_descr.header.AdditionalSenseCode = cur_sense_data.asc;
+                tb.sense_data_descr.header.AdditionalSenseCodeQualifier = cur_sense_data.ascq;
+                tb.sense_data_descr.header.AdditionalSenseLength = sizeof(sat_response_information);
+                memcpy(&tb.sense_data_descr.info.sat_response, &sat_response_information, sizeof(sat_response_information));
+                send_command_result(&tb.sense_data_descr, MIN(sizeof(tb.sense_data_descr.header) + sizeof(sat_response_information), length));
+            }
+            else
+            {
+                tb.sense_data_fixed.ResponseCode = 0x70;
+                tb.sense_data_fixed.Obsolete = 0;
+                tb.sense_data_fixed.fei_sensekey = cur_sense_data.sense_key & 0x0f;
+                tb.sense_data_fixed.Information = cur_sense_data.information;
+                tb.sense_data_fixed.AdditionalSenseLength = 10;
+                tb.sense_data_fixed.CommandSpecificInformation = 0;
+                tb.sense_data_fixed.AdditionalSenseCode = cur_sense_data.asc;
+                tb.sense_data_fixed.AdditionalSenseCodeQualifier = cur_sense_data.ascq;
+                tb.sense_data_fixed.FieldReplaceableUnitCode = 0;
+                tb.sense_data_fixed.SKSV = 0;
+                tb.sense_data_fixed.SenseKeySpecific = 0;
+                send_command_result(&tb.sense_data_fixed, MIN(sizeof(tb.sense_data_fixed), length));
+            }
             break;
         }
 
         case SCSI_MODE_SENSE_10:
         {
-            if (ums_ejected)
+            if (ums_ejected) 
             {
-                send_command_failed_result();
-                cur_sense_data.sense_key = SENSE_NOT_READY;
-                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
-                cur_sense_data.ascq = 0;
+                send_command_failed_result(SENSE_NOT_READY, ASC_MEDIUM_NOT_PRESENT, 0);
                 break;
             }
             unsigned char page_code = cbw->command_block[2] & 0x3f;
@@ -342,10 +433,7 @@ static void handle_scsi(struct command_block_wrapper* cbw)
                     send_command_result(&tb.ms_data_10, MIN(sizeof(tb.ms_data_10), length));
                     break;
                 default:
-                    send_command_failed_result();
-                    cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
-                    cur_sense_data.asc = ASC_INVALID_FIELD_IN_CBD;
-                    cur_sense_data.ascq = 0;
+                    send_command_failed_result(SENSE_ILLEGAL_REQUEST, ASC_INVALID_FIELD_IN_CBD, 0);
                     break;
             }
             break;
@@ -355,10 +443,7 @@ static void handle_scsi(struct command_block_wrapper* cbw)
         {
             if (ums_ejected)
             {
-                send_command_failed_result();
-                cur_sense_data.sense_key = SENSE_NOT_READY;
-                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
-                cur_sense_data.ascq = 0;
+                send_command_failed_result(SENSE_NOT_READY, ASC_MEDIUM_NOT_PRESENT, 0);
                 break;
             }
             unsigned char page_code = cbw->command_block[2] & 0x3f;
@@ -389,10 +474,7 @@ static void handle_scsi(struct command_block_wrapper* cbw)
                     send_command_result(&tb.ms_data_6, MIN(sizeof(tb.ms_data_6), length));
                     break;
                 default:
-                    send_command_failed_result();
-                    cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
-                    cur_sense_data.asc = ASC_INVALID_FIELD_IN_CBD;
-                    cur_sense_data.ascq = 0;
+                    send_command_failed_result(SENSE_ILLEGAL_REQUEST, ASC_INVALID_FIELD_IN_CBD, 0);
                     break;
             }
             break;
@@ -419,13 +501,7 @@ static void handle_scsi(struct command_block_wrapper* cbw)
                 tb.format_capacity_data.block_size |= swap32(SCSI_FORMAT_CAPACITY_FORMATTED_MEDIA);
                 send_command_result(&tb.format_capacity_data, MIN(sizeof(tb.format_capacity_data), length));
            }
-           else
-           {
-               send_command_failed_result();
-               cur_sense_data.sense_key = SENSE_NOT_READY;
-               cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
-               cur_sense_data.ascq = 0;
-           }
+           else send_command_failed_result(SENSE_NOT_READY, ASC_MEDIUM_NOT_PRESENT, 0);
            break;
         }
 
@@ -437,23 +513,14 @@ static void handle_scsi(struct command_block_wrapper* cbw)
                 tb.capacity_data.block_size = swap32(storage_info.sector_size);
                 send_command_result(&tb.capacity_data, MIN(sizeof(tb.capacity_data), length));
             }
-            else
-            {
-                send_command_failed_result();
-                cur_sense_data.sense_key = SENSE_NOT_READY;
-                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
-                cur_sense_data.ascq = 0;
-            }
+            else send_command_failed_result(SENSE_NOT_READY, ASC_MEDIUM_NOT_PRESENT, 0);
             break;
         }
 
         case SCSI_READ_10:
             if (ums_ejected)
             {
-                send_command_failed_result();
-                cur_sense_data.sense_key = SENSE_NOT_READY;
-                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
-                cur_sense_data.ascq = 0;
+                send_command_failed_result(SENSE_NOT_READY, ASC_MEDIUM_NOT_PRESENT, 0);
                 break;
             }
             cur_cmd.sector = (cbw->command_block[2] << 24 | cbw->command_block[3] << 16
@@ -462,12 +529,7 @@ static void handle_scsi(struct command_block_wrapper* cbw)
             cur_cmd.orig_count = cur_cmd.count;
 
             if ((cur_cmd.sector + cur_cmd.count) > storage_info.num_sectors)
-            {
-                send_csw(1);
-                cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
-                cur_sense_data.asc = ASC_LBA_OUT_OF_RANGE;
-                cur_sense_data.ascq = 0;
-            }
+                send_command_failed_result(SENSE_ILLEGAL_REQUEST, ASC_LBA_OUT_OF_RANGE, 0);
             else if (!cur_cmd.count) send_csw(0);
             else send_and_read_next();
             break;
@@ -475,10 +537,7 @@ static void handle_scsi(struct command_block_wrapper* cbw)
         case SCSI_WRITE_10:
             if (ums_ejected)
             {
-                send_command_failed_result();
-                cur_sense_data.sense_key = SENSE_NOT_READY;
-                cur_sense_data.asc = ASC_MEDIUM_NOT_PRESENT;
-                cur_sense_data.ascq = 0;
+                send_command_failed_result(SENSE_NOT_READY, ASC_MEDIUM_NOT_PRESENT, 0);
                 break;
             }
             cur_cmd.sector = (cbw->command_block[2] << 24 | cbw->command_block[3] << 16
@@ -487,12 +546,7 @@ static void handle_scsi(struct command_block_wrapper* cbw)
             cur_cmd.orig_count = cur_cmd.count;
 
             if ((cur_cmd.sector + cur_cmd.count) > storage_info.num_sectors)
-            {
-                send_csw(1);
-                cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
-                cur_sense_data.asc = ASC_LBA_OUT_OF_RANGE;
-                cur_sense_data.ascq = 0;
-            }
+                send_command_failed_result(SENSE_ILLEGAL_REQUEST, ASC_LBA_OUT_OF_RANGE, 0);
             else if (!cur_cmd.count) send_csw(0);
             else
                 receive_block_data(umsbuf[1][!writebuf_current],
@@ -501,14 +555,138 @@ static void handle_scsi(struct command_block_wrapper* cbw)
 
         case SCSI_WRITE_BUFFER:
             break;
-
+            
+        case SCSI_ATA_PASSTHROUGH_12:
+        case SCSI_ATA_PASSTHROUGH_16:
+        {
+            if (!storage_info.driverinfo || get_platform_id() != 0x4c435049)
+            {
+                send_command_failed_result(SENSE_ILLEGAL_REQUEST, ASC_INVALID_COMMAND, 0);
+                break;
+            }
+            int cmd = cbw->command_block[0];
+            int multi = cbw->command_block[1] >> 5;
+            int protocol = (cbw->command_block[1] >> 1) & 0xf;
+            int extend = 0;
+            int offline = cbw->command_block[2] >> 6;
+            int check = (cbw->command_block[2] >> 5) & 1;
+            int type = (cbw->command_block[2] >> 4) & 1;
+            int dir = (cbw->command_block[2] >> 3) & 1;
+            int block = (cbw->command_block[2] >> 2) & 1;
+            int len = cbw->command_block[2] & 3;
+            int features = cbw->command_block[3];
+            int count = cbw->command_block[4];
+            int lbal = cbw->command_block[5];
+            int lbam = cbw->command_block[6];
+            int lbah = cbw->command_block[7];
+            int device = cbw->command_block[8] & ~0x10;
+            int command = cbw->command_block[9];
+            int control = cbw->command_block[11];
+            if (cmd == SCSI_ATA_PASSTHROUGH_16)
+            {
+                extend = cbw->command_block[1] & 1;
+                features = (extend ? (cbw->command_block[3] << 8) : 0) | cbw->command_block[4];
+                count = (extend ? (cbw->command_block[5] << 8) : 0) | cbw->command_block[6];
+                lbal = (extend ? (cbw->command_block[7] << 8) : 0) | cbw->command_block[8];
+                lbam = (extend ? (cbw->command_block[9] << 8) : 0) | cbw->command_block[10];
+                lbah = (extend ? (cbw->command_block[11] << 8) : 0) | cbw->command_block[12];
+                device = cbw->command_block[13] & ~0x10;
+                command = cbw->command_block[14];
+                control = cbw->command_block[15];
+            }
+            sat_command.lba48 = extend;
+            sat_check = check;
+            int delay = (2 << offline) - 2;
+            int bytes = 0;
+            switch (len)
+            {
+                case 1: bytes = features; break;
+                case 2: bytes = count; break;
+                case 3: bytes = length; break;
+            }
+            int blocks = 1;
+            if (block)
+            {
+                blocks = bytes;
+                bytes = type ? storage_info.sector_size : 512;
+            }
+            int invalid = blocks * bytes > UMS_BUFSIZE;
+            int dma = 0;
+            switch (protocol)
+            {
+                case SAT_HARD_RESET:
+                    sat_pending = SAT_PENDING_HRST;
+                    enqueue_async();
+                    return;
+                case SAT_SOFT_RESET:
+                    sat_pending = SAT_PENDING_SRST;
+                    enqueue_async();
+                    return;
+                case SAT_NON_DATA:
+                    if (len) invalid = 1;
+                    break;
+                case SAT_PIO_DATA_IN:
+                    if (!len || !dir) invalid = 1;
+                    break;
+                case SAT_PIO_DATA_OUT:
+                    if (!len || dir) invalid = 1;
+                    break;
+                case SAT_UDMA_DATA_IN:
+                    if (!len || !dir) invalid = 1;
+                    dma = 1;
+                    break;
+                case SAT_UDMA_DATA_OUT:
+                    if (!len || dir) invalid = 1;
+                    dma = 1;
+                    break;
+                case SAT_RETURN_RESPONSE:
+                    sat_pending = SAT_PENDING_READ_CDB;
+                    enqueue_async();
+                    return;
+                //case SAT_NON_DATA_RESET:
+                //case SAT_DMA:
+                //case SAT_DMA_QUEUED:
+                //case SAT_FPDMA:
+                //case SAT_DIAGNOSTIC:
+                default:
+                    invalid = 1;
+                    break;
+            }
+            if (invalid)
+            {
+                send_command_failed_result(SENSE_ILLEGAL_REQUEST, ASC_INVALID_FIELD_IN_CBD, 0);
+                return;
+            }
+            readbuf_count[!readbuf_current] = 0;
+            void* buffer = umsbuf[0][!readbuf_current];
+            sat_command.transfer = !!len;
+            sat_command.send = !dir;
+            sat_command.dma = dma;
+            sat_command.delay = delay * 1000000;
+            sat_command.buffer = buffer;
+            sat_command.size = blocks;
+            sat_command.blksize = bytes;
+            sat_command.feature = features;
+            sat_command.count = count;
+            sat_command.lba_low = lbal;
+            sat_command.lba_mid = lbam;
+            sat_command.lba_high = lbah;
+            sat_command.device = device;
+            sat_command.command = command;
+            if (len && !dir) receive_sat_write(buffer, bytes * blocks);
+            else
+            {
+                sat_pending = SAT_PENDING_CMD;
+                enqueue_async();
+            }
+            break;
+        }
+        
         default:
-            send_csw(1);
-            cur_sense_data.sense_key = SENSE_ILLEGAL_REQUEST;
-            cur_sense_data.asc = ASC_INVALID_COMMAND;
-            cur_sense_data.ascq = 0;
+            send_command_failed_result(SENSE_ILLEGAL_REQUEST, ASC_INVALID_COMMAND, 0);
             break;
     }
+    have_sat_response_information = false;
 }
 
 
@@ -554,10 +732,8 @@ static void writebuf_push()
     {
         if (IS_ERR(write_rc))
         {
-            send_csw(1);
-            cur_sense_data.sense_key = SENSE_MEDIUM_ERROR;
-            cur_sense_data.asc = ASC_WRITE_ERROR;
-            cur_sense_data.ascq = 0;
+            send_command_failed_result(SENSE_MEDIUM_ERROR, ASC_WRITE_ERROR, 0);
+            return;
         }
         send_csw(0);
         write_rc = 0;
@@ -569,34 +745,46 @@ static void writebuf_push()
 void ums_xfer_complete(bool in, int bytesleft)
 {
     length -= bytesleft;
-    switch (state)
-    {
-        case RECEIVING_BLOCKS:
-            if (length != storage_info.sector_size * cur_cmd.count && length != UMS_BUFSIZE) break;
-            update_readcache();
-            if (!writebuf_busy) writebuf_push();
-            else writebuf_overrun = true;
-            enqueue_async();
-            break;
-        case WAITING_FOR_CSW_COMPLETION:
-            state = WAITING_FOR_COMMAND;
-            listen();
-            break;
-        case WAITING_FOR_COMMAND:
-            invalidate_dcache(&cmdbuf, sizeof(cmdbuf));  // Who pulls this into a cache line!?
-            handle_scsi(&cmdbuf.cbw);
-            break;
-        case SENDING_RESULT:
-            send_csw(0);
-            break;
-        case SENDING_FAILED_RESULT:
-            send_csw(1);
-            break;
-        case SENDING_BLOCKS:
-            if (!cur_cmd.count) send_csw(0);
-            else send_and_read_next();
-            break;
-    }
+    if (in)
+        switch (state)
+        {
+            case WAITING_FOR_CSW_COMPLETION:
+                state = WAITING_FOR_COMMAND;
+                listen();
+                break;
+            case SENDING_RESULT:
+                send_csw(0);
+                break;
+            case SENDING_BLOCKS:
+                if (!cur_cmd.count) send_csw(0);
+                else send_and_read_next();
+                break;
+            default:
+                fail("diskmode: Got IN completion in invalid state!");
+        }
+    else
+        switch (state)
+        {
+            case RECEIVING_BLOCKS:
+                if (length != storage_info.sector_size * cur_cmd.count && length != UMS_BUFSIZE) break;
+                update_readcache();
+                if (!writebuf_busy) writebuf_push();
+                else writebuf_overrun = true;
+                enqueue_async();
+                break;
+            case WAITING_FOR_COMMAND:
+                state = PROCESSING;
+                invalidate_dcache(&cmdbuf, sizeof(cmdbuf));  // Who pulls this into a cache line!?
+                handle_scsi(&cmdbuf.cbw);
+                break;
+            case RECEIVING_SAT_WRITE:
+                state = PROCESSING;
+                sat_pending = SAT_PENDING_CMD;
+                enqueue_async();
+                break;
+            default:
+                fail("diskmode: Got OUT completion in invalid state!");
+        }
 }
 
 void ums_handle_async()
@@ -625,13 +813,103 @@ void ums_handle_async()
     {
         read_blocked = false;
         if (readbuf_count[readbuf_current] < 0)
-        {
-            send_csw(1);
-            cur_sense_data.sense_key = SENSE_MEDIUM_ERROR;
-            cur_sense_data.asc = ASC_READ_ERROR;
-            cur_sense_data.ascq = 0;
-        }
+            send_command_failed_result(SENSE_MEDIUM_ERROR, ASC_READ_ERROR, 0);
         else send_and_read_next();
+    }
+    
+    struct ata_target_driverinfo* drv = storage_info.driverinfo;
+    switch (sat_pending)
+    {
+        case SAT_PENDING_SRST:
+        {
+            sat_pending = SAT_PENDING_NONE;
+            if (IS_ERR(drv->soft_reset()))
+                send_command_failed_result(SENSE_HARDWARE_ERROR, ASC_UNSUCCESSFUL_SOFT_RESET, 0);
+            else send_csw(0);
+            break;
+        }
+        case SAT_PENDING_HRST:
+        {
+            sat_pending = SAT_PENDING_NONE;
+            if (IS_ERR(drv->hard_reset()))
+                send_command_failed_result(SENSE_HARDWARE_ERROR, ASC_UNSUCCESSFUL_SOFT_RESET, 0);
+            else send_csw(0);
+            break;
+        }
+        case SAT_PENDING_CMD:
+        {
+int cmd = sat_command.command;
+            int datasize = sat_command.size * sat_command.blksize;
+            void* buffer = sat_command.buffer;
+            int rc = drv->raw_cmd(&sat_command);
+            sat_response_information.descriptor_code = 9;
+            sat_response_information.additional_length = 12;
+            sat_response_information.extend = sat_command.lba48;
+            sat_response_information.error = sat_command.feature;
+            sat_response_information.sector_count_h = sat_command.count >> 8;
+            sat_response_information.sector_count_l = sat_command.count & 0xff;
+            sat_response_information.lba_low_h = sat_command.lba_low >> 8;
+            sat_response_information.lba_low_l = sat_command.lba_low & 0xff;
+            sat_response_information.lba_mid_h = sat_command.lba_mid >> 8;
+            sat_response_information.lba_mid_l = sat_command.lba_mid & 0xff;
+            sat_response_information.lba_high_h = sat_command.lba_high >> 8;
+            sat_response_information.lba_high_l = sat_command.lba_high & 0xff;
+            sat_response_information.device = sat_command.device;
+            sat_response_information.status = sat_command.command;
+            have_sat_response_information = true;
+            sat_pending = SAT_PENDING_NONE;
+            if (IS_ERR(rc) || (sat_command.command & 0x21))
+            {
+                if (sat_command.command & 0x20)
+                    send_command_failed_result(SENSE_HARDWARE_ERROR, ASC_INTERNAL_TARGET_FAILURE, 0);
+                else if ((sat_command.command & 0x01) && (sat_command.feature & 0x01))
+                    send_command_failed_result(SENSE_MEDIUM_ERROR, ASC_ADDRESS_MARK_NOT_FOUND, 0);
+                else if ((sat_command.command & 0x01) && (sat_command.feature & 0x02))
+                    send_command_failed_result(SENSE_NOT_READY, ASC_MEDIUM_NOT_PRESENT, 0);
+                else if ((sat_command.command & 0x01) && (sat_command.feature & 0x08))
+                    send_command_failed_result(SENSE_UNIT_ATTENTION, ASC_OPERATOR_REQUEST, ASCQ_MEDIUM_REMOVAL_REQUEST);
+                else if ((sat_command.command & 0x01) && (sat_command.feature & 0x10))
+                    send_command_failed_result(SENSE_ILLEGAL_REQUEST, ASC_LBA_OUT_OF_RANGE, 0);
+                else if ((sat_command.command & 0x01) && (sat_command.feature & 0x20))
+                    send_command_failed_result(SENSE_UNIT_ATTENTION, ASC_MEDIUM_MAY_HAVE_CHANGED, 0);
+                else if ((sat_command.command & 0x01) && (sat_command.feature & 0x40) && datasize && !sat_command.send)
+                    send_command_failed_result(SENSE_MEDIUM_ERROR, ASC_READ_ERROR, 0);
+                else if ((sat_command.command & 0x01) && (sat_command.feature & 0x40))
+                    send_command_failed_result(SENSE_DATA_PROTECT, ASC_WRITE_PROTECTED, 0);
+                else if ((sat_command.command & 0x01) && (sat_command.feature & 0x80))
+                    send_command_failed_result(SENSE_ABORTED_COMMAND, ASC_SCSI_PARITY_ERROR, ASCQ_UICRC_ERROR_DETECTED);
+                else if ((sat_command.command & 0x01) && (sat_command.feature & 0x04))
+                    send_command_failed_result(SENSE_ABORTED_COMMAND, 0, 0);
+                else send_command_failed_result(SENSE_HARDWARE_ERROR, ASC_INTERNAL_TARGET_FAILURE, 0);
+            }
+            else if (sat_check)
+                send_command_failed_result(SENSE_SOFT_ERROR, ASC_RECOVERED_ERROR, ASCQ_SAT_INFO_AVAILABLE);
+            else if (datasize) send_command_result(buffer, datasize);
+            else send_csw(0);
+            break;
+        }
+        case SAT_PENDING_READ_CDB:
+        {
+            int rc = drv->read_taskfile(&sat_command);
+            sat_response_information.descriptor_code = 9;
+            sat_response_information.additional_length = 12;
+            sat_response_information.extend = sat_command.lba48;
+            sat_response_information.error = sat_command.feature;
+            sat_response_information.sector_count_h = sat_command.count >> 8;
+            sat_response_information.sector_count_l = sat_command.count & 0xff;
+            sat_response_information.lba_low_h = sat_command.lba_low >> 8;
+            sat_response_information.lba_low_l = sat_command.lba_low & 0xff;
+            sat_response_information.lba_mid_h = sat_command.lba_mid >> 8;
+            sat_response_information.lba_mid_l = sat_command.lba_mid & 0xff;
+            sat_response_information.lba_high_h = sat_command.lba_high >> 8;
+            sat_response_information.lba_high_l = sat_command.lba_high & 0xff;
+            sat_response_information.device = sat_command.device;
+            sat_response_information.status = sat_command.command;
+            sat_pending = SAT_PENDING_NONE;
+            if (IS_ERR(rc)) send_command_failed_result(SENSE_HARDWARE_ERROR, ASC_INTERNAL_TARGET_FAILURE, 0);
+            else send_command_result(&sat_response_information, sizeof(sat_response_information));
+            break;
+        }
     }
 }
 

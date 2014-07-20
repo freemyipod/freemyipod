@@ -34,6 +34,7 @@ static union usb_endpoint_number usb_outep = { .number = 0, .direction = USB_END
 static union usb_endpoint_number usb_inep = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN };
 static int maxpacket = 512;
 static struct wakeup mainloop_wakeup;
+static char* error = NULL;
 
 
 static const struct usb_devicedescriptor usb_devicedescriptor =
@@ -204,7 +205,7 @@ int handle_ep_ctrl_request(const struct usb_instance* data, int interface, int e
 
 void handle_xfer_complete(const struct usb_instance* data, int ifnum, int epnum, int bytesleft)
 {
-    ums_xfer_complete(epnum & 0x80, bytesleft);
+    ums_xfer_complete(epnum, bytesleft);
 }
 
 
@@ -234,7 +235,6 @@ static struct usb_endpoint usb_c1_i0_a0_ep1out =
 static struct usb_endpoint usb_c1_i0_a0_ep1in =
 {
     .number = { .number = 0, .direction = USB_ENDPOINT_DIRECTION_IN },
-    .ctrl_request = handle_ep_ctrl_request,
     .xfer_complete = handle_xfer_complete,
     .timeout = handle_timeout,
 };
@@ -329,6 +329,8 @@ void usb_connect()
             ums_handle_async();
     
     usbmanager_uninstall_custom();
+    
+    if (error) panic(PANIC_KILLTHREAD, error);
 }
 
 
@@ -350,9 +352,21 @@ void usb_receive(void* buffer, uint32_t len)
 }
 
 
-void usb_stall()
+void usb_stall_in()
 {
-    usb_set_stall(usb_handle, usb_outep, true);
     usb_set_stall(usb_handle, usb_inep, true);
 }
 
+
+void usb_stall_out()
+{
+    usb_set_stall(usb_handle, usb_outep, true);
+}
+
+
+void fail(char* errormsg)
+{
+    error = errormsg;
+    ums_ejected = true;
+    wakeup_signal(&mainloop_wakeup);
+}

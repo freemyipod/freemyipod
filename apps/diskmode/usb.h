@@ -36,7 +36,9 @@ extern void usb_connect();
 extern void enqueue_async();
 extern void usb_transmit(void* buffer, uint32_t len);
 extern void usb_receive(void* buffer, uint32_t len);
-extern void usb_stall();
+extern void usb_stall_in();
+extern void usb_stall_out();
+extern void fail(char* errormsg);
 
 #endif
 
