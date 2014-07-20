@@ -334,7 +334,7 @@ int storage_soft_reset(void)
     int rc=0;
     
 #if (CONFIG_STORAGE & STORAGE_ATA)
-    if ((rc=ata_soft_reset())) return rc;
+    if ((rc=ata_reset())) return rc;
 #endif
 
 #if (CONFIG_STORAGE & STORAGE_MMC)
