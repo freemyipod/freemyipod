@@ -182,7 +182,6 @@ static bool initialized = false;
 static bool flush_fat_disabled = false;
 
 static int update_fsinfo(IF_MV_NONVOID(struct bpb* fat_bpb));
-static int flush_fat(IF_MV_NONVOID(struct bpb* fat_bpb));
 static int bpb_is_sane(IF_MV_NONVOID(struct bpb* fat_bpb));
 static void *cache_fat_sector(IF_MV2(struct bpb* fat_bpb,)
                               long secnum, bool dirty);
@@ -487,10 +486,11 @@ int fat_unmount(int volume, bool flush)
 #else
     (void)volume;
 #endif
+    if (!initialized) return;
 
     if(flush)
     {
-        rc = flush_fat(IF_MV(fat_bpb)); /* the clean way, while still alive */
+        rc = flush_fat(IF_MV2(fat_bpb,) true); /* the clean way, while still alive */
     }
     else
     {   /* volume is not accessible any more, e.g. MMC removed */
@@ -1024,12 +1024,12 @@ static int update_fsinfo(IF_MV_NONVOID(struct bpb* fat_bpb))
     return 0;
 }
 
-static int flush_fat(IF_MV_NONVOID(struct bpb* fat_bpb))
+int flush_fat(IF_MV2(struct bpb* fat_bpb,) bool force)
 {
     int i;
     int rc;
     unsigned char *sec;
-    if (flush_fat_disabled)
+    if (flush_fat_disabled && !force)
     {
         DEBUGF("flush_fat() skipped");
         return 0;
@@ -1780,7 +1780,7 @@ int fat_create_dir(const char* name,
     /* Set the firstcluster field in the direntry */
     update_short_entry(&newdir, 0, FAT_ATTR_DIRECTORY);
 
-    rc = flush_fat(IF_MV(fat_bpb));
+    rc = flush_fat(IF_MV2(fat_bpb,) false);
     if (rc < 0)
         return rc * 10 - 5;
 
@@ -1830,7 +1830,7 @@ int fat_closewrite(struct fat_file *file, long size, int attr)
             return rc * 10 - 1;
     }
 
-    flush_fat(IF_MV(fat_bpb));
+    flush_fat(IF_MV2(fat_bpb,) false);
 
 #ifdef TEST_FAT
     if ( file->firstcluster ) {
@@ -1968,7 +1968,7 @@ int fat_remove(struct fat_file* file)
     file->firstcluster = 0;
     file->dircluster = 0;
 
-    rc = flush_fat(IF_MV(fat_bpb));
+    rc = flush_fat(IF_MV2(fat_bpb,) false);
     if (rc < 0)
         return rc * 10 - 2;
 
@@ -2017,7 +2017,7 @@ int fat_rename(struct fat_file* file,
     if (rc < 0)
         return rc * 10 - 4;
 
-    rc = flush_fat(IF_MV(fat_bpb));
+    rc = flush_fat(IF_MV2(fat_bpb,) false);
     if (rc < 0)
         return rc * 10 - 5;
 
@@ -2575,5 +2575,5 @@ bool fat_ismounted(int volume)
 void fat_enable_flushing(bool state)
 {
     flush_fat_disabled = !state;
-    if (state) flush_fat();
+    if (state) flush_fat(true);
 }

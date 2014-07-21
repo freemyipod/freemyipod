@@ -68,6 +68,8 @@ extern struct mutex ata_mutex;
 
 extern void ata_set_retries(int retries);
 extern void ata_srst_after_error(bool enable);
+extern int ata_lock_exclusive(int timeout);
+extern void ata_unlock_exclusive();
 extern int ata_soft_reset();
 extern int ata_hard_reset();
 extern int ata_read_taskfile(struct ata_raw_cmd_t* cmd);

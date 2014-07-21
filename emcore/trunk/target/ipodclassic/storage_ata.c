@@ -109,6 +109,16 @@ void ata_srst_after_error(bool enable)
     ata_error_srst = enable;
 }
 
+int ata_lock_exclusive(int timeout)
+{
+    return mutex_lock(&ata_mutex, timeout);
+}
+
+void ata_unlock_exclusive()
+{
+    mutex_unlock(&ata_mutex);
+}
+
 static uint16_t ata_read_cbr(uint32_t volatile* reg)
 {
     while (!(ATA_PIO_READY & 2)) yield();
@@ -1323,7 +1333,10 @@ int ata_bbt_reload()
 
 int ata_init(void)
 {
-    mutex_init(&ata_mutex);
+    // Remove this, as it isn't strictly required and causes a race condition.
+    // The clickwheel dispatcher can run ata_lock_exclusive before ata_init is run.
+    // BSS is initialized to zeroes, which are interpreted as an unlocked mutex anyway.
+    //mutex_init(&ata_mutex);
     wakeup_init(&ata_wakeup);
     wakeup_init(&mmc_wakeup);
     wakeup_init(&mmc_comp_wakeup);

@@ -28,7 +28,7 @@
 #include "global.h"
 
 
-void clickwheel_init(void) INITCODE_ATTR;
+int clickwheel_init(void) INITCODE_ATTR;
 uint32_t clickwheel_get_state(void);
 
 

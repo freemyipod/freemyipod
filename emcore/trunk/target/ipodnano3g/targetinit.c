@@ -37,6 +37,18 @@ void targetinit_late()
     int i;
     
     clickwheel_init();
+    int buttons = clickwheel_get_state() & 0x1f;
+    if (buttons == 0x11)
+    {
+        cputs(CONSOLE_BOOT, "MENU+SELECT is being pressed.\n"
+                            "Continue pressing these buttons to enter DFU mode.\n");
+        while (buttons == 0x11)
+        {
+            sleep(100000);
+            buttons = clickwheel_get_state() & 0x1f;
+        }
+        cputs(CONSOLE_BOOT, "MENU+SELECT was released. Continuing normal boot.\n");
+    }    
     
     uint8_t* nor = (uint8_t*)memalign(0x10, 0x1000);
     uint32_t* norword = (uint32_t*)nor;

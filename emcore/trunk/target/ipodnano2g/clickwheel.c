@@ -31,13 +31,15 @@
 
 
 static struct wakeup clickwheel_wakeup IBSS_ATTR;
+static struct wakeup clickwheel_init_wakeup INITDATA_ATTR;
 static volatile uint32_t clickwheel_packet IBSS_ATTR;
 static struct scheduler_thread clickwheel_thread_handle;
 static uint32_t clickwheel_stack[0x100] STACK_ATTR;
+static bool wheel_initialized IBSS_ATTR;
 static bool oldtouched IBSS_ATTR;
 static int oldpos IBSS_ATTR;
 static int oldbuttons IBSS_ATTR;
-static uint32_t lastpacket IBSS_ATTR;
+static int lastpacket IBSS_ATTR;
 static int packets IBSS_ATTR;
 static int collect IBSS_ATTR;
 static int lastdiff IBSS_ATTR;
@@ -124,14 +126,21 @@ void clickwheel_thread(void* arg0, void* arg1, void* arg2, void* arg3)
         {
             if (data & 0x1F0000) oldbuttons = (data >> 16) & 0x1F;
             DEBUGF("This is an init packet, button state: %02X", oldbuttons);
+            if (!wheel_initialized)
+            {
+                wheel_initialized = true;
+                wakeup_signal(&clickwheel_init_wakeup);
+            }
         }
     }
 }
 
 
-void clickwheel_init()
+int clickwheel_init()
 {
     wakeup_init(&clickwheel_wakeup);
+    wakeup_init(&clickwheel_init_wakeup);
+    wheel_initialized = false;
     oldtouched = false;
     oldbuttons = 0;
     lastpacket = 0;
@@ -154,6 +163,9 @@ void clickwheel_init()
     thread_create(&clickwheel_thread_handle, "Clickwheel dispatcher", clickwheel_thread,
                   clickwheel_stack, sizeof(clickwheel_stack), OS_THREAD, 200, true,
                   NULL, NULL, NULL, NULL);
+    wakeup_wait(&clickwheel_init_wakeup, 100000);
+    if (!wheel_initialized) RET_ERR(0);
+    return 0;
 }
 
 void INT_WHEEL(void) ICODE_ATTR;
