@@ -443,12 +443,8 @@ bool read_console_callback(const struct usb_instance* data, union usb_endpoint_n
     }
     bytes = MIN(64, (int)dbgmemaddr);
     dbgmemaddr -= bytes;
-    if (dbgmemaddr)
-    {
-        usb_ep0_start_tx(dbgusb, dbgbuf, bytes,
-                         bytes < 64 ? usb_ep0_short_tx_callback : read_console_callback);
-    }
-    else usb_ep0_start_tx(dbgusb, dbgbuf, bytes, NULL);
+    usb_ep0_start_tx(dbgusb, dbgbuf, bytes,
+                     bytes < 64 ? usb_ep0_short_tx_callback : read_console_callback);
     return true;
 }
 
