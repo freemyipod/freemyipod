@@ -27,12 +27,13 @@ var http = require('http');
 
 var control = require('./control');
 
-var server = 'hitchcock.freenode.net';
+var server = 'irc.freenode.net';
 var nickname = 'fmibot';
 var nicknamePassword = fs.readFileSync('nickserv.txt');
 
 var announceChannel = '#freemyipod';
 var socketPath = '/tmp/fmibot.sock';
+var pingTimer = null;
 
 var config = {
     autoConnect: false,
@@ -83,10 +84,32 @@ ircbot.addListener('channellist_item', function(info) {
     console.info(info.name, info.users, info.topic);
 });
 
+function ircConnect() {
+	ircbot.connect(Math.pow(2, 32) - 1);
+}
+
+// ping
+ircbot.addListener('ping', function() {
+	if (pingTimer !== null) {
+		clearTimeout(pingTimer);
+	}
+
+	pingTimer = setTimeout(function() {
+		pingTimer = null;
+		ircbot.disconnect();
+		setTimeout(ircConnect, 10 * 1000);
+	}, 30 * 60 * 1000);
+});
+
+// misc
+ircbot.addListener('action', function(from, to, message) {
+    if (to.indexOf('#') === 0 && message === 'kicks ' + nickname) {
+        ircbot.say(to, 'ouch!');
+    }
+});
+
 // control socket
-var controlSocket = new control.Socket(socketPath, function() {
-    ircbot.connect();
-}, function(cmd) {
+var controlSocket = new control.Socket(socketPath, ircConnect, function(cmd) {
     var args = cmd.split(' ');
     var cmd = args.shift().toLowerCase();
     
