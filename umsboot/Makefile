@@ -18,7 +18,7 @@ OBJDUMP := $(CROSS)objdump
 CFLAGS_GENERAL  := -c -ffunction-sections -fdata-sections -fmessage-length=0 -Wall $(CFLAGS_GENERAL)
 CFLAGS_ASM      := -x assembler-with-cpp $(CFLAGS_ASM)
 CFLAGS_debug    := -O0 -g3 -gdwarf-2 $(CFLAGS_DEBUG)
-CFLAGS_release  := $(FLTO) -Os -fno-pie -fno-stack-protector -fomit-frame-pointer $(CFLAGS_RELEASE)
+CFLAGS_release  := $(FLTO) -ffat-lto-objects -Os -fno-pie -fno-stack-protector -fomit-frame-pointer $(CFLAGS_RELEASE)
 LDFLAGS_GENERAL := -nostdlib --gc-sections $(LDFLAGS_GENERAL)
 LDFLAGS_debug   := -O0 $(LDFLAGS_DEBUG)
 LDFLAGS_release := $(FLTO) -Os $(LDFLAGS_RELEASE)
