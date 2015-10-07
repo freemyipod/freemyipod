@@ -1,12 +1,12 @@
-CFLAGS := -O2 -Wall -Wextra -Werror -g -lusb-1.0
+TARGET = ipoddfu
+PKGCONFIG ?= pkg-config
+CFLAGS = -O2 -Wall -Wextra -Werror -g $(shell $(PKGCONFIG) --cflags libusb-1.0)
+LDFLAGS = $(shell $(PKGCONFIG) --libs-only-L libusb-1.0)
+LDLIBS = $(shell $(PKGCONFIG) --libs-only-l libusb-1.0)
 
-all: build ipoddfu
+all: $(TARGET)
 
-ipoddfu:
-	gcc $(CFLAGS) -o build/ipoddfu usb.c dfu.c crc32.c misc.c ipoddfu.c
-
-build:
-	@mkdir $@
+$(TARGET): usb.o dfu.o crc32.o misc.o
 
 clean:
-	@rm -rf build
+	rm -rf $(TARGET) *.o

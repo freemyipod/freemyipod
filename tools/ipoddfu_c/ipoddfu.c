@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 #include "usb.h"
 #include "dfu.h"
