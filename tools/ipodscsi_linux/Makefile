@@ -27,11 +27,9 @@ all: $(NAME)
 
 -include $(OBJ:%=%.dep)
 
-ipodscsi.rc: ipodscsi.exe.manifest
+$(NAME): build/$(NAME)
 
-$(NAME): build/$(NAME).exe
-
-build/$(NAME).exe: $(OBJ)
+build/$(NAME): $(OBJ)
 	@echo [LD]     $@
 	@$(LD) -o $@ $(OBJ) $(LDFLAGS)
 
