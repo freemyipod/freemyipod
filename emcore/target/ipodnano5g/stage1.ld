@@ -1,5 +1,5 @@
 /* iPod nano 5G stage-1 SRAM loader: position-dependent at 0x22000000 (the ROM's DFU load address).
-   tools/n5g_mkimage.py appends {u32 length, emcore.bin} at _stage1_end (16-byte aligned). */
+   tools/nano5g/image.py appends {u32 length, emcore.bin} at _stage1_end (16-byte aligned). */
 ENTRY(_stage1_entry)
 OUTPUT_FORMAT(elf32-littlearm)
 OUTPUT_ARCH(arm)

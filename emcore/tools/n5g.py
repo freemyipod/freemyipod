@@ -4,7 +4,7 @@ import argparse
 import importlib
 import sys
 
-COMMANDS = {"image": "image", "diag": "diagnostics", "aes": "aes"}
+COMMANDS = {"image": "image", "diag": "diagnostics", "aes": "aes", "nand": "nand"}
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)

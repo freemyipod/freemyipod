@@ -23,6 +23,9 @@
 
 #include "global.h"
 #include "malloc.h"
+#ifdef HAVE_NAND5G
+#include "target/ipodnano5g/nand5g.h"
+#endif
 #include "usbdebug.h"
 #include "panic.h"
 #include "usb.h"
@@ -287,6 +290,18 @@ bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_nu
             dbgbuf[0] = 1;
             dbgbuf[1] = wedge_fix_enable;
             wedge_fix_enable = buf[1];
+            break;
+#endif
+#ifdef HAVE_NAND5G
+        case N5G_NAND_STATUS:
+        case N5G_NAND_STEP:
+        case N5G_NAND_READ_ROM:
+        case N5G_NAND_READ_PAGE:
+        case N5G_NAND_FTL_OPEN:
+        case N5G_NAND_FTL_READ:
+        case N5G_NAND_BLOCK_READ:
+        case N5G_NAND_WRITE_CAPS:
+            n5g_nand_usb_command(buf, dbgbuf);
             break;
 #endif
         case 10:  // READ CONSOLE
@@ -895,8 +910,12 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
 
                     buf[0] = 1;
                     buf[1] = dbg_monitor_heartbeat;
+#ifdef HAVE_NAND5G
+                    n5g_nand_heartbeat(&buf[2], &buf[3]);
+#else
                     buf[2] = 0;
                     buf[3] = 0;
+#endif
                     break;
 #endif
                 default:

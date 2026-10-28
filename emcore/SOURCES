@@ -154,6 +154,11 @@ target/ipodnano5g/targetinit.c
 target/ipodnano5g/clickwheel.c
 target/ipodnano5g/accel.c
 target/ipodnano5g/hwkeyaes.c
+#ifdef HAVE_NAND5G
+target/ipodnano5g/nand5g.c
+target/ipodnano5g/nand/nand-nano5g.c
+target/ipodnano5g/nand/ftl-nano5g.c
+#endif
 target/ipodnano5g/mmu.c
 target/ipodnano5g/interrupt.c
 target/ipodnano5g/timer.c

@@ -98,6 +98,10 @@
 /* targetinit_late(): click wheel start + a register report once I2C/USB are up (targetinit.c) */
 #define HAVE_TARGETINIT_LATE
 
+#ifndef N5G_NAND_DISABLE
+#define HAVE_NAND5G
+#endif
+
 /* no HAVE_STORAGE: the NAND harness (nand5g.c on the Rockbox driver copy) is reached over USB only */
 
 

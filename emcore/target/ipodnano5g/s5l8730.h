@@ -29,7 +29,7 @@
 /*
  * S5L8730 (iPod nano 5G) register map for emCORE, derived from the nano 4G S5L8720 header.
  * Firmware labels and addresses identify the sources of hardware constants;
- * see REFERENCES.md at the repository root for their meaning. Shared emCORE
+ * Shared emCORE
  * drivers retain the register names used by the S5L8720 header.
  *
  * Differences from the nano 4G:
@@ -42,6 +42,9 @@
  *   LCD: LCDPHTIME is +0x20, +0x10 is the read trigger
  */
 
+
+/* NAND flash memory controller (S5L8730). */
+#define FMC_BASE 0x38a00000
 
 /////SYSCON/////
 #define PWRCON(i)    (*((uint32_t volatile*)(0x3C500000 \
