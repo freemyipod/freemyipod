@@ -24,6 +24,15 @@
 #include "global.h"
 #include "storage.h"
 #include "thread.h"
+#ifdef HAVE_USB
+#include "usb/usbglue.h"
+#endif
+#ifdef HAVE_BACKLIGHT
+#include "backlight.h"
+#endif
+#ifdef HAVE_LCD
+#include "lcd.h"
+#endif
 
 
 void shutdown(bool shutdownhw)

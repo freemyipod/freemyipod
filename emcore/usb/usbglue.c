@@ -5,6 +5,7 @@
 #include "util.h"
 #include "thread.h"
 #include "malloc.h"
+#include "power.h"
 #include USB_DRIVER_HEADER
 
 static const struct usb_devicedescriptor usb_devicedescriptor =

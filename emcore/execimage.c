@@ -26,6 +26,8 @@
 #include "execimage.h"
 #include "mmu.h"
 #include "malloc.h"
+#include "ucl.h"
+#include "library.h"
 
 
 struct scheduler_thread* execimage(void* image, bool copy, int argc, const char* const* argv)
@@ -119,7 +121,7 @@ struct scheduler_thread* execimage(void* image, bool copy, int argc, const char*
         uint32_t data = *((uint32_t*)(image + reloc));
         *((void**)(image + reloc)) = image + data;
     }
-    if (tempsize != finalsize) realloc(image, finalsize); /* Can only shrink => safe */
+    if (tempsize != finalsize) image = realloc(image, finalsize); /* Can only shrink => safe */
     void* ptr = image + textsize;
     memset(ptr, 0, bsssize);
     ptr += bsssize;
@@ -140,7 +142,7 @@ struct scheduler_thread* execimage(void* image, bool copy, int argc, const char*
     invalidate_icache();
     struct scheduler_thread* thread;
     if (lib)
-        thread = (struct scheduler_thread*)library_register(image, image + entrypoint, argc, argv);
+        thread = (struct scheduler_thread*)library_register(image, image + entrypoint, argc, (const char**)argv);
     else
     {
         thread = thread_create(NULL, NULL, image + entrypoint, ptr, stacksize,

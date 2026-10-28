@@ -1,4 +1,6 @@
 NAME := emcore
+.DEFAULT_GOAL := all
+.DELETE_ON_ERROR:
 
 ifeq ($(shell uname),WindowsNT)
 CCACHE :=
@@ -6,7 +8,9 @@ else
 CCACHE := $(shell which ccache)
 endif
 
-CROSS   ?= arm-elf-eabi-
+CROSS   ?= arm-none-eabi-
+HOSTCC  ?= cc
+PYTHON  ?= python3
 CC      := $(CCACHE) $(CROSS)gcc
 AS      := $(CROSS)as
 LD      := $(CROSS)ld
@@ -20,8 +24,8 @@ PPCFLAGS += -DASM_FILE
 preprocess = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#")
 preprocesspaths = $(shell $(CC) $(PPCFLAGS) $(2) -E -P -x c $(1) | grep -v "^\#" | sed -e "s:^..*:$(dir $(1))&:" | sed -e "s:^\\./::")
 
-REVISION := $(shell svnversion .)
-REVISIONINT := $(shell echo $(REVISION) | sed -e "s/[^0-9].*$$//")
+REVISION ?= $(shell git describe --always --dirty 2>/dev/null || echo unknown)
+REVISIONINT ?= $(shell git rev-list --count HEAD 2>/dev/null || echo 0)
 
 TARGETS := $(call preprocess,TARGETS,-I.)
 
@@ -31,10 +35,12 @@ define TARGET_template
 SRC_$(1) := $$(call preprocesspaths,SOURCES,-DTARGET_$(1) -DTARGET=\"$(1)\" -DCONFIG_H=\"target/$(1)/config.h\" -DTARGET_H=\"target/$(1)/target.h\" -D_NO_VERSION_H_ -Itarget/$(1) -I.)
 OBJ_$(1) := $$(SRC_$(1):%.c=build/$(1)/%.o)
 OBJ_$(1) := $$(OBJ_$(1):%.S=build/$(1)/%.o)
+OBJ_$(1) += $$(EXTRAOBJ_$(1))
 
 -include $$(OBJ_$(1):%=%.dep)
 
-$(1): build/$(1)/$(NAME)-$(1).ucl
+TARGET_OUTPUT_$(1) ?= build/$(1)/$(NAME)-$(1).ucl
+$(1): $$(TARGET_OUTPUT_$(1))
 
 build/$(1)/$(NAME)-$(1).ucl: build/$(1)/$(NAME).bin
 	@echo [UCL]    $$<
@@ -87,15 +93,11 @@ all: $(TARGETS)
 
 $(foreach target,$(TARGETS),$(eval $(call TARGET_template,$(target))))
 
-build/version.h: version.h ../../.svn/entries
-	@echo [PP]     $<
-ifeq ($(shell uname),WindowsNT)
-	@-if not exist build md build
-	@sed -e "s/\$$REVISION\$$/$(REVISION)/" -e "s/\$$REVISIONINT\$$/$(REVISIONINT)/" < $< > $@
-else
-	@-mkdir -p build
-	@sed -e 's/\$$REVISION\$$/$(REVISION)/' -e 's/\$$REVISIONINT\$$/$(REVISIONINT)/' < $< > $@
-endif
+.PHONY: version-force
+build/version.h: version.h version-force
+	@mkdir -p build
+	@sed -e 's/\$$REVISION\$$/$(REVISION)/' -e 's/\$$REVISIONINT\$$/$(REVISIONINT)/' < $< > $@.tmp
+	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
 
 clean:
 	@rm -rf build

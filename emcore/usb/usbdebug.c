@@ -22,6 +22,7 @@
 
 
 #include "global.h"
+#include "malloc.h"
 #include "usbdebug.h"
 #include "panic.h"
 #include "usb.h"
@@ -777,12 +778,12 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                 case 52:  // MALLOC
                     buf[0] = 1;
                     buf[1] = (uint32_t)malloc((size_t)buf[1]);
-                    if (buf[1]) reownalloc(buf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    if (buf[1]) reownalloc((void*)buf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
                     break;
                 case 53:  // MEMALIGN
                     buf[0] = 1;
                     buf[1] = (uint32_t)memalign((size_t)buf[1], (size_t)buf[2]);
-                    if (buf[1]) reownalloc(buf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    if (buf[1]) reownalloc((void*)buf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
                     break;
                 case 54:  // REALLOC
                     buf[0] = 1;
@@ -798,7 +799,8 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                     break;
                 case 57:  // FREE MONITOR ALLOCATIONS
                     buf[0] = 1;
-                    buf[1] = (uint32_t)free_all_of_thread(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    free_all_of_thread(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    buf[1] = 0;
                     break;
 #ifdef HAVE_RTC
                 case 60:  // RTC READ

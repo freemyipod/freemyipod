@@ -29,6 +29,7 @@
 #include "usb.h"
 
 
+extern void usbdebug_init(void) INITCODE_ATTR;
 extern void usbdebug_enable(const struct usb_instance* data, int interface, int altsetting);
 extern void usbdebug_disable(const struct usb_instance* data, int interface, int altsetting);
 extern void usbdebug_bulk_enable(const struct usb_instance* data, int interface, int altsetting);

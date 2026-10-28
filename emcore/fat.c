@@ -486,7 +486,7 @@ int fat_unmount(int volume, bool flush)
 #else
     (void)volume;
 #endif
-    if (!initialized) return;
+    if (!initialized) return -1;
 
     if(flush)
     {
