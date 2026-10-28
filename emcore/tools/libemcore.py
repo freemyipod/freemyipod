@@ -26,7 +26,9 @@
     Provides functions to communicate with emCORE devices via the USB bus.
 """
 
+import os
 import sys
+import time
 import struct
 import ctypes
 import usb.core
@@ -36,6 +38,7 @@ import datetime
 from libemcoredata import *
 from misc import Logger, Bunch, remote_pointer, Error, ArgumentError, getthread, gethwname
 from functools import wraps
+from nano5g.protocol import Cmd
 
 class DeviceNotFoundError(Error):
     pass
@@ -70,18 +73,18 @@ def command(timeout = None, target = None):
                                      (gethwname(target), gethwname(self.lib.dev.hwtypeid)))
             timeout = None
             if "timeout" in kwargs.keys():
-                timeout = kwargs['timeout']
+                timeout = kwargs.pop('timeout')
             elif time is not None:
                 timeout = time
             if timeout is not None:
                 oldtimeout = self.lib.dev.timeout
                 self.lib.dev.timeout = timeout
             # function call
-            ret = func(*args)
-            # postcommand stuff
-            if timeout is not None:
-                self.lib.dev.timeout = oldtimeout
-            return ret
+            try:
+                return func(*args, **kwargs)
+            finally:
+                if timeout is not None:
+                    self.lib.dev.timeout = oldtimeout
         func._command = True
         wrapper.func = func
         return wrapper
@@ -111,13 +114,18 @@ class Emcore(object):
             raise DeviceError("Connected to unknown software type. Exiting")
         
         self.getmallocpoolbounds()
+        # Nano5g uses control writes by default; bulk OUT is an explicit option.
+        self.bulk_write = os.environ.get("EMCORE_BULK_WRITE",
+                                         "0" if self.lib.dev.hwtypeid == 0x47354e49 else "1") == "1"
+        if self.lib.dev.hwtypeid == 0x47354e49:
+            self.lib.dev.bulk_gap = float(os.environ.get("EMCORE_BULK_GAP_MS", "5")) / 1000.0
     
     @command()
     def _readmem(self, addr, size):
         """ Reads the memory from location 'addr' with size 'size'
             from the device. Can handle up to 0xff0 bytes.
         """
-        resp = self.lib.monitorcommand(struct.pack("<IIII", 4, addr, size, 0), "III%ds" % size, (None, None, None, "data"))
+        resp = self.lib.monitorcommand(struct.pack("<IIII", Cmd.READ_MEM, addr, size, 0), "III%ds" % size, (None, None, None, "data"))
         return resp.data
     
     @command()
@@ -125,7 +133,7 @@ class Emcore(object):
         """ Writes the data in 'data' to the location 'addr'
             in the memory of the device. Can handle up to 0xff0 bytes.
         """
-        return self.lib.monitorcommand(struct.pack("<IIII%ds" % len(data), 5, addr, len(data), 0, data), "III", (None, None, None))
+        return self.lib.monitorcommand(struct.pack("<IIII%ds" % len(data), Cmd.WRITE_MEM, addr, len(data), 0, data), "III", (None, None, None))
     
     @command(timeout = 10000)
     def _readmem_bulk(self, addr, size):
@@ -147,7 +155,7 @@ class Emcore(object):
     @command()
     def getversioninfo(self):
         """ This returns the emCORE version and device information. """
-        resp = self.lib.monitorcommand(struct.pack("<IIII", 1, 0, 0, 0), "IBBBBI", ("revision", "majorv", "minorv", "patchv", "swtypeid", "hwtypeid"))
+        resp = self.lib.monitorcommand(struct.pack("<IIII", Cmd.GETINFO, 0, 0, 0), "IBBBBI", ("revision", "majorv", "minorv", "patchv", "swtypeid", "hwtypeid"))
         self.lib.dev.version.revision = resp.revision
         self.lib.dev.version.majorv = resp.majorv
         self.lib.dev.version.minorv = resp.minorv
@@ -176,12 +184,22 @@ class Emcore(object):
     @command()
     def reset(self, force=False):
         """ Reboot the device """
-        return self.lib.monitorcommand(struct.pack("<IIII", 2, 0 if force else 1, 0, 0))
-    
+        return self.lib.monitorcommand(struct.pack("<IIII", Cmd.RESET if self.lib.dev.hwtypeid == 0x47354e49 else 2, 0 if force else 1, 0, 0))
     @command()
     def poweroff(self, force=False):
         """ Powers the device off. """
         return self.lib.monitorcommand(struct.pack("<IIII", 3, 0 if force else 1, 0, 0))
+
+    def close(self):
+        """ Release the claimed USB interface so a new connection can be made
+        without EBUSY (the dump's reconnect needs this - opening a second handle
+        to the same device while the old one is still claimed returns
+        Resource busy). Idempotent. """
+        try:
+            if self.lib.dev.claimed:
+                self.lib.dev.disconnect()
+        except Exception:
+            pass
     
     @command()
     def read(self, addr, size):
@@ -212,7 +230,14 @@ class Emcore(object):
             addr += readsize
             size -= readsize
         return data
-    
+
+    def get_monitor_heartbeat(self):
+        """Read the monitor heartbeat and NAND progress words."""
+        r = self.lib.monitorcommand(struct.pack("<IIII", Cmd.HEARTBEAT_ASYNC, 0, 0, 0),
+                                    "III", ("heartbeat", "nand_word", "nand_progress"))
+        r.nand_pending = (r.nand_word >> 31) & 1
+        return r
+
     @command()
     def write(self, addr, data):
         """ Writes the data in 'data' to the location 'addr'
@@ -221,32 +246,33 @@ class Emcore(object):
         size = len(data)
         self.logger.debug("Uploading %d bytes to 0x%X\n" % (size, addr))
         offset = 0
-        try:
-            if self.lib.bulkin and size > 0x800:
-                if addr & 63:
-                    align = 64 - (addr & 63)
-                    self._writemem(addr, data[offset:offset+align])
-                    offset += align
-                    addr += align
-                    size -= align
-                align = size & 63
+        # Bulk OUT only on request (EMCORE_BULK_WRITE=1), and NO silent fallback: the old bare
+        # "except" (warn() is invisible at the default loglevel -1) hid a failed bulk write and continued with
+        # 0xf00-byte EP0 writes = multi-packet control-OUT data stages (FIX-GLM4: the EPROTO trigger).
+        if self.bulk_write and self.lib.bulkout and size > 64:
+            if addr & 63:
+                align = 64 - (addr & 63)
+                self._writemem(addr, data[offset:offset+align])
+                offset += align
+                addr += align
                 size -= align
-                while size > 0:
-                    chunk = min(size, 0xffc00)
-                    self._writemem_bulk(addr, data[offset:offset+chunk])
-                    offset += chunk
-                    addr += chunk
-                    size -= chunk
-                size = align
-        except: self.logger.warn("Bulk write interface failed, falling back to slow writes\n")
+            align = size & 63
+            size -= align
+            while size > 0:
+                chunk = min(size, 0xffc00)
+                self._writemem_bulk(addr, data[offset:offset+chunk])
+                offset += chunk
+                addr += chunk
+                size -= chunk
+            size = align
         while size > 0:
-            writesize = min(size, 0xf00)
+            writesize = min(size, 64 if self.lib.dev.hwtypeid == 0x47354e49 else 0xf00)   # <= 64 data bytes = 80-byte control OUT (2 packets)
             self._writemem(addr, data[offset:offset+writesize])
             offset += writesize
             addr += writesize
             size -= writesize
         return data
-    
+
     @command()
     def upload(self, data):
         """ Allocates memory of the size of 'data' and uploads 'data' to that memory region.
@@ -318,12 +344,20 @@ class Emcore(object):
     @command()
     def cread(self, bitmask=0x1):
         """ Reads one packet with the maximal cin size from the device consoles
-            identified with the specified bitmask
+            identified with the specified bitmask.
+
+            Protocol detail: the device-side CREAD handler
+            (usbdebug.c async case 13) writes the console bytes into buf[4] but
+            NEVER sets `len`, so it echoes only the fixed 16-byte header — the
+            read payload is NOT returned in the reply.  rcvdatatypes is therefore
+            'III' (16B), not the old 'III%ds' (which over-requested 64B and then
+            tripped over an undefined `size`).  Returns a Bunch with `.size` =
+            the cread() return count reported by the device.
         """
         cin_maxsize = 48
-        resp = self.lib.monitorcommand(struct.pack("<IIII", 13, bitmask, cin_maxsize, 0), "III%ds" % cin_maxsize, ("size", None, None))
-        resp.data = resp.data[size:]
+        resp = self.lib.monitorcommand(struct.pack("<IIII", 13, bitmask, cin_maxsize, 0), "III", ("size", None, None))
         resp.maxsize = cin_maxsize
+        resp.data = b""     # payload is not echoed by the device (see usbdebug.c)
         return resp
     
     @command()
@@ -431,7 +465,7 @@ class Emcore(object):
         if priority > 256 or priority < 0:
             raise ArgumentError("Priority must be a number between 0 and 256")
         if state == "ready":
-            state = 0
+            state = 2   # THREAD_READY (thread.h: THREAD_FREE=0, THREAD_SUSPENDED=1, THREAD_READY=2) - 0 was a BUG (created threads never ran)
         elif state == "suspended":
             state = 1
         else:
@@ -1133,6 +1167,9 @@ class Dev(object):
         self.bulkin = None
         self.claimed = False
         self.timeout = 1000
+        # Pause between the bulk-OUT command (EP0) and the bulk data so the device has armed its
+        # OUT endpoint before the first data packet arrives (EMCORE_BULK_GAP_MS, default 5, 0 = stock).
+        self.bulk_gap = float(os.environ.get("EMCORE_BULK_GAP_MS", "0")) / 1000.0
         
         self.connect()
         
@@ -1207,6 +1244,8 @@ class Dev(object):
         cmdsize = self.dev.ctrl_transfer(0x42, 0x00, 0, self.bulkout.bEndpointAddress, cmd, self.timeout)
         if cmdsize != len(cmd):
             raise SendError("Bulk send command could not be fully sent (%d of %d)!" % (cmdsize, len(cmd)))
+        if self.bulk_gap > 0:
+            time.sleep(self.bulk_gap)
         size = self.bulkout.write(data, self.timeout)
         if size != len(data):
             raise SendError("Bulk data could not be fully sent (%d of %d)!" % (size, len(data)))

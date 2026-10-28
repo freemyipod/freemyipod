@@ -361,7 +361,7 @@ def getfuncdoc(funcdict):
         function = funcdict[function].func
         docinfo = Bunch()
         name = function.__name__
-        argspec = inspect.getargspec(function)
+        argspec = inspect.getfullargspec(function)
         args = argspec[0]
         docinfo['varargs'] = False
         if argspec[1]:
