@@ -92,7 +92,7 @@ endef
 
 all: $(TARGETS)
 
-$(foreach target,$(TARGETS),$(eval $(call TARGET_template,$(target))))
+$(foreach target,$(sort $(TARGETS) ipodnano5g),$(eval $(call TARGET_template,$(target))))
 
 .PHONY: version-force
 build/version.h: version.h version-force

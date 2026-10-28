@@ -1,16 +1,21 @@
+# Explicit nano5g build entry points. Other builds remain in their own directories.
 .DEFAULT_GOAL := help
 CROSS ?= arm-none-eabi-
 HOSTCC ?= cc
 PYTHON ?= python3
-N5G_BUILD := emcore/build/ipodnano5g
-.PHONY: help n5g-stage1 n5g-kernel n5g-image
+
+.PHONY: help all nano5g n5g n5g-image n5g-kernel n5g-stage1 clean nano5g-clean
 help:
-	@echo "Use make n5g-image to build the nano5g RAM-boot image."
-n5g-stage1:
-	+$(MAKE) -C emcore -f target/ipodnano5g/stage1.mk CROSS="$(CROSS)" n5g-stage1
+	@echo "Use make nano5g for the nano5g RAM-boot image; make -C emcore for the original targets."
+all:
+	+$(MAKE) -C emcore all
+nano5g n5g n5g-image:
+	+$(MAKE) -C emcore TARGETS=ipodnano5g CROSS="$(CROSS)" HOSTCC="$(HOSTCC)" PYTHON="$(PYTHON)" ipodnano5g
 n5g-kernel:
-	+$(MAKE) -C emcore CROSS="$(CROSS)" HOSTCC="$(HOSTCC)" TARGETS=ipodnano5g ipodnano5g
-n5g-image: n5g-kernel
-	@mkdir -p recovery-image
-	$(PYTHON) emcore/tools/n5g.py image --stage1 $(N5G_BUILD)/stage1.bin --payload $(N5G_BUILD)/emcore.bin --stage1-elf $(N5G_BUILD)/stage1.elf --kernel-elf $(N5G_BUILD)/emcore.elf --nm $(CROSS)nm --raw recovery-image/emcore-nano5g.bin -o recovery-image/emcore-nano5g.dfu
-	$(CROSS)nm -n $(N5G_BUILD)/emcore.elf > recovery-image/emcore-nano5g.nm
+	+$(MAKE) -C emcore TARGETS=ipodnano5g CROSS="$(CROSS)" HOSTCC="$(HOSTCC)" build/ipodnano5g/emcore.bin
+n5g-stage1:
+	+$(MAKE) -C emcore TARGETS=ipodnano5g CROSS="$(CROSS)" n5g-stage1
+clean:
+	+$(MAKE) -C emcore clean
+nano5g-clean:
+	+$(MAKE) -C emcore TARGETS=ipodnano5g nano5g-clean

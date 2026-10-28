@@ -40,26 +40,6 @@ PREFIX = struct.pack('<4I', 0x44565250, 2, 0, 4)   # 'PRVD', version 2, 0, 4
 STATUS_OFF, TAG_OFF = 0x40, 0x80
 
 
-class LogicalReader:
-    """Reads through the harness; needs the FTL mounted (step 4) and an idle monitor."""
-    def __init__(self, session):
-        self.session = session
-        st = session.status()
-        if st.busy or not st.blockio_blocks or not st.step_ok_mask & (1 << 4):
-            raise N.ToolError('finish n5g nand init --ftl first; the monitor must be idle')
-        self.total = st.blockio_blocks
-
-    def read(self, lba, count):
-        if lba < 0 or count < 1 or lba + count > self.total:
-            raise N.ToolError('logical read outside the FTL')
-        if self.session.status().busy:
-            raise N.ToolError('another monitor client has queued a job')
-        _, data = N.logical_read(self.session, lba, count, False)
-        if len(data) != count * SECTOR:
-            raise N.ToolError('short logical read')
-        return bytes(data)
-
-
 def private_lba(mbr, total):
     """The private partition's first LBA from the raw MBR; the layout is checked, never assumed."""
     m = partitions.parse_mbr(mbr)
@@ -153,7 +133,7 @@ def main(argv=None):
     session = engine = None
     try:
         session = N.make_write_session(ep0=True)
-        reader = LogicalReader(session)
+        reader = N.LogicalReader(session)
         engine = Engine(session.em)
         if args.command == 'show':
             _, lba, sector, status = inspect(reader, engine)
