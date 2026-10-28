@@ -58,6 +58,16 @@
 #endif
 
 
+#ifdef TARGET_ipodnano5g
+
+uint32_t wedge_fix_enable = 0;
+
+
+#define WEDGE_REPLY_WATCHDOG_MAX 100000u
+static volatile uint32_t dbg_reply_midflight;
+static uint32_t dbg_reply_watchdog;
+
+#endif
 static uint32_t dbgbuf[16] CACHEALIGN_ATTR;
 
 enum dbgstate_t
@@ -96,6 +106,11 @@ static struct bulk_state
     int size;
 } bulk_state[2] IBSS_ATTR;
 static int bulk_ctrlreq_ep IBSS_ATTR;
+#ifdef TARGET_ipodnano5g
+
+
+volatile uint32_t dbg_monitor_heartbeat IBSS_ATTR;
+#endif
 
 static const char dbgconoverflowstr[] = "\n\n[overflowed]\n\n";
 
@@ -264,6 +279,13 @@ bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_nu
             dbgbuf[0] = 1;
             break;
         }
+#ifdef TARGET_ipodnano5g
+        case 68:
+            dbgbuf[0] = 1;
+            dbgbuf[1] = wedge_fix_enable;
+            wedge_fix_enable = buf[1];
+            break;
+#endif
         case 10:  // READ CONSOLE
             dbgmemaddr = (void*)buf[1];
             dbgstate = DBGSTATE_READ_CONSOLE;
@@ -413,8 +435,14 @@ bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_nu
     default: break;
     }
     dbgstate = DBGSTATE_RESPOND;
+#ifdef TARGET_ipodnano5g
+
+    if (!(wedge_fix_enable & (1u<<4))) usb_set_stall(dbgusb, ep0out, true);
+    usb_ep0_start_tx(dbgusb, NULL, 0, NULL);
+#else
     usb_set_stall(dbgusb, ep0out, true);
     usb_ep0_start_tx(dbgusb, NULL, 0, NULL);
+#endif
     return true;
 }
 
@@ -466,6 +494,15 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
             switch (data->buffer->setup.bmRequestType.direction)
             {
             case USB_SETUP_BMREQUESTTYPE_DIRECTION_OUT:
+#ifdef TARGET_ipodnano5g
+
+                if ((wedge_fix_enable & (1u<<6)) && dbg_reply_midflight) {
+                    if (++dbg_reply_watchdog < WEDGE_REPLY_WATCHDOG_MAX)
+                        return -3;
+                    dbg_reply_midflight = 0;
+                    dbg_reply_watchdog = 0;
+                }
+#endif
                 dbgstate = DBGSTATE_SETUP;
                 dbgmemlen = 0;
                 usb_ep0_start_rx(dbgusb, true, 64, usbdebug_handle_data);
@@ -481,6 +518,11 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
                     dbgmemlen -= len;
                     if (dbgmemlen)
                     {
+#ifdef TARGET_ipodnano5g
+
+                        dbg_reply_midflight = 1;
+                        dbg_reply_watchdog = 0;
+#endif
                         usb_ep0_start_rx(dbgusb, false, 0, NULL);
                         dbgusb->state->ep0_tx_ptr = dbgmemaddr + 48;
                         dbgusb->state->ep0_tx_len = dbgmemlen;
@@ -488,6 +530,10 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
                                          len < 48 ? usb_ep0_short_tx_callback : usb_ep0_tx_callback);
                         return -3;
                     }
+#ifdef TARGET_ipodnano5g
+                    dbg_reply_midflight = 0;
+                    dbg_reply_watchdog = 0;
+#endif
                     dbgstate = DBGSTATE_IDLE;
                     *response = dbgbuf;
                     return len + 16;
@@ -536,7 +582,14 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
                     *response = dbgbuf;
                     return bytes + 16;
                 }
+#ifdef TARGET_ipodnano5g
+                default:
+
+                    if (wedge_fix_enable & (1u<<4)) return -3;
+                    return -2;
+#else
                 default: return -2;
+#endif
                 }
                 break;
             }
@@ -554,6 +607,9 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
     struct scheduler_thread* t;
     while (1)
     {
+#ifdef TARGET_ipodnano5g
+        dbg_monitor_heartbeat++;
+#endif
         wakeup_wait(&dbgwakeup, TIMEOUT_BLOCK);
         for (t = head_thread; t; t = t->thread_next)
             if (t->state == THREAD_DEFUNCT)
@@ -817,6 +873,17 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                 case 61:  // RTC WRITE
                     buf[0] = 1;
                     rtc_write_datetime((const struct rtc_datetime*)&buf[1]);
+                    break;
+#endif
+#ifdef TARGET_ipodnano5g
+                case 200:
+
+
+
+                    buf[0] = 1;
+                    buf[1] = dbg_monitor_heartbeat;
+                    buf[2] = 0;
+                    buf[3] = 0;
                     break;
 #endif
                 default:

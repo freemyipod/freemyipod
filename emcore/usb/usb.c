@@ -42,6 +42,8 @@ void usb_ep0_start_tx(const struct usb_instance* data, const void* buf, int len,
 {
     if (((uint32_t)buf) & (CACHEALIGN_SIZE - 1))
     {
+        if (len > (int)sizeof(data->buffer->raw))
+            len = sizeof(data->buffer->raw);
         memcpy(data->buffer->raw, buf, len);
         buf = data->buffer->raw;
     }
