@@ -3,7 +3,7 @@
 import argparse
 import importlib
 
-COMMANDS = {}
+COMMANDS = {"image": "image"}
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
