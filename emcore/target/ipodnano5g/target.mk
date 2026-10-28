@@ -12,7 +12,7 @@ ifneq ($(N5G_BACKLIGHT_BOOT),)
 CFLAGS_ipodnano5g += -DN5G_BACKLIGHT_BOOT=$(N5G_BACKLIGHT_BOOT)
 endif
 
-N5G_NAND_WRITE := 0
+N5G_NAND_WRITE ?= 1
 NAND_DIR := target/ipodnano5g/nand
 NAND_BUILD := build/ipodnano5g/nand
 FMSSASM := build/host/fmssasm

@@ -300,6 +300,9 @@ bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_nu
         case N5G_NAND_FTL_OPEN:
         case N5G_NAND_FTL_READ:
         case N5G_NAND_BLOCK_READ:
+        case N5G_NAND_WRITE_OPEN:
+        case N5G_NAND_BLOCK_WRITE:
+        case N5G_NAND_FLUSH:
         case N5G_NAND_WRITE_CAPS:
             n5g_nand_usb_command(buf, dbgbuf);
             break;

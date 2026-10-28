@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read and inspect nano5g NAND through the emCORE worker protocol."""
+"""Read, inspect and write nano5g NAND through the emCORE worker protocol."""
 import argparse
 import os
 import struct
@@ -202,6 +202,71 @@ def check(st, ok_lib=(0,)):
     return st
 
 
+class Writer:
+    """Logical 4 KiB-sector writes through commands 128..131 (Rockbox ftl_write / ftl_flush inside the kernel).
+    Needs a session with write_memory(addr, data) and the read-only ladder up to the FTL mount (step 4). Data is
+    staged in the harness result buffer and checked by CRC-32 on the device before the first NAND operation."""
+    def __init__(self, s):
+        self.s = s
+        protocol, flags, maximum = s.cmd(CMD_WRITE_CAPS)
+        if protocol != WRITE_PROTOCOL:
+            raise ToolError("writer protocol %d on the device, tool expects %d (rebuild/update)" % (protocol, WRITE_PROTOCOL))
+        if not flags & 1:
+            raise ToolError("this kernel was built read-only (N5G_NAND_WRITE=0): no writer")
+        if not 1 <= maximum <= RESULT_BYTES // BLOCK_BYTES:
+            raise ToolError("implausible writer chunk limit %d" % maximum)
+        st = s.status()
+        if st.busy or not st.blockio_blocks or not st.step_ok_mask & (1 << 4):
+            raise ToolError("finish the read-only ladder (n5g.py nand init --ftl) first; the monitor must be idle")
+        self.total, self.maximum, self.staging = st.blockio_blocks, maximum, st.result_addr
+        self.opened = False
+
+    def bounds(self, lba, count):
+        if lba < 0 or count < 1 or lba >= self.total or count > self.total - lba:
+            raise ValueError("logical sector range %d+%d outside the FTL (%d sectors)" % (lba, count, self.total))
+
+    def read(self, lba, count):
+        self.bounds(lba, count)
+        out = bytearray()
+        while count:
+            n = min(count, self.maximum)
+            st = check(self.s.job(CMD_BLOCK_READ, lba, n, timeout=120.0))
+            data = self.s.result(st, n * BLOCK_BYTES)
+            if len(data) != n * BLOCK_BYTES:
+                raise ToolError("short NAND read")
+            out.extend(data); lba += n; count -= n
+        return bytes(out)
+
+    def open(self):
+        if not self.opened:
+            check(self.s.job(CMD_WRITE_OPEN, timeout=600.0))
+            self.opened = True
+
+    def write(self, lba, data):
+        if not data or len(data) % BLOCK_BYTES:
+            raise ValueError("write payload must contain whole %d-byte sectors" % BLOCK_BYTES)
+        self.bounds(lba, len(data) // BLOCK_BYTES)
+        self.open()
+        for off in range(0, len(data), self.maximum * BLOCK_BYTES):
+            chunk = data[off:off + self.maximum * BLOCK_BYTES]
+            if self.s.status().busy:
+                raise ToolError("another monitor client has queued a job")
+            self.s.write_memory(self.staging, chunk)
+            checksum = zlib.crc32(chunk) & 0xffffffff   # the device checks this before touching the NAND
+            check(self.s.job(CMD_BLOCK_WRITE, lba + off // BLOCK_BYTES, len(chunk) // BLOCK_BYTES, d=checksum, timeout=600.0))
+
+    def flush(self):
+        if self.opened:
+            check(self.s.job(CMD_FLUSH, timeout=600.0))
+
+    def verify(self, lba, data):
+        for off in range(0, len(data), self.maximum * BLOCK_BYTES):
+            chunk = data[off:off + self.maximum * BLOCK_BYTES]
+            if self.read(lba + off // BLOCK_BYTES, len(chunk) // BLOCK_BYTES) != chunk:
+                raise ToolError("read-back mismatch at LBA %d" % (lba + off // BLOCK_BYTES))
+
+
+# ------------------------------------------------------------------------------------------- subcommands
 def cmd_status(s, a):
     st = s.status()
     print(format_status(st))
@@ -378,10 +443,52 @@ def cmd_mbr(s, a):
                 e.name, e.type, e.devoffset, e.length, e.addr, lpn, off))
 
 
-HANDLERS = {"status": cmd_status, "step": cmd_step, "init": cmd_init, "id": cmd_id,
-            "romread": cmd_romread, "rawread": cmd_rawread, "ftl-open": cmd_ftl_open,
-            "lread": cmd_lread, "dump": cmd_dump, "mbr": cmd_mbr}
-WRITE_COMMANDS = set()
+def cmd_write_caps(s, a):
+    protocol, flags, maximum = s.cmd(CMD_WRITE_CAPS)
+    print("writer protocol %d, writer %s, up to %d sectors (%d KiB) per write command" % (
+        protocol, "built in" if flags & 1 else "NOT built in (read-only kernel)", maximum, maximum * BLOCK_BYTES // 1024))
+    return protocol, flags, maximum
+
+
+def cmd_write_open(s, a):
+    w = Writer(s)
+    w.open()
+    print("FTL open for writing (%d sectors x %d B); nothing written" % (w.total, BLOCK_BYTES))
+    return w
+
+
+def cmd_lwrite(s, a):
+    data = open(a.file, "rb").read()
+    if not data or len(data) % BLOCK_BYTES:
+        raise ToolError("%s: %d bytes is not a whole number of %d-byte sectors" % (a.file, len(data), BLOCK_BYTES))
+    w = Writer(s)
+    n = len(data) // BLOCK_BYTES
+    w.bounds(a.lba, n)
+    print("writing %d sector(s) at LBA %d..%d from %s" % (n, a.lba, a.lba + n - 1, a.file))
+    w.write(a.lba, data)
+    if not a.no_flush:
+        w.flush()
+        print("flushed")
+    if not a.no_verify:
+        w.verify(a.lba, data)
+        print("read back: identical")
+    return w
+
+
+def cmd_flush(s, a):
+    w = Writer(s)
+    w.opened = True      # flush is harmless when nothing was written; the device answers PRECOND if never opened
+    w.flush()
+    print("flushed")
+    return w
+
+
+HANDLERS = {"status": cmd_status, "step": cmd_step, "init": cmd_init, "id": cmd_id, "romread": cmd_romread,
+            "rawread": cmd_rawread, "ftl-open": cmd_ftl_open, "lread": cmd_lread, "dump": cmd_dump, "mbr": cmd_mbr,
+            "write-caps": cmd_write_caps, "write-open": cmd_write_open,
+            "lwrite": cmd_lwrite, "flush": cmd_flush}
+WRITE_COMMANDS = ("write-open", "lwrite", "flush")
+
 
 def build_parser():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -405,6 +512,11 @@ def build_parser():
     p.add_argument("--count", type=ai, default=None); p.add_argument("--chunk", type=ai, default=32)
     p.add_argument("--ftl", action="store_true")
     sub.add_parser("mbr")
+    sub.add_parser("write-caps")
+    sub.add_parser("write-open")
+    p = sub.add_parser("lwrite"); p.add_argument("lba", type=ai); p.add_argument("file")
+    p.add_argument("--no-flush", action="store_true"); p.add_argument("--no-verify", action="store_true")
+    sub.add_parser("flush")
     return ap
 
 
