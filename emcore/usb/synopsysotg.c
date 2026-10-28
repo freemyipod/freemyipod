@@ -489,6 +489,7 @@ void synopsysotg_init(const struct usb_instance* instance)
     synopsysotg_target_enable_irq(instance);
 
     // Soft reconnect
+    synopsysotg_target_run_mode(instance);
     dctl.b.sftdiscon = 0;
     data->core->dregs.dctl = dctl;
 }

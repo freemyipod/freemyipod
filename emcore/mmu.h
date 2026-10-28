@@ -30,6 +30,11 @@
 
 void clean_dcache() __attribute__((naked, noinline)) ICODE_ATTR;
 void invalidate_dcache() __attribute__((naked, noinline)) ICODE_ATTR;
+#ifdef TARGET_ipodnano5g
+void clean_dcache_range(uint32_t addr, uint32_t size);
+void invalidate_dcache_range(uint32_t addr, uint32_t size);
+#endif
+
 void invalidate_icache() __attribute__((naked, noinline)) ICODE_ATTR;
 
 

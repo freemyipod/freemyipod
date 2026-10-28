@@ -30,6 +30,9 @@
 
 bool clockgate_get_state(int gate);
 void clockgate_enable(int gate, bool enable);
+#ifdef TARGET_ipodnano5g
+void clockgate_dma(int dmac, int chan, bool enable);
+#endif
 
 
 #endif

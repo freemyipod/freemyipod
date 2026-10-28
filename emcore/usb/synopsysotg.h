@@ -37,5 +37,6 @@ extern void synopsysotg_target_disable_clocks(const struct usb_instance* instanc
 extern void synopsysotg_target_enable_irq(const struct usb_instance* instance);
 extern void synopsysotg_target_disable_irq(const struct usb_instance* instance);
 extern void synopsysotg_target_clear_irq(const struct usb_instance* instance);
+extern void synopsysotg_target_run_mode(const struct usb_instance* instance);
 
 #endif

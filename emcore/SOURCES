@@ -146,3 +146,14 @@ libc/strncmp.c
 libc/strrchr.c
 libc/tlsf/tlsf.c
 
+
+#ifdef TARGET_ipodnano5g
+target/ipodnano5g/mmu.c
+target/ipodnano5g/interrupt.c
+target/ipodnano5g/timer.c
+target/ipodnano5g/clockgates.c
+target/ipodnano5g/i2c.c
+target/ipodnano5g/power.c
+usb/synopsysotg.c
+usb/synopsysotg_s5l87xx.c
+#endif

@@ -349,7 +349,11 @@ bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_nu
             invalidate_icache();
             buf[0] = 1;
             break;
+#ifdef TARGET_ipodnano5g
+        case 104: // RESET
+#else
         case 2:  // RESET
+#endif
             if (!buf[1]) reset();
         default:
             if (!dbgbusy)
@@ -571,7 +575,10 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
             int len = 0;
             switch (buf[0])
             {
-                case 2:  // RESET
+                case 2: // RESET
+#ifdef TARGET_ipodnano5g
+                case 104:
+#endif
                     shutdown(false);
                     reset();
                 case 3:  // POWER OFF

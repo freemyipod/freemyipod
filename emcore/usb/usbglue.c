@@ -184,11 +184,33 @@ static struct usb_interface usb_simpledebug_intf =
     },
 };
 
+#ifdef TARGET_ipodnano5g
+/* Configuration callbacks run in the USB IRQ. Publish the input-current
+ * budget here; target/ipodnano5g/power.c applies it from a thread over I2C. */
+extern void n5g_power_usb_budget(int ma);
+static void usbglue_set_configuration(const struct usb_instance* data, int configuration)
+{
+    (void)data; (void)configuration;
+    n5g_power_usb_budget(USB_MAXCURRENT);
+}
+static void usbglue_unset_configuration(const struct usb_instance* data, int configuration)
+{
+    (void)data; (void)configuration;
+    n5g_power_usb_budget(100);   /* unconfigured / bus reset (usb_unconfigure): back to the 100 mA budget */
+}
+
+#endif
+
 static const struct usb_configuration usb_c1 =
 {
     .descriptor = &usb_config1_descriptors.c1,
+#ifdef TARGET_ipodnano5g
+    .set_configuration = usbglue_set_configuration,
+    .unset_configuration = usbglue_unset_configuration,
+#else
     .set_configuration = NULL,
     .unset_configuration = NULL,
+#endif
     .interface_count = 1,
     .interfaces =
     {
