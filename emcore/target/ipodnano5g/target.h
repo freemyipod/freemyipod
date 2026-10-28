@@ -90,10 +90,10 @@
 /* HAVE_HWKEYAES_EXT disabled. */
 /* user keys 128/192/256, IV, ECB: hwkeyaes_ext.h, USB cmd 25 flags byte */
 
-/* HAVE_ACCELEROMETER is enabled with its driver. */
+#define HAVE_ACCELEROMETER
 
-/* HAVE_BUTTON is enabled with its driver. */
-/* HAVE_CLICKWHEEL is enabled with its driver. */
+#define HAVE_BUTTON
+#define HAVE_CLICKWHEEL
 
 /* targetinit_late(): click wheel start + a register report once I2C/USB are up (targetinit.c) */
 #define HAVE_TARGETINIT_LATE

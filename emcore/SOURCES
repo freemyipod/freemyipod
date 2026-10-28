@@ -151,6 +151,8 @@ libc/tlsf/tlsf.c
 target/ipodnano5g/lcd.c
 target/ipodnano5g/backlight.c
 target/ipodnano5g/targetinit.c
+target/ipodnano5g/clickwheel.c
+target/ipodnano5g/accel.c
 target/ipodnano5g/mmu.c
 target/ipodnano5g/interrupt.c
 target/ipodnano5g/timer.c
