@@ -23,6 +23,10 @@
 
 #include "global.h"
 #include "thread.h"
+#include "timer.h"
+#ifdef HAVE_BUTTON
+#include "button.h"
+#endif
 #include "console.h"
 #include "power.h"
 #include "interrupt.h"
@@ -195,6 +199,9 @@ void initthread(void* arg0, void* arg1, void* arg2, void* arg3)
 #ifdef HAVE_BACKLIGHT
     backlight_init();
 #endif
+#ifdef HAVE_NAND5G
+    { extern int n5g_nand_init(void); n5g_nand_init(); }
+#endif
 #ifdef HAVE_BUTTON
     button_init();
 #endif
@@ -308,7 +315,7 @@ void init()
     size_t size = (size_t)(&bootinfo) - (size_t)(&_poolstart) + bootinfo.totalsize;
     void* bootalloc = malloc(size);
     size -= (size_t)(bootalloc) - (size_t)(&_poolstart);
-    realloc(bootalloc, size);
+    bootalloc = realloc(bootalloc, size);
     struct initbss* ib = (struct initbss*)malloc(sizeof(struct initbss));
     reownalloc(ib, OWNER_TYPE(OWNER_THREAD, &(ib->initthread)));
     reownalloc(bootalloc, OWNER_TYPE(OWNER_THREAD, &(ib->initthread)));

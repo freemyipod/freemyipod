@@ -1,0 +1,5 @@
+/emcore/build/
+/recovery-image/
+.venv/
+__pycache__/
+*.pyc

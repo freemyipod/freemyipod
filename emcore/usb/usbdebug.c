@@ -22,6 +22,11 @@
 
 
 #include "global.h"
+#include "malloc.h"
+#ifdef HAVE_NAND5G
+#include "target/ipodnano5g/nand5g.h"
+#include "target/ipodnano5g/module5g.h"
+#endif
 #include "usbdebug.h"
 #include "panic.h"
 #include "usb.h"
@@ -41,6 +46,9 @@
 #endif
 #ifdef HAVE_HWKEYAES
 #include "hwkeyaes.h"
+#ifdef HAVE_HWKEYAES_EXT
+#include "target/ipodnano5g/hwkeyaes_ext.h"
+#endif
 #endif
 #ifdef HAVE_HMACSHA1
 #include "hmacsha1.h"
@@ -57,6 +65,16 @@
 #endif
 
 
+#ifdef TARGET_ipodnano5g
+
+uint32_t wedge_fix_enable = 0;
+
+
+#define WEDGE_REPLY_WATCHDOG_MAX 100000u
+static volatile uint32_t dbg_reply_midflight;
+static uint32_t dbg_reply_watchdog;
+
+#endif
 static uint32_t dbgbuf[16] CACHEALIGN_ATTR;
 
 enum dbgstate_t
@@ -95,6 +113,11 @@ static struct bulk_state
     int size;
 } bulk_state[2] IBSS_ATTR;
 static int bulk_ctrlreq_ep IBSS_ATTR;
+#ifdef TARGET_ipodnano5g
+
+
+volatile uint32_t dbg_monitor_heartbeat IBSS_ATTR;
+#endif
 
 static const char dbgconoverflowstr[] = "\n\n[overflowed]\n\n";
 
@@ -263,6 +286,31 @@ bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_nu
             dbgbuf[0] = 1;
             break;
         }
+#ifdef TARGET_ipodnano5g
+        case 68:
+            dbgbuf[0] = 1;
+            dbgbuf[1] = wedge_fix_enable;
+            wedge_fix_enable = buf[1];
+            break;
+#endif
+#ifdef HAVE_NAND5G
+        case N5G_MODULE_INFO:
+            n5g_module_command(buf, dbgbuf);
+            break;
+        case N5G_NAND_STATUS:
+        case N5G_NAND_STEP:
+        case N5G_NAND_READ_ROM:
+        case N5G_NAND_READ_PAGE:
+        case N5G_NAND_FTL_OPEN:
+        case N5G_NAND_FTL_READ:
+        case N5G_NAND_BLOCK_READ:
+        case N5G_NAND_WRITE_OPEN:
+        case N5G_NAND_BLOCK_WRITE:
+        case N5G_NAND_FLUSH:
+        case N5G_NAND_WRITE_CAPS:
+            n5g_nand_usb_command(buf, dbgbuf);
+            break;
+#endif
         case 10:  // READ CONSOLE
             dbgmemaddr = (void*)buf[1];
             dbgstate = DBGSTATE_READ_CONSOLE;
@@ -348,7 +396,11 @@ bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_nu
             invalidate_icache();
             buf[0] = 1;
             break;
+#ifdef TARGET_ipodnano5g
+        case 104: // RESET
+#else
         case 2:  // RESET
+#endif
             if (!buf[1]) reset();
         default:
             if (!dbgbusy)
@@ -408,8 +460,14 @@ bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_nu
     default: break;
     }
     dbgstate = DBGSTATE_RESPOND;
+#ifdef TARGET_ipodnano5g
+
+    if (!(wedge_fix_enable & (1u<<4))) usb_set_stall(dbgusb, ep0out, true);
+    usb_ep0_start_tx(dbgusb, NULL, 0, NULL);
+#else
     usb_set_stall(dbgusb, ep0out, true);
     usb_ep0_start_tx(dbgusb, NULL, 0, NULL);
+#endif
     return true;
 }
 
@@ -461,6 +519,15 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
             switch (data->buffer->setup.bmRequestType.direction)
             {
             case USB_SETUP_BMREQUESTTYPE_DIRECTION_OUT:
+#ifdef TARGET_ipodnano5g
+
+                if ((wedge_fix_enable & (1u<<6)) && dbg_reply_midflight) {
+                    if (++dbg_reply_watchdog < WEDGE_REPLY_WATCHDOG_MAX)
+                        return -3;
+                    dbg_reply_midflight = 0;
+                    dbg_reply_watchdog = 0;
+                }
+#endif
                 dbgstate = DBGSTATE_SETUP;
                 dbgmemlen = 0;
                 usb_ep0_start_rx(dbgusb, true, 64, usbdebug_handle_data);
@@ -476,6 +543,11 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
                     dbgmemlen -= len;
                     if (dbgmemlen)
                     {
+#ifdef TARGET_ipodnano5g
+
+                        dbg_reply_midflight = 1;
+                        dbg_reply_watchdog = 0;
+#endif
                         usb_ep0_start_rx(dbgusb, false, 0, NULL);
                         dbgusb->state->ep0_tx_ptr = dbgmemaddr + 48;
                         dbgusb->state->ep0_tx_len = dbgmemlen;
@@ -483,6 +555,10 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
                                          len < 48 ? usb_ep0_short_tx_callback : usb_ep0_tx_callback);
                         return -3;
                     }
+#ifdef TARGET_ipodnano5g
+                    dbg_reply_midflight = 0;
+                    dbg_reply_watchdog = 0;
+#endif
                     dbgstate = DBGSTATE_IDLE;
                     *response = dbgbuf;
                     return len + 16;
@@ -531,7 +607,14 @@ int usbdebug_handle_setup(const struct usb_instance* data, int interface, union 
                     *response = dbgbuf;
                     return bytes + 16;
                 }
+#ifdef TARGET_ipodnano5g
+                default:
+
+                    if (wedge_fix_enable & (1u<<4)) return -3;
+                    return -2;
+#else
                 default: return -2;
+#endif
                 }
                 break;
             }
@@ -549,6 +632,9 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
     struct scheduler_thread* t;
     while (1)
     {
+#ifdef TARGET_ipodnano5g
+        dbg_monitor_heartbeat++;
+#endif
         wakeup_wait(&dbgwakeup, TIMEOUT_BLOCK);
         for (t = head_thread; t; t = t->thread_next)
             if (t->state == THREAD_DEFUNCT)
@@ -570,7 +656,16 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
             int len = 0;
             switch (buf[0])
             {
-                case 2:  // RESET
+#ifdef HAVE_NAND5G
+                case N5G_MODULE_RESERVE:
+                case N5G_MODULE_ACTIVATE:
+                    n5g_module_command(buf, buf);
+                    break;
+#endif
+                case 2: // RESET
+#ifdef TARGET_ipodnano5g
+                case 104:
+#endif
                     shutdown(false);
                     reset();
                 case 3:  // POWER OFF
@@ -633,7 +728,17 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                     break;
 #ifdef HAVE_HWKEYAES
                 case 25:  // HWKEYAES
+#ifdef HAVE_HWKEYAES_EXT
+                    if (((uint8_t*)buf)[4] != HWKEYAES_ENCRYPT)
+                    {
+                        buf[0] = 2; /* Unsupported operation. */
+                        break;
+                    }
+                    buf[1] = (uint32_t)hwkeyaes_usb_encrypt(((uint16_t*)buf)[3], ((uint8_t*)buf)[5],
+                                                           (void*)buf[2], buf[3]);
+#else
                     hwkeyaes((enum hwkeyaes_direction)((uint8_t*)buf)[4], ((uint16_t*)buf)[3], (void*)buf[2], buf[3]);
+#endif
                     buf[0] = 1;
                     break;
 #endif
@@ -777,12 +882,12 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                 case 52:  // MALLOC
                     buf[0] = 1;
                     buf[1] = (uint32_t)malloc((size_t)buf[1]);
-                    if (buf[1]) reownalloc(buf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    if (buf[1]) reownalloc((void*)buf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
                     break;
                 case 53:  // MEMALIGN
                     buf[0] = 1;
                     buf[1] = (uint32_t)memalign((size_t)buf[1], (size_t)buf[2]);
-                    if (buf[1]) reownalloc(buf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    if (buf[1]) reownalloc((void*)buf[1], KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
                     break;
                 case 54:  // REALLOC
                     buf[0] = 1;
@@ -798,7 +903,8 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                     break;
                 case 57:  // FREE MONITOR ALLOCATIONS
                     buf[0] = 1;
-                    buf[1] = (uint32_t)free_all_of_thread(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    free_all_of_thread(KERNEL_OWNER(KERNEL_OWNER_USB_MONITOR));
+                    buf[1] = 0;
                     break;
 #ifdef HAVE_RTC
                 case 60:  // RTC READ
@@ -808,6 +914,21 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                 case 61:  // RTC WRITE
                     buf[0] = 1;
                     rtc_write_datetime((const struct rtc_datetime*)&buf[1]);
+                    break;
+#endif
+#ifdef TARGET_ipodnano5g
+                case 200:
+
+
+
+                    buf[0] = 1;
+                    buf[1] = dbg_monitor_heartbeat;
+#ifdef HAVE_NAND5G
+                    n5g_nand_heartbeat(&buf[2], &buf[3]);
+#else
+                    buf[2] = 0;
+                    buf[3] = 0;
+#endif
                     break;
 #endif
                 default:

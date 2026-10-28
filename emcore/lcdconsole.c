@@ -38,7 +38,11 @@
 #define OFFSETBYTES (LINEBYTES * OFFSETY + PIXELBYTES * OFFSETX)
 
 
+#ifdef TARGET_ipodnano5g
+static unsigned char framebuf[LCD_FRAMEBUFSIZE] __attribute__((section(".lcdfb")));
+#else
 static unsigned char framebuf[LCD_FRAMEBUFSIZE];
+#endif
 static unsigned int current_row IBSS_ATTR;
 static unsigned int current_col IBSS_ATTR;
 static bool lcdconsole_needs_update IBSS_ATTR;
@@ -95,10 +99,17 @@ void lcdconsole_write_noblit(const char* string, size_t length, int fgcolor, int
     while (length--) lcdconsole_putc_noblit(*string++, fgcolor, bgcolor);
 }
 
+#ifdef TARGET_ipodnano5g
+extern bool lcd_console_suspended(void);
+#define CONSOLE_SUSPENDED() lcd_console_suspended()
+#else
+#define CONSOLE_SUSPENDED() false
+#endif
+
 void lcdconsole_update()
 {
     uint32_t mode = enter_critical_section();
-    if (displaylcd_busy())
+    if (CONSOLE_SUSPENDED() || displaylcd_busy())
     {
         lcdconsole_needs_update = true;
         leave_critical_section(mode);
@@ -110,6 +121,11 @@ void lcdconsole_update()
 
 void lcdconsole_supdate()
 {
+    if (CONSOLE_SUSPENDED())
+    {
+        lcdconsole_needs_update = true;
+        return;
+    }
     displaylcd_safe_native(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf);
 }
 
@@ -133,7 +149,7 @@ void lcdconsole_write(const char* string, size_t length, int fgcolor, int bgcolo
 
 void lcdconsole_callback()
 {
-    if (lcdconsole_needs_update)
+    if (lcdconsole_needs_update && !CONSOLE_SUSPENDED())
     {
         displaylcd_safe_native(0, LCD_WIDTH - 1, 0, LCD_HEIGHT - 1, framebuf);
         lcdconsole_needs_update = false;
