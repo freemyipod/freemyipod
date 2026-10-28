@@ -38,7 +38,11 @@
 #define OFFSETBYTES (LINEBYTES * OFFSETY + PIXELBYTES * OFFSETX)
 
 
+#ifdef TARGET_ipodnano5g
+static unsigned char framebuf[LCD_FRAMEBUFSIZE] __attribute__((section(".lcdfb")));
+#else
 static unsigned char framebuf[LCD_FRAMEBUFSIZE];
+#endif
 static unsigned int current_row IBSS_ATTR;
 static unsigned int current_col IBSS_ATTR;
 static bool lcdconsole_needs_update IBSS_ATTR;

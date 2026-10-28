@@ -148,6 +148,9 @@ libc/tlsf/tlsf.c
 
 
 #ifdef TARGET_ipodnano5g
+target/ipodnano5g/lcd.c
+target/ipodnano5g/backlight.c
+target/ipodnano5g/targetinit.c
 target/ipodnano5g/mmu.c
 target/ipodnano5g/interrupt.c
 target/ipodnano5g/timer.c

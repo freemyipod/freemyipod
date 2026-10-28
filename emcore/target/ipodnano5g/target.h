@@ -38,8 +38,8 @@
 #define CPU_FREQ 274670000
 
 
-#define CONSOLE_BOOT 2
-#define CONSOLE_PANIC 2
+#define CONSOLE_BOOT 3
+#define CONSOLE_PANIC 3
 #define CONSOLE_PANICDUMP 0
 
 
@@ -74,7 +74,7 @@
 //#define USB_HAVE_TARGET_SPECIFIC_REQUESTS
 
 
-/* HAVE_LCD is enabled with its driver. */
+#define HAVE_LCD
 #define LCD_WIDTH 240            /* bl_DisplayPlatform:0x568 {0xf0, 0x178}, fw_disk:0x0807d498  */
 #define LCD_HEIGHT 376
 #define LCD_FORMAT 0x004154b4  // rgb565, red in bits 15..11 (bl_Gop:0x2e6)
@@ -82,7 +82,7 @@
 #define LCDCONSOLE_FGCOLOR 0
 #define LCDCONSOLE_BGCOLOR -1
 
-/* HAVE_BACKLIGHT is enabled with its driver. */
+#define HAVE_BACKLIGHT
 
 #define HAVE_I2C
 
@@ -96,7 +96,7 @@
 /* HAVE_CLICKWHEEL is enabled with its driver. */
 
 /* targetinit_late(): click wheel start + a register report once I2C/USB are up (targetinit.c) */
-/* HAVE_TARGETINIT_LATE is enabled with its driver. */
+#define HAVE_TARGETINIT_LATE
 
 /* no HAVE_STORAGE: the NAND harness (nand5g.c on the Rockbox driver copy) is reached over USB only */
 
