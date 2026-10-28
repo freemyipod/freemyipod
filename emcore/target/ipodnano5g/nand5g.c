@@ -31,6 +31,7 @@
 #include "clockgates.h"
 #include "crc32.h"
 #include "nand5g.h"
+#include "module5g.h"
 /* the driver's public headers are shaped by the Rockbox model define */
 #include "nand/nand-target.h"
 #include "nand/ftl-target.h"
@@ -381,6 +382,7 @@ int n5g_nand_init(void)
 
 void n5g_nand_heartbeat(uint32_t *w0, uint32_t *w1)
 {
+    if (n5g_module_heartbeat(w0, w1)) return;
     *w0 = (S.busy ? 0x80000000u : 0u) | (S.state & 0x7fu) << 24 | (S.job_kind & 0xffu) << 16 |
           (S.step_reached & 0xffu) << 8 | (S.jobs_done & 0xffu);
     *w1 = nand_get_read_count();
@@ -391,6 +393,7 @@ static uint32_t queue(uint32_t kind, uint32_t a0, uint32_t a1, uint32_t a2)
     uint32_t mode, i;
     if (!g_ready) return N5G_ACCEPT_NOT_INIT;
     mode = enter_critical_section();
+    if (n5g_module_blocks_nand()) { leave_critical_section(mode); return N5G_ACCEPT_BUSY; }
     if (S.busy) { leave_critical_section(mode); return N5G_ACCEPT_BUSY; }
     S.busy = 1;
     S.state = N5G_STATE_QUEUED;
@@ -408,6 +411,7 @@ static uint32_t queue(uint32_t kind, uint32_t a0, uint32_t a1, uint32_t a2)
 void n5g_nand_usb_command(const uint32_t *buf, uint32_t *reply)
 {
     uint32_t acc;
+    if (n5g_module_dispatch(buf, reply)) return;
     reply[0] = 1;
     switch (buf[0]) {
     case N5G_NAND_WRITE_CAPS:
@@ -437,3 +441,8 @@ void n5g_nand_usb_command(const uint32_t *buf, uint32_t *reply)
     reply[3] = (uint32_t)&n5g_nand_status;
 }
 
+
+int n5g_nand_module_can_load(void)
+{
+    return g_ready && !S.busy && !S.jobs_started;
+}

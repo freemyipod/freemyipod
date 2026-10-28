@@ -47,6 +47,7 @@
 #include "mmu.h"
 #include "lcdconsole.h"
 #include "console.h"
+#include "module5g.h"
 
 
 static struct dma_lli lcd_lli[(LCD_WIDTH * LCD_HEIGHT - 1) / 0xfff]
@@ -759,3 +760,75 @@ int lcd_translate_color(uint8_t alpha, uint8_t red, uint8_t green, uint8_t blue)
 }
 
 
+/* Module lease (module5g.h, ABI 2): the controller, DMAC0 channel 4 and the panel belong to the leaseholder.
+   lcd_leased is set before the mutex is taken, so console output (cprintf from any thread, the DMA completion
+   callback, panic output) only marks the framebuffer dirty instead of touching the controller or blocking. */
+static volatile bool lcd_leased;
+
+bool lcd_console_suspended(void)
+{
+    return lcd_leased;
+}
+
+int lcd_lease_acquire(int timeout)
+{
+    long start;
+    lcd_leased = true;
+    if (mutex_lock(&lcd_mutex, timeout) != THREAD_OK)
+    {
+        lcd_leased = false;
+        return -1;
+    }
+    /* let the frame in flight finish (DMA timeout guard), then stop the channel if it did not */
+    start = USEC_TIMER;
+    while (lcd_dma_busy && !TIMEOUT_EXPIRED(start, LCD_DMA_TIMEOUT_US)) sleep(1000);
+    if (lcd_dma_busy || (DMAC0C4CONFIG & 1)) lcd_dma_abort();
+    return 0;
+}
+
+/* Back to the lcd_panel_init state: gates, CLKCON2, controller modes (steps 1..3), channel 4 stopped with its flags
+   cleared (the lcd_dma_abort writes), the detected panel's initialization routine without the white fill, then a full repaint
+   of the console framebuffer. A panel that was never detected is left uninitialized, as at boot. */
+void lcd_lease_release(void)
+{
+    long start;
+    clockgate_enable(CLOCKGATE_LCD, true);
+    clockgate_enable(CLOCKGATE_LCD_2, true);
+    clockgate_enable(CLOCKGATE_DMAC0, true);
+    CLKCON2 = LCD_CLKCON2_VALUE;
+    start = USEC_TIMER;
+    while (CLKCON2 != LCD_CLKCON2_VALUE) if (TIMEOUT_EXPIRED(start, 100000)) break;
+    DMAC0C4CONFIG = 0;
+    DMAC0INTTCCLR = 0x10;
+    DMAC0INTERRCLR = 0x10;
+    lcd_dma_busy = false;
+    clockgate_dma(0, 4, false);
+    DMAC0CONFIG = 1;
+    LCDCON = LCD_MODE_PIXEL;
+    LCDPHTIME = 0x11;
+    if (lcd_panel_info.type >= 0) lcd_panels[(int)lcd_panel_info.type].init(false);
+    lcd_set_mode(LCD_MODE_PIXEL);
+    lcd_leased = false;
+    mutex_unlock(&lcd_mutex);
+    lcdconsole_update();
+}
+
+/* After release: wait for the repaint (bounded by the DMA timeout guard) and report the driver's own counters. */
+int lcd_lease_verify(uint32_t* out, uint32_t words)
+{
+    uint32_t v[N5G_LEASE_VERIFY_WORDS], i;
+    displaylcd_sync();
+    v[0] = (uint32_t)(int)lcd_panel_info.type;
+    v[1] = lcd_panel_info.status_timeouts;
+    v[2] = lcd_panel_info.read_timeouts;
+    v[3] = lcd_dma_aborts;
+    v[4] = LCDCON;
+    v[5] = LCDPHTIME;
+    v[6] = CLKCON2;
+    v[7] = lcd_dma_busy;
+    v[8] = DMAC0C4CONFIG;
+    v[9] = lcd_leased;
+    v[10] = v[11] = 0;
+    for (i = 0; i < words && i < N5G_LEASE_VERIFY_WORDS; i++) out[i] = v[i];
+    return 0;
+}

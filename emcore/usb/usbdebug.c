@@ -25,6 +25,7 @@
 #include "malloc.h"
 #ifdef HAVE_NAND5G
 #include "target/ipodnano5g/nand5g.h"
+#include "target/ipodnano5g/module5g.h"
 #endif
 #include "usbdebug.h"
 #include "panic.h"
@@ -293,6 +294,9 @@ bool usbdebug_handle_data(const struct usb_instance* data, union usb_endpoint_nu
             break;
 #endif
 #ifdef HAVE_NAND5G
+        case N5G_MODULE_INFO:
+            n5g_module_command(buf, dbgbuf);
+            break;
         case N5G_NAND_STATUS:
         case N5G_NAND_STEP:
         case N5G_NAND_READ_ROM:
@@ -652,6 +656,12 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
             int len = 0;
             switch (buf[0])
             {
+#ifdef HAVE_NAND5G
+                case N5G_MODULE_RESERVE:
+                case N5G_MODULE_ACTIVATE:
+                    n5g_module_command(buf, buf);
+                    break;
+#endif
                 case 2: // RESET
 #ifdef TARGET_ipodnano5g
                 case 104:

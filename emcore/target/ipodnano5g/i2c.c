@@ -169,3 +169,22 @@ uint8_t i2c_recvbyte(uint32_t bus, uint32_t device, uint32_t address)
     return buf[0];
 }
 
+/* Module lease (module5g.h, ABI 2). The lease is the bus mutex itself, owned by the leasing thread, so every emCORE
+   I2C user (power thread, backlight, accelerometer, USB syscalls) waits for the release. The leaseholder may drive
+   either controller directly and may switch its clocks off. Release puts back what i2c_init established: all four
+   clock gates on and i2c_controller_init on both buses (bl_PreEfi:0x2200b400 sequence, no W1C/FIFO register replay). */
+int i2c_lease_acquire(int timeout)
+{
+    return mutex_lock(&i2cmutex, timeout) == THREAD_OK ? 0 : -1;
+}
+
+void i2c_lease_release(void)
+{
+    clockgate_enable(CLOCKGATE_I2C0, true);
+    clockgate_enable(CLOCKGATE_I2C0_2, true);
+    clockgate_enable(CLOCKGATE_I2C1, true);
+    clockgate_enable(CLOCKGATE_I2C1_2, true);
+    i2c_controller_init(0);
+    i2c_controller_init(1);
+    mutex_unlock(&i2cmutex);
+}

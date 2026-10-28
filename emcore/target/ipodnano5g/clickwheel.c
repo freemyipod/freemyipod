@@ -67,6 +67,10 @@ uint32_t clickwheel_last_reply;
 uint32_t clickwheel_replies;
 uint32_t clickwheel_timeouts;
 
+/* Module lease (module5g.h, N5G_LEASE_WHEEL): while leased the poller thread sends nothing and the controller
+   belongs to the leaseholder; release re-runs the init sequence and resumes polling. */
+static volatile bool wheel_leased;
+static volatile bool wheel_poller_idle;
 static void wheel_hw_init(void);
 
 
@@ -179,6 +183,13 @@ static void clickwheel_thread(void* arg0, void* arg1, void* arg2, void* arg3)
     while (true)
     {
         uint32_t data;
+        if (wheel_leased)
+        {
+            wheel_poller_idle = true;
+            sleep(WHEEL_POLL_US);
+            continue;
+        }
+        wheel_poller_idle = false;
         data = wheel_xfer(WHEEL_QUERY_PACKET);
         if (data)
         {
@@ -202,6 +213,42 @@ static void wheel_hw_init(void)
     WHEEL08 = 0x3a980;
     WHEEL00 |= 0x100000;
     WHEEL00 |= 0x200000;
+}
+
+/* Lease: stop the poller between two exchanges (bounded by timeout us), then leave the controller as it is. */
+int clickwheel_lease_acquire(int timeout)
+{
+    long start = USEC_TIMER;
+    wheel_leased = true;
+    while (!wheel_poller_idle)
+    {
+        if (TIMEOUT_EXPIRED(start, timeout)) { wheel_leased = false; return -1; }
+        sleep(1000);
+    }
+    return 0;
+}
+
+/* Release: the leaseholder may have left the controller in any state; the poller's own init sequence
+   brings it back (clock gate, pins, WHEEL00/08), interrupt flags cleared, interrupt enable off (polled use). */
+void clickwheel_lease_release(void)
+{
+    wheel_hw_init();
+    WHEEL10 = 0;
+    WHEELINT = 7;
+    wheel_leased = false;
+}
+
+/* Verify after release: replies and timeouts before and after 200 ms of polling, last reply. */
+int clickwheel_lease_verify(uint32_t* out, uint32_t words)
+{
+    uint32_t v[12], i;
+    v[0] = clickwheel_replies; v[1] = clickwheel_timeouts;
+    sleep(200000);
+    v[2] = clickwheel_replies; v[3] = clickwheel_timeouts;
+    v[4] = clickwheel_last_reply; v[5] = wheel_leased; v[6] = wheel_poller_idle;
+    v[7] = WHEEL00; v[8] = WHEEL08; v[9] = WHEEL10; v[10] = WHEEL0C; v[11] = 0;
+    for (i = 0; i < words && i < 12; i++) out[i] = v[i];
+    return 0;
 }
 
 int clickwheel_init()
