@@ -129,7 +129,11 @@ void mutex_unlock_internal(struct mutex* obj)
         o = obj->owner->owned_mutexes;
         while (o->owned_next)
         {
-            if (o->owned_next == obj) o->owned_next = obj->owned_next;
+            if (o->owned_next == obj)
+            {
+                o->owned_next = obj->owned_next;
+                break;
+            }
             o = o->owned_next;
         }
     }
