@@ -42,6 +42,9 @@
 #endif
 #ifdef HAVE_HWKEYAES
 #include "hwkeyaes.h"
+#ifdef HAVE_HWKEYAES_EXT
+#include "target/ipodnano5g/hwkeyaes_ext.h"
+#endif
 #endif
 #ifdef HAVE_HMACSHA1
 #include "hmacsha1.h"
@@ -697,7 +700,17 @@ void dbgthread(void* arg0, void* arg1, void* arg2, void* arg3)
                     break;
 #ifdef HAVE_HWKEYAES
                 case 25:  // HWKEYAES
+#ifdef HAVE_HWKEYAES_EXT
+                    if (((uint8_t*)buf)[4] != HWKEYAES_ENCRYPT)
+                    {
+                        buf[0] = 2; /* Unsupported operation. */
+                        break;
+                    }
+                    buf[1] = (uint32_t)hwkeyaes_usb_encrypt(((uint16_t*)buf)[3], ((uint8_t*)buf)[5],
+                                                           (void*)buf[2], buf[3]);
+#else
                     hwkeyaes((enum hwkeyaes_direction)((uint8_t*)buf)[4], ((uint16_t*)buf)[3], (void*)buf[2], buf[3]);
+#endif
                     buf[0] = 1;
                     break;
 #endif

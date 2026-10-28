@@ -581,6 +581,21 @@ class Ladder:
             0x100000 - left, status))
         self.alive("D-cache clean loop")
 
+    def r_aes(self):
+        """Hardware AES with a user key, FIPS-197 C.1 (key/IV byte order assumption)."""
+        buf = align(self.tail[0] + 0x1000, 32)
+        key, pt, ct = FIPS197
+        self.plan("AES buffer %08x: 32-B key field, 16-B IV, 16-B block" % buf)
+        self.wr(buf, key + bytes(16) + bytes(16) + pt)
+        flags = 1 | 8              # 128-bit key, ECB
+        for encrypt, want, what in ((1, ct, "encrypt"),):
+            self.plan("HWKEYAES %s ECB, user key (cmd 25)" % what)
+            rc = struct.unpack_from("<i", self.t.raw(struct.pack("<IBBHII", 25, encrypt, flags, 0, buf, 16), 16), 4)[0]
+            got = self.rd(buf + 48, 16)
+            self.check(rc == 0 and got == want, "%s: rc %d, %s (%s)" % (what, rc, got.hex(), "FIPS-197" if got == want
+                                                                       else "expected " + want.hex()))
+        self.wr(buf, bytes(64))
+
     def r_memtest(self, size=None):
         """SDRAM integrity and sustained write load : fill the tail with addr^key on the device,
         clean+invalidate, verify. Default: the whole tail except the work block."""
@@ -633,7 +648,7 @@ class Ladder:
         self.alive("the exception")
 
     RUNGS = ["identity", "bootreport", "clocks", "usec", "usbcaps", "chipid", "sdram", "pagetable", "threads", "lcd",
-             "pmu", "accel", "wheel", "tail", "sram", "flush", "sramcode", "tailcode", "sleep", "icache", "dcache", "memtest"]
+             "pmu", "accel", "wheel", "tail", "sram", "flush", "sramcode", "tailcode", "sleep", "icache", "dcache", "aes", "memtest"]
     EXPLICIT = ["sramsize", "udf"]
     EXPECTED_PANIC = {"udf"}
 

@@ -547,6 +547,14 @@ class Emcore(object):
         return self.lib.monitorcommand(struct.pack("<IBBHII", 25, 0, 0, keyindex, addr, size), "III", (None, None, None))
     
     @command(timeout = 30000)
+    def aesencrypt_ext(self, addr, size, keysel=0, keybits=128, ecb=False, ivout=False):
+        """Encrypt the payload following a 32-byte key and 16-byte IV at addr."""
+        flags = 1 | ({128: 0, 192: 1, 256: 2}[keybits] << 1) | (8 if ecb else 0) | (16 if ivout else 0)
+        result = self.lib.monitorcommand(struct.pack("<IBBHII", 25, 1, flags, keysel, addr, size),
+                                         "iII", ("rc", None, None))
+        return result.rc
+
+    @command(timeout = 30000)
     def hmac_sha1(self, addr, size, destination):
         """ Generates a HMAC-SHA1 hash of the buffer and saves it to 'destination' """
         return self.lib.monitorcommand(struct.pack("<IIII", 26, addr, size, destination), "III", (None, None, None))

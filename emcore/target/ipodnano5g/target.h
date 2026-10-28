@@ -86,8 +86,8 @@
 
 #define HAVE_I2C
 
-/* HAVE_HWKEYAES is enabled with its driver. */
-/* HAVE_HWKEYAES_EXT disabled. */
+#define HAVE_HWKEYAES
+#define HAVE_HWKEYAES_EXT
 /* user keys 128/192/256, IV, ECB: hwkeyaes_ext.h, USB cmd 25 flags byte */
 
 #define HAVE_ACCELEROMETER
